@@ -1,0 +1,60 @@
+<div class="row g-3 mb-4">
+  <div class="col-md-6">
+    <div class="tf-card">
+      <div class="card-header"><i class="bi bi-calendar-check me-2"></i>TODAY'S ATTENDANCE — <%= new Date(today).toLocaleDateString('en-US', {weekday:'long', month:'long', day:'numeric'}) %></div>
+      <div style="overflow-x:auto;">
+        <table class="tf-table">
+          <thead><tr><th>User</th><th>Login</th><th>Logout</th><th>Duration</th></tr></thead>
+          <tbody>
+            <% if (dailyLogs.length > 0) { %>
+              <% dailyLogs.forEach(l => { %>
+              <tr>
+                <td>
+                  <div style="font-size:0.8rem;font-weight:500;"><%= l.user_name %></div>
+                  <div style="font-size:0.65rem;color:var(--tf-text-muted);"><%= l.email %></div>
+                </td>
+                <td style="font-family:var(--tf-font-mono);font-size:0.75rem;color:#10b981;">
+                  <%= l.login_time ? new Date(l.login_time).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) : '—' %>
+                </td>
+                <td style="font-family:var(--tf-font-mono);font-size:0.75rem;color:var(--tf-text-muted);">
+                  <%= l.logout_time ? new Date(l.logout_time).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) : 'Active' %>
+                </td>
+                <td style="font-size:0.75rem;color:var(--tf-text-muted);">
+                  <%= l.duration ? l.duration.substring(0,5) + 'h' : '—' %>
+                </td>
+              </tr>
+              <% }) %>
+            <% } else { %>
+            <tr><td colspan="4" style="text-align:center;padding:2rem;color:var(--tf-text-muted);">No logins today</td></tr>
+            <% } %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-6">
+    <div class="tf-card">
+      <div class="card-header"><i class="bi bi-graph-up me-2"></i>7-DAY ATTENDANCE</div>
+      <div style="overflow-x:auto;">
+        <table class="tf-table">
+          <thead><tr><th>User</th><th>Days Present</th><th>Rate</th></tr></thead>
+          <tbody>
+            <% weeklyStats.forEach(s => { %>
+            <tr>
+              <td style="font-size:0.8rem;font-weight:500;"><%= s.name %></td>
+              <td style="font-family:var(--tf-font-mono);"><%= s.days_present %> / 7</td>
+              <td style="min-width:100px;">
+                <div class="tf-progress">
+                  <div class="tf-progress-bar" style="width:<%= Math.round((s.days_present/7)*100) %>%;"></div>
+                </div>
+                <div style="font-size:0.65rem;color:var(--tf-text-muted);"><%= Math.round((s.days_present/7)*100) %>%</div>
+              </td>
+            </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>

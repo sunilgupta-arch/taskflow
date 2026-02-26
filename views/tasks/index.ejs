@@ -1,0 +1,203 @@
+<!-- Filters & Actions Bar -->
+<div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+  <form method="GET" action="/tasks" class="d-flex gap-2 flex-wrap flex-grow-1">
+    <input type="text" name="search" value="<%= filters.search || '' %>" placeholder="Search tasks..." class="tf-form-control" style="max-width:220px;">
+    <select name="status" class="tf-select" style="max-width:140px;">
+      <option value="">All Status</option>
+      <option value="pending" <%= filters.status === 'pending' ? 'selected' : '' %>>Pending</option>
+      <option value="in_progress" <%= filters.status === 'in_progress' ? 'selected' : '' %>>In Progress</option>
+      <option value="completed" <%= filters.status === 'completed' ? 'selected' : '' %>>Completed</option>
+    </select>
+    <select name="type" class="tf-select" style="max-width:130px;">
+      <option value="">All Types</option>
+      <option value="daily" <%= filters.type === 'daily' ? 'selected' : '' %>>Daily</option>
+      <option value="weekly" <%= filters.type === 'weekly' ? 'selected' : '' %>>Weekly</option>
+      <option value="adhoc" <%= filters.type === 'adhoc' ? 'selected' : '' %>>Adhoc</option>
+    </select>
+    <button type="submit" class="btn-tf btn-tf-outline">Filter</button>
+  </form>
+  
+  <% if (['CFC_ADMIN', 'CFC_MANAGER'].includes(user.role_name)) { %>
+  <a href="/tasks/create" class="btn-tf btn-tf-primary text-decoration-none">
+    <i class="bi bi-plus-circle me-1"></i> New Task
+  </a>
+  <% } %>
+</div>
+
+<!-- Task Table -->
+<div class="tf-card">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span><i class="bi bi-check2-square me-2"></i>TASKS (<%= pagination.total %>)</span>
+  </div>
+  <div style="overflow-x:auto;">
+    <table class="tf-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Task</th>
+          <th>Type</th>
+          <th>Assigned To</th>
+          <th>Status</th>
+          <th>Due Date</th>
+          <th>Reward</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (tasks.length > 0) { %>
+          <% tasks.forEach(task => { %>
+          <tr data-task-id="<%= task.id %>">
+            <td style="font-family:var(--tf-font-mono);font-size:0.75rem;color:var(--tf-text-muted);">#<%= task.id %></td>
+            <td>
+              <a href="/tasks/<%= task.id %>" style="color:var(--tf-text);text-decoration:none;font-weight:500;">
+                <%= task.title %>
+              </a>
+              <% if (task.attachment_count > 0) { %>
+              <span style="font-size:0.65rem;color:var(--tf-text-muted);margin-left:4px;">
+                <i class="bi bi-paperclip"></i> <%= task.attachment_count %>
+              </span>
+              <% } %>
+              <% if (task.description) { %>
+              <div style="font-size:0.75rem;color:var(--tf-text-muted);margin-top:2px;">
+                <%= task.description.substring(0, 60) %><%= task.description.length > 60 ? '...' : '' %>
+              </div>
+              <% } %>
+            </td>
+            <td><span class="badge badge-<%= task.type %>" style="font-size:0.65rem;border-radius:4px;padding:2px 6px;"><%= task.type %></span></td>
+            <td>
+              <% if (task.assigned_to_name) { %>
+                <span style="font-size:0.8rem;"><%= task.assigned_to_name %></span>
+              <% } else { %>
+                <span style="color:var(--tf-text-muted);font-size:0.75rem;">Unassigned</span>
+                <% if (user.role_name === 'OUR_USER') { %>
+                <button class="btn-tf" style="font-size:0.65rem;padding:2px 8px;background:rgba(0,212,255,0.1);color:#00d4ff;border:1px solid rgba(0,212,255,0.3);" onclick="pickTask(<%= task.id %>)">
+                  Pick
+                </button>
+                <% } %>
+              <% } %>
+            </td>
+            <td>
+              <span class="badge badge-<%= task.status %>" style="font-size:0.65rem;border-radius:4px;padding:3px 8px;">
+                <%= task.status.replace('_', ' ') %>
+              </span>
+            </td>
+            <td style="font-size:0.8rem;color:<%= task.due_date && new Date(task.due_date) < new Date() && task.status !== 'completed' ? '#ef4444' : 'var(--tf-text-muted)' %>;">
+              <%= task.due_date ? new Date(task.due_date).toLocaleDateString() : '—' %>
+            </td>
+            <td style="font-family:var(--tf-font-mono);color:#f59e0b;font-size:0.8rem;">
+              <%= task.reward_amount ? '$' + parseFloat(task.reward_amount).toFixed(2) : '—' %>
+            </td>
+            <td>
+              <div class="d-flex gap-1">
+                <% if (['CFC_ADMIN', 'CFC_MANAGER', 'OUR_ADMIN', 'OUR_MANAGER'].includes(user.role_name) && task.status !== 'completed') { %>
+                <button class="btn-tf" style="font-size:0.65rem;padding:2px 8px;background:transparent;color:#00d4ff;border:1px solid rgba(0,212,255,0.3);" 
+                  onclick="openAssignModal(<%= task.id %>, '<%= task.assigned_to_name || '' %>')">
+                  Assign
+                </button>
+                <% } %>
+                
+                <% if (user.role_name === 'OUR_USER' && task.assigned_to === user.id && task.status !== 'completed') { %>
+                <button class="btn-tf" style="font-size:0.65rem;padding:2px 8px;background:rgba(16,185,129,0.1);color:#10b981;border:1px solid rgba(16,185,129,0.3);" 
+                  onclick="completeTask(<%= task.id %>)">
+                  Complete
+                </button>
+                <% } %>
+              </div>
+            </td>
+          </tr>
+          <% }) %>
+        <% } else { %>
+        <tr>
+          <td colspan="8" style="text-align:center;padding:3rem;color:var(--tf-text-muted);">
+            <i class="bi bi-inbox" style="font-size:2rem;display:block;margin-bottom:0.5rem;"></i>
+            No tasks found
+          </td>
+        </tr>
+        <% } %>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Pagination -->
+  <% if (pagination.totalPages > 1) { %>
+  <div class="d-flex justify-content-between align-items-center p-3" style="border-top:1px solid var(--tf-border);">
+    <span style="font-size:0.75rem;color:var(--tf-text-muted);">
+      Page <%= pagination.page %> of <%= pagination.totalPages %> (<%= pagination.total %> tasks)
+    </span>
+    <div class="d-flex gap-1">
+      <% if (pagination.hasPrev) { %>
+      <a href="?page=<%= pagination.page - 1 %>&status=<%= filters.status || '' %>&type=<%= filters.type || '' %>&search=<%= filters.search || '' %>" 
+         class="btn-tf btn-tf-outline" style="font-size:0.7rem;padding:4px 10px;">← Prev</a>
+      <% } %>
+      <% if (pagination.hasNext) { %>
+      <a href="?page=<%= pagination.page + 1 %>&status=<%= filters.status || '' %>&type=<%= filters.type || '' %>&search=<%= filters.search || '' %>"
+         class="btn-tf btn-tf-primary" style="font-size:0.7rem;padding:4px 10px;">Next →</a>
+      <% } %>
+    </div>
+  </div>
+  <% } %>
+</div>
+
+<!-- Assign Modal -->
+<div id="assignModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:200;align-items:center;justify-content:center;">
+  <div style="background:var(--tf-surface);border:1px solid var(--tf-border);border-radius:12px;padding:1.5rem;width:100%;max-width:400px;margin:1rem;">
+    <h6 style="font-family:var(--tf-font-mono);margin-bottom:1rem;">ASSIGN TASK</h6>
+    <input type="hidden" id="assignTaskId">
+    <div class="mb-3">
+      <label style="font-size:0.75rem;color:var(--tf-text-muted);display:block;margin-bottom:0.4rem;">ASSIGN TO</label>
+      <select id="assignUserId" class="tf-select">
+        <option value="">Select user...</option>
+        <% ourUsers.forEach(u => { %>
+        <option value="<%= u.id %>"><%= u.name %> (<%= u.role_name %>)</option>
+        <% }) %>
+      </select>
+    </div>
+    <div class="d-flex gap-2 justify-content-end">
+      <button class="btn-tf btn-tf-outline" onclick="closeAssignModal()">Cancel</button>
+      <button class="btn-tf btn-tf-primary" onclick="submitAssign()">Assign</button>
+    </div>
+  </div>
+</div>
+
+<script>
+function openAssignModal(taskId, currentAssignee) {
+  document.getElementById('assignTaskId').value = taskId;
+  document.getElementById('assignModal').style.display = 'flex';
+}
+function closeAssignModal() {
+  document.getElementById('assignModal').style.display = 'none';
+}
+async function submitAssign() {
+  const taskId = document.getElementById('assignTaskId').value;
+  const userId = document.getElementById('assignUserId').value;
+  if (!userId) return showToast('Please select a user', 'error');
+  try {
+    await axios.post('/tasks/assign', { task_id: taskId, assigned_to: userId });
+    showToast('Task assigned successfully');
+    closeAssignModal();
+    setTimeout(() => location.reload(), 800);
+  } catch (e) {
+    showToast(e.response?.data?.message || 'Failed to assign task', 'error');
+  }
+}
+async function pickTask(taskId) {
+  if (!confirm('Pick this task?')) return;
+  try {
+    await axios.post(`/tasks/pick/${taskId}`);
+    showToast('Task picked successfully!');
+    setTimeout(() => location.reload(), 800);
+  } catch (e) {
+    showToast(e.response?.data?.message || 'Failed to pick task', 'error');
+  }
+}
+async function completeTask(taskId) {
+  if (!confirm('Mark this task as completed?')) return;
+  try {
+    await axios.post(`/tasks/complete/${taskId}`);
+    showToast('Task marked as completed!');
+    setTimeout(() => location.reload(), 800);
+  } catch (e) {
+    showToast(e.response?.data?.message || 'Failed to complete task', 'error');
+  }
+}
+</script>

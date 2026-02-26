@@ -1,0 +1,266 @@
+<%
+const isAdmin = ['CFC_ADMIN', 'OUR_ADMIN'].includes(user.role_name);
+const isManager = ['CFC_MANAGER', 'OUR_MANAGER'].includes(user.role_name);
+%>
+
+<% if (isAdmin || isManager) { %>
+<!-- Admin / Manager Dashboard -->
+
+<!-- Task Stats Row -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="stat-card" style="--stat-color: #00d4ff;">
+      <div class="stat-value"><%= taskStats.total || 0 %></div>
+      <div class="stat-label">Total Tasks</div>
+      <i class="bi bi-list-task stat-icon"></i>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card" style="--stat-color: #f59e0b;">
+      <div class="stat-value"><%= taskStats.pending || 0 %></div>
+      <div class="stat-label">Pending</div>
+      <i class="bi bi-hourglass stat-icon"></i>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card" style="--stat-color: #00d4ff;">
+      <div class="stat-value"><%= taskStats.in_progress || 0 %></div>
+      <div class="stat-label">In Progress</div>
+      <i class="bi bi-play-circle stat-icon"></i>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card" style="--stat-color: #10b981;">
+      <div class="stat-value"><%= taskStats.completed || 0 %></div>
+      <div class="stat-label">Completed</div>
+      <i class="bi bi-check-circle stat-icon"></i>
+    </div>
+  </div>
+</div>
+
+<!-- Completion Timeline -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="stat-card" style="--stat-color: #7c3aed;">
+      <div class="stat-value"><%= taskStats.completed_today || 0 %></div>
+      <div class="stat-label">Completed Today</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card" style="--stat-color: #7c3aed;">
+      <div class="stat-value"><%= taskStats.completed_this_week || 0 %></div>
+      <div class="stat-label">This Week</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card" style="--stat-color: #7c3aed;">
+      <div class="stat-value"><%= taskStats.completed_this_month || 0 %></div>
+      <div class="stat-label">This Month</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card" style="--stat-color: #7c3aed;">
+      <div class="stat-value"><%= taskStats.completed_this_year || 0 %></div>
+      <div class="stat-label">This Year</div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <!-- Rewards Summary -->
+  <div class="col-md-4">
+    <div class="tf-card h-100">
+      <div class="card-header">
+        <i class="bi bi-coin me-2" style="color:#f59e0b;"></i>REWARDS OVERVIEW
+      </div>
+      <div class="p-3">
+        <div class="d-flex justify-content-between align-items-center py-2 border-bottom" style="border-color:var(--tf-border)!important;">
+          <span style="font-size:0.8rem;color:var(--tf-text-muted);">Total Earned</span>
+          <span style="font-family:var(--tf-font-mono);color:#00d4ff;">$<%= parseFloat(rewardSummary?.total || 0).toFixed(2) %></span>
+        </div>
+        <div class="d-flex justify-content-between align-items-center py-2 border-bottom" style="border-color:var(--tf-border)!important;">
+          <span style="font-size:0.8rem;color:var(--tf-text-muted);">Pending</span>
+          <span style="font-family:var(--tf-font-mono);color:#f59e0b;">$<%= parseFloat(rewardSummary?.pending || 0).toFixed(2) %></span>
+        </div>
+        <div class="d-flex justify-content-between align-items-center py-2">
+          <span style="font-size:0.8rem;color:var(--tf-text-muted);">Paid Out</span>
+          <span style="font-family:var(--tf-font-mono);color:#10b981;">$<%= parseFloat(rewardSummary?.paid || 0).toFixed(2) %></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Attendance Summary -->
+  <div class="col-md-4">
+    <div class="tf-card h-100">
+      <div class="card-header">
+        <i class="bi bi-people me-2" style="color:#00d4ff;"></i>ATTENDANCE TODAY
+      </div>
+      <div class="p-3">
+        <% if (attendanceSummary) { %>
+        <div class="d-flex justify-content-between py-2 border-bottom" style="border-color:var(--tf-border)!important;">
+          <span style="font-size:0.8rem;color:var(--tf-text-muted);">Total Users</span>
+          <span style="font-family:var(--tf-font-mono)"><%= attendanceSummary.total_users %></span>
+        </div>
+        <div class="d-flex justify-content-between py-2 border-bottom" style="border-color:var(--tf-border)!important;">
+          <span style="font-size:0.8rem;color:var(--tf-text-muted);">Logged In</span>
+          <span style="font-family:var(--tf-font-mono);color:#10b981;"><%= attendanceSummary.logged_in_today %></span>
+        </div>
+        <div class="d-flex justify-content-between py-2 border-bottom" style="border-color:var(--tf-border)!important;">
+          <span style="font-size:0.8rem;color:var(--tf-text-muted);">On Leave</span>
+          <span style="font-family:var(--tf-font-mono);color:#f59e0b;"><%= attendanceSummary.on_leave %></span>
+        </div>
+        <div class="d-flex justify-content-between py-2">
+          <span style="font-size:0.8rem;color:var(--tf-text-muted);">On Weekoff</span>
+          <span style="font-family:var(--tf-font-mono);color:#64748b;"><%= attendanceSummary.on_weekoff %></span>
+        </div>
+        <% } %>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Actions -->
+  <div class="col-md-4">
+    <div class="tf-card h-100">
+      <div class="card-header">
+        <i class="bi bi-lightning me-2" style="color:#f59e0b;"></i>QUICK ACTIONS
+      </div>
+      <div class="p-3 d-flex flex-column gap-2">
+        <% if (['CFC_ADMIN','CFC_MANAGER'].includes(user.role_name)) { %>
+        <a href="/tasks/create" class="btn-tf btn-tf-primary text-center text-decoration-none">
+          <i class="bi bi-plus-circle me-1"></i> Create Task
+        </a>
+        <% } %>
+        <a href="/tasks" class="btn-tf btn-tf-outline text-center text-decoration-none">
+          <i class="bi bi-list-task me-1"></i> View All Tasks
+        </a>
+        <a href="/rewards" class="btn-tf btn-tf-outline text-center text-decoration-none">
+          <i class="bi bi-coin me-1"></i> Rewards Ledger
+        </a>
+        <% if (user.role_name === 'OUR_ADMIN') { %>
+        <a href="/users" class="btn-tf btn-tf-outline text-center text-decoration-none">
+          <i class="bi bi-people me-1"></i> Manage Users
+        </a>
+        <% } %>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Per User Stats -->
+<% if (perUserStats && perUserStats.length > 0) { %>
+<div class="tf-card mb-4">
+  <div class="card-header">
+    <i class="bi bi-bar-chart me-2"></i>TEAM PERFORMANCE
+  </div>
+  <div style="overflow-x:auto;">
+    <table class="tf-table">
+      <thead>
+        <tr>
+          <th>User</th>
+          <th>Total Tasks</th>
+          <th>Completed</th>
+          <th>In Progress</th>
+          <th>Pending</th>
+          <th>Progress</th>
+          <th>Rewards</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% perUserStats.forEach(u => { 
+           const progress = u.total_tasks > 0 ? Math.round((u.completed / u.total_tasks) * 100) : 0;
+           const reward = perUserRewards?.find(r => r.id === u.id);
+        %>
+        <tr>
+          <td>
+            <div style="font-weight:600;font-size:0.875rem;"><%= u.name %></div>
+            <div style="font-size:0.7rem;color:var(--tf-text-muted);"><%= u.email %></div>
+          </td>
+          <td><span style="font-family:var(--tf-font-mono);"><%= u.total_tasks %></span></td>
+          <td><span style="color:#10b981;font-family:var(--tf-font-mono);"><%= u.completed %></span></td>
+          <td><span style="color:#00d4ff;font-family:var(--tf-font-mono);"><%= u.in_progress %></span></td>
+          <td><span style="color:#f59e0b;font-family:var(--tf-font-mono);"><%= u.pending %></span></td>
+          <td style="min-width:100px;">
+            <div class="tf-progress">
+              <div class="tf-progress-bar" style="width:<%= progress %>%"></div>
+            </div>
+            <div style="font-size:0.65rem;color:var(--tf-text-muted);margin-top:2px;"><%= progress %>%</div>
+          </td>
+          <td>
+            <span style="font-family:var(--tf-font-mono);color:#f59e0b;">
+              $<%= parseFloat(reward?.total_earned || 0).toFixed(2) %>
+            </span>
+          </td>
+        </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>
+<% } %>
+
+<% } else { %>
+<!-- OUR_USER Dashboard -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="stat-card" style="--stat-color:#00d4ff;">
+      <div class="stat-value"><%= taskStats?.in_progress || 0 %></div>
+      <div class="stat-label">Active Tasks</div>
+      <i class="bi bi-play-circle stat-icon"></i>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card" style="--stat-color:#10b981;">
+      <div class="stat-value"><%= taskStats?.completed || 0 %></div>
+      <div class="stat-label">Completed</div>
+      <i class="bi bi-check-circle stat-icon"></i>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card" style="--stat-color:#f59e0b;">
+      <div class="stat-value">$<%= parseFloat(rewardSummary?.pending_amount || 0).toFixed(0) %></div>
+      <div class="stat-label">Pending Reward</div>
+      <i class="bi bi-hourglass stat-icon"></i>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card" style="--stat-color:#10b981;">
+      <div class="stat-value">$<%= parseFloat(rewardSummary?.paid_amount || 0).toFixed(0) %></div>
+      <div class="stat-label">Paid Out</div>
+      <i class="bi bi-coin stat-icon"></i>
+    </div>
+  </div>
+</div>
+
+<!-- Recent Tasks -->
+<div class="tf-card">
+  <div class="card-header d-flex align-items-center justify-content-between">
+    <span><i class="bi bi-list-task me-2"></i>MY RECENT TASKS</span>
+    <a href="/tasks" style="font-size:0.75rem;color:var(--tf-accent);text-decoration:none;">View All →</a>
+  </div>
+  <table class="tf-table">
+    <thead>
+      <tr><th>Task</th><th>Type</th><th>Status</th><th>Due</th><th>Reward</th></tr>
+    </thead>
+    <tbody>
+      <% if (recentTasks && recentTasks.length > 0) { %>
+        <% recentTasks.forEach(t => { %>
+        <tr>
+          <td>
+            <a href="/tasks/<%= t.id %>" style="color:var(--tf-text);text-decoration:none;font-weight:500;"><%= t.title %></a>
+          </td>
+          <td><span class="badge badge-<%= t.type %>" style="font-size:0.65rem;border-radius:4px;padding:2px 6px;"><%= t.type %></span></td>
+          <td><span class="badge badge-<%= t.status %>" style="font-size:0.65rem;border-radius:4px;padding:2px 6px;"><%= t.status.replace('_',' ') %></span></td>
+          <td style="font-size:0.8rem;color:var(--tf-text-muted);"><%= t.due_date ? new Date(t.due_date).toLocaleDateString() : '—' %></td>
+          <td style="font-family:var(--tf-font-mono);color:#f59e0b;font-size:0.8rem;">
+            <%= t.reward_amount ? '$' + parseFloat(t.reward_amount).toFixed(2) : '—' %>
+          </td>
+        </tr>
+        <% }) %>
+      <% } else { %>
+      <tr><td colspan="5" style="text-align:center;color:var(--tf-text-muted);padding:2rem;">No tasks assigned yet</td></tr>
+      <% } %>
+    </tbody>
+  </table>
+</div>
+<% } %>

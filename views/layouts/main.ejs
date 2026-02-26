@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= typeof title !== 'undefined' ? title : 'TaskFlow' %></title>
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Bootstrap 5 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  
+  <!-- Bootstrap Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  
+  <style>
+    :root {
+      --tf-bg: #0a0e1a;
+      --tf-surface: #111827;
+      --tf-surface-2: #1a2235;
+      --tf-border: #1e2d45;
+      --tf-accent: #00d4ff;
+      --tf-accent-2: #7c3aed;
+      --tf-success: #10b981;
+      --tf-warning: #f59e0b;
+      --tf-danger: #ef4444;
+      --tf-text: #e2e8f0;
+      --tf-text-muted: #64748b;
+      --tf-sidebar-width: 260px;
+      --tf-font-mono: 'Space Mono', monospace;
+      --tf-font: 'DM Sans', sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    
+    body {
+      font-family: var(--tf-font);
+      background: var(--tf-bg);
+      color: var(--tf-text);
+      min-height: 100vh;
+    }
+
+    /* Sidebar */
+    #sidebar {
+      width: var(--tf-sidebar-width);
+      min-height: 100vh;
+      background: var(--tf-surface);
+      border-right: 1px solid var(--tf-border);
+      position: fixed;
+      top: 0; left: 0; bottom: 0;
+      display: flex;
+      flex-direction: column;
+      z-index: 100;
+      transition: transform 0.3s ease;
+    }
+
+    .sidebar-brand {
+      padding: 1.5rem 1.25rem;
+      border-bottom: 1px solid var(--tf-border);
+    }
+
+    .sidebar-brand .logo-text {
+      font-family: var(--tf-font-mono);
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--tf-accent);
+      letter-spacing: -0.5px;
+    }
+
+    .sidebar-brand .org-badge {
+      font-size: 0.65rem;
+      padding: 2px 8px;
+      border-radius: 20px;
+      margin-left: 8px;
+      font-weight: 600;
+      letter-spacing: 1px;
+    }
+
+    .org-cfc { background: rgba(0,212,255,0.15); color: var(--tf-accent); border: 1px solid rgba(0,212,255,0.3); }
+    .org-our { background: rgba(124,58,237,0.15); color: #a78bfa; border: 1px solid rgba(124,58,237,0.3); }
+
+    .sidebar-nav { flex: 1; padding: 1rem 0; overflow-y: auto; }
+
+    .nav-section-label {
+      font-family: var(--tf-font-mono);
+      font-size: 0.6rem;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--tf-text-muted);
+      padding: 0.5rem 1.25rem 0.25rem;
+    }
+
+    .nav-item a {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.6rem 1.25rem;
+      color: #94a3b8;
+      text-decoration: none;
+      font-size: 0.875rem;
+      font-weight: 500;
+      border-left: 3px solid transparent;
+      transition: all 0.2s;
+    }
+
+    .nav-item a:hover, .nav-item a.active {
+      color: var(--tf-text);
+      background: var(--tf-surface-2);
+      border-left-color: var(--tf-accent);
+    }
+
+    .nav-item a i { font-size: 1rem; width: 20px; text-align: center; }
+
+    .sidebar-footer {
+      padding: 1rem 1.25rem;
+      border-top: 1px solid var(--tf-border);
+    }
+
+    .user-info { display: flex; align-items: center; gap: 0.75rem; }
+
+    .user-avatar {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--tf-accent), var(--tf-accent-2));
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--tf-font-mono);
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: #000;
+      flex-shrink: 0;
+    }
+
+    .user-name { font-size: 0.8rem; font-weight: 600; color: var(--tf-text); line-height: 1.2; }
+    .user-role { font-size: 0.65rem; color: var(--tf-text-muted); font-family: var(--tf-font-mono); }
+
+    /* Main Content */
+    #main-content {
+      margin-left: var(--tf-sidebar-width);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Topbar */
+    #topbar {
+      background: var(--tf-surface);
+      border-bottom: 1px solid var(--tf-border);
+      padding: 0.75rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+
+    .page-title {
+      font-family: var(--tf-font-mono);
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--tf-text);
+      letter-spacing: -0.5px;
+    }
+
+    /* Content Area */
+    .content-area { padding: 1.5rem; flex: 1; }
+
+    /* Cards */
+    .tf-card {
+      background: var(--tf-surface);
+      border: 1px solid var(--tf-border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .tf-card .card-header {
+      background: var(--tf-surface-2);
+      border-bottom: 1px solid var(--tf-border);
+      padding: 1rem 1.25rem;
+      font-family: var(--tf-font-mono);
+      font-size: 0.8rem;
+      letter-spacing: 0.5px;
+    }
+
+    /* Stats Cards */
+    .stat-card {
+      background: var(--tf-surface);
+      border: 1px solid var(--tf-border);
+      border-radius: 12px;
+      padding: 1.25rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: var(--stat-color, var(--tf-accent));
+    }
+
+    .stat-value {
+      font-family: var(--tf-font-mono);
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--tf-text);
+      line-height: 1;
+    }
+
+    .stat-label {
+      font-size: 0.75rem;
+      color: var(--tf-text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-top: 0.25rem;
+    }
+
+    .stat-icon {
+      position: absolute;
+      right: 1.25rem;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 2rem;
+      opacity: 0.1;
+    }
+
+    /* Badges */
+    .badge-pending { background: rgba(245,158,11,0.2); color: #f59e0b; border: 1px solid rgba(245,158,11,0.3); }
+    .badge-in_progress { background: rgba(0,212,255,0.2); color: var(--tf-accent); border: 1px solid rgba(0,212,255,0.3); }
+    .badge-completed { background: rgba(16,185,129,0.2); color: var(--tf-success); border: 1px solid rgba(16,185,129,0.3); }
+    .badge-paid { background: rgba(16,185,129,0.2); color: var(--tf-success); border: 1px solid rgba(16,185,129,0.3); }
+    .badge-daily { background: rgba(0,212,255,0.1); color: #67e8f9; }
+    .badge-weekly { background: rgba(124,58,237,0.2); color: #c4b5fd; }
+    .badge-adhoc { background: rgba(245,158,11,0.1); color: #fcd34d; }
+
+    /* Table */
+    .tf-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+    .tf-table th {
+      font-family: var(--tf-font-mono);
+      font-size: 0.65rem;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--tf-text-muted);
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid var(--tf-border);
+      text-align: left;
+    }
+    .tf-table td {
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid var(--tf-border);
+      color: var(--tf-text);
+      vertical-align: middle;
+    }
+    .tf-table tr:hover td { background: var(--tf-surface-2); }
+    .tf-table tr:last-child td { border-bottom: none; }
+
+    /* Buttons */
+    .btn-tf {
+      font-family: var(--tf-font-mono);
+      font-size: 0.75rem;
+      letter-spacing: 0.5px;
+      border-radius: 6px;
+      padding: 0.4rem 0.9rem;
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-tf-primary {
+      background: var(--tf-accent);
+      color: #000;
+      border-color: var(--tf-accent);
+    }
+    .btn-tf-primary:hover { background: #00b8d9; }
+
+    .btn-tf-outline {
+      background: transparent;
+      color: var(--tf-accent);
+      border-color: var(--tf-accent);
+    }
+    .btn-tf-outline:hover { background: rgba(0,212,255,0.1); }
+
+    .btn-tf-danger { background: var(--tf-danger); color: #fff; }
+    .btn-tf-success { background: var(--tf-success); color: #fff; }
+
+    /* Form Controls */
+    .tf-form-control, .tf-select {
+      background: var(--tf-surface-2);
+      border: 1px solid var(--tf-border);
+      color: var(--tf-text);
+      border-radius: 6px;
+      padding: 0.5rem 0.75rem;
+      font-size: 0.875rem;
+      width: 100%;
+      font-family: var(--tf-font);
+      transition: border-color 0.2s;
+    }
+    .tf-form-control:focus, .tf-select:focus {
+      outline: none;
+      border-color: var(--tf-accent);
+      box-shadow: 0 0 0 3px rgba(0,212,255,0.1);
+    }
+
+    /* Alert */
+    .tf-alert {
+      border-radius: 8px;
+      padding: 0.75rem 1rem;
+      font-size: 0.875rem;
+      border: 1px solid;
+    }
+
+    /* Toast */
+    #toast-container {
+      position: fixed;
+      bottom: 1.5rem;
+      right: 1.5rem;
+      z-index: 9999;
+    }
+
+    .tf-toast {
+      background: var(--tf-surface);
+      border: 1px solid var(--tf-border);
+      border-radius: 8px;
+      padding: 1rem 1.25rem;
+      min-width: 280px;
+      animation: slideIn 0.3s ease;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-top: 0.5rem;
+    }
+
+    @keyframes slideIn {
+      from { transform: translateX(100px); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+
+    /* Progress */
+    .tf-progress {
+      height: 4px;
+      background: var(--tf-border);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .tf-progress-bar {
+      height: 100%;
+      border-radius: 2px;
+      background: var(--tf-accent);
+      transition: width 0.6s ease;
+    }
+
+    /* Mobile menu button */
+    .btn-menu {
+      background: none;
+      border: 1px solid var(--tf-border);
+      color: var(--tf-text);
+      font-size: 1.25rem;
+      padding: 0.25rem 0.5rem;
+      border-radius: 6px;
+      cursor: pointer;
+      display: none;
+      line-height: 1;
+    }
+    .btn-menu:hover { background: var(--tf-surface-2); }
+
+    /* Sidebar overlay for mobile */
+    .sidebar-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 99;
+    }
+    .sidebar-overlay.show { display: block; }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      #sidebar { transform: translateX(-100%); }
+      #sidebar.show { transform: translateX(0); }
+      #main-content { margin-left: 0; }
+      .btn-menu { display: inline-flex; }
+    }
+  </style>
+  <%- style %>
+</head>
+<body>
+
+<!-- Sidebar -->
+<aside id="sidebar">
+  <div class="sidebar-brand">
+    <span class="logo-text">TASKFLOW</span>
+    <span class="org-badge <%= user.org_type === 'CFC' ? 'org-cfc' : 'org-our' %>">
+      <%= user.org_type %>
+    </span>
+    <div class="mt-1" style="font-size:0.7rem;color:var(--tf-text-muted);">
+      <%= user.org_name %>
+    </div>
+  </div>
+
+  <nav class="sidebar-nav">
+    <div class="nav-section-label">Navigation</div>
+    <div class="nav-item">
+      <a href="/dashboard" class="<%= typeof title !== 'undefined' && title.includes('Dashboard') ? 'active' : '' %>">
+        <i class="bi bi-grid-1x2"></i> Dashboard
+      </a>
+    </div>
+    <div class="nav-item">
+      <a href="/tasks" class="<%= typeof title !== 'undefined' && title.includes('Task') && !title.includes('Create') ? 'active' : '' %>">
+        <i class="bi bi-check2-square"></i> Tasks
+      </a>
+    </div>
+
+    <% if (['CFC_ADMIN', 'CFC_MANAGER'].includes(user.role_name)) { %>
+    <div class="nav-item">
+      <a href="/tasks/create">
+        <i class="bi bi-plus-circle"></i> Create Task
+      </a>
+    </div>
+    <% } %>
+
+    <% if (['OUR_ADMIN', 'CFC_ADMIN', 'OUR_MANAGER', 'CFC_MANAGER'].includes(user.role_name)) { %>
+    <div class="nav-section-label mt-2">Reports</div>
+    <div class="nav-item">
+      <a href="/reports/completion">
+        <i class="bi bi-graph-up"></i> Completion
+      </a>
+    </div>
+    <div class="nav-item">
+      <a href="/reports/rewards">
+        <i class="bi bi-cash-stack"></i> Rewards
+      </a>
+    </div>
+    <div class="nav-item">
+      <a href="/attendance">
+        <i class="bi bi-calendar-check"></i> Attendance
+      </a>
+    </div>
+    <% } %>
+
+    <div class="nav-section-label mt-2">Finance</div>
+    <div class="nav-item">
+      <a href="/rewards">
+        <i class="bi bi-coin"></i> Rewards
+      </a>
+    </div>
+
+    <% if (user.role_name === 'OUR_ADMIN') { %>
+    <div class="nav-section-label mt-2">Admin</div>
+    <div class="nav-item">
+      <a href="/users">
+        <i class="bi bi-people"></i> Users
+      </a>
+    </div>
+    <% } %>
+  </nav>
+
+  <div class="sidebar-footer">
+    <div class="user-info">
+      <div class="user-avatar"><%= user.name.charAt(0).toUpperCase() %></div>
+      <div>
+        <div class="user-name"><%= user.name %></div>
+        <div class="user-role"><%= user.role_name %></div>
+      </div>
+      <a href="/auth/logout" class="ms-auto" title="Logout" style="color:var(--tf-text-muted);">
+        <i class="bi bi-box-arrow-right"></i>
+      </a>
+    </div>
+  </div>
+</aside>
+
+<!-- Main Content -->
+<div id="main-content">
+  <div id="topbar">
+    <button id="menuBtn" class="btn-menu d-md-none" aria-label="Toggle menu">
+      <i class="bi bi-list"></i>
+    </button>
+    <div class="page-title"><%= typeof title !== 'undefined' ? title.split(' - ')[0] : 'TaskFlow' %></div>
+    <div class="d-flex align-items-center gap-2">
+      <span class="badge" style="background:var(--tf-surface-2);color:var(--tf-text-muted);font-family:var(--tf-font-mono);font-size:0.65rem;">
+        <%= new Date().toLocaleDateString('en-US', {weekday:'short',month:'short',day:'numeric'}) %>
+      </span>
+    </div>
+  </div>
+
+  <div class="content-area">
+    <%- body %>
+  </div>
+</div>
+
+<!-- Sidebar Overlay (mobile) -->
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+<!-- Toast Container -->
+<div id="toast-container"></div>
+
+<!-- Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.6.2/axios.min.js"></script>
+
+<script>
+// Toast utility
+function showToast(message, type = 'success') {
+  const icons = { success: 'bi-check-circle-fill', error: 'bi-x-circle-fill', info: 'bi-info-circle-fill' };
+  const colors = { success: '#10b981', error: '#ef4444', info: '#00d4ff' };
+  
+  const toast = $(`
+    <div class="tf-toast">
+      <i class="bi ${icons[type]}" style="color:${colors[type]};font-size:1.1rem;"></i>
+      <span style="font-size:0.875rem;">${message}</span>
+    </div>
+  `);
+  
+  $('#toast-container').append(toast);
+  setTimeout(() => toast.fadeOut(300, () => toast.remove()), 4000);
+}
+
+// Mobile sidebar toggle
+(function() {
+  const menuBtn = document.getElementById('menuBtn');
+  const sidebar = document.getElementById('sidebar');
+  const overlay = document.getElementById('sidebarOverlay');
+
+  if (menuBtn && sidebar) {
+    menuBtn.addEventListener('click', function() {
+      sidebar.classList.toggle('show');
+      overlay.classList.toggle('show');
+    });
+
+    overlay.addEventListener('click', function() {
+      sidebar.classList.remove('show');
+      overlay.classList.remove('show');
+    });
+  }
+})();
+
+// Global Axios defaults
+axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
+
+// Handle Axios errors globally
+axios.interceptors.response.use(
+  res => res,
+  err => {
+    if (err.response?.status === 401) window.location.href = '/auth/login';
+    return Promise.reject(err);
+  }
+);
+</script>
+
+<%- script %>
+
+</body>
+</html>

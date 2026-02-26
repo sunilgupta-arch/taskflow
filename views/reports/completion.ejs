@@ -1,0 +1,76 @@
+<!-- Stats Row -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="stat-card" style="--stat-color:#00d4ff;"><div class="stat-value"><%= stats.total %></div><div class="stat-label">Total Tasks</div></div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card" style="--stat-color:#10b981;"><div class="stat-value"><%= stats.completed %></div><div class="stat-label">Completed</div></div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card" style="--stat-color:#f59e0b;"><div class="stat-value"><%= stats.pending %></div><div class="stat-label">Pending</div></div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card" style="--stat-color:#7c3aed;"><div class="stat-value"><%= stats.in_progress %></div><div class="stat-label">In Progress</div></div>
+  </div>
+</div>
+
+<div class="row g-3">
+  <!-- Monthly Breakdown -->
+  <div class="col-lg-5">
+    <div class="tf-card">
+      <div class="card-header"><i class="bi bi-calendar3 me-2"></i>MONTHLY BREAKDOWN (12M)</div>
+      <div class="p-3">
+        <% const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']; %>
+        <% if (monthly.length > 0) { %>
+          <% const maxCount = Math.max(...monthly.map(m => m.count)); %>
+          <% monthly.forEach(m => { %>
+          <div class="mb-2">
+            <div class="d-flex justify-content-between mb-1">
+              <span style="font-size:0.75rem;"><%= months[m.month-1] %> <%= m.year %></span>
+              <span style="font-family:var(--tf-font-mono);font-size:0.75rem;color:#10b981;"><%= m.count %></span>
+            </div>
+            <div class="tf-progress">
+              <div class="tf-progress-bar" style="width:<%= Math.round((m.count/maxCount)*100) %>%;background:#10b981;"></div>
+            </div>
+          </div>
+          <% }) %>
+        <% } else { %>
+        <p style="color:var(--tf-text-muted);font-size:0.875rem;">No completion data yet</p>
+        <% } %>
+      </div>
+    </div>
+  </div>
+
+  <!-- Per User -->
+  <div class="col-lg-7">
+    <div class="tf-card">
+      <div class="card-header"><i class="bi bi-people me-2"></i>COMPLETION BY USER</div>
+      <div style="overflow-x:auto;">
+        <table class="tf-table">
+          <thead>
+            <tr><th>User</th><th>Total</th><th>Done</th><th>Active</th><th>Pending</th><th>Rate</th></tr>
+          </thead>
+          <tbody>
+            <% perUser.forEach(u => { 
+              const rate = u.total_tasks > 0 ? Math.round((u.completed/u.total_tasks)*100) : 0;
+            %>
+            <tr>
+              <td style="font-size:0.875rem;font-weight:500;"><%= u.name %></td>
+              <td style="font-family:var(--tf-font-mono);"><%= u.total_tasks %></td>
+              <td style="color:#10b981;font-family:var(--tf-font-mono);"><%= u.completed %></td>
+              <td style="color:#00d4ff;font-family:var(--tf-font-mono);"><%= u.in_progress %></td>
+              <td style="color:#f59e0b;font-family:var(--tf-font-mono);"><%= u.pending %></td>
+              <td style="min-width:80px;">
+                <div class="tf-progress">
+                  <div class="tf-progress-bar" style="width:<%= rate %>%;"></div>
+                </div>
+                <div style="font-size:0.65rem;color:var(--tf-text-muted);"><%= rate %>%</div>
+              </td>
+            </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>

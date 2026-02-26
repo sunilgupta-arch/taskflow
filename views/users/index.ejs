@@ -1,0 +1,252 @@
+<!-- Header Actions -->
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <form method="GET" action="/users" class="d-flex gap-2">
+    <input type="text" name="search" value="<%= filters.search || '' %>" placeholder="Search users..." class="tf-form-control" style="max-width:200px;">
+    <select name="org_type" class="tf-select" style="max-width:130px;">
+      <option value="">All Orgs</option>
+      <option value="CFC" <%= filters.org_type === 'CFC' ? 'selected' : '' %>>CFC</option>
+      <option value="OUR" <%= filters.org_type === 'OUR' ? 'selected' : '' %>>OUR</option>
+    </select>
+    <button type="submit" class="btn-tf btn-tf-outline">Filter</button>
+  </form>
+  <button class="btn-tf btn-tf-primary" onclick="openCreateModal()">
+    <i class="bi bi-person-plus me-1"></i> Add User
+  </button>
+</div>
+
+<!-- Users Table -->
+<div class="tf-card">
+  <div class="card-header"><i class="bi bi-people me-2"></i>USERS (<%= pagination.total %>)</div>
+  <div style="overflow-x:auto;">
+    <table class="tf-table">
+      <thead>
+        <tr>
+          <th>User</th>
+          <th>Organization</th>
+          <th>Role</th>
+          <th>Weekly Off</th>
+          <th>Leave</th>
+          <th>Status</th>
+          <th>Joined</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% users.forEach(u => { %>
+        <tr>
+          <td>
+            <div style="font-weight:500;"><%= u.name %></div>
+            <div style="font-size:0.7rem;color:var(--tf-text-muted);"><%= u.email %></div>
+          </td>
+          <td>
+            <span class="badge" style="font-size:0.65rem;border-radius:4px;padding:2px 6px;
+              background:<%= u.org_type === 'CFC' ? 'rgba(0,212,255,0.1)' : 'rgba(124,58,237,0.1)' %>;
+              color:<%= u.org_type === 'CFC' ? '#00d4ff' : '#a78bfa' %>;">
+              <%= u.org_type %>
+            </span>
+            <div style="font-size:0.7rem;color:var(--tf-text-muted);margin-top:2px;"><%= u.org_name %></div>
+          </td>
+          <td style="font-family:var(--tf-font-mono);font-size:0.75rem;"><%= u.role_name %></td>
+          <td style="font-size:0.8rem;color:var(--tf-text-muted);"><%= u.weekly_off_day %></td>
+          <td>
+            <button onclick="toggleLeave(<%= u.id %>, <%= u.leave_status %>)" 
+              style="background:none;border:none;cursor:pointer;font-size:0.875rem;color:<%= u.leave_status ? '#ef4444' : 'var(--tf-text-muted)' %>;">
+              <i class="bi bi-<%= u.leave_status ? 'toggle-on' : 'toggle-off' %>"></i>
+            </button>
+          </td>
+          <td>
+            <span style="font-size:0.65rem;border-radius:20px;padding:2px 8px;border:1px solid;
+              background:<%= u.is_active ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)' %>;
+              color:<%= u.is_active ? '#10b981' : '#ef4444' %>;
+              border-color:<%= u.is_active ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)' %>;">
+              <%= u.is_active ? 'Active' : 'Inactive' %>
+            </span>
+          </td>
+          <td style="font-size:0.75rem;color:var(--tf-text-muted);"><%= new Date(u.created_at).toLocaleDateString() %></td>
+          <td>
+            <div class="d-flex gap-1">
+              <button class="btn-tf" style="font-size:0.65rem;padding:2px 8px;background:transparent;color:#00d4ff;border:1px solid rgba(0,212,255,0.3);"
+                onclick="openEditModal(<%= JSON.stringify(u) %>)">Edit</button>
+              <button class="btn-tf" style="font-size:0.65rem;padding:2px 8px;background:transparent;color:#f59e0b;border:1px solid rgba(245,158,11,0.3);"
+                onclick="openResetModal(<%= u.id %>, '<%= u.name.replace(/'/g, "\\'") %>')">Reset Pwd</button>
+              <button class="btn-tf" style="font-size:0.65rem;padding:2px 8px;background:transparent;color:<%= u.is_active ? '#ef4444' : '#10b981' %>;border:1px solid;"
+                onclick="toggleActive(<%= u.id %>)">
+                <%= u.is_active ? 'Deactivate' : 'Activate' %>
+              </button>
+            </div>
+          </td>
+        </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Create/Edit Modal -->
+<div id="userModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:200;align-items:center;justify-content:center;padding:1rem;">
+  <div style="background:var(--tf-surface);border:1px solid var(--tf-border);border-radius:12px;padding:1.5rem;width:100%;max-width:500px;max-height:90vh;overflow-y:auto;">
+    <h6 style="font-family:var(--tf-font-mono);margin-bottom:1.25rem;" id="modalTitle">CREATE USER</h6>
+    
+    <input type="hidden" id="editUserId">
+    
+    <div class="row g-3">
+      <div class="col-12">
+        <label style="font-size:0.7rem;color:var(--tf-text-muted);display:block;margin-bottom:0.3rem;">NAME *</label>
+        <input type="text" id="uName" class="tf-form-control" placeholder="Full name">
+      </div>
+      <div class="col-12">
+        <label style="font-size:0.7rem;color:var(--tf-text-muted);display:block;margin-bottom:0.3rem;">EMAIL *</label>
+        <input type="email" id="uEmail" class="tf-form-control" placeholder="email@example.com">
+      </div>
+      <div class="col-12" id="passwordField">
+        <label style="font-size:0.7rem;color:var(--tf-text-muted);display:block;margin-bottom:0.3rem;">PASSWORD *</label>
+        <input type="password" id="uPassword" class="tf-form-control" placeholder="Min 8 characters">
+      </div>
+      <div class="col-6">
+        <label style="font-size:0.7rem;color:var(--tf-text-muted);display:block;margin-bottom:0.3rem;">ORGANIZATION *</label>
+        <select id="uOrgId" class="tf-select">
+          <% orgs.forEach(o => { %>
+          <option value="<%= o.id %>"><%= o.name %> (<%= o.org_type %>)</option>
+          <% }) %>
+        </select>
+      </div>
+      <div class="col-6">
+        <label style="font-size:0.7rem;color:var(--tf-text-muted);display:block;margin-bottom:0.3rem;">ROLE *</label>
+        <select id="uRoleId" class="tf-select">
+          <% roles.forEach(r => { %>
+          <option value="<%= r.id %>"><%= r.name %></option>
+          <% }) %>
+        </select>
+      </div>
+      <div class="col-12">
+        <label style="font-size:0.7rem;color:var(--tf-text-muted);display:block;margin-bottom:0.3rem;">WEEKLY OFF DAY</label>
+        <select id="uWeeklyOff" class="tf-select">
+          <% ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'].forEach(d => { %>
+          <option value="<%= d %>"><%= d %></option>
+          <% }) %>
+        </select>
+      </div>
+    </div>
+    
+    <div class="d-flex gap-2 mt-4 justify-content-end">
+      <button class="btn-tf btn-tf-outline" onclick="closeUserModal()">Cancel</button>
+      <button class="btn-tf btn-tf-primary" onclick="submitUser()" id="modalSubmitBtn">CREATE</button>
+    </div>
+  </div>
+</div>
+
+<!-- Reset Password Modal -->
+<div id="resetModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:200;align-items:center;justify-content:center;padding:1rem;">
+  <div style="background:var(--tf-surface);border:1px solid var(--tf-border);border-radius:12px;padding:1.5rem;width:100%;max-width:400px;">
+    <h6 style="font-family:var(--tf-font-mono);margin-bottom:1.25rem;">RESET PASSWORD</h6>
+    <p style="font-size:0.8rem;color:var(--tf-text-muted);margin-bottom:1rem;">Resetting password for <strong id="resetUserName"></strong></p>
+    <input type="hidden" id="resetUserId">
+    <div class="mb-3">
+      <label style="font-size:0.7rem;color:var(--tf-text-muted);display:block;margin-bottom:0.3rem;">NEW PASSWORD *</label>
+      <input type="password" id="resetPassword" class="tf-form-control" placeholder="Min 6 characters">
+    </div>
+    <div class="mb-3">
+      <label style="font-size:0.7rem;color:var(--tf-text-muted);display:block;margin-bottom:0.3rem;">CONFIRM PASSWORD *</label>
+      <input type="password" id="resetPasswordConfirm" class="tf-form-control" placeholder="Re-enter password">
+    </div>
+    <div class="d-flex gap-2 justify-content-end">
+      <button class="btn-tf btn-tf-outline" onclick="closeResetModal()">Cancel</button>
+      <button class="btn-tf" style="background:#f59e0b;color:#000;" onclick="submitResetPassword()">Reset Password</button>
+    </div>
+  </div>
+</div>
+
+<script>
+function openCreateModal() {
+  document.getElementById('modalTitle').textContent = 'CREATE USER';
+  document.getElementById('editUserId').value = '';
+  document.getElementById('uName').value = '';
+  document.getElementById('uEmail').value = '';
+  document.getElementById('uPassword').value = '';
+  document.getElementById('passwordField').style.display = 'block';
+  document.getElementById('modalSubmitBtn').textContent = 'CREATE';
+  document.getElementById('userModal').style.display = 'flex';
+}
+function openEditModal(u) {
+  document.getElementById('modalTitle').textContent = 'EDIT USER';
+  document.getElementById('editUserId').value = u.id;
+  document.getElementById('uName').value = u.name;
+  document.getElementById('uEmail').value = u.email;
+  document.getElementById('passwordField').style.display = 'none';
+  document.getElementById('modalSubmitBtn').textContent = 'UPDATE';
+  document.getElementById('userModal').style.display = 'flex';
+}
+function closeUserModal() {
+  document.getElementById('userModal').style.display = 'none';
+}
+async function submitUser() {
+  const id = document.getElementById('editUserId').value;
+  const data = {
+    name: document.getElementById('uName').value,
+    email: document.getElementById('uEmail').value,
+    organization_id: document.getElementById('uOrgId').value,
+    role_id: document.getElementById('uRoleId').value,
+    weekly_off_day: document.getElementById('uWeeklyOff').value,
+    password: document.getElementById('uPassword').value
+  };
+  try {
+    if (id) {
+      await axios.put(`/users/${id}`, data);
+      showToast('User updated');
+    } else {
+      await axios.post('/users', data);
+      showToast('User created');
+    }
+    closeUserModal();
+    setTimeout(() => location.reload(), 800);
+  } catch (e) {
+    showToast(e.response?.data?.message || 'Error', 'error');
+  }
+}
+async function toggleActive(id) {
+  try {
+    await axios.patch(`/users/${id}/toggle`);
+    showToast('Status updated');
+    setTimeout(() => location.reload(), 600);
+  } catch (e) {
+    showToast('Error', 'error');
+  }
+}
+async function toggleLeave(id, current) {
+  try {
+    await axios.patch('/users/leave', { user_id: id, leave_status: current ? 0 : 1 });
+    showToast('Leave status updated');
+    setTimeout(() => location.reload(), 600);
+  } catch (e) {
+    showToast('Error', 'error');
+  }
+}
+function openResetModal(id, name) {
+  document.getElementById('resetUserId').value = id;
+  document.getElementById('resetUserName').textContent = name;
+  document.getElementById('resetPassword').value = '';
+  document.getElementById('resetPasswordConfirm').value = '';
+  document.getElementById('resetModal').style.display = 'flex';
+}
+function closeResetModal() {
+  document.getElementById('resetModal').style.display = 'none';
+}
+async function submitResetPassword() {
+  const id = document.getElementById('resetUserId').value;
+  const password = document.getElementById('resetPassword').value;
+  const confirm = document.getElementById('resetPasswordConfirm').value;
+  if (!password || password.length < 6) {
+    return showToast('Password must be at least 6 characters', 'error');
+  }
+  if (password !== confirm) {
+    return showToast('Passwords do not match', 'error');
+  }
+  try {
+    await axios.post('/users/' + id + '/reset-password', { password: password });
+    showToast('Password reset successfully');
+    closeResetModal();
+  } catch (e) {
+    showToast(e.response?.data?.message || 'Error resetting password', 'error');
+  }
+}
+</script>

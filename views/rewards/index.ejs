@@ -1,0 +1,131 @@
+<!-- Summary Row -->
+<div class="row g-3 mb-4">
+  <div class="col-md-4">
+    <div class="stat-card" style="--stat-color:#00d4ff;">
+      <div class="stat-value">$<%= parseFloat(summary?.total || 0).toFixed(2) %></div>
+      <div class="stat-label">Total Rewards</div>
+      <i class="bi bi-currency-dollar stat-icon"></i>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="stat-card" style="--stat-color:#f59e0b;">
+      <div class="stat-value">$<%= parseFloat(summary?.pending || 0).toFixed(2) %></div>
+      <div class="stat-label">Pending Payment</div>
+      <i class="bi bi-hourglass stat-icon"></i>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="stat-card" style="--stat-color:#10b981;">
+      <div class="stat-value">$<%= parseFloat(summary?.paid || 0).toFixed(2) %></div>
+      <div class="stat-label">Paid Out</div>
+      <i class="bi bi-check-circle stat-icon"></i>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3">
+  <!-- Per User Summary (Admin Only) -->
+  <% if (perUser && ['OUR_ADMIN', 'CFC_ADMIN', 'OUR_MANAGER', 'CFC_MANAGER'].includes(user.role_name)) { %>
+  <div class="col-lg-4">
+    <div class="tf-card">
+      <div class="card-header"><i class="bi bi-people me-2"></i>PER USER</div>
+      <div style="max-height:400px;overflow-y:auto;">
+        <% perUser.forEach(u => { %>
+        <div class="d-flex align-items-center gap-2 p-3" style="border-bottom:1px solid var(--tf-border);">
+          <div class="user-avatar" style="width:32px;height:32px;font-size:0.7rem;"><%= u.name.charAt(0) %></div>
+          <div class="flex-grow-1">
+            <div style="font-size:0.8rem;font-weight:500;"><%= u.name %></div>
+            <div style="font-size:0.65rem;color:var(--tf-text-muted);">
+              Earned: <span style="color:#10b981;">$<%= parseFloat(u.total_earned).toFixed(2) %></span>
+              · Pending: <span style="color:#f59e0b;">$<%= parseFloat(u.pending).toFixed(2) %></span>
+            </div>
+          </div>
+        </div>
+        <% }) %>
+      </div>
+    </div>
+  </div>
+  <% } %>
+
+  <!-- Rewards Ledger -->
+  <div class="<%= perUser && ['OUR_ADMIN', 'CFC_ADMIN', 'OUR_MANAGER', 'CFC_MANAGER'].includes(user.role_name) ? 'col-lg-8' : 'col-12' %>">
+    <div class="tf-card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-receipt me-2"></i>REWARDS LEDGER</span>
+        <div class="d-flex gap-2">
+          <form method="GET" action="/rewards" class="d-flex gap-2">
+            <select name="status" class="tf-select" style="max-width:120px;font-size:0.75rem;">
+              <option value="">All</option>
+              <option value="pending" <%= filters.status === 'pending' ? 'selected' : '' %>>Pending</option>
+              <option value="paid" <%= filters.status === 'paid' ? 'selected' : '' %>>Paid</option>
+            </select>
+            <button type="submit" class="btn-tf btn-tf-outline" style="font-size:0.7rem;padding:4px 10px;">Filter</button>
+          </form>
+        </div>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="tf-table">
+          <thead>
+            <tr>
+              <th>User</th>
+              <th>Task</th>
+              <th>Amount</th>
+              <th>Status</th>
+              <th>Date</th>
+              <% if (user.role_name === 'OUR_ADMIN') { %><th>Action</th><% } %>
+            </tr>
+          </thead>
+          <tbody>
+            <% if (rewards.length > 0) { %>
+              <% rewards.forEach(r => { %>
+              <tr>
+                <td style="font-size:0.8rem;"><%= r.user_name %></td>
+                <td>
+                  <div style="font-size:0.8rem;font-weight:500;"><%= r.task_title %></div>
+                  <div style="font-size:0.65rem;color:var(--tf-text-muted);"><%= r.task_type %></div>
+                </td>
+                <td style="font-family:var(--tf-font-mono);color:#f59e0b;">$<%= parseFloat(r.reward_amount).toFixed(2) %></td>
+                <td>
+                  <span class="badge badge-<%= r.status %>" style="font-size:0.65rem;border-radius:4px;padding:2px 6px;"><%= r.status %></span>
+                </td>
+                <td style="font-size:0.75rem;color:var(--tf-text-muted);">
+                  <% if (r.paid_at) { %>
+                    <span style="color:#10b981;"><%= new Date(r.paid_at).toLocaleDateString() %></span>
+                    <div style="font-size:0.65rem;">by <%= r.paid_by_name %></div>
+                  <% } else { %>
+                    <%= new Date(r.created_at).toLocaleDateString() %>
+                  <% } %>
+                </td>
+                <% if (user.role_name === 'OUR_ADMIN') { %>
+                <td>
+                  <% if (r.status === 'pending') { %>
+                  <button class="btn-tf btn-tf-success" style="font-size:0.65rem;padding:2px 8px;" onclick="markPaid(<%= r.id %>)">
+                    Mark Paid
+                  </button>
+                  <% } %>
+                </td>
+                <% } %>
+              </tr>
+              <% }) %>
+            <% } else { %>
+            <tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--tf-text-muted);">No reward entries found</td></tr>
+            <% } %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+async function markPaid(id) {
+  if (!confirm('Mark this reward as paid?')) return;
+  try {
+    await axios.post(`/rewards/mark-paid/${id}`);
+    showToast('Reward marked as paid!');
+    setTimeout(() => location.reload(), 800);
+  } catch (e) {
+    showToast(e.response?.data?.message || 'Error', 'error');
+  }
+}
+</script>

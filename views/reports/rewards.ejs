@@ -1,0 +1,70 @@
+<!-- Summary -->
+<div class="row g-3 mb-4">
+  <div class="col-md-4">
+    <div class="stat-card" style="--stat-color:#f59e0b;">
+      <div class="stat-value">$<%= parseFloat(summary?.total || 0).toFixed(2) %></div>
+      <div class="stat-label">Total Rewards Earned</div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="stat-card" style="--stat-color:#f59e0b;">
+      <div class="stat-value">$<%= parseFloat(summary?.pending || 0).toFixed(2) %></div>
+      <div class="stat-label">Awaiting Payment</div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="stat-card" style="--stat-color:#10b981;">
+      <div class="stat-value">$<%= parseFloat(summary?.paid || 0).toFixed(2) %></div>
+      <div class="stat-label">Total Paid Out</div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-5">
+    <div class="tf-card">
+      <div class="card-header"><i class="bi bi-person-check me-2"></i>REWARDS BY USER</div>
+      <% perUser.forEach(u => { 
+        const totalForBar = parseFloat(summary?.total || 1);
+        const pct = Math.round((parseFloat(u.total_earned) / totalForBar) * 100);
+      %>
+      <div class="p-3" style="border-bottom:1px solid var(--tf-border);">
+        <div class="d-flex justify-content-between mb-1">
+          <span style="font-size:0.8rem;font-weight:500;"><%= u.name %></span>
+          <span style="font-family:var(--tf-font-mono);color:#f59e0b;font-size:0.8rem;">$<%= parseFloat(u.total_earned).toFixed(2) %></span>
+        </div>
+        <div class="tf-progress mb-1">
+          <div class="tf-progress-bar" style="width:<%= pct %>%;background:#f59e0b;"></div>
+        </div>
+        <div style="font-size:0.65rem;color:var(--tf-text-muted);">
+          Paid: $<%= parseFloat(u.paid).toFixed(2) %> · Pending: $<%= parseFloat(u.pending).toFixed(2) %>
+        </div>
+      </div>
+      <% }) %>
+    </div>
+  </div>
+
+  <div class="col-lg-7">
+    <div class="tf-card">
+      <div class="card-header"><i class="bi bi-receipt me-2"></i>RECENT LEDGER</div>
+      <div style="overflow-x:auto;">
+        <table class="tf-table">
+          <thead>
+            <tr><th>User</th><th>Task</th><th>Amount</th><th>Status</th><th>Date</th></tr>
+          </thead>
+          <tbody>
+            <% ledger.forEach(r => { %>
+            <tr>
+              <td style="font-size:0.8rem;"><%= r.user_name %></td>
+              <td style="font-size:0.8rem;"><%= r.task_title %></td>
+              <td style="font-family:var(--tf-font-mono);color:#f59e0b;font-size:0.8rem;">$<%= parseFloat(r.reward_amount).toFixed(2) %></td>
+              <td><span class="badge badge-<%= r.status %>" style="font-size:0.65rem;border-radius:4px;padding:2px 6px;"><%= r.status %></span></td>
+              <td style="font-size:0.75rem;color:var(--tf-text-muted);"><%= new Date(r.created_at).toLocaleDateString() %></td>
+            </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>

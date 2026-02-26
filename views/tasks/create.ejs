@@ -1,0 +1,89 @@
+<div class="row justify-content-center">
+  <div class="col-lg-7">
+    <div class="tf-card">
+      <div class="card-header"><i class="bi bi-plus-circle me-2"></i>CREATE NEW TASK</div>
+      <div class="p-4">
+        <div id="formError" class="tf-alert" style="display:none;border-color:rgba(239,68,68,0.3);background:rgba(239,68,68,0.1);color:#fca5a5;margin-bottom:1rem;"></div>
+        
+        <form id="createTaskForm">
+          <div class="mb-3">
+            <label style="font-size:0.75rem;color:var(--tf-text-muted);display:block;margin-bottom:0.4rem;text-transform:uppercase;letter-spacing:0.5px;">TITLE *</label>
+            <input type="text" name="title" class="tf-form-control" placeholder="Task title" required maxlength="255">
+          </div>
+          
+          <div class="mb-3">
+            <label style="font-size:0.75rem;color:var(--tf-text-muted);display:block;margin-bottom:0.4rem;text-transform:uppercase;letter-spacing:0.5px;">DESCRIPTION</label>
+            <textarea name="description" class="tf-form-control" rows="4" placeholder="Task description..." style="resize:vertical;"></textarea>
+          </div>
+          
+          <div class="row g-3 mb-3">
+            <div class="col-md-4">
+              <label style="font-size:0.75rem;color:var(--tf-text-muted);display:block;margin-bottom:0.4rem;text-transform:uppercase;letter-spacing:0.5px;">TYPE *</label>
+              <select name="type" class="tf-select" required>
+                <option value="adhoc">Adhoc</option>
+                <option value="daily">Daily (Recurring)</option>
+                <option value="weekly">Weekly (Recurring)</option>
+              </select>
+            </div>
+            <div class="col-md-4">
+              <label style="font-size:0.75rem;color:var(--tf-text-muted);display:block;margin-bottom:0.4rem;text-transform:uppercase;letter-spacing:0.5px;">DUE DATE</label>
+              <input type="date" name="due_date" class="tf-form-control">
+            </div>
+            <div class="col-md-4">
+              <label style="font-size:0.75rem;color:var(--tf-text-muted);display:block;margin-bottom:0.4rem;text-transform:uppercase;letter-spacing:0.5px;">REWARD ($)</label>
+              <input type="number" name="reward_amount" class="tf-form-control" placeholder="0.00" min="0" step="0.01">
+            </div>
+          </div>
+          
+          <div class="mb-4">
+            <label style="font-size:0.75rem;color:var(--tf-text-muted);display:block;margin-bottom:0.4rem;text-transform:uppercase;letter-spacing:0.5px;">ASSIGN TO (OPTIONAL)</label>
+            <select name="assigned_to" class="tf-select">
+              <option value="">Leave unassigned (team can pick)</option>
+              <% ourUsers.forEach(u => { %>
+              <option value="<%= u.id %>"><%= u.name %></option>
+              <% }) %>
+            </select>
+            <div style="font-size:0.7rem;color:var(--tf-text-muted);margin-top:4px;">
+              If unassigned, OUR team members can self-assign the task
+            </div>
+          </div>
+          
+          <div class="d-flex gap-2">
+            <a href="/tasks" class="btn-tf btn-tf-outline text-decoration-none">Cancel</a>
+            <button type="submit" class="btn-tf btn-tf-primary flex-grow-1" id="submitBtn">
+              CREATE TASK
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.getElementById('createTaskForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = document.getElementById('submitBtn');
+  const errDiv = document.getElementById('formError');
+  
+  btn.disabled = true;
+  btn.textContent = 'CREATING...';
+  errDiv.style.display = 'none';
+  
+  const formData = {};
+  new FormData(e.target).forEach((v, k) => { if (v) formData[k] = v; });
+  
+  try {
+    const res = await axios.post('/tasks/create', formData);
+    if (res.data.success) {
+      showToast('Task created successfully!');
+      setTimeout(() => window.location.href = '/tasks', 800);
+    }
+  } catch (err) {
+    errDiv.textContent = err.response?.data?.message || 'Failed to create task';
+    errDiv.style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = 'CREATE TASK';
+  }
+});
+</script>

@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node -e \"require\\(''./routes/index''\\); require\\(''./routes/tasks''\\); require\\(''./models/User''\\); console.log\\(''All files loaded OK''\\)\")",
+      "Bash(npx kill-port 5500)",
+      "Bash(taskkill //F //FI \"WINDOWTITLE eq node*\")",
+      "Bash(fuser -k 5500/tcp)",
+      "Bash(lsof -ti:5500)",
+      "Bash(xargs kill -9)",
+      "Bash(node server.js)",
+      "Bash(node -e \":*)",
+      "Bash(node -e \"require\\(''./routes/tasks''\\); require\\(''./controllers/taskController''\\); require\\(''./services/taskService''\\); console.log\\(''All files loaded OK''\\)\")",
+      "Bash(curl -s -X POST http://localhost:5500/auth/login -H 'Content-Type: application/json' -H 'X-Requested-With: XMLHttpRequest' -d '{\"\"email\"\":\"\"our.admin@taskflow.com\"\",\"\"password\"\":\"\"Password@123\"\"}')",
+      "Bash(node -e \"require\\(''./controllers/rewardController''\\); require\\(''./controllers/taskController''\\); require\\(''./services/taskService''\\); console.log\\(''All OK''\\)\")"
+    ]
+  }
+}
