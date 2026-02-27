@@ -7,12 +7,13 @@
       <option value="pending" <%= filters.status === 'pending' ? 'selected' : '' %>>Pending</option>
       <option value="in_progress" <%= filters.status === 'in_progress' ? 'selected' : '' %>>In Progress</option>
       <option value="completed" <%= filters.status === 'completed' ? 'selected' : '' %>>Completed</option>
+      <option value="deactivated" <%= filters.status === 'deactivated' ? 'selected' : '' %>>Deactivated</option>
     </select>
     <select name="type" class="tf-select" style="max-width:130px;">
       <option value="">All Types</option>
       <option value="daily" <%= filters.type === 'daily' ? 'selected' : '' %>>Daily</option>
       <option value="weekly" <%= filters.type === 'weekly' ? 'selected' : '' %>>Weekly</option>
-      <option value="adhoc" <%= filters.type === 'adhoc' ? 'selected' : '' %>>Adhoc</option>
+      <option value="adhoc" <%= filters.type === 'adhoc' ? 'selected' : '' %>>One Time</option>
     </select>
     <button type="submit" class="btn-tf btn-tf-outline">Filter</button>
   </form>
@@ -63,10 +64,22 @@
               </div>
               <% } %>
             </td>
-            <td><span class="badge badge-<%= task.type %>" style="font-size:0.65rem;border-radius:4px;padding:2px 6px;"><%= task.type %></span></td>
+            <td><span class="badge badge-<%= task.type %>" style="font-size:0.65rem;border-radius:4px;padding:2px 6px;"><%= task.type === 'adhoc' ? 'one time' : task.type %></span></td>
             <td>
-              <% if (task.assigned_to_name) { %>
-                <span style="font-size:0.8rem;"><%= task.assigned_to_name %></span>
+              <% if (task.assignee_names) { %>
+                <% const names = task.assignee_names.split(', '); %>
+                <% if (names.length === 1) { %>
+                  <span style="font-size:0.8rem;"><%= names[0] %></span>
+                <% } else { %>
+                  <span class="assignee-group" style="font-size:0.8rem;cursor:pointer;color:#00d4ff;" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'">
+                    <%= names.length %> users <i class="bi bi-chevron-down" style="font-size:0.6rem;"></i>
+                  </span>
+                  <div style="display:none;font-size:0.75rem;margin-top:4px;padding:6px 8px;background:rgba(0,212,255,0.05);border:1px solid rgba(0,212,255,0.15);border-radius:6px;">
+                    <% names.forEach(name => { %>
+                      <div style="padding:2px 0;color:var(--tf-text-muted);"><i class="bi bi-person" style="margin-right:4px;"></i><%= name %></div>
+                    <% }) %>
+                  </div>
+                <% } %>
               <% } else { %>
                 <span style="color:var(--tf-text-muted);font-size:0.75rem;">Unassigned</span>
                 <% if (user.role_name === 'OUR_USER') { %>
@@ -88,18 +101,32 @@
               <%= task.reward_amount ? '$' + parseFloat(task.reward_amount).toFixed(2) : '—' %>
             </td>
             <td>
-              <div class="d-flex gap-1">
-                <% if (['CFC_ADMIN', 'CFC_MANAGER', 'OUR_ADMIN', 'OUR_MANAGER'].includes(user.role_name) && task.status !== 'completed') { %>
-                <button class="btn-tf" style="font-size:0.65rem;padding:2px 8px;background:transparent;color:#00d4ff;border:1px solid rgba(0,212,255,0.3);" 
-                  onclick="openAssignModal(<%= task.id %>, '<%= task.assigned_to_name || '' %>')">
+              <div class="d-flex gap-1 flex-wrap">
+                <% if (['CFC_ADMIN', 'CFC_MANAGER', 'OUR_ADMIN', 'OUR_MANAGER'].includes(user.role_name) && !['completed','deactivated'].includes(task.status)) { %>
+                <button class="btn-tf" style="font-size:0.65rem;padding:2px 8px;background:transparent;color:#00d4ff;border:1px solid rgba(0,212,255,0.3);"
+                  onclick="openAssignModal(<%= task.id %>, '<%= task.assignee_names || '' %>')">
                   Assign
                 </button>
                 <% } %>
-                
-                <% if (user.role_name === 'OUR_USER' && task.assigned_to === user.id && task.status !== 'completed') { %>
-                <button class="btn-tf" style="font-size:0.65rem;padding:2px 8px;background:rgba(16,185,129,0.1);color:#10b981;border:1px solid rgba(16,185,129,0.3);" 
+
+                <% if (user.role_name === 'OUR_USER' && task.assigned_to === user.id && !['completed','deactivated'].includes(task.status)) { %>
+                <button class="btn-tf" style="font-size:0.65rem;padding:2px 8px;background:rgba(16,185,129,0.1);color:#10b981;border:1px solid rgba(16,185,129,0.3);"
                   onclick="completeTask(<%= task.id %>)">
                   Complete
+                </button>
+                <% } %>
+
+                <% if (['CFC_ADMIN', 'CFC_MANAGER'].includes(user.role_name) && task.status !== 'deactivated' && task.status !== 'completed') { %>
+                <button class="btn-tf" style="font-size:0.65rem;padding:2px 8px;background:rgba(245,158,11,0.1);color:#f59e0b;border:1px solid rgba(245,158,11,0.3);"
+                  onclick="deactivateTask(<%= task.id %>)">
+                  Deactivate
+                </button>
+                <% } %>
+
+                <% if (['CFC_ADMIN'].includes(user.role_name) && task.status === 'deactivated') { %>
+                <button class="btn-tf" style="font-size:0.65rem;padding:2px 8px;background:rgba(239,68,68,0.1);color:#ef4444;border:1px solid rgba(239,68,68,0.3);"
+                  onclick="deleteTask(<%= task.id %>)">
+                  Delete
                 </button>
                 <% } %>
               </div>
@@ -144,24 +171,40 @@
     <h6 style="font-family:var(--tf-font-mono);margin-bottom:1rem;">ASSIGN TASK</h6>
     <input type="hidden" id="assignTaskId">
     <div class="mb-3">
-      <label style="font-size:0.75rem;color:var(--tf-text-muted);display:block;margin-bottom:0.4rem;">ASSIGN TO</label>
-      <select id="assignUserId" class="tf-select">
-        <option value="">Select user...</option>
+      <label style="font-size:0.75rem;color:var(--tf-text-muted);display:block;margin-bottom:0.4rem;">SELECT USERS</label>
+      <div id="assignUserList" style="max-height:200px;overflow-y:auto;border:1px solid var(--tf-border);border-radius:8px;padding:8px;">
         <% ourUsers.forEach(u => { %>
-        <option value="<%= u.id %>"><%= u.name %> (<%= u.role_name %>)</option>
+        <label style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:0.8rem;cursor:pointer;color:var(--tf-text);">
+          <input type="checkbox" class="assign-user-cb" value="<%= u.id %>" style="accent-color:#00d4ff;">
+          <%= u.name %> <span style="font-size:0.7rem;color:var(--tf-text-muted);">(<%= u.role_name %>)</span>
+        </label>
         <% }) %>
-      </select>
+      </div>
     </div>
     <div class="d-flex gap-2 justify-content-end">
       <button class="btn-tf btn-tf-outline" onclick="closeAssignModal()">Cancel</button>
-      <button class="btn-tf btn-tf-primary" onclick="submitAssign()">Assign</button>
+      <button class="btn-tf btn-tf-primary" onclick="submitAssign()">Save</button>
     </div>
   </div>
 </div>
 
 <script>
-function openAssignModal(taskId, currentAssignee) {
+const ourUsersMap = {
+  <% ourUsers.forEach(u => { %>'<%= u.id %>': '<%= u.name %>',<% }) %>
+};
+
+function openAssignModal(taskId, currentAssigneeNames) {
   document.getElementById('assignTaskId').value = taskId;
+  // Reset all checkboxes
+  document.querySelectorAll('.assign-user-cb').forEach(cb => cb.checked = false);
+  // Pre-check current assignees by matching names
+  if (currentAssigneeNames) {
+    const names = currentAssigneeNames.split(', ').map(n => n.trim());
+    document.querySelectorAll('.assign-user-cb').forEach(cb => {
+      const userName = ourUsersMap[cb.value];
+      if (userName && names.includes(userName)) cb.checked = true;
+    });
+  }
   document.getElementById('assignModal').style.display = 'flex';
 }
 function closeAssignModal() {
@@ -169,15 +212,15 @@ function closeAssignModal() {
 }
 async function submitAssign() {
   const taskId = document.getElementById('assignTaskId').value;
-  const userId = document.getElementById('assignUserId').value;
-  if (!userId) return showToast('Please select a user', 'error');
+  const selected = [...document.querySelectorAll('.assign-user-cb:checked')].map(cb => cb.value);
+  if (!selected.length) return showToast('Please select at least one user', 'error');
   try {
-    await axios.post('/tasks/assign', { task_id: taskId, assigned_to: userId });
-    showToast('Task assigned successfully');
+    await axios.post('/tasks/assign', { task_id: taskId, assigned_to: selected });
+    showToast('Task assignees updated');
     closeAssignModal();
     setTimeout(() => location.reload(), 800);
   } catch (e) {
-    showToast(e.response?.data?.message || 'Failed to assign task', 'error');
+    showToast(e.response?.data?.message || 'Failed to update assignees', 'error');
   }
 }
 async function pickTask(taskId) {
@@ -198,6 +241,26 @@ async function completeTask(taskId) {
     setTimeout(() => location.reload(), 800);
   } catch (e) {
     showToast(e.response?.data?.message || 'Failed to complete task', 'error');
+  }
+}
+async function deactivateTask(taskId) {
+  if (!confirm('Deactivate this task? It will no longer be active.')) return;
+  try {
+    await axios.post(`/tasks/deactivate/${taskId}`);
+    showToast('Task deactivated');
+    setTimeout(() => location.reload(), 800);
+  } catch (e) {
+    showToast(e.response?.data?.message || 'Failed to deactivate task', 'error');
+  }
+}
+async function deleteTask(taskId) {
+  if (!confirm('Permanently delete this task? This cannot be undone.')) return;
+  try {
+    await axios.delete(`/tasks/${taskId}`);
+    showToast('Task deleted');
+    setTimeout(() => location.reload(), 800);
+  } catch (e) {
+    showToast(e.response?.data?.message || 'Failed to delete task', 'error');
   }
 }
 </script>

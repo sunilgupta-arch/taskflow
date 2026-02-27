@@ -11,7 +11,9 @@
       "Bash(node -e \":*)",
       "Bash(node -e \"require\\(''./routes/tasks''\\); require\\(''./controllers/taskController''\\); require\\(''./services/taskService''\\); console.log\\(''All files loaded OK''\\)\")",
       "Bash(curl -s -X POST http://localhost:5500/auth/login -H 'Content-Type: application/json' -H 'X-Requested-With: XMLHttpRequest' -d '{\"\"email\"\":\"\"our.admin@taskflow.com\"\",\"\"password\"\":\"\"Password@123\"\"}')",
-      "Bash(node -e \"require\\(''./controllers/rewardController''\\); require\\(''./controllers/taskController''\\); require\\(''./services/taskService''\\); console.log\\(''All OK''\\)\")"
+      "Bash(node -e \"require\\(''./controllers/rewardController''\\); require\\(''./controllers/taskController''\\); require\\(''./services/taskService''\\); console.log\\(''All OK''\\)\")",
+      "Bash(ls -la /c/Users/sunil-work/Documents/projects/taskflow/*.js)",
+      "Bash(npm install socket.io)"
     ]
   }
 }

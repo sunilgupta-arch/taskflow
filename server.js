@@ -1,10 +1,15 @@
 require('dotenv').config();
 const express = require('express');
+const http = require('http');
 const expressLayouts = require('express-ejs-layouts');
 const cookieParser = require('cookie-parser');
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
+const jwt = require('jsonwebtoken');
+const cookie = require('cookie');
+const db = require('./config/db');
+const { init: initSocket } = require('./config/socket');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -76,10 +81,55 @@ const { startCronJobs } = require('./utils/cronJobs');
 startCronJobs();
 
 // ============================================================
-// Start Server
+// Start Server + Socket.IO
 // ============================================================
-app.listen(PORT, () => {
+const server = http.createServer(app);
+const io = initSocket(server);
+
+// Socket.IO authentication middleware
+io.use(async (socket, next) => {
+  try {
+    const rawCookie = socket.handshake.headers.cookie || '';
+    const cookies = cookie.parse(rawCookie);
+    const token = cookies.token;
+
+    if (!token) return next(new Error('Authentication required'));
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const [users] = await db.query(
+      `SELECT u.*, r.name as role_name, r.organization_type, o.name as org_name, o.org_type
+       FROM users u
+       JOIN roles r ON u.role_id = r.id
+       JOIN organizations o ON u.organization_id = o.id
+       WHERE u.id = ? AND u.is_active = 1`,
+      [decoded.id]
+    );
+
+    if (!users.length) return next(new Error('User not found'));
+
+    socket.user = users[0];
+    next();
+  } catch (err) {
+    next(new Error('Invalid token'));
+  }
+});
+
+// Socket.IO connection handler
+io.on('connection', (socket) => {
+  const user = socket.user;
+
+  // Join user-specific room
+  socket.join(`user:${user.id}`);
+
+  // Join admins room if user is admin or manager
+  if (['CFC_ADMIN', 'CFC_MANAGER', 'OUR_ADMIN', 'OUR_MANAGER'].includes(user.role_name)) {
+    socket.join('admins');
+  }
+});
+
+server.listen(PORT, () => {
   console.log(`\n🚀 TaskFlow running at http://localhost:${PORT}`);
+  console.log(`🔌 Socket.IO ready`);
   console.log(`📦 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`\nDefault credentials:`);
   console.log(`  CFC Admin  : cfc.admin@taskflow.com / Password@123`);

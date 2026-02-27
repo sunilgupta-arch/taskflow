@@ -2,6 +2,7 @@ const TaskModel = require('../models/Task');
 const TaskService = require('../services/taskService');
 const { ApiResponse, getPagination, getPaginationMeta } = require('../utils/response');
 const db = require('../config/db');
+const { getIO } = require('../config/socket');
 
 class TaskController {
   // GET /tasks
@@ -65,6 +66,19 @@ class TaskController {
       const task = await TaskModel.findById(req.params.id);
       if (!task) return res.status(404).render('error', { title: 'Not Found', message: 'Task not found', code: 404, layout: false });
 
+      // Fetch all group assignees if this is a grouped task
+      let groupAssignees = [];
+      if (task.group_id) {
+        const [rows] = await db.query(
+          `SELECT t.id as task_id, t.assigned_to, t.status, u.name, u.email
+           FROM tasks t
+           LEFT JOIN users u ON t.assigned_to = u.id
+           WHERE t.group_id = ? AND t.is_deleted = 0
+           ORDER BY u.name`, [task.group_id]
+        );
+        groupAssignees = rows;
+      }
+
       const [attachments] = await db.query(
         `SELECT ta.*, u.name as uploaded_by_name FROM task_attachments ta
          JOIN users u ON ta.uploaded_by = u.id
@@ -81,7 +95,7 @@ class TaskController {
          ORDER BY c.created_at ASC`, [task.id]
       );
 
-      res.render('tasks/show', { title: task.title, task, attachments, comments, role: req.user.role_name });
+      res.render('tasks/show', { title: task.title, task, attachments, comments, groupAssignees, role: req.user.role_name });
     } catch (err) {
       res.status(500).render('error', { title: 'Error', message: err.message, code: 500, layout: false });
     }
@@ -112,7 +126,34 @@ class TaskController {
   static async assign(req, res) {
     try {
       const { task_id, assigned_to } = req.body;
+      // If assigned_to is an array, this is a group assignee update
+      if (Array.isArray(assigned_to)) {
+        await TaskService.updateGroupAssignees(task_id, assigned_to);
+
+        // Notify each assigned user via socket
+        const task = await TaskModel.findById(task_id);
+        const io = getIO();
+        assigned_to.forEach(userId => {
+          io.to(`user:${userId}`).emit('task:assigned', {
+            message: `You have been assigned to "${task.title}"`,
+            taskId: task_id,
+            taskTitle: task.title
+          });
+        });
+
+        return ApiResponse.success(res, {}, 'Task assignees updated successfully');
+      }
       await TaskService.assignTask(task_id, assigned_to, req.user.role_name);
+
+      // Notify the assigned user via socket
+      const task = await TaskModel.findById(task_id);
+      const io = getIO();
+      io.to(`user:${assigned_to}`).emit('task:assigned', {
+        message: `You have been assigned to "${task.title}"`,
+        taskId: task_id,
+        taskTitle: task.title
+      });
+
       return ApiResponse.success(res, {}, 'Task assigned successfully');
     } catch (err) {
       return ApiResponse.error(res, err.message, 400);
@@ -133,6 +174,16 @@ class TaskController {
   static async complete(req, res) {
     try {
       const task = await TaskService.completeTask(req.params.id, req.user.id);
+
+      // Notify all admins/managers via socket
+      const io = getIO();
+      io.to('admins').emit('task:completed', {
+        message: `${req.user.name} completed "${task.title}"`,
+        taskId: task.id,
+        taskTitle: task.title,
+        completedBy: req.user.name
+      });
+
       return ApiResponse.success(res, task, 'Task marked as completed');
     } catch (err) {
       return ApiResponse.error(res, err.message, 400);
@@ -150,10 +201,20 @@ class TaskController {
     }
   }
 
+  // POST /tasks/deactivate/:id
+  static async deactivate(req, res) {
+    try {
+      await TaskService.deactivateTask(req.params.id);
+      return ApiResponse.success(res, {}, 'Task deactivated successfully');
+    } catch (err) {
+      return ApiResponse.error(res, err.message, 400);
+    }
+  }
+
   // DELETE /tasks/:id
   static async destroy(req, res) {
     try {
-      await TaskModel.softDelete(req.params.id);
+      await TaskService.deleteTask(req.params.id);
       return ApiResponse.success(res, {}, 'Task deleted');
     } catch (err) {
       return ApiResponse.error(res, err.message, 400);

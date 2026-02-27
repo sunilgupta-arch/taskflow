@@ -14,6 +14,7 @@ router.post('/create', requireRoles('CFC_ADMIN', 'CFC_MANAGER'), auditLog('CREAT
 router.post('/assign', requireRoles('CFC_ADMIN', 'CFC_MANAGER', 'OUR_ADMIN', 'OUR_MANAGER'), auditLog('ASSIGN', 'task'), TaskController.assign);
 router.post('/pick/:id', requireRoles('OUR_USER'), TaskController.pick);
 router.post('/complete/:id', requireRoles('OUR_USER', 'OUR_MANAGER', 'OUR_ADMIN'), auditLog('COMPLETE', 'task'), TaskController.complete);
+router.post('/deactivate/:id', requireRoles('CFC_ADMIN', 'CFC_MANAGER'), auditLog('DEACTIVATE', 'task'), TaskController.deactivate);
 router.get('/:id', TaskController.show);
 router.post('/:id/comments', TaskController.addComment);
 router.post('/:id/upload', upload.array('files', 5), TaskController.uploadAttachments);

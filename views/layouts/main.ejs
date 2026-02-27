@@ -231,6 +231,7 @@
     .badge-pending { background: rgba(245,158,11,0.2); color: #f59e0b; border: 1px solid rgba(245,158,11,0.3); }
     .badge-in_progress { background: rgba(0,212,255,0.2); color: var(--tf-accent); border: 1px solid rgba(0,212,255,0.3); }
     .badge-completed { background: rgba(16,185,129,0.2); color: var(--tf-success); border: 1px solid rgba(16,185,129,0.3); }
+    .badge-deactivated { background: rgba(107,114,128,0.2); color: #9ca3af; border: 1px solid rgba(107,114,128,0.3); }
     .badge-paid { background: rgba(16,185,129,0.2); color: var(--tf-success); border: 1px solid rgba(16,185,129,0.3); }
     .badge-daily { background: rgba(0,212,255,0.1); color: #67e8f9; }
     .badge-weekly { background: rgba(124,58,237,0.2); color: #c4b5fd; }
@@ -501,6 +502,7 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.6.2/axios.min.js"></script>
+<script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
 
 <script>
 // Toast utility
@@ -549,6 +551,25 @@ axios.interceptors.response.use(
     return Promise.reject(err);
   }
 );
+
+// Socket.IO - Real-time notifications
+(function() {
+  if (typeof io === 'undefined') return;
+
+  var socket = io({ withCredentials: true });
+
+  socket.on('connect', function() {
+    console.log('[Socket] Connected:', socket.id);
+  });
+
+  socket.on('task:assigned', function(data) {
+    showToast(data.message, 'info');
+  });
+
+  socket.on('task:completed', function(data) {
+    showToast(data.message, 'info');
+  });
+})();
 </script>
 
 <%- script %>

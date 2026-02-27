@@ -9,7 +9,23 @@ class TaskService {
       throw new Error('Only CFC organization can create tasks');
     }
 
-    const taskId = await TaskModel.create({ ...data, created_by: creator.id });
+    const assignees = Array.isArray(data.assigned_to) ? data.assigned_to : [];
+    const baseData = { ...data, created_by: creator.id };
+
+    // Multiple assignees: create one task row per person, linked by group_id
+    if (assignees.length > 1) {
+      const firstTaskId = await TaskModel.create({ ...baseData, assigned_to: assignees[0] });
+      // Use first task's ID as the group_id for all rows
+      await TaskModel.update(firstTaskId, { group_id: firstTaskId });
+      for (let i = 1; i < assignees.length; i++) {
+        await TaskModel.create({ ...baseData, assigned_to: assignees[i], group_id: firstTaskId });
+      }
+      return TaskModel.findById(firstTaskId);
+    }
+
+    // Single or no assignee: no group needed
+    if (assignees.length === 1) baseData.assigned_to = assignees[0];
+    const taskId = await TaskModel.create(baseData);
     return TaskModel.findById(taskId);
   }
 
@@ -78,6 +94,81 @@ class TaskService {
       throw err;
     } finally {
       conn.release();
+    }
+  }
+
+  static async updateGroupAssignees(taskId, userIds) {
+    const task = await TaskModel.findById(taskId);
+    if (!task) throw new Error('Task not found');
+
+    const groupId = task.group_id || task.id;
+
+    // Get all current tasks in the group
+    const [currentTasks] = await db.query(
+      `SELECT * FROM tasks WHERE group_id = ? AND is_deleted = 0`, [groupId]
+    );
+
+    const currentUserIds = currentTasks.map(t => String(t.assigned_to));
+    const newUserIds = userIds.map(String);
+
+    // Users to remove: in current but not in new
+    const toRemove = currentTasks.filter(t => !newUserIds.includes(String(t.assigned_to)));
+    for (const t of toRemove) {
+      await TaskModel.softDelete(t.id);
+    }
+
+    // Users to add: in new but not in current
+    const toAdd = newUserIds.filter(uid => !currentUserIds.includes(uid));
+    // Use the first task as a template
+    const template = currentTasks[0] || task;
+    for (const userId of toAdd) {
+      await TaskModel.create({
+        title: template.title,
+        description: template.description,
+        type: template.type,
+        assigned_to: userId,
+        created_by: template.created_by,
+        group_id: groupId,
+        due_date: template.due_date,
+        reward_amount: template.reward_amount,
+        status: 'pending'
+      });
+    }
+
+    // If this was a solo task being turned into a group, set group_id on original
+    if (!task.group_id && newUserIds.length > 1) {
+      await TaskModel.update(task.id, { group_id: task.id });
+    }
+  }
+
+  static async deactivateTask(taskId) {
+    const task = await TaskModel.findById(taskId);
+    if (!task) throw new Error('Task not found');
+
+    if (task.group_id) {
+      // Deactivate all tasks in the group
+      await db.query(
+        `UPDATE tasks SET status = 'deactivated' WHERE group_id = ? AND is_deleted = 0`,
+        [task.group_id]
+      );
+    } else {
+      await TaskModel.update(taskId, { status: 'deactivated' });
+    }
+  }
+
+  static async deleteTask(taskId) {
+    const task = await TaskModel.findById(taskId);
+    if (!task) throw new Error('Task not found');
+    if (task.status !== 'deactivated') throw new Error('Task must be deactivated before deletion');
+
+    if (task.group_id) {
+      // Delete all tasks in the group
+      await db.query(
+        `UPDATE tasks SET is_deleted = 1 WHERE group_id = ? AND is_deleted = 0`,
+        [task.group_id]
+      );
+    } else {
+      await TaskModel.softDelete(taskId);
     }
   }
 

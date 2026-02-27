@@ -19,7 +19,19 @@
           </div>
           <div class="col-6 col-md-3">
             <div style="font-size:0.65rem;color:var(--tf-text-muted);text-transform:uppercase;letter-spacing:0.5px;">Assigned To</div>
-            <div style="font-size:0.875rem;margin-top:2px;"><%= task.assigned_to_name || 'Unassigned' %></div>
+            <div style="font-size:0.875rem;margin-top:2px;">
+              <% if (groupAssignees && groupAssignees.length > 1) { %>
+                <% groupAssignees.forEach((a, i) => { %>
+                  <div style="display:flex;align-items:center;gap:6px;padding:2px 0;">
+                    <i class="bi bi-person" style="font-size:0.75rem;color:var(--tf-text-muted);"></i>
+                    <span><%= a.name %></span>
+                    <span class="badge badge-<%= a.status %>" style="font-size:0.55rem;padding:1px 5px;border-radius:3px;"><%= a.status.replace('_',' ') %></span>
+                  </div>
+                <% }) %>
+              <% } else { %>
+                <%= task.assigned_to_name || 'Unassigned' %>
+              <% } %>
+            </div>
           </div>
           <div class="col-6 col-md-3">
             <div style="font-size:0.65rem;color:var(--tf-text-muted);text-transform:uppercase;letter-spacing:0.5px;">Due Date</div>

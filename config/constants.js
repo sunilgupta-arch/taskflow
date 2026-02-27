@@ -15,7 +15,8 @@ module.exports = {
   TASK_STATUS: {
     PENDING: 'pending',
     IN_PROGRESS: 'in_progress',
-    COMPLETED: 'completed'
+    COMPLETED: 'completed',
+    DEACTIVATED: 'deactivated'
   },
 
   TASK_TYPE: {

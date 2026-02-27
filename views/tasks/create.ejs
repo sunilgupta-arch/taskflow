@@ -20,7 +20,7 @@
             <div class="col-md-4">
               <label style="font-size:0.75rem;color:var(--tf-text-muted);display:block;margin-bottom:0.4rem;text-transform:uppercase;letter-spacing:0.5px;">TYPE *</label>
               <select name="type" class="tf-select" required>
-                <option value="adhoc">Adhoc</option>
+                <option value="adhoc">One Time</option>
                 <option value="daily">Daily (Recurring)</option>
                 <option value="weekly">Weekly (Recurring)</option>
               </select>
@@ -37,14 +37,13 @@
           
           <div class="mb-4">
             <label style="font-size:0.75rem;color:var(--tf-text-muted);display:block;margin-bottom:0.4rem;text-transform:uppercase;letter-spacing:0.5px;">ASSIGN TO (OPTIONAL)</label>
-            <select name="assigned_to" class="tf-select">
-              <option value="">Leave unassigned (team can pick)</option>
+            <select name="assigned_to" class="tf-select" multiple size="4" style="min-height:80px;">
               <% ourUsers.forEach(u => { %>
               <option value="<%= u.id %>"><%= u.name %></option>
               <% }) %>
             </select>
             <div style="font-size:0.7rem;color:var(--tf-text-muted);margin-top:4px;">
-              If unassigned, OUR team members can self-assign the task
+              Hold Ctrl/Cmd to select multiple. Leave empty for unassigned (team can pick)
             </div>
           </div>
           
@@ -61,6 +60,29 @@
 </div>
 
 <script>
+const typeSelect = document.querySelector('select[name="type"]');
+const dueDateInput = document.querySelector('input[name="due_date"]');
+
+function getToday() {
+  return new Date().toISOString().split('T')[0];
+}
+
+function handleTypeChange() {
+  const type = typeSelect.value;
+  if (type === 'daily') {
+    dueDateInput.value = getToday();
+    dueDateInput.readOnly = true;
+    dueDateInput.style.opacity = '0.6';
+  } else {
+    dueDateInput.readOnly = false;
+    dueDateInput.style.opacity = '1';
+    if (type === 'adhoc') dueDateInput.value = '';
+  }
+}
+
+typeSelect.addEventListener('change', handleTypeChange);
+handleTypeChange();
+
 document.getElementById('createTaskForm').addEventListener('submit', async (e) => {
   e.preventDefault();
   const btn = document.getElementById('submitBtn');
@@ -71,7 +93,15 @@ document.getElementById('createTaskForm').addEventListener('submit', async (e) =
   errDiv.style.display = 'none';
   
   const formData = {};
-  new FormData(e.target).forEach((v, k) => { if (v) formData[k] = v; });
+  new FormData(e.target).forEach((v, k) => {
+    if (!v) return;
+    if (k === 'assigned_to') {
+      if (!formData.assigned_to) formData.assigned_to = [];
+      formData.assigned_to.push(v);
+    } else {
+      formData[k] = v;
+    }
+  });
   
   try {
     const res = await axios.post('/tasks/create', formData);

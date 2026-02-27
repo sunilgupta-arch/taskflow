@@ -13,13 +13,24 @@ const dailyTaskJob = cron.schedule('0 0 * * *', async () => {
       `SELECT * FROM tasks WHERE type = 'daily' AND status = 'completed' AND is_deleted = 0`
     );
 
+    const today = new Date().toISOString().split('T')[0];
+    const newGroupIds = new Map(); // old group_id -> new group_id
+
     for (const task of tasks) {
-      // Create a new instance for today
-      await db.query(
-        `INSERT INTO tasks (title, description, type, assigned_to, created_by, reward_amount, status)
-         VALUES (?, ?, 'daily', ?, ?, ?, 'pending')`,
-        [task.title, task.description, task.assigned_to, task.created_by, task.reward_amount]
+      const [result] = await db.query(
+        `INSERT INTO tasks (title, description, type, assigned_to, created_by, reward_amount, status, due_date)
+         VALUES (?, ?, 'daily', ?, ?, ?, 'pending', ?)`,
+        [task.title, task.description, task.assigned_to, task.created_by, task.reward_amount, today]
       );
+
+      // Preserve grouping for multi-assigned tasks
+      if (task.group_id) {
+        if (!newGroupIds.has(task.group_id)) {
+          // First task in this group — use its new ID as the new group_id
+          newGroupIds.set(task.group_id, result.insertId);
+        }
+        await db.query(`UPDATE tasks SET group_id = ? WHERE id = ?`, [newGroupIds.get(task.group_id), result.insertId]);
+      }
     }
 
     console.log(`[CRON] Created ${tasks.length} daily task(s)`);
@@ -38,15 +49,25 @@ const weeklyTaskJob = cron.schedule('0 0 * * 1', async () => {
       `SELECT * FROM tasks WHERE type = 'weekly' AND status = 'completed' AND is_deleted = 0`
     );
 
+    const newGroupIds = new Map();
+
     for (const task of tasks) {
       const dueDate = new Date();
       dueDate.setDate(dueDate.getDate() + 6); // End of week
 
-      await db.query(
+      const [result] = await db.query(
         `INSERT INTO tasks (title, description, type, assigned_to, created_by, reward_amount, status, due_date)
          VALUES (?, ?, 'weekly', ?, ?, ?, 'pending', ?)`,
         [task.title, task.description, task.assigned_to, task.created_by, task.reward_amount, dueDate.toISOString().split('T')[0]]
       );
+
+      // Preserve grouping for multi-assigned tasks
+      if (task.group_id) {
+        if (!newGroupIds.has(task.group_id)) {
+          newGroupIds.set(task.group_id, result.insertId);
+        }
+        await db.query(`UPDATE tasks SET group_id = ? WHERE id = ?`, [newGroupIds.get(task.group_id), result.insertId]);
+      }
     }
 
     console.log(`[CRON] Created ${tasks.length} weekly task(s)`);

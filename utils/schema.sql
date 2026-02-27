@@ -58,9 +58,10 @@ CREATE TABLE IF NOT EXISTS tasks (
   type ENUM('daily','weekly','adhoc') NOT NULL DEFAULT 'adhoc',
   assigned_to INT UNSIGNED DEFAULT NULL,
   created_by INT UNSIGNED NOT NULL,
+  group_id INT UNSIGNED DEFAULT NULL,
   due_date DATE DEFAULT NULL,
   reward_amount DECIMAL(10,2) DEFAULT NULL,
-  status ENUM('pending','in_progress','completed') DEFAULT 'pending',
+  status ENUM('pending','in_progress','completed','deactivated') DEFAULT 'pending',
   is_deleted TINYINT(1) DEFAULT 0,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   completed_at TIMESTAMP DEFAULT NULL,
@@ -71,7 +72,8 @@ CREATE TABLE IF NOT EXISTS tasks (
   INDEX idx_assigned (assigned_to),
   INDEX idx_created_by (created_by),
   INDEX idx_type (type),
-  INDEX idx_deleted (is_deleted)
+  INDEX idx_deleted (is_deleted),
+  INDEX idx_group (group_id)
 ) ENGINE=InnoDB;
 
 -- ============================================================
