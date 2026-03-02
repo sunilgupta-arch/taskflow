@@ -146,6 +146,24 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 ) ENGINE=InnoDB;
 
 -- ============================================================
+-- TASK COMMENTS
+-- ============================================================
+CREATE TABLE IF NOT EXISTS task_comments (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  task_id INT UNSIGNED NOT NULL,
+  user_id INT UNSIGNED NOT NULL,
+  comment TEXT NOT NULL,
+  parent_id INT UNSIGNED DEFAULT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (parent_id) REFERENCES task_comments(id) ON DELETE CASCADE,
+  INDEX idx_task (task_id),
+  INDEX idx_user (user_id),
+  INDEX idx_parent (parent_id)
+) ENGINE=InnoDB;
+
+-- ============================================================
 -- NOTES (Personal user notes / diary)
 -- ============================================================
 CREATE TABLE IF NOT EXISTS notes (
