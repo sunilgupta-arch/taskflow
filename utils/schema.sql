@@ -3,6 +3,14 @@
 -- ============================================================
 
 CREATE DATABASE IF NOT EXISTS taskflow_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- ============================================================
+-- DATABASE USER
+-- ============================================================
+CREATE USER IF NOT EXISTS 'user_taskflow'@'%' IDENTIFIED BY '269608Raj$';
+GRANT ALL PRIVILEGES ON taskflow_db.* TO 'user_taskflow'@'%';
+FLUSH PRIVILEGES;
+
 USE taskflow_db;
 
 -- ============================================================
