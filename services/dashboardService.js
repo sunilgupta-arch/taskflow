@@ -3,12 +3,12 @@ const TaskService = require('./taskService');
 const RewardModel = require('../models/Reward');
 
 class DashboardService {
-  static async getAdminDashboard() {
+  static async getAdminDashboard(orgType = null) {
     const [taskStats, rewardSummary, attendanceSummary, perUserStats, perUserRewards] = await Promise.all([
-      TaskService.getTaskStats(),
+      TaskService.getTaskStats(null, orgType),
       RewardModel.getGlobalSummary(),
       this.getAttendanceSummary(),
-      TaskService.getCompletionPerUser(),
+      TaskService.getCompletionPerUser(orgType),
       RewardModel.getPerUserSummary()
     ]);
 

@@ -8,17 +8,17 @@ async function seed() {
   try {
     // Organizations
     await db.query(`INSERT IGNORE INTO organizations (id, name, org_type) VALUES
-      (1, 'CFC Corporation', 'CFC'),
-      (2, 'Our Execution Team', 'OUR')`);
+      (1, 'Client Corporation', 'CLIENT'),
+      (2, 'Local Execution Team', 'LOCAL')`);
     console.log('✅ Organizations seeded');
 
     // Roles
     await db.query(`INSERT IGNORE INTO roles (id, name, organization_type) VALUES
-      (1, 'CFC_ADMIN', 'CFC'),
-      (2, 'CFC_MANAGER', 'CFC'),
-      (3, 'OUR_ADMIN', 'OUR'),
-      (4, 'OUR_MANAGER', 'OUR'),
-      (5, 'OUR_USER', 'OUR')`);
+      (1, 'CLIENT_ADMIN', 'CLIENT'),
+      (2, 'CLIENT_MANAGER', 'CLIENT'),
+      (3, 'LOCAL_ADMIN', 'LOCAL'),
+      (4, 'LOCAL_MANAGER', 'LOCAL'),
+      (5, 'LOCAL_USER', 'LOCAL')`);
     console.log('✅ Roles seeded');
 
     // Users
@@ -54,11 +54,11 @@ async function seed() {
     console.log('✅ Tasks & rewards seeded');
     console.log('\n🎉 Seed complete! Login credentials:');
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log('CFC Admin    : cfc.admin@taskflow.com / Password@123');
-    console.log('CFC Manager  : cfc.manager@taskflow.com / Password@123');
-    console.log('Our Admin    : our.admin@taskflow.com / Password@123');
-    console.log('Our Manager  : our.manager@taskflow.com / Password@123');
-    console.log('Our User 1   : our.user1@taskflow.com / Password@123');
+    console.log('Client Admin   : cfc.admin@taskflow.com / Password@123');
+    console.log('Client Manager : cfc.manager@taskflow.com / Password@123');
+    console.log('Local Admin    : our.admin@taskflow.com / Password@123');
+    console.log('Local Manager  : our.manager@taskflow.com / Password@123');
+    console.log('Local User 1   : our.user1@taskflow.com / Password@123');
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     
     process.exit(0);

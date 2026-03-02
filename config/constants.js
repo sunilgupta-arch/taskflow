@@ -1,15 +1,15 @@
 module.exports = {
   ROLES: {
-    CFC_ADMIN: 'CFC_ADMIN',
-    CFC_MANAGER: 'CFC_MANAGER',
-    OUR_ADMIN: 'OUR_ADMIN',
-    OUR_MANAGER: 'OUR_MANAGER',
-    OUR_USER: 'OUR_USER'
+    CLIENT_ADMIN: 'CLIENT_ADMIN',
+    CLIENT_MANAGER: 'CLIENT_MANAGER',
+    LOCAL_ADMIN: 'LOCAL_ADMIN',
+    LOCAL_MANAGER: 'LOCAL_MANAGER',
+    LOCAL_USER: 'LOCAL_USER'
   },
 
   ORG_TYPES: {
-    CFC: 'CFC',
-    OUR: 'OUR'
+    CLIENT: 'CLIENT',
+    LOCAL: 'LOCAL'
   },
 
   TASK_STATUS: {
@@ -31,25 +31,25 @@ module.exports = {
   },
 
   PERMISSIONS: {
-    CFC_ADMIN: [
+    CLIENT_ADMIN: [
       'task:create', 'task:assign', 'task:reward',
       'report:view', 'dashboard:admin', 'analytics:view'
     ],
-    CFC_MANAGER: [
+    CLIENT_MANAGER: [
       'task:create', 'task:assign', 'task:reward',
       'report:view', 'dashboard:manager'
     ],
-    OUR_ADMIN: [
-      'user:create', 'user:manage', 'task:reassign',
+    LOCAL_ADMIN: [
+      'user:create', 'user:manage', 'task:create', 'task:reassign',
       'report:view', 'reward:mark_paid', 'leave:manage',
       'dashboard:admin', 'analytics:view'
     ],
-    OUR_MANAGER: [
-      'task:reassign', 'report:view', 'dashboard:manager'
+    LOCAL_MANAGER: [
+      'task:create', 'task:reassign', 'user:create', 'report:view', 'dashboard:manager'
     ],
-    OUR_USER: [
+    LOCAL_USER: [
       'task:view_assigned', 'task:pick', 'task:update_status',
-      'task:upload_attachment', 'task:complete', 'dashboard:user'
+      'task:upload_attachment', 'task:complete', 'task:create_self', 'dashboard:user'
     ]
   }
 };

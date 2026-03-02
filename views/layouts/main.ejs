@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en" data-bs-theme="dark">
+<script>(function(){var t=localStorage.getItem('tf-theme')||'dark';document.documentElement.setAttribute('data-bs-theme',t);})()</script>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -17,6 +18,13 @@
   
   <style>
     :root {
+      --tf-sidebar-width: 260px;
+      --tf-font-mono: 'Space Mono', monospace;
+      --tf-font: 'DM Sans', sans-serif;
+    }
+
+    /* Dark Theme (default) */
+    [data-bs-theme="dark"] {
       --tf-bg: #0a0e1a;
       --tf-surface: #111827;
       --tf-surface-2: #1a2235;
@@ -28,9 +36,23 @@
       --tf-danger: #ef4444;
       --tf-text: #e2e8f0;
       --tf-text-muted: #64748b;
-      --tf-sidebar-width: 260px;
-      --tf-font-mono: 'Space Mono', monospace;
-      --tf-font: 'DM Sans', sans-serif;
+      --tf-nav-link: #94a3b8;
+    }
+
+    /* Light Theme */
+    [data-bs-theme="light"] {
+      --tf-bg: #f1f5f9;
+      --tf-surface: #ffffff;
+      --tf-surface-2: #f8fafc;
+      --tf-border: #e2e8f0;
+      --tf-accent: #0284c7;
+      --tf-accent-2: #7c3aed;
+      --tf-success: #059669;
+      --tf-warning: #d97706;
+      --tf-danger: #dc2626;
+      --tf-text: #1e293b;
+      --tf-text-muted: #64748b;
+      --tf-nav-link: #475569;
     }
 
     * { box-sizing: border-box; }
@@ -78,8 +100,8 @@
       letter-spacing: 1px;
     }
 
-    .org-cfc { background: rgba(0,212,255,0.15); color: var(--tf-accent); border: 1px solid rgba(0,212,255,0.3); }
-    .org-our { background: rgba(124,58,237,0.15); color: #a78bfa; border: 1px solid rgba(124,58,237,0.3); }
+    .org-client { background: rgba(0,212,255,0.15); color: var(--tf-accent); border: 1px solid rgba(0,212,255,0.3); }
+    .org-local { background: rgba(124,58,237,0.15); color: #a78bfa; border: 1px solid rgba(124,58,237,0.3); }
 
     .sidebar-nav { flex: 1; padding: 1rem 0; overflow-y: auto; }
 
@@ -97,7 +119,7 @@
       align-items: center;
       gap: 0.75rem;
       padding: 0.6rem 1.25rem;
-      color: #94a3b8;
+      color: var(--tf-nav-link);
       text-decoration: none;
       font-size: 0.875rem;
       font-weight: 500;
@@ -193,6 +215,20 @@
       position: relative;
       overflow: hidden;
     }
+
+    .stat-card-link {
+      display: block;
+      text-decoration: none;
+      color: inherit;
+      cursor: pointer;
+      transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+    }
+    .stat-card-link:hover {
+      transform: translateY(-2px);
+      border-color: var(--stat-color, var(--tf-accent));
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    .stat-card-link:active { transform: translateY(0); }
 
     .stat-card::before {
       content: '';
@@ -368,6 +404,31 @@
     }
     .btn-menu:hover { background: var(--tf-surface-2); }
 
+    /* Theme Toggle Button */
+    .btn-theme-toggle {
+      background: var(--tf-surface-2);
+      border: 1px solid var(--tf-border);
+      color: var(--tf-text-muted);
+      width: 34px; height: 34px;
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: 0.9rem;
+    }
+    .btn-theme-toggle:hover {
+      color: var(--tf-accent);
+      border-color: var(--tf-accent);
+      background: rgba(0,212,255,0.05);
+    }
+
+    /* Light theme badge adjustments */
+    [data-bs-theme="light"] .badge-daily { background: rgba(2,132,199,0.1); color: #0284c7; }
+    [data-bs-theme="light"] .badge-weekly { background: rgba(124,58,237,0.1); color: #7c3aed; }
+    [data-bs-theme="light"] .badge-adhoc { background: rgba(217,119,6,0.1); color: #d97706; }
+    [data-bs-theme="light"] .org-client { background: rgba(2,132,199,0.1); color: #0284c7; border-color: rgba(2,132,199,0.3); }
+    [data-bs-theme="light"] .org-local { background: rgba(124,58,237,0.1); color: #7c3aed; border-color: rgba(124,58,237,0.3); }
+
     /* Sidebar overlay for mobile */
     .sidebar-overlay {
       display: none;
@@ -394,7 +455,7 @@
 <aside id="sidebar">
   <div class="sidebar-brand">
     <span class="logo-text">TASKFLOW</span>
-    <span class="org-badge <%= user.org_type === 'CFC' ? 'org-cfc' : 'org-our' %>">
+    <span class="org-badge <%= user.org_type === 'CLIENT' ? 'org-client' : 'org-local' %>">
       <%= user.org_type %>
     </span>
     <div class="mt-1" style="font-size:0.7rem;color:var(--tf-text-muted);">
@@ -410,20 +471,26 @@
       </a>
     </div>
     <div class="nav-item">
-      <a href="/tasks" class="<%= typeof title !== 'undefined' && title.includes('Task') && !title.includes('Create') ? 'active' : '' %>">
+      <a href="/tasks" class="<%= typeof title !== 'undefined' && title === 'Task Management' ? 'active' : '' %>">
         <i class="bi bi-check2-square"></i> Tasks
       </a>
     </div>
 
-    <% if (['CFC_ADMIN', 'CFC_MANAGER'].includes(user.role_name)) { %>
+    <% if (['LOCAL_ADMIN', 'LOCAL_MANAGER'].includes(user.role_name)) { %>
+    <div class="nav-item">
+      <a href="/tasks/my" class="<%= typeof title !== 'undefined' && title === 'My Tasks' ? 'active' : '' %>">
+        <i class="bi bi-person-check"></i> My Tasks
+      </a>
+    </div>
+    <% } %>
+
     <div class="nav-item">
       <a href="/tasks/create">
         <i class="bi bi-plus-circle"></i> Create Task
       </a>
     </div>
-    <% } %>
 
-    <% if (['OUR_ADMIN', 'CFC_ADMIN', 'OUR_MANAGER', 'CFC_MANAGER'].includes(user.role_name)) { %>
+    <% if (['LOCAL_ADMIN', 'CLIENT_ADMIN', 'LOCAL_MANAGER', 'CLIENT_MANAGER'].includes(user.role_name)) { %>
     <div class="nav-section-label mt-2">Reports</div>
     <div class="nav-item">
       <a href="/reports/completion">
@@ -449,7 +516,14 @@
       </a>
     </div>
 
-    <% if (user.role_name === 'OUR_ADMIN') { %>
+    <div class="nav-section-label mt-2">Personal</div>
+    <div class="nav-item">
+      <a href="/notes" class="<%= typeof title !== 'undefined' && title === 'My Notes' ? 'active' : '' %>">
+        <i class="bi bi-journal-text"></i> My Notes
+      </a>
+    </div>
+
+    <% if (['LOCAL_ADMIN', 'LOCAL_MANAGER'].includes(user.role_name)) { %>
     <div class="nav-section-label mt-2">Admin</div>
     <div class="nav-item">
       <a href="/users">
@@ -484,6 +558,10 @@
       <span class="badge" style="background:var(--tf-surface-2);color:var(--tf-text-muted);font-family:var(--tf-font-mono);font-size:0.65rem;">
         <%= new Date().toLocaleDateString('en-US', {weekday:'short',month:'short',day:'numeric'}) %>
       </span>
+      <button id="themeToggle" class="btn-theme-toggle" aria-label="Toggle theme">
+        <i class="bi bi-sun-fill" id="themeIconLight" style="display:none;"></i>
+        <i class="bi bi-moon-stars-fill" id="themeIconDark"></i>
+      </button>
     </div>
   </div>
 
@@ -538,6 +616,28 @@ function showToast(message, type = 'success') {
       overlay.classList.remove('show');
     });
   }
+})();
+
+// Theme toggle
+(function() {
+  var toggle = document.getElementById('themeToggle');
+  var iconLight = document.getElementById('themeIconLight');
+  var iconDark = document.getElementById('themeIconDark');
+
+  function applyIcons() {
+    var current = document.documentElement.getAttribute('data-bs-theme');
+    iconLight.style.display = current === 'dark' ? 'none' : 'inline';
+    iconDark.style.display = current === 'dark' ? 'inline' : 'none';
+  }
+  applyIcons();
+
+  toggle.addEventListener('click', function() {
+    var current = document.documentElement.getAttribute('data-bs-theme');
+    var next = current === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-bs-theme', next);
+    localStorage.setItem('tf-theme', next);
+    applyIcons();
+  });
 })();
 
 // Global Axios defaults

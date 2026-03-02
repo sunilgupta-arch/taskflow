@@ -18,9 +18,9 @@ const dailyTaskJob = cron.schedule('0 0 * * *', async () => {
 
     for (const task of tasks) {
       const [result] = await db.query(
-        `INSERT INTO tasks (title, description, type, assigned_to, created_by, reward_amount, status, due_date)
-         VALUES (?, ?, 'daily', ?, ?, ?, 'pending', ?)`,
-        [task.title, task.description, task.assigned_to, task.created_by, task.reward_amount, today]
+        `INSERT INTO tasks (title, description, type, assigned_to, created_by, created_by_org, reward_amount, status, due_date)
+         VALUES (?, ?, 'daily', ?, ?, ?, ?, 'pending', ?)`,
+        [task.title, task.description, task.assigned_to, task.created_by, task.created_by_org || 'CLIENT', task.reward_amount, today]
       );
 
       // Preserve grouping for multi-assigned tasks
@@ -56,9 +56,9 @@ const weeklyTaskJob = cron.schedule('0 0 * * 1', async () => {
       dueDate.setDate(dueDate.getDate() + 6); // End of week
 
       const [result] = await db.query(
-        `INSERT INTO tasks (title, description, type, assigned_to, created_by, reward_amount, status, due_date)
-         VALUES (?, ?, 'weekly', ?, ?, ?, 'pending', ?)`,
-        [task.title, task.description, task.assigned_to, task.created_by, task.reward_amount, dueDate.toISOString().split('T')[0]]
+        `INSERT INTO tasks (title, description, type, assigned_to, created_by, created_by_org, reward_amount, status, due_date)
+         VALUES (?, ?, 'weekly', ?, ?, ?, ?, 'pending', ?)`,
+        [task.title, task.description, task.assigned_to, task.created_by, task.created_by_org || 'CLIENT', task.reward_amount, dueDate.toISOString().split('T')[0]]
       );
 
       // Preserve grouping for multi-assigned tasks

@@ -11,7 +11,7 @@ USE taskflow_db;
 CREATE TABLE IF NOT EXISTS organizations (
   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(100) NOT NULL,
-  org_type ENUM('CFC', 'OUR') NOT NULL,
+  org_type ENUM('CLIENT', 'LOCAL') NOT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS organizations (
 CREATE TABLE IF NOT EXISTS roles (
   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(50) NOT NULL UNIQUE,
-  organization_type ENUM('CFC', 'OUR') NOT NULL,
+  organization_type ENUM('CLIENT', 'LOCAL') NOT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
@@ -58,6 +58,7 @@ CREATE TABLE IF NOT EXISTS tasks (
   type ENUM('daily','weekly','adhoc') NOT NULL DEFAULT 'adhoc',
   assigned_to INT UNSIGNED DEFAULT NULL,
   created_by INT UNSIGNED NOT NULL,
+  created_by_org ENUM('CLIENT', 'LOCAL') NOT NULL DEFAULT 'CLIENT',
   group_id INT UNSIGNED DEFAULT NULL,
   due_date DATE DEFAULT NULL,
   reward_amount DECIMAL(10,2) DEFAULT NULL,
@@ -73,7 +74,8 @@ CREATE TABLE IF NOT EXISTS tasks (
   INDEX idx_created_by (created_by),
   INDEX idx_type (type),
   INDEX idx_deleted (is_deleted),
-  INDEX idx_group (group_id)
+  INDEX idx_group (group_id),
+  INDEX idx_created_by_org (created_by_org)
 ) ENGINE=InnoDB;
 
 -- ============================================================
@@ -140,5 +142,20 @@ CREATE TABLE IF NOT EXISTS audit_logs (
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
   INDEX idx_user (user_id),
   INDEX idx_entity (entity_type, entity_id),
+  INDEX idx_created (created_at)
+) ENGINE=InnoDB;
+
+-- ============================================================
+-- NOTES (Personal user notes / diary)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS notes (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  user_id INT UNSIGNED NOT NULL,
+  title VARCHAR(255) NOT NULL,
+  content TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  INDEX idx_user (user_id),
   INDEX idx_created (created_at)
 ) ENGINE=InnoDB;

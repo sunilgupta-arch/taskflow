@@ -8,7 +8,7 @@ class RewardController {
       const role = req.user.role_name;
 
       // Non-admins see only their own rewards
-      const isRegularUser = ['OUR_USER', 'OUR_MANAGER', 'CFC_MANAGER'].includes(role);
+      const isRegularUser = ['LOCAL_USER', 'LOCAL_MANAGER', 'CLIENT_MANAGER'].includes(role);
       const filterUserId = isRegularUser ? req.user.id : user_id;
 
       const { rows, total } = await RewardModel.getAll({ status, user_id: filterUserId, page, limit });

@@ -122,7 +122,7 @@ io.on('connection', (socket) => {
   socket.join(`user:${user.id}`);
 
   // Join admins room if user is admin or manager
-  if (['CFC_ADMIN', 'CFC_MANAGER', 'OUR_ADMIN', 'OUR_MANAGER'].includes(user.role_name)) {
+  if (['CLIENT_ADMIN', 'CLIENT_MANAGER', 'LOCAL_ADMIN', 'LOCAL_MANAGER'].includes(user.role_name)) {
     socket.join('admins');
   }
 });
@@ -132,9 +132,9 @@ server.listen(PORT, () => {
   console.log(`🔌 Socket.IO ready`);
   console.log(`📦 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`\nDefault credentials:`);
-  console.log(`  CFC Admin  : cfc.admin@taskflow.com / Password@123`);
-  console.log(`  OUR Admin  : our.admin@taskflow.com / Password@123`);
-  console.log(`  OUR User   : our.user1@taskflow.com / Password@123\n`);
+  console.log(`  Client Admin : cfc.admin@taskflow.com / Password@123`);
+  console.log(`  Local Admin  : our.admin@taskflow.com / Password@123`);
+  console.log(`  Local User   : our.user1@taskflow.com / Password@123\n`);
 });
 
 module.exports = app;

@@ -4,20 +4,30 @@
       <div class="card-header"><i class="bi bi-plus-circle me-2"></i>CREATE NEW TASK</div>
       <div class="p-4">
         <div id="formError" class="tf-alert" style="display:none;border-color:rgba(239,68,68,0.3);background:rgba(239,68,68,0.1);color:#fca5a5;margin-bottom:1rem;"></div>
-        
+
         <form id="createTaskForm">
           <div class="mb-3">
-            <label style="font-size:0.75rem;color:var(--tf-text-muted);display:block;margin-bottom:0.4rem;text-transform:uppercase;letter-spacing:0.5px;">TITLE *</label>
-            <input type="text" name="title" class="tf-form-control" placeholder="Task title" required maxlength="255">
+            <div class="d-flex justify-content-between align-items-center" style="margin-bottom:0.4rem;">
+              <label style="font-size:0.75rem;color:var(--tf-text-muted);text-transform:uppercase;letter-spacing:0.5px;margin:0;">TITLE *</label>
+              <button type="button" id="voiceTitleBtn" onclick="toggleVoiceInput('title')" class="btn-tf" style="font-size:0.65rem;padding:2px 8px;background:transparent;color:var(--tf-text-muted);border:1px solid var(--tf-border);" title="Voice input for title">
+                <i class="bi bi-mic" id="voiceTitleIcon"></i> <span id="voiceTitleLabel">Dictate</span>
+              </button>
+            </div>
+            <input type="text" id="taskTitle" name="title" class="tf-form-control" placeholder="Task title" required maxlength="255">
           </div>
-          
+
           <div class="mb-3">
-            <label style="font-size:0.75rem;color:var(--tf-text-muted);display:block;margin-bottom:0.4rem;text-transform:uppercase;letter-spacing:0.5px;">DESCRIPTION</label>
-            <textarea name="description" class="tf-form-control" rows="4" placeholder="Task description..." style="resize:vertical;"></textarea>
+            <div class="d-flex justify-content-between align-items-center" style="margin-bottom:0.4rem;">
+              <label style="font-size:0.75rem;color:var(--tf-text-muted);text-transform:uppercase;letter-spacing:0.5px;margin:0;">DESCRIPTION</label>
+              <button type="button" id="voiceDescBtn" onclick="toggleVoiceInput('desc')" class="btn-tf" style="font-size:0.65rem;padding:2px 8px;background:transparent;color:var(--tf-text-muted);border:1px solid var(--tf-border);" title="Voice input for description">
+                <i class="bi bi-mic" id="voiceDescIcon"></i> <span id="voiceDescLabel">Dictate</span>
+              </button>
+            </div>
+            <textarea id="taskDesc" name="description" class="tf-form-control" rows="4" placeholder="Task description or use voice input..." style="resize:vertical;"></textarea>
           </div>
-          
+
           <div class="row g-3 mb-3">
-            <div class="col-md-4">
+            <div class="<%= role === 'LOCAL_USER' ? 'col-md-6' : 'col-md-4' %>">
               <label style="font-size:0.75rem;color:var(--tf-text-muted);display:block;margin-bottom:0.4rem;text-transform:uppercase;letter-spacing:0.5px;">TYPE *</label>
               <select name="type" class="tf-select" required>
                 <option value="adhoc">One Time</option>
@@ -25,16 +35,19 @@
                 <option value="weekly">Weekly (Recurring)</option>
               </select>
             </div>
-            <div class="col-md-4">
+            <div class="<%= role === 'LOCAL_USER' ? 'col-md-6' : 'col-md-4' %>">
               <label style="font-size:0.75rem;color:var(--tf-text-muted);display:block;margin-bottom:0.4rem;text-transform:uppercase;letter-spacing:0.5px;">DUE DATE</label>
               <input type="date" name="due_date" class="tf-form-control">
             </div>
+            <% if (role !== 'LOCAL_USER') { %>
             <div class="col-md-4">
-              <label style="font-size:0.75rem;color:var(--tf-text-muted);display:block;margin-bottom:0.4rem;text-transform:uppercase;letter-spacing:0.5px;">REWARD ($)</label>
-              <input type="number" name="reward_amount" class="tf-form-control" placeholder="0.00" min="0" step="0.01">
+              <label style="font-size:0.75rem;color:var(--tf-text-muted);display:block;margin-bottom:0.4rem;text-transform:uppercase;letter-spacing:0.5px;">REWARD (PTS)</label>
+              <input type="number" name="reward_amount" class="tf-form-control" placeholder="0" min="0" step="1">
             </div>
+            <% } %>
           </div>
-          
+
+          <% if (role !== 'LOCAL_USER') { %>
           <div class="mb-4">
             <label style="font-size:0.75rem;color:var(--tf-text-muted);display:block;margin-bottom:0.4rem;text-transform:uppercase;letter-spacing:0.5px;">ASSIGN TO (OPTIONAL)</label>
             <select name="assigned_to" class="tf-select" multiple size="4" style="min-height:80px;">
@@ -46,7 +59,14 @@
               Hold Ctrl/Cmd to select multiple. Leave empty for unassigned (team can pick)
             </div>
           </div>
-          
+          <% } else { %>
+          <div class="mb-4">
+            <div class="tf-alert" style="border-color:rgba(124,58,237,0.3);background:rgba(124,58,237,0.1);color:#a78bfa;">
+              <i class="bi bi-info-circle me-1"></i> This task will be auto-assigned to you.
+            </div>
+          </div>
+          <% } %>
+
           <div class="d-flex gap-2">
             <a href="/tasks" class="btn-tf btn-tf-outline text-decoration-none">Cancel</a>
             <button type="submit" class="btn-tf btn-tf-primary flex-grow-1" id="submitBtn">
@@ -87,11 +107,11 @@ document.getElementById('createTaskForm').addEventListener('submit', async (e) =
   e.preventDefault();
   const btn = document.getElementById('submitBtn');
   const errDiv = document.getElementById('formError');
-  
+
   btn.disabled = true;
   btn.textContent = 'CREATING...';
   errDiv.style.display = 'none';
-  
+
   const formData = {};
   new FormData(e.target).forEach((v, k) => {
     if (!v) return;
@@ -102,7 +122,7 @@ document.getElementById('createTaskForm').addEventListener('submit', async (e) =
       formData[k] = v;
     }
   });
-  
+
   try {
     const res = await axios.post('/tasks/create', formData);
     if (res.data.success) {
@@ -116,4 +136,100 @@ document.getElementById('createTaskForm').addEventListener('submit', async (e) =
     btn.textContent = 'CREATE TASK';
   }
 });
+
+// Voice Input (Speech-to-Text)
+var recognition = null;
+var activeVoiceField = null; // 'title' or 'desc'
+
+function toggleVoiceInput(field) {
+  if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+    return showToast('Voice input is not supported in this browser', 'error');
+  }
+
+  // If already recording this field, stop it
+  if (recognition && activeVoiceField === field) {
+    stopVoice();
+    return;
+  }
+
+  // If recording a different field, stop that first
+  if (recognition) stopVoice();
+
+  var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  recognition = new SpeechRecognition();
+  recognition.continuous = field === 'desc';
+  recognition.interimResults = true;
+  recognition.lang = 'en-US';
+  activeVoiceField = field;
+
+  var input = document.getElementById(field === 'title' ? 'taskTitle' : 'taskDesc');
+  var existingText = input.value;
+
+  recognition.onresult = function(e) {
+    var interim = '';
+    var final = '';
+    for (var i = e.resultIndex; i < e.results.length; i++) {
+      if (e.results[i].isFinal) {
+        final += e.results[i][0].transcript;
+      } else {
+        interim += e.results[i][0].transcript;
+      }
+    }
+    if (final) {
+      existingText += (existingText ? ' ' : '') + final;
+      input.value = existingText;
+    }
+    if (interim) {
+      input.value = existingText + (existingText ? ' ' : '') + interim;
+    }
+  };
+
+  recognition.onerror = function(e) {
+    if (e.error !== 'aborted') showToast('Voice error: ' + e.error, 'error');
+    stopVoice();
+  };
+
+  recognition.onend = function() {
+    if (recognition && activeVoiceField === field) {
+      if (field === 'desc') {
+        try { recognition.start(); } catch(e) { stopVoice(); }
+      } else {
+        stopVoice();
+      }
+    }
+  };
+
+  recognition.start();
+  setVoiceBtnState(field, true);
+  showToast('Listening... speak now', 'info');
+}
+
+function stopVoice() {
+  var field = activeVoiceField;
+  if (recognition) {
+    activeVoiceField = null;
+    try { recognition.stop(); } catch(e) {}
+    recognition = null;
+  }
+  if (field) setVoiceBtnState(field, false);
+}
+
+function setVoiceBtnState(field, active) {
+  var prefix = field === 'title' ? 'voiceTitle' : 'voiceDesc';
+  var icon = document.getElementById(prefix + 'Icon');
+  var label = document.getElementById(prefix + 'Label');
+  var btn = document.getElementById(prefix + 'Btn');
+  if (!icon || !btn) return;
+  if (active) {
+    icon.className = 'bi bi-mic-fill';
+    label.textContent = 'Stop';
+    btn.style.color = '#ef4444';
+    btn.style.borderColor = '#ef4444';
+  } else {
+    icon.className = 'bi bi-mic';
+    label.textContent = 'Dictate';
+    btn.style.color = 'var(--tf-text-muted)';
+    btn.style.borderColor = 'var(--tf-border)';
+  }
+}
 </script>

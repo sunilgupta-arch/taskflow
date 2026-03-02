@@ -2,19 +2,19 @@
 <div class="row g-3 mb-4">
   <div class="col-md-4">
     <div class="stat-card" style="--stat-color:#f59e0b;">
-      <div class="stat-value">$<%= parseFloat(summary?.total || 0).toFixed(2) %></div>
+      <div class="stat-value"><%= parseFloat(summary?.total || 0).toFixed(0) %> pts</div>
       <div class="stat-label">Total Rewards Earned</div>
     </div>
   </div>
   <div class="col-md-4">
     <div class="stat-card" style="--stat-color:#f59e0b;">
-      <div class="stat-value">$<%= parseFloat(summary?.pending || 0).toFixed(2) %></div>
+      <div class="stat-value"><%= parseFloat(summary?.pending || 0).toFixed(0) %> pts</div>
       <div class="stat-label">Awaiting Payment</div>
     </div>
   </div>
   <div class="col-md-4">
     <div class="stat-card" style="--stat-color:#10b981;">
-      <div class="stat-value">$<%= parseFloat(summary?.paid || 0).toFixed(2) %></div>
+      <div class="stat-value"><%= parseFloat(summary?.paid || 0).toFixed(0) %> pts</div>
       <div class="stat-label">Total Paid Out</div>
     </div>
   </div>
@@ -31,13 +31,13 @@
       <div class="p-3" style="border-bottom:1px solid var(--tf-border);">
         <div class="d-flex justify-content-between mb-1">
           <span style="font-size:0.8rem;font-weight:500;"><%= u.name %></span>
-          <span style="font-family:var(--tf-font-mono);color:#f59e0b;font-size:0.8rem;">$<%= parseFloat(u.total_earned).toFixed(2) %></span>
+          <span style="font-family:var(--tf-font-mono);color:#f59e0b;font-size:0.8rem;"><%= parseFloat(u.total_earned).toFixed(0) %> pts</span>
         </div>
         <div class="tf-progress mb-1">
           <div class="tf-progress-bar" style="width:<%= pct %>%;background:#f59e0b;"></div>
         </div>
         <div style="font-size:0.65rem;color:var(--tf-text-muted);">
-          Paid: $<%= parseFloat(u.paid).toFixed(2) %> · Pending: $<%= parseFloat(u.pending).toFixed(2) %>
+          Paid: <%= parseFloat(u.paid).toFixed(0) %> pts · Pending: <%= parseFloat(u.pending).toFixed(0) %> pts
         </div>
       </div>
       <% }) %>
@@ -57,7 +57,7 @@
             <tr>
               <td style="font-size:0.8rem;"><%= r.user_name %></td>
               <td style="font-size:0.8rem;"><%= r.task_title %></td>
-              <td style="font-family:var(--tf-font-mono);color:#f59e0b;font-size:0.8rem;">$<%= parseFloat(r.reward_amount).toFixed(2) %></td>
+              <td style="font-family:var(--tf-font-mono);color:#f59e0b;font-size:0.8rem;"><%= parseFloat(r.reward_amount).toFixed(0) %> pts</td>
               <td><span class="badge badge-<%= r.status %>" style="font-size:0.65rem;border-radius:4px;padding:2px 6px;"><%= r.status %></span></td>
               <td style="font-size:0.75rem;color:var(--tf-text-muted);"><%= new Date(r.created_at).toLocaleDateString() %></td>
             </tr>

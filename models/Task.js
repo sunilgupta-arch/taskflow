@@ -16,10 +16,10 @@ class TaskModel {
 
   static async create(data) {
     const [result] = await db.query(
-      `INSERT INTO tasks (title, description, type, assigned_to, created_by, group_id, due_date, reward_amount, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO tasks (title, description, type, assigned_to, created_by, created_by_org, group_id, due_date, reward_amount, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [data.title, data.description, data.type, data.assigned_to || null, data.created_by,
-       data.group_id || null, data.due_date || null, data.reward_amount || null, data.status || 'pending']
+       data.created_by_org || 'CLIENT', data.group_id || null, data.due_date || null, data.reward_amount || null, data.status || 'pending']
     );
     return result.insertId;
   }
@@ -28,7 +28,7 @@ class TaskModel {
     const fields = [];
     const values = [];
 
-    const allowed = ['title', 'description', 'type', 'assigned_to', 'group_id', 'due_date', 'reward_amount', 'status', 'completed_at'];
+    const allowed = ['title', 'description', 'type', 'assigned_to', 'group_id', 'due_date', 'reward_amount', 'status', 'completed_at', 'created_by_org'];
     allowed.forEach(f => {
       if (data[f] !== undefined) {
         fields.push(`${f} = ?`);
@@ -52,12 +52,17 @@ class TaskModel {
     return result.affectedRows > 0;
   }
 
-  static async getAll({ status, type, assigned_to, created_by, search, page = 1, limit = 20, user, role } = {}) {
+  static async getAll({ status, type, assigned_to, created_by, search, completed_period, page = 1, limit = 20, user, role, orgType } = {}) {
     let where = ['t.is_deleted = 0'];
     let params = [];
 
-    // Role-based filtering: OUR_USER sees only their own tasks (no grouping)
-    if (role === 'OUR_USER' && user) {
+    // Visibility filtering: CLIENT users should NOT see LOCAL-created tasks
+    if (orgType === 'CLIENT') {
+      where.push("t.created_by_org = 'CLIENT'");
+    }
+
+    // Role-based filtering: LOCAL_USER sees only their own tasks (no grouping)
+    if (role === 'LOCAL_USER' && user) {
       where.push('t.assigned_to = ?');
       params.push(user);
     }
@@ -68,11 +73,21 @@ class TaskModel {
     if (created_by) { where.push('t.created_by = ?'); params.push(created_by); }
     if (search) { where.push('(t.title LIKE ? OR t.description LIKE ?)'); params.push(`%${search}%`, `%${search}%`); }
 
+    // Completed period filter for dashboard drill-down
+    if (completed_period) {
+      switch (completed_period) {
+        case 'today': where.push('DATE(t.completed_at) = CURDATE()'); break;
+        case 'week': where.push('YEARWEEK(t.completed_at) = YEARWEEK(NOW())'); break;
+        case 'month': where.push('MONTH(t.completed_at) = MONTH(NOW()) AND YEAR(t.completed_at) = YEAR(NOW())'); break;
+        case 'year': where.push('YEAR(t.completed_at) = YEAR(NOW())'); break;
+      }
+    }
+
     const whereClause = `WHERE ${where.join(' AND ')}`;
     const offset = (parseInt(page) - 1) * parseInt(limit);
 
-    // For OUR_USER: show individual rows (they only see their own tasks)
-    if (role === 'OUR_USER') {
+    // For LOCAL_USER: show individual rows (they only see their own tasks)
+    if (role === 'LOCAL_USER') {
       const [rows] = await db.query(
         `SELECT t.*,
                 u1.name as assigned_to_name,
@@ -108,6 +123,7 @@ class TaskModel {
               ANY_VALUE(t.reward_amount) as reward_amount,
               ANY_VALUE(t.status) as status,
               ANY_VALUE(t.is_deleted) as is_deleted,
+              ANY_VALUE(t.created_by_org) as created_by_org,
               MAX(t.created_at) as created_at,
               ANY_VALUE(t.completed_at) as completed_at,
               ANY_VALUE(t.updated_at) as updated_at,

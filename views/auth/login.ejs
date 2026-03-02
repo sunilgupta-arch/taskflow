@@ -1,20 +1,44 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-bs-theme="dark">
+<script>(function(){var t=localStorage.getItem('tf-theme')||'dark';document.documentElement.setAttribute('data-bs-theme',t);})()</script>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>TaskFlow — Login</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
   <style>
-    :root {
+    /* Dark theme */
+    [data-bs-theme="dark"] {
       --bg: #0a0e1a;
       --surface: #111827;
       --border: #1e2d45;
       --accent: #00d4ff;
       --text: #e2e8f0;
       --muted: #64748b;
+      --input-bg: rgba(10,14,26,0.8);
+      --demo-bg: rgba(0,0,0,0.3);
+      --demo-border: rgba(30,45,69,0.5);
+      --grid-line: rgba(30,45,69,0.3);
+      --error-color: #fca5a5;
     }
+
+    /* Light theme */
+    [data-bs-theme="light"] {
+      --bg: #f1f5f9;
+      --surface: #ffffff;
+      --border: #e2e8f0;
+      --accent: #0284c7;
+      --text: #1e293b;
+      --muted: #64748b;
+      --input-bg: #f8fafc;
+      --demo-bg: #f8fafc;
+      --demo-border: #e2e8f0;
+      --grid-line: rgba(148,163,184,0.15);
+      --error-color: #dc2626;
+    }
+
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       font-family: 'DM Sans', sans-serif;
@@ -26,33 +50,33 @@
       justify-content: center;
       padding: 1rem;
     }
-    
+
     .login-bg {
       position: fixed; inset: 0;
-      background: 
+      background:
         radial-gradient(ellipse at 20% 50%, rgba(0,212,255,0.05) 0%, transparent 60%),
         radial-gradient(ellipse at 80% 20%, rgba(124,58,237,0.05) 0%, transparent 60%);
       pointer-events: none;
     }
-    
+
     .grid-overlay {
       position: fixed; inset: 0;
-      background-image: linear-gradient(rgba(30,45,69,0.3) 1px, transparent 1px),
-                        linear-gradient(90deg, rgba(30,45,69,0.3) 1px, transparent 1px);
+      background-image: linear-gradient(var(--grid-line) 1px, transparent 1px),
+                        linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
       background-size: 40px 40px;
       pointer-events: none;
       opacity: 0.4;
     }
-    
+
     .login-container {
       width: 100%;
       max-width: 440px;
       position: relative;
       z-index: 10;
     }
-    
+
     .login-header { text-align: center; margin-bottom: 2rem; }
-    
+
     .logo {
       font-family: 'Space Mono', monospace;
       font-size: 1.75rem;
@@ -60,7 +84,7 @@
       color: var(--accent);
       letter-spacing: -1px;
     }
-    
+
     .logo-sub {
       font-size: 0.75rem;
       color: var(--muted);
@@ -68,14 +92,14 @@
       text-transform: uppercase;
       margin-top: 0.25rem;
     }
-    
+
     .login-card {
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 16px;
       padding: 2rem;
     }
-    
+
     .card-title {
       font-family: 'Space Mono', monospace;
       font-size: 0.8rem;
@@ -83,10 +107,13 @@
       text-transform: uppercase;
       color: var(--muted);
       margin-bottom: 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     }
-    
+
     .form-group { margin-bottom: 1.25rem; }
-    
+
     label {
       display: block;
       font-size: 0.75rem;
@@ -96,10 +123,10 @@
       margin-bottom: 0.4rem;
       text-transform: uppercase;
     }
-    
+
     input {
       width: 100%;
-      background: rgba(10,14,26,0.8);
+      background: var(--input-bg);
       border: 1px solid var(--border);
       color: var(--text);
       border-radius: 8px;
@@ -109,12 +136,12 @@
       transition: border-color 0.2s, box-shadow 0.2s;
       outline: none;
     }
-    
+
     input:focus {
       border-color: var(--accent);
       box-shadow: 0 0 0 3px rgba(0,212,255,0.1);
     }
-    
+
     .btn-login {
       width: 100%;
       background: var(--accent);
@@ -130,30 +157,30 @@
       margin-top: 0.5rem;
       transition: all 0.2s;
     }
-    
-    .btn-login:hover { background: #00b8d9; transform: translateY(-1px); }
+
+    .btn-login:hover { opacity: 0.9; transform: translateY(-1px); }
     .btn-login:active { transform: translateY(0); }
     .btn-login:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
-    
+
     .error-msg {
       background: rgba(239,68,68,0.1);
       border: 1px solid rgba(239,68,68,0.3);
-      color: #fca5a5;
+      color: var(--error-color);
       border-radius: 8px;
       padding: 0.75rem 1rem;
       font-size: 0.85rem;
       margin-bottom: 1rem;
       display: none;
     }
-    
+
     .demo-accounts {
       margin-top: 1.5rem;
       padding: 1rem;
-      background: rgba(0,0,0,0.3);
+      background: var(--demo-bg);
       border: 1px solid var(--border);
       border-radius: 8px;
     }
-    
+
     .demo-title {
       font-family: 'Space Mono', monospace;
       font-size: 0.6rem;
@@ -162,42 +189,61 @@
       color: var(--muted);
       margin-bottom: 0.75rem;
     }
-    
+
     .demo-item {
       display: flex;
       justify-content: space-between;
       align-items: center;
       padding: 0.35rem 0;
-      border-bottom: 1px solid rgba(30,45,69,0.5);
+      border-bottom: 1px solid var(--demo-border);
       cursor: pointer;
     }
     .demo-item:last-child { border-bottom: none; }
     .demo-item:hover { opacity: 0.8; }
-    
+
     .demo-role {
       font-size: 0.7rem;
       color: var(--accent);
       font-family: 'Space Mono', monospace;
     }
-    
+
     .demo-email { font-size: 0.7rem; color: var(--muted); }
+
+    .btn-theme-toggle {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      width: 30px; height: 30px;
+      border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: 0.85rem;
+    }
+    .btn-theme-toggle:hover { color: var(--accent); border-color: var(--accent); }
   </style>
 </head>
 <body>
   <div class="login-bg"></div>
   <div class="grid-overlay"></div>
-  
+
   <div class="login-container">
     <div class="login-header">
       <div class="logo">TASKFLOW</div>
       <div class="logo-sub">Multi-Org Task & Reward System</div>
     </div>
-    
+
     <div class="login-card">
-      <div class="card-title">// System Access</div>
-      
+      <div class="card-title">
+        <span>// System Access</span>
+        <button id="themeToggle" class="btn-theme-toggle" aria-label="Toggle theme">
+          <i class="bi bi-sun-fill" id="themeIconLight" style="display:none;"></i>
+          <i class="bi bi-moon-stars-fill" id="themeIconDark"></i>
+        </button>
+      </div>
+
       <div class="error-msg" id="errorMsg"></div>
-      
+
       <form id="loginForm">
         <div class="form-group">
           <label>Email Address</label>
@@ -211,19 +257,19 @@
           AUTHENTICATE →
         </button>
       </form>
-      
+
       <div class="demo-accounts">
         <div class="demo-title">// Demo Accounts (Password@123)</div>
         <div class="demo-item" onclick="fillLogin('cfc.admin@taskflow.com')">
-          <span class="demo-role">CFC_ADMIN</span>
+          <span class="demo-role">CLIENT_ADMIN</span>
           <span class="demo-email">cfc.admin@taskflow.com</span>
         </div>
         <div class="demo-item" onclick="fillLogin('our.admin@taskflow.com')">
-          <span class="demo-role">OUR_ADMIN</span>
+          <span class="demo-role">LOCAL_ADMIN</span>
           <span class="demo-email">our.admin@taskflow.com</span>
         </div>
         <div class="demo-item" onclick="fillLogin('our.user1@taskflow.com')">
-          <span class="demo-role">OUR_USER</span>
+          <span class="demo-role">LOCAL_USER</span>
           <span class="demo-email">our.user1@taskflow.com</span>
         </div>
       </div>
@@ -232,28 +278,50 @@
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.6.2/axios.min.js"></script>
   <script>
+    // Theme toggle
+    (function() {
+      var toggle = document.getElementById('themeToggle');
+      var iconLight = document.getElementById('themeIconLight');
+      var iconDark = document.getElementById('themeIconDark');
+
+      function applyIcons() {
+        var current = document.documentElement.getAttribute('data-bs-theme');
+        iconLight.style.display = current === 'dark' ? 'none' : 'inline';
+        iconDark.style.display = current === 'dark' ? 'inline' : 'none';
+      }
+      applyIcons();
+
+      toggle.addEventListener('click', function() {
+        var current = document.documentElement.getAttribute('data-bs-theme');
+        var next = current === 'dark' ? 'light' : 'dark';
+        document.documentElement.setAttribute('data-bs-theme', next);
+        localStorage.setItem('tf-theme', next);
+        applyIcons();
+      });
+    })();
+
     function fillLogin(email) {
       document.getElementById('email').value = email;
       document.getElementById('password').value = 'Password@123';
     }
-    
+
     document.getElementById('loginForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       const btn = document.getElementById('loginBtn');
       const errorMsg = document.getElementById('errorMsg');
-      
+
       btn.disabled = true;
       btn.textContent = 'AUTHENTICATING...';
       errorMsg.style.display = 'none';
-      
+
       try {
         const res = await axios.post('/auth/login', {
           email: document.getElementById('email').value,
           password: document.getElementById('password').value
         });
-        
+
         if (res.data.success) {
-          btn.textContent = 'ACCESS GRANTED ✓';
+          btn.textContent = 'ACCESS GRANTED';
           window.location.href = res.data.data.redirectUrl || '/dashboard';
         }
       } catch (err) {

@@ -2,21 +2,21 @@
 <div class="row g-3 mb-4">
   <div class="col-md-4">
     <div class="stat-card" style="--stat-color:#00d4ff;">
-      <div class="stat-value">$<%= parseFloat(summary?.total || 0).toFixed(2) %></div>
+      <div class="stat-value"><%= parseFloat(summary?.total || 0).toFixed(0) %> pts</div>
       <div class="stat-label">Total Rewards</div>
-      <i class="bi bi-currency-dollar stat-icon"></i>
+      <i class="bi bi-trophy stat-icon"></i>
     </div>
   </div>
   <div class="col-md-4">
     <div class="stat-card" style="--stat-color:#f59e0b;">
-      <div class="stat-value">$<%= parseFloat(summary?.pending || 0).toFixed(2) %></div>
-      <div class="stat-label">Pending Payment</div>
+      <div class="stat-value"><%= parseFloat(summary?.pending || 0).toFixed(0) %> pts</div>
+      <div class="stat-label">Pending</div>
       <i class="bi bi-hourglass stat-icon"></i>
     </div>
   </div>
   <div class="col-md-4">
     <div class="stat-card" style="--stat-color:#10b981;">
-      <div class="stat-value">$<%= parseFloat(summary?.paid || 0).toFixed(2) %></div>
+      <div class="stat-value"><%= parseFloat(summary?.paid || 0).toFixed(0) %> pts</div>
       <div class="stat-label">Paid Out</div>
       <i class="bi bi-check-circle stat-icon"></i>
     </div>
@@ -25,7 +25,7 @@
 
 <div class="row g-3">
   <!-- Per User Summary (Admin Only) -->
-  <% if (perUser && ['OUR_ADMIN', 'CFC_ADMIN', 'OUR_MANAGER', 'CFC_MANAGER'].includes(user.role_name)) { %>
+  <% if (perUser && ['LOCAL_ADMIN', 'CLIENT_ADMIN', 'LOCAL_MANAGER', 'CLIENT_MANAGER'].includes(user.role_name)) { %>
   <div class="col-lg-4">
     <div class="tf-card">
       <div class="card-header"><i class="bi bi-people me-2"></i>PER USER</div>
@@ -36,8 +36,8 @@
           <div class="flex-grow-1">
             <div style="font-size:0.8rem;font-weight:500;"><%= u.name %></div>
             <div style="font-size:0.65rem;color:var(--tf-text-muted);">
-              Earned: <span style="color:#10b981;">$<%= parseFloat(u.total_earned).toFixed(2) %></span>
-              · Pending: <span style="color:#f59e0b;">$<%= parseFloat(u.pending).toFixed(2) %></span>
+              Earned: <span style="color:#10b981;"><%= parseFloat(u.total_earned).toFixed(0) %> pts</span>
+              · Pending: <span style="color:#f59e0b;"><%= parseFloat(u.pending).toFixed(0) %> pts</span>
             </div>
           </div>
         </div>
@@ -48,7 +48,7 @@
   <% } %>
 
   <!-- Rewards Ledger -->
-  <div class="<%= perUser && ['OUR_ADMIN', 'CFC_ADMIN', 'OUR_MANAGER', 'CFC_MANAGER'].includes(user.role_name) ? 'col-lg-8' : 'col-12' %>">
+  <div class="<%= perUser && ['LOCAL_ADMIN', 'CLIENT_ADMIN', 'LOCAL_MANAGER', 'CLIENT_MANAGER'].includes(user.role_name) ? 'col-lg-8' : 'col-12' %>">
     <div class="tf-card">
       <div class="card-header d-flex justify-content-between align-items-center">
         <span><i class="bi bi-receipt me-2"></i>REWARDS LEDGER</span>
@@ -72,7 +72,7 @@
               <th>Amount</th>
               <th>Status</th>
               <th>Date</th>
-              <% if (user.role_name === 'OUR_ADMIN') { %><th>Action</th><% } %>
+              <% if (user.role_name === 'LOCAL_ADMIN') { %><th>Action</th><% } %>
             </tr>
           </thead>
           <tbody>
@@ -84,7 +84,7 @@
                   <div style="font-size:0.8rem;font-weight:500;"><%= r.task_title %></div>
                   <div style="font-size:0.65rem;color:var(--tf-text-muted);"><%= r.task_type %></div>
                 </td>
-                <td style="font-family:var(--tf-font-mono);color:#f59e0b;">$<%= parseFloat(r.reward_amount).toFixed(2) %></td>
+                <td style="font-family:var(--tf-font-mono);color:#f59e0b;"><%= parseFloat(r.reward_amount).toFixed(0) %> pts</td>
                 <td>
                   <span class="badge badge-<%= r.status %>" style="font-size:0.65rem;border-radius:4px;padding:2px 6px;"><%= r.status %></span>
                 </td>
@@ -96,7 +96,7 @@
                     <%= new Date(r.created_at).toLocaleDateString() %>
                   <% } %>
                 </td>
-                <% if (user.role_name === 'OUR_ADMIN') { %>
+                <% if (user.role_name === 'LOCAL_ADMIN') { %>
                 <td>
                   <% if (r.status === 'pending') { %>
                   <button class="btn-tf btn-tf-success" style="font-size:0.65rem;padding:2px 8px;" onclick="markPaid(<%= r.id %>)">

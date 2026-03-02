@@ -4,13 +4,29 @@ const db = require('../config/db');
 
 class TaskService {
   static async createTask(data, creator) {
-    // Only CFC can create tasks
-    if (creator.organization_type !== 'CFC') {
-      throw new Error('Only CFC organization can create tasks');
+    const role = creator.role_name;
+    const orgType = creator.organization_type;
+
+    if (!['CLIENT', 'LOCAL'].includes(orgType)) {
+      throw new Error('Not authorized to create tasks');
     }
 
+    const baseData = {
+      ...data,
+      created_by: creator.id,
+      created_by_org: orgType
+    };
+
+    // LOCAL_USER: force self-assignment, no reward
+    if (role === 'LOCAL_USER') {
+      baseData.assigned_to = creator.id;
+      baseData.reward_amount = null;
+      const taskId = await TaskModel.create(baseData);
+      return TaskModel.findById(taskId);
+    }
+
+    // For admins/managers: same multi-assign logic
     const assignees = Array.isArray(data.assigned_to) ? data.assigned_to : [];
-    const baseData = { ...data, created_by: creator.id };
 
     // Multiple assignees: create one task row per person, linked by group_id
     if (assignees.length > 1) {
@@ -33,19 +49,19 @@ class TaskService {
     const task = await TaskModel.findById(taskId);
     if (!task) throw new Error('Task not found');
 
-    // CFC can assign, OUR can reassign
-    const allowedRoles = ['CFC_ADMIN', 'CFC_MANAGER', 'OUR_ADMIN', 'OUR_MANAGER'];
+    // CLIENT can assign, LOCAL can reassign
+    const allowedRoles = ['CLIENT_ADMIN', 'CLIENT_MANAGER', 'LOCAL_ADMIN', 'LOCAL_MANAGER'];
     if (!allowedRoles.includes(assignerRole)) {
       throw new Error('Not authorized to assign tasks');
     }
 
-    // If reassigning within OUR, validate assignee is OUR team
-    if (['OUR_ADMIN', 'OUR_MANAGER'].includes(assignerRole)) {
+    // If reassigning within LOCAL, validate assignee is LOCAL team
+    if (['LOCAL_ADMIN', 'LOCAL_MANAGER'].includes(assignerRole)) {
       const [users] = await db.query(
         `SELECT u.id FROM users u JOIN organizations o ON u.organization_id = o.id
-         WHERE u.id = ? AND o.org_type = 'OUR'`, [assigneeId]
+         WHERE u.id = ? AND o.org_type = 'LOCAL'`, [assigneeId]
       );
-      if (!users.length) throw new Error('Can only reassign to OUR team members');
+      if (!users.length) throw new Error('Can only reassign to LOCAL team members');
     }
 
     return TaskModel.update(taskId, { assigned_to: assigneeId, status: 'in_progress' });
@@ -56,7 +72,7 @@ class TaskService {
     if (!task) throw new Error('Task not found');
     if (task.assigned_to) throw new Error('Task is already assigned');
     if (task.status !== 'pending') throw new Error('Task is not available for picking');
-    if (user.organization_type !== 'OUR') throw new Error('Only OUR team can pick tasks');
+    if (user.organization_type !== 'LOCAL') throw new Error('Only LOCAL team can pick tasks');
 
     return TaskModel.update(taskId, { assigned_to: user.id, status: 'in_progress' });
   }
@@ -128,6 +144,7 @@ class TaskService {
         type: template.type,
         assigned_to: userId,
         created_by: template.created_by,
+        created_by_org: template.created_by_org,
         group_id: groupId,
         due_date: template.due_date,
         reward_amount: template.reward_amount,
@@ -195,8 +212,9 @@ class TaskService {
     return attachments;
   }
 
-  static async getTaskStats(userId = null) {
+  static async getTaskStats(userId = null, orgType = null) {
     let userFilter = userId ? `AND (t.assigned_to = ${db.escape(userId)} OR t.created_by = ${db.escape(userId)})` : '';
+    let orgFilter = orgType === 'CLIENT' ? "AND t.created_by_org = 'CLIENT'" : '';
 
     const [[stats]] = await db.query(
       `SELECT
@@ -208,12 +226,14 @@ class TaskService {
         SUM(CASE WHEN status = 'completed' AND YEARWEEK(completed_at) = YEARWEEK(NOW()) THEN 1 ELSE 0 END) as completed_this_week,
         SUM(CASE WHEN status = 'completed' AND MONTH(completed_at) = MONTH(NOW()) AND YEAR(completed_at) = YEAR(NOW()) THEN 1 ELSE 0 END) as completed_this_month,
         SUM(CASE WHEN status = 'completed' AND YEAR(completed_at) = YEAR(NOW()) THEN 1 ELSE 0 END) as completed_this_year
-       FROM tasks t WHERE is_deleted = 0 ${userFilter}`
+       FROM tasks t WHERE is_deleted = 0 ${userFilter} ${orgFilter}`
     );
     return stats;
   }
 
-  static async getCompletionPerUser() {
+  static async getCompletionPerUser(orgType = null) {
+    let orgFilter = orgType === 'CLIENT' ? "AND t.created_by_org = 'CLIENT'" : '';
+
     const [rows] = await db.query(
       `SELECT u.id, u.name, u.email,
         COUNT(t.id) as total_tasks,
@@ -221,7 +241,7 @@ class TaskService {
         SUM(CASE WHEN t.status = 'in_progress' THEN 1 ELSE 0 END) as in_progress,
         SUM(CASE WHEN t.status = 'pending' THEN 1 ELSE 0 END) as pending
        FROM users u
-       LEFT JOIN tasks t ON u.id = t.assigned_to AND t.is_deleted = 0
+       LEFT JOIN tasks t ON u.id = t.assigned_to AND t.is_deleted = 0 ${orgFilter}
        WHERE u.is_active = 1
        GROUP BY u.id
        ORDER BY completed DESC`

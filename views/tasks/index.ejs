@@ -1,6 +1,6 @@
 <!-- Filters & Actions Bar -->
 <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
-  <form method="GET" action="/tasks" class="d-flex gap-2 flex-wrap flex-grow-1">
+  <form method="GET" action="<%= typeof isMyTasks !== 'undefined' && isMyTasks ? '/tasks/my' : '/tasks' %>" class="d-flex gap-2 flex-wrap flex-grow-1">
     <input type="text" name="search" value="<%= filters.search || '' %>" placeholder="Search tasks..." class="tf-form-control" style="max-width:220px;">
     <select name="status" class="tf-select" style="max-width:140px;">
       <option value="">All Status</option>
@@ -18,11 +18,9 @@
     <button type="submit" class="btn-tf btn-tf-outline">Filter</button>
   </form>
   
-  <% if (['CFC_ADMIN', 'CFC_MANAGER'].includes(user.role_name)) { %>
   <a href="/tasks/create" class="btn-tf btn-tf-primary text-decoration-none">
     <i class="bi bi-plus-circle me-1"></i> New Task
   </a>
-  <% } %>
 </div>
 
 <!-- Task Table -->
@@ -82,7 +80,7 @@
                 <% } %>
               <% } else { %>
                 <span style="color:var(--tf-text-muted);font-size:0.75rem;">Unassigned</span>
-                <% if (user.role_name === 'OUR_USER') { %>
+                <% if (user.role_name === 'LOCAL_USER') { %>
                 <button class="btn-tf" style="font-size:0.65rem;padding:2px 8px;background:rgba(0,212,255,0.1);color:#00d4ff;border:1px solid rgba(0,212,255,0.3);" onclick="pickTask(<%= task.id %>)">
                   Pick
                 </button>
@@ -98,32 +96,32 @@
               <%= task.due_date ? new Date(task.due_date).toLocaleDateString() : '—' %>
             </td>
             <td style="font-family:var(--tf-font-mono);color:#f59e0b;font-size:0.8rem;">
-              <%= task.reward_amount ? '$' + parseFloat(task.reward_amount).toFixed(2) : '—' %>
+              <%= task.reward_amount ? parseFloat(task.reward_amount).toFixed(0) + ' pts' : '—' %>
             </td>
             <td>
               <div class="d-flex gap-1 flex-wrap">
-                <% if (['CFC_ADMIN', 'CFC_MANAGER', 'OUR_ADMIN', 'OUR_MANAGER'].includes(user.role_name) && !['completed','deactivated'].includes(task.status)) { %>
+                <% if (['CLIENT_ADMIN', 'CLIENT_MANAGER', 'LOCAL_ADMIN', 'LOCAL_MANAGER'].includes(user.role_name) && !['completed','deactivated'].includes(task.status)) { %>
                 <button class="btn-tf" style="font-size:0.65rem;padding:2px 8px;background:transparent;color:#00d4ff;border:1px solid rgba(0,212,255,0.3);"
                   onclick="openAssignModal(<%= task.id %>, '<%= task.assignee_names || '' %>')">
                   Assign
                 </button>
                 <% } %>
 
-                <% if (user.role_name === 'OUR_USER' && task.assigned_to === user.id && !['completed','deactivated'].includes(task.status)) { %>
+                <% if (((user.role_name === 'LOCAL_USER') || (typeof isMyTasks !== 'undefined' && isMyTasks)) && task.assigned_to === user.id && !['completed','deactivated'].includes(task.status)) { %>
                 <button class="btn-tf" style="font-size:0.65rem;padding:2px 8px;background:rgba(16,185,129,0.1);color:#10b981;border:1px solid rgba(16,185,129,0.3);"
                   onclick="completeTask(<%= task.id %>)">
                   Complete
                 </button>
                 <% } %>
 
-                <% if (['CFC_ADMIN', 'CFC_MANAGER'].includes(user.role_name) && task.status !== 'deactivated' && task.status !== 'completed') { %>
+                <% if ((['CLIENT_ADMIN', 'CLIENT_MANAGER'].includes(user.role_name) || (['LOCAL_ADMIN', 'LOCAL_MANAGER'].includes(user.role_name) && task.created_by_org === 'LOCAL')) && task.status !== 'deactivated' && task.status !== 'completed') { %>
                 <button class="btn-tf" style="font-size:0.65rem;padding:2px 8px;background:rgba(245,158,11,0.1);color:#f59e0b;border:1px solid rgba(245,158,11,0.3);"
                   onclick="deactivateTask(<%= task.id %>)">
                   Deactivate
                 </button>
                 <% } %>
 
-                <% if (['CFC_ADMIN'].includes(user.role_name) && task.status === 'deactivated') { %>
+                <% if ((['CLIENT_ADMIN'].includes(user.role_name) || (user.role_name === 'LOCAL_ADMIN' && task.created_by_org === 'LOCAL')) && task.status === 'deactivated') { %>
                 <button class="btn-tf" style="font-size:0.65rem;padding:2px 8px;background:rgba(239,68,68,0.1);color:#ef4444;border:1px solid rgba(239,68,68,0.3);"
                   onclick="deleteTask(<%= task.id %>)">
                   Delete
@@ -153,11 +151,11 @@
     </span>
     <div class="d-flex gap-1">
       <% if (pagination.hasPrev) { %>
-      <a href="?page=<%= pagination.page - 1 %>&status=<%= filters.status || '' %>&type=<%= filters.type || '' %>&search=<%= filters.search || '' %>" 
+      <a href="?page=<%= pagination.page - 1 %>&status=<%= filters.status || '' %>&type=<%= filters.type || '' %>&search=<%= filters.search || '' %>&completed_period=<%= filters.completed_period || '' %>"
          class="btn-tf btn-tf-outline" style="font-size:0.7rem;padding:4px 10px;">← Prev</a>
       <% } %>
       <% if (pagination.hasNext) { %>
-      <a href="?page=<%= pagination.page + 1 %>&status=<%= filters.status || '' %>&type=<%= filters.type || '' %>&search=<%= filters.search || '' %>"
+      <a href="?page=<%= pagination.page + 1 %>&status=<%= filters.status || '' %>&type=<%= filters.type || '' %>&search=<%= filters.search || '' %>&completed_period=<%= filters.completed_period || '' %>"
          class="btn-tf btn-tf-primary" style="font-size:0.7rem;padding:4px 10px;">Next →</a>
       <% } %>
     </div>

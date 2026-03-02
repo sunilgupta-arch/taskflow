@@ -25,6 +25,18 @@ class UserController {
 
   static async create(req, res) {
     try {
+      // LOCAL_MANAGER can only create LOCAL_USER role
+      if (req.user.role_name === 'LOCAL_MANAGER') {
+        const [[role]] = await db.query('SELECT name FROM roles WHERE id = ?', [req.body.role_id]);
+        if (!role || role.name !== 'LOCAL_USER') {
+          return ApiResponse.error(res, 'You can only create users with LOCAL_USER role', 403);
+        }
+        const [[org]] = await db.query('SELECT org_type FROM organizations WHERE id = ?', [req.body.organization_id]);
+        if (!org || org.org_type !== 'LOCAL') {
+          return ApiResponse.error(res, 'You can only create users in LOCAL organizations', 403);
+        }
+      }
+
       const userId = await UserModel.create(req.body);
       const user = await UserModel.findById(userId);
       return ApiResponse.success(res, user, 'User created successfully', 201);

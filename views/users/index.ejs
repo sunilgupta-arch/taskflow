@@ -4,8 +4,8 @@
     <input type="text" name="search" value="<%= filters.search || '' %>" placeholder="Search users..." class="tf-form-control" style="max-width:200px;">
     <select name="org_type" class="tf-select" style="max-width:130px;">
       <option value="">All Orgs</option>
-      <option value="CFC" <%= filters.org_type === 'CFC' ? 'selected' : '' %>>CFC</option>
-      <option value="OUR" <%= filters.org_type === 'OUR' ? 'selected' : '' %>>OUR</option>
+      <option value="CLIENT" <%= filters.org_type === 'CLIENT' ? 'selected' : '' %>>CLIENT</option>
+      <option value="LOCAL" <%= filters.org_type === 'LOCAL' ? 'selected' : '' %>>LOCAL</option>
     </select>
     <button type="submit" class="btn-tf btn-tf-outline">Filter</button>
   </form>
@@ -40,8 +40,8 @@
           </td>
           <td>
             <span class="badge" style="font-size:0.65rem;border-radius:4px;padding:2px 6px;
-              background:<%= u.org_type === 'CFC' ? 'rgba(0,212,255,0.1)' : 'rgba(124,58,237,0.1)' %>;
-              color:<%= u.org_type === 'CFC' ? '#00d4ff' : '#a78bfa' %>;">
+              background:<%= u.org_type === 'CLIENT' ? 'rgba(0,212,255,0.1)' : 'rgba(124,58,237,0.1)' %>;
+              color:<%= u.org_type === 'CLIENT' ? '#00d4ff' : '#a78bfa' %>;">
               <%= u.org_type %>
             </span>
             <div style="font-size:0.7rem;color:var(--tf-text-muted);margin-top:2px;"><%= u.org_name %></div>
@@ -49,10 +49,14 @@
           <td style="font-family:var(--tf-font-mono);font-size:0.75rem;"><%= u.role_name %></td>
           <td style="font-size:0.8rem;color:var(--tf-text-muted);"><%= u.weekly_off_day %></td>
           <td>
-            <button onclick="toggleLeave(<%= u.id %>, <%= u.leave_status %>)" 
+            <% if (user.role_name === 'LOCAL_ADMIN') { %>
+            <button onclick="toggleLeave(<%= u.id %>, <%= u.leave_status %>)"
               style="background:none;border:none;cursor:pointer;font-size:0.875rem;color:<%= u.leave_status ? '#ef4444' : 'var(--tf-text-muted)' %>;">
               <i class="bi bi-<%= u.leave_status ? 'toggle-on' : 'toggle-off' %>"></i>
             </button>
+            <% } else { %>
+            <span style="font-size:0.75rem;color:<%= u.leave_status ? '#ef4444' : 'var(--tf-text-muted)' %>;"><%= u.leave_status ? 'On Leave' : '—' %></span>
+            <% } %>
           </td>
           <td>
             <span style="font-size:0.65rem;border-radius:20px;padding:2px 8px;border:1px solid;
@@ -64,6 +68,7 @@
           </td>
           <td style="font-size:0.75rem;color:var(--tf-text-muted);"><%= new Date(u.created_at).toLocaleDateString() %></td>
           <td>
+            <% if (user.role_name === 'LOCAL_ADMIN') { %>
             <div class="d-flex gap-1">
               <button class="btn-tf" style="font-size:0.65rem;padding:2px 8px;background:transparent;color:#00d4ff;border:1px solid rgba(0,212,255,0.3);"
                 onclick="openEditModal(<%= JSON.stringify(u) %>)">Edit</button>
@@ -74,6 +79,9 @@
                 <%= u.is_active ? 'Deactivate' : 'Activate' %>
               </button>
             </div>
+            <% } else { %>
+            <span style="font-size:0.7rem;color:var(--tf-text-muted);">—</span>
+            <% } %>
           </td>
         </tr>
         <% }) %>
@@ -105,7 +113,7 @@
       <div class="col-6">
         <label style="font-size:0.7rem;color:var(--tf-text-muted);display:block;margin-bottom:0.3rem;">ORGANIZATION *</label>
         <select id="uOrgId" class="tf-select">
-          <% orgs.forEach(o => { %>
+          <% orgs.filter(o => user.role_name === 'LOCAL_MANAGER' ? o.org_type === 'LOCAL' : true).forEach(o => { %>
           <option value="<%= o.id %>"><%= o.name %> (<%= o.org_type %>)</option>
           <% }) %>
         </select>
@@ -113,7 +121,7 @@
       <div class="col-6">
         <label style="font-size:0.7rem;color:var(--tf-text-muted);display:block;margin-bottom:0.3rem;">ROLE *</label>
         <select id="uRoleId" class="tf-select">
-          <% roles.forEach(r => { %>
+          <% roles.filter(r => user.role_name === 'LOCAL_MANAGER' ? r.name === 'LOCAL_USER' : true).forEach(r => { %>
           <option value="<%= r.id %>"><%= r.name %></option>
           <% }) %>
         </select>

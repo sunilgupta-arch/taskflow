@@ -7,8 +7,8 @@ class DashboardController {
       const role = req.user.role_name;
       let data = {};
 
-      if (['CFC_ADMIN', 'OUR_ADMIN', 'CFC_MANAGER', 'OUR_MANAGER'].includes(role)) {
-        data = await DashboardService.getAdminDashboard();
+      if (['CLIENT_ADMIN', 'LOCAL_ADMIN', 'CLIENT_MANAGER', 'LOCAL_MANAGER'].includes(role)) {
+        data = await DashboardService.getAdminDashboard(req.user.organization_type);
       } else {
         data = await DashboardService.getUserDashboard(req.user.id);
       }

@@ -8,11 +8,11 @@ class TaskController {
   // GET /tasks
   static async index(req, res) {
     try {
-      const { page = 1, limit = 20, status, type, search } = req.query;
+      const { page = 1, limit = 20, status, type, search, completed_period } = req.query;
       const role = req.user.role_name;
 
-      const filters = { status, type, search, page, limit };
-      if (role === 'OUR_USER') {
+      const filters = { status, type, search, completed_period, page, limit, orgType: req.user.organization_type };
+      if (role === 'LOCAL_USER') {
         filters.user = req.user.id;
         filters.role = role;
       }
@@ -24,7 +24,7 @@ class TaskController {
         `SELECT u.id, u.name, r.name as role_name FROM users u 
          JOIN roles r ON u.role_id = r.id
          JOIN organizations o ON u.organization_id = o.id
-         WHERE o.org_type = 'OUR' AND u.is_active = 1`
+         WHERE o.org_type = 'LOCAL' AND u.is_active = 1`
       );
 
       res.render('tasks/index', {
@@ -32,8 +32,35 @@ class TaskController {
         tasks: rows,
         pagination: getPaginationMeta(total, page, limit),
         ourUsers,
-        filters: { status, type, search },
+        filters: { status, type, search, completed_period },
         role
+      });
+    } catch (err) {
+      res.status(500).render('error', { title: 'Error', message: err.message, code: 500, layout: false });
+    }
+  }
+
+  // GET /tasks/my
+  static async myTasks(req, res) {
+    try {
+      const { page = 1, limit = 20, status, type, search } = req.query;
+      const filters = {
+        status, type, search, page, limit,
+        orgType: req.user.organization_type,
+        user: req.user.id,
+        role: 'LOCAL_USER' // reuse individual-row query path
+      };
+
+      const { rows, total } = await TaskModel.getAll(filters);
+
+      res.render('tasks/index', {
+        title: 'My Tasks',
+        tasks: rows,
+        pagination: getPaginationMeta(total, page, limit),
+        ourUsers: [],
+        filters: { status, type, search },
+        role: req.user.role_name,
+        isMyTasks: true
       });
     } catch (err) {
       res.status(500).render('error', { title: 'Error', message: err.message, code: 500, layout: false });
@@ -42,12 +69,21 @@ class TaskController {
 
   // GET /tasks/create
   static async showCreate(req, res) {
-    const [ourUsers] = await db.query(
-      `SELECT u.id, u.name FROM users u 
-       JOIN organizations o ON u.organization_id = o.id
-       WHERE o.org_type = 'OUR' AND u.is_active = 1`
-    );
-    res.render('tasks/create', { title: 'Create Task', ourUsers });
+    const role = req.user.role_name;
+    let ourUsers = [];
+
+    // LOCAL_USER gets simplified form (no user dropdown, no reward)
+    // All other roles get the full form with user dropdown
+    if (role !== 'LOCAL_USER') {
+      const [users] = await db.query(
+        `SELECT u.id, u.name FROM users u
+         JOIN organizations o ON u.organization_id = o.id
+         WHERE o.org_type = 'LOCAL' AND u.is_active = 1`
+      );
+      ourUsers = users;
+    }
+
+    res.render('tasks/create', { title: 'Create Task', ourUsers, role });
   }
 
   // POST /tasks/create
@@ -65,6 +101,11 @@ class TaskController {
     try {
       const task = await TaskModel.findById(req.params.id);
       if (!task) return res.status(404).render('error', { title: 'Not Found', message: 'Task not found', code: 404, layout: false });
+
+      // Visibility check: CLIENT users cannot view LOCAL-created tasks
+      if (req.user.organization_type === 'CLIENT' && task.created_by_org === 'LOCAL') {
+        return res.status(404).render('error', { title: 'Not Found', message: 'Task not found', code: 404, layout: false });
+      }
 
       // Fetch all group assignees if this is a grouped task
       let groupAssignees = [];
