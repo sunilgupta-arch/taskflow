@@ -540,9 +540,14 @@
         <div class="user-name"><%= user.name %></div>
         <div class="user-role"><%= user.role_name %></div>
       </div>
-      <a href="/auth/logout" class="ms-auto" title="Logout" style="color:var(--tf-text-muted);">
-        <i class="bi bi-box-arrow-right"></i>
-      </a>
+      <div class="ms-auto d-flex gap-2">
+        <a href="#" onclick="openChangePasswordModal();return false;" title="Change Password" style="color:var(--tf-text-muted);">
+          <i class="bi bi-key"></i>
+        </a>
+        <a href="/auth/logout" title="Logout" style="color:var(--tf-text-muted);">
+          <i class="bi bi-box-arrow-right"></i>
+        </a>
+      </div>
     </div>
   </div>
 </aside>
@@ -670,6 +675,83 @@ axios.interceptors.response.use(
     showToast(data.message, 'info');
   });
 })();
+</script>
+
+<!-- Change Password Modal -->
+<div id="changePasswordModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:200;align-items:center;justify-content:center;padding:1rem;">
+  <div style="background:var(--tf-surface);border:1px solid var(--tf-border);border-radius:12px;padding:1.5rem;width:100%;max-width:420px;">
+    <h6 style="font-family:var(--tf-font-mono);margin-bottom:1.25rem;"><i class="bi bi-key me-2"></i>RESET PASSWORD</h6>
+    <div id="cpError" class="tf-alert" style="display:none;border-color:rgba(239,68,68,0.3);background:rgba(239,68,68,0.1);color:#fca5a5;margin-bottom:1rem;font-size:0.85rem;"></div>
+    <div class="mb-3">
+      <label style="font-size:0.7rem;color:var(--tf-text-muted);display:block;margin-bottom:0.3rem;text-transform:uppercase;letter-spacing:0.5px;">NEW PASSWORD</label>
+      <input type="password" id="cpNew" class="tf-form-control" placeholder="Min 6 characters">
+    </div>
+    <div class="mb-3">
+      <label style="font-size:0.7rem;color:var(--tf-text-muted);display:block;margin-bottom:0.3rem;text-transform:uppercase;letter-spacing:0.5px;">CONFIRM NEW PASSWORD</label>
+      <input type="password" id="cpConfirm" class="tf-form-control" placeholder="Re-enter new password">
+    </div>
+    <div class="d-flex gap-2 justify-content-end">
+      <button class="btn-tf btn-tf-outline" onclick="closeChangePasswordModal()">Cancel</button>
+      <button class="btn-tf btn-tf-primary" id="cpSubmitBtn" onclick="submitChangePassword()">RESET</button>
+    </div>
+  </div>
+</div>
+
+<script>
+function openChangePasswordModal() {
+  document.getElementById('cpNew').value = '';
+  document.getElementById('cpConfirm').value = '';
+  document.getElementById('cpError').style.display = 'none';
+  document.getElementById('cpSubmitBtn').disabled = false;
+  document.getElementById('cpSubmitBtn').textContent = 'RESET';
+  document.getElementById('changePasswordModal').style.display = 'flex';
+}
+function closeChangePasswordModal() {
+  document.getElementById('changePasswordModal').style.display = 'none';
+}
+async function submitChangePassword() {
+  var errDiv = document.getElementById('cpError');
+  var btn = document.getElementById('cpSubmitBtn');
+  var newPw = document.getElementById('cpNew').value;
+  var confirm = document.getElementById('cpConfirm').value;
+
+  errDiv.style.display = 'none';
+
+  if (!newPw || !confirm) {
+    errDiv.textContent = 'Both fields are required';
+    errDiv.style.display = 'block';
+    return;
+  }
+  if (newPw.length < 6) {
+    errDiv.textContent = 'Password must be at least 6 characters';
+    errDiv.style.display = 'block';
+    return;
+  }
+  if (newPw !== confirm) {
+    errDiv.textContent = 'Passwords do not match';
+    errDiv.style.display = 'block';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'RESETTING...';
+
+  try {
+    var res = await axios.post('/change-password', {
+      new_password: newPw,
+      confirm_password: confirm
+    });
+    if (res.data.success) {
+      closeChangePasswordModal();
+      showToast('Password reset successfully');
+    }
+  } catch (e) {
+    errDiv.textContent = e.response?.data?.message || 'Failed to reset password';
+    errDiv.style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = 'RESET';
+  }
+}
 </script>
 
 <%- script %>

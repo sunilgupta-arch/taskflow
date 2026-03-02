@@ -84,6 +84,27 @@ class UserController {
     }
   }
 
+  static async changePassword(req, res) {
+    try {
+      const { new_password, confirm_password } = req.body;
+
+      if (!new_password || !confirm_password) {
+        return ApiResponse.error(res, 'All fields are required', 400);
+      }
+      if (new_password.length < 6) {
+        return ApiResponse.error(res, 'New password must be at least 6 characters', 400);
+      }
+      if (new_password !== confirm_password) {
+        return ApiResponse.error(res, 'New passwords do not match', 400);
+      }
+
+      await UserModel.update(req.user.id, { password: new_password });
+      return ApiResponse.success(res, {}, 'Password changed successfully');
+    } catch (err) {
+      return ApiResponse.error(res, err.message, 400);
+    }
+  }
+
   static async updateLeave(req, res) {
     try {
       const { user_id, leave_status } = req.body;

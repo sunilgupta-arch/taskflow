@@ -20,6 +20,9 @@ router.patch('/users/leave', authenticate, requireRoles('LOCAL_ADMIN'), UserCont
 router.post('/users/:id/reset-password', authenticate, requireRoles('LOCAL_ADMIN'), UserController.resetPassword);
 router.patch('/users/:id/toggle', authenticate, requireRoles('LOCAL_ADMIN'), UserController.toggleActive);
 
+// Change Password (all authenticated users)
+router.post('/change-password', authenticate, UserController.changePassword);
+
 // Rewards
 router.get('/rewards', authenticate, RewardController.index);
 router.post('/rewards/mark-paid/:id', authenticate, requireRoles('LOCAL_ADMIN'), RewardController.markPaid);
