@@ -52,30 +52,120 @@ class ReportController {
   static async attendanceReport(req, res) {
     try {
       const today = new Date().toISOString().split('T')[0];
+      const month = req.query.month || today.slice(0, 7); // 'YYYY-MM'
+      const [yearStr, monStr] = month.split('-');
+      const year = parseInt(yearStr);
+      const mon = parseInt(monStr);
+      const lastDay = new Date(year, mon, 0).getDate();
+      const startDate = `${month}-01`;
+      const endDate = `${month}-${String(lastDay).padStart(2, '0')}`;
 
-      const [dailyLogs] = await db.query(
-        `SELECT al.*, u.name as user_name, u.email,
-                TIMEDIFF(COALESCE(al.logout_time, NOW()), al.login_time) as duration
-         FROM attendance_logs al
-         JOIN users u ON al.user_id = u.id
-         WHERE al.date = ?
-         ORDER BY al.login_time`, [today]
-      );
+      const [dailyLogs, weeklyStats, activeUsers, attendanceDays, leaveData] = await Promise.all([
+        db.query(
+          `SELECT al.*, u.name as user_name, u.email, u.shift_start, u.shift_hours,
+                  TIMEDIFF(COALESCE(al.logout_time, NOW()), al.login_time) as duration
+           FROM attendance_logs al
+           JOIN users u ON al.user_id = u.id
+           JOIN roles r ON u.role_id = r.id
+           WHERE al.date = ? AND r.name IN ('LOCAL_USER', 'LOCAL_MANAGER')
+           ORDER BY al.login_time`, [today]
+        ),
+        db.query(
+          `SELECT u.id, u.name, COUNT(al.id) as days_present
+           FROM users u
+           JOIN roles r ON u.role_id = r.id
+           LEFT JOIN attendance_logs al ON u.id = al.user_id
+             AND al.date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+           WHERE u.is_active = 1 AND r.name IN ('LOCAL_USER', 'LOCAL_MANAGER')
+           GROUP BY u.id ORDER BY days_present DESC`
+        ),
+        db.query(
+          `SELECT u.id, u.name, u.weekly_off_day FROM users u
+           JOIN organizations o ON u.organization_id = o.id
+           JOIN roles r ON u.role_id = r.id
+           WHERE u.is_active = 1 AND o.org_type = 'LOCAL' AND r.name IN ('LOCAL_USER', 'LOCAL_MANAGER')
+           ORDER BY u.name`
+        ),
+        db.query(
+          `SELECT user_id, date FROM attendance_logs
+           WHERE date >= ? AND date <= ?`,
+          [startDate, endDate]
+        ),
+        db.query(
+          `SELECT user_id, from_date, to_date, status FROM leave_requests
+           WHERE from_date <= ? AND to_date >= ? AND status IN ('approved', 'pending')`,
+          [endDate, startDate]
+        )
+      ]);
 
-      const [weeklyStats] = await db.query(
-        `SELECT u.id, u.name, COUNT(al.id) as days_present
-         FROM users u
-         LEFT JOIN attendance_logs al ON u.id = al.user_id
-           AND al.date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
-         WHERE u.is_active = 1
-         GROUP BY u.id ORDER BY days_present DESC`
-      );
+      // Build calendar data
+      const attendanceSet = new Set();
+      attendanceDays[0].forEach(row => {
+        const d = row.date instanceof Date ? row.date.toISOString().split('T')[0] : String(row.date).split('T')[0];
+        attendanceSet.add(`${row.user_id}-${d}`);
+      });
+
+      const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+      const todayDate = new Date(today);
+
+      const calendarData = {};
+      activeUsers[0].forEach(u => {
+        calendarData[u.id] = {};
+        for (let d = 1; d <= lastDay; d++) {
+          const dateObj = new Date(year, mon - 1, d);
+          const dateStr = `${year}-${String(mon).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+          const dayName = dayNames[dateObj.getDay()];
+
+          if (dateObj > todayDate) {
+            // Check if there's a pending/approved leave for future
+            let futureStatus = 'future';
+            for (const lv of leaveData[0]) {
+              const from = lv.from_date instanceof Date ? lv.from_date.toISOString().split('T')[0] : String(lv.from_date).split('T')[0];
+              const to = lv.to_date instanceof Date ? lv.to_date.toISOString().split('T')[0] : String(lv.to_date).split('T')[0];
+              if (lv.user_id === u.id && dateStr >= from && dateStr <= to) {
+                futureStatus = lv.status === 'approved' ? 'approved_leave' : 'pending_leave';
+                break;
+              }
+            }
+            calendarData[u.id][d] = futureStatus;
+          } else if (dayName === u.weekly_off_day) {
+            calendarData[u.id][d] = 'weekoff';
+          } else {
+            // Check leaves
+            let onLeave = false;
+            for (const lv of leaveData[0]) {
+              const from = lv.from_date instanceof Date ? lv.from_date.toISOString().split('T')[0] : String(lv.from_date).split('T')[0];
+              const to = lv.to_date instanceof Date ? lv.to_date.toISOString().split('T')[0] : String(lv.to_date).split('T')[0];
+              if (lv.user_id === u.id && dateStr >= from && dateStr <= to) {
+                calendarData[u.id][d] = lv.status === 'approved' ? 'approved_leave' : 'pending_leave';
+                onLeave = true;
+                break;
+              }
+            }
+            if (!onLeave) {
+              calendarData[u.id][d] = attendanceSet.has(`${u.id}-${dateStr}`) ? 'present' : 'absent';
+            }
+          }
+        }
+      });
+
+      // Prev/next month
+      const prevMonth = mon === 1 ? `${year - 1}-12` : `${year}-${String(mon - 1).padStart(2, '0')}`;
+      const nextMonth = mon === 12 ? `${year + 1}-01` : `${year}-${String(mon + 1).padStart(2, '0')}`;
 
       res.render('attendance/index', {
         title: 'Attendance Dashboard',
-        dailyLogs,
-        weeklyStats,
-        today
+        dailyLogs: dailyLogs[0],
+        weeklyStats: weeklyStats[0],
+        today,
+        calendarUsers: activeUsers[0],
+        calendarData,
+        month,
+        year,
+        mon,
+        lastDay,
+        prevMonth,
+        nextMonth
       });
     } catch (err) {
       res.status(500).render('error', { title: 'Error', message: err.message, code: 500, layout: false });

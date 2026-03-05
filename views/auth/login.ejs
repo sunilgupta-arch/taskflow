@@ -18,8 +18,6 @@
       --text: #e2e8f0;
       --muted: #64748b;
       --input-bg: rgba(10,14,26,0.8);
-      --demo-bg: rgba(0,0,0,0.3);
-      --demo-border: rgba(30,45,69,0.5);
       --grid-line: rgba(30,45,69,0.3);
       --error-color: #fca5a5;
     }
@@ -33,8 +31,6 @@
       --text: #1e293b;
       --muted: #64748b;
       --input-bg: #f8fafc;
-      --demo-bg: #f8fafc;
-      --demo-border: #e2e8f0;
       --grid-line: rgba(148,163,184,0.15);
       --error-color: #dc2626;
     }
@@ -173,41 +169,6 @@
       display: none;
     }
 
-    .demo-accounts {
-      margin-top: 1.5rem;
-      padding: 1rem;
-      background: var(--demo-bg);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-    }
-
-    .demo-title {
-      font-family: 'Space Mono', monospace;
-      font-size: 0.6rem;
-      letter-spacing: 2px;
-      text-transform: uppercase;
-      color: var(--muted);
-      margin-bottom: 0.75rem;
-    }
-
-    .demo-item {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 0.35rem 0;
-      border-bottom: 1px solid var(--demo-border);
-      cursor: pointer;
-    }
-    .demo-item:last-child { border-bottom: none; }
-    .demo-item:hover { opacity: 0.8; }
-
-    .demo-role {
-      font-size: 0.7rem;
-      color: var(--accent);
-      font-family: 'Space Mono', monospace;
-    }
-
-    .demo-email { font-size: 0.7rem; color: var(--muted); }
 
     .btn-theme-toggle {
       background: none;
@@ -258,21 +219,6 @@
         </button>
       </form>
 
-      <div class="demo-accounts">
-        <div class="demo-title">// Demo Accounts (Password@123)</div>
-        <div class="demo-item" onclick="fillLogin('cfc.admin@taskflow.com')">
-          <span class="demo-role">CLIENT_ADMIN</span>
-          <span class="demo-email">cfc.admin@taskflow.com</span>
-        </div>
-        <div class="demo-item" onclick="fillLogin('our.admin@taskflow.com')">
-          <span class="demo-role">LOCAL_ADMIN</span>
-          <span class="demo-email">our.admin@taskflow.com</span>
-        </div>
-        <div class="demo-item" onclick="fillLogin('our.user1@taskflow.com')">
-          <span class="demo-role">LOCAL_USER</span>
-          <span class="demo-email">our.user1@taskflow.com</span>
-        </div>
-      </div>
     </div>
   </div>
 
@@ -299,11 +245,6 @@
         applyIcons();
       });
     })();
-
-    function fillLogin(email) {
-      document.getElementById('email').value = email;
-      document.getElementById('password').value = 'Password@123';
-    }
 
     document.getElementById('loginForm').addEventListener('submit', async (e) => {
       e.preventDefault();

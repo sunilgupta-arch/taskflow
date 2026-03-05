@@ -66,6 +66,31 @@ const isManager = ['CLIENT_MANAGER', 'LOCAL_MANAGER'].includes(user.role_name);
   </div>
 </div>
 
+<!-- Task Types -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-4">
+    <a href="/tasks?type=daily" class="stat-card stat-card-link" style="--stat-color: #06b6d4;">
+      <div class="stat-value"><%= taskStats.type_daily || 0 %></div>
+      <div class="stat-label">Daily Tasks</div>
+      <i class="bi bi-calendar-day stat-icon"></i>
+    </a>
+  </div>
+  <div class="col-6 col-md-4">
+    <a href="/tasks?type=weekly" class="stat-card stat-card-link" style="--stat-color: #8b5cf6;">
+      <div class="stat-value"><%= taskStats.type_weekly || 0 %></div>
+      <div class="stat-label">Weekly Tasks</div>
+      <i class="bi bi-calendar-week stat-icon"></i>
+    </a>
+  </div>
+  <div class="col-6 col-md-4">
+    <a href="/tasks?type=adhoc" class="stat-card stat-card-link" style="--stat-color: #f97316;">
+      <div class="stat-value"><%= taskStats.type_adhoc || 0 %></div>
+      <div class="stat-label">One Time Tasks</div>
+      <i class="bi bi-lightning stat-icon"></i>
+    </a>
+  </div>
+</div>
+
 <div class="row g-3 mb-4">
   <!-- Rewards Summary -->
   <div class="col-md-4">
@@ -171,8 +196,10 @@ const isManager = ['CLIENT_MANAGER', 'LOCAL_MANAGER'].includes(user.role_name);
         %>
         <tr>
           <td>
-            <div style="font-weight:600;font-size:0.875rem;"><%= u.name %></div>
-            <div style="font-size:0.7rem;color:var(--tf-text-muted);"><%= u.email %></div>
+            <a href="/users/<%= u.id %>/progress" style="text-decoration:none;color:inherit;">
+              <div style="font-weight:600;font-size:0.875rem;"><%= u.name %></div>
+              <div style="font-size:0.7rem;color:var(--tf-text-muted);"><%= u.email %></div>
+            </a>
           </td>
           <td><span style="font-family:var(--tf-font-mono);"><%= u.total_tasks %></span></td>
           <td><span style="color:#10b981;font-family:var(--tf-font-mono);"><%= u.completed %></span></td>
@@ -226,6 +253,31 @@ const isManager = ['CLIENT_MANAGER', 'LOCAL_MANAGER'].includes(user.role_name);
       <div class="stat-value"><%= parseFloat(rewardSummary?.paid_amount || 0).toFixed(0) %> pts</div>
       <div class="stat-label">Paid Out</div>
       <i class="bi bi-coin stat-icon"></i>
+    </a>
+  </div>
+</div>
+
+<!-- Task Types -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-4">
+    <a href="/tasks/my?type=daily" class="stat-card stat-card-link" style="--stat-color: #06b6d4;">
+      <div class="stat-value"><%= taskStats?.type_daily || 0 %></div>
+      <div class="stat-label">Daily Tasks</div>
+      <i class="bi bi-calendar-day stat-icon"></i>
+    </a>
+  </div>
+  <div class="col-6 col-md-4">
+    <a href="/tasks/my?type=weekly" class="stat-card stat-card-link" style="--stat-color: #8b5cf6;">
+      <div class="stat-value"><%= taskStats?.type_weekly || 0 %></div>
+      <div class="stat-label">Weekly Tasks</div>
+      <i class="bi bi-calendar-week stat-icon"></i>
+    </a>
+  </div>
+  <div class="col-6 col-md-4">
+    <a href="/tasks/my?type=adhoc" class="stat-card stat-card-link" style="--stat-color: #f97316;">
+      <div class="stat-value"><%= taskStats?.type_adhoc || 0 %></div>
+      <div class="stat-label">One Time Tasks</div>
+      <i class="bi bi-lightning stat-icon"></i>
     </a>
   </div>
 </div>

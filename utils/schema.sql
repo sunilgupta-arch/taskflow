@@ -44,6 +44,8 @@ CREATE TABLE IF NOT EXISTS users (
   email VARCHAR(150) NOT NULL UNIQUE,
   password VARCHAR(255) NOT NULL,
   weekly_off_day ENUM('Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday') DEFAULT 'Sunday',
+  shift_start TIME DEFAULT '10:00:00',
+  shift_hours DECIMAL(3,1) DEFAULT 8.5,
   leave_status TINYINT(1) DEFAULT 0,
   is_active TINYINT(1) DEFAULT 1,
   avatar VARCHAR(255) DEFAULT NULL,
@@ -169,6 +171,27 @@ CREATE TABLE IF NOT EXISTS task_comments (
   INDEX idx_task (task_id),
   INDEX idx_user (user_id),
   INDEX idx_parent (parent_id)
+) ENGINE=InnoDB;
+
+-- ============================================================
+-- LEAVE REQUESTS
+-- ============================================================
+CREATE TABLE IF NOT EXISTS leave_requests (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  user_id INT UNSIGNED NOT NULL,
+  from_date DATE NOT NULL,
+  to_date DATE NOT NULL,
+  reason VARCHAR(500) NOT NULL,
+  status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',
+  reviewed_by INT UNSIGNED DEFAULT NULL,
+  review_remark VARCHAR(500) DEFAULT NULL,
+  reviewed_at TIMESTAMP DEFAULT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (reviewed_by) REFERENCES users(id) ON DELETE SET NULL,
+  INDEX idx_user (user_id),
+  INDEX idx_status (status),
+  INDEX idx_dates (from_date, to_date)
 ) ENGINE=InnoDB;
 
 -- ============================================================

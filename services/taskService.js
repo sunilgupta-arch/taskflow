@@ -11,11 +11,16 @@ class TaskService {
       throw new Error('Not authorized to create tasks');
     }
 
+    // LOCAL admin/manager can mark task as visible to client team
+    const effectiveOrg = (data.client_visible && ['LOCAL_ADMIN', 'LOCAL_MANAGER'].includes(role))
+      ? 'CLIENT' : orgType;
+
     const baseData = {
       ...data,
       created_by: creator.id,
-      created_by_org: orgType
+      created_by_org: effectiveOrg
     };
+    delete baseData.client_visible;
 
     // LOCAL_USER: force self-assignment, no reward
     if (role === 'LOCAL_USER') {
@@ -75,6 +80,16 @@ class TaskService {
     if (user.organization_type !== 'LOCAL') throw new Error('Only LOCAL team can pick tasks');
 
     return TaskModel.update(taskId, { assigned_to: user.id, status: 'in_progress' });
+  }
+
+  static async startTask(taskId, userId) {
+    const task = await TaskModel.findById(taskId);
+    if (!task) throw new Error('Task not found');
+    if (task.assigned_to !== userId) throw new Error('You can only start tasks assigned to you');
+    if (task.status !== 'pending') throw new Error('Only pending tasks can be started');
+
+    await TaskModel.update(taskId, { status: 'in_progress' });
+    return TaskModel.findById(taskId);
   }
 
   static async completeTask(taskId, userId) {
@@ -225,7 +240,10 @@ class TaskService {
         SUM(CASE WHEN status = 'completed' AND DATE(completed_at) = CURDATE() THEN 1 ELSE 0 END) as completed_today,
         SUM(CASE WHEN status = 'completed' AND YEARWEEK(completed_at) = YEARWEEK(NOW()) THEN 1 ELSE 0 END) as completed_this_week,
         SUM(CASE WHEN status = 'completed' AND MONTH(completed_at) = MONTH(NOW()) AND YEAR(completed_at) = YEAR(NOW()) THEN 1 ELSE 0 END) as completed_this_month,
-        SUM(CASE WHEN status = 'completed' AND YEAR(completed_at) = YEAR(NOW()) THEN 1 ELSE 0 END) as completed_this_year
+        SUM(CASE WHEN status = 'completed' AND YEAR(completed_at) = YEAR(NOW()) THEN 1 ELSE 0 END) as completed_this_year,
+        SUM(CASE WHEN type = 'daily' THEN 1 ELSE 0 END) as type_daily,
+        SUM(CASE WHEN type = 'weekly' THEN 1 ELSE 0 END) as type_weekly,
+        SUM(CASE WHEN type = 'adhoc' THEN 1 ELSE 0 END) as type_adhoc
        FROM tasks t WHERE is_deleted = 0 ${userFilter} ${orgFilter}`
     );
     return stats;

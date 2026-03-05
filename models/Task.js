@@ -93,7 +93,8 @@ class TaskModel {
                 u1.name as assigned_to_name,
                 u2.name as created_by_name,
                 u1.name as assignee_names,
-                (SELECT COUNT(*) FROM task_attachments ta WHERE ta.task_id = t.id) as attachment_count
+                (SELECT COUNT(*) FROM task_attachments ta WHERE ta.task_id = t.id) as attachment_count,
+                (SELECT COUNT(*) FROM task_comments tc WHERE tc.task_id = t.id) as comment_count
          FROM tasks t
          LEFT JOIN users u1 ON t.assigned_to = u1.id
          LEFT JOIN users u2 ON t.created_by = u2.id
@@ -132,7 +133,8 @@ class TaskModel {
               GROUP_CONCAT(DISTINCT u1.name ORDER BY u1.name SEPARATOR ', ') as assignee_names,
               GROUP_CONCAT(DISTINCT t.id) as grouped_task_ids,
               COUNT(DISTINCT t.id) as assignee_count,
-              (SELECT COUNT(*) FROM task_attachments ta WHERE ta.task_id = MIN(t.id)) as attachment_count
+              (SELECT COUNT(*) FROM task_attachments ta WHERE ta.task_id = MIN(t.id)) as attachment_count,
+              (SELECT COUNT(*) FROM task_comments tc WHERE tc.task_id = MIN(t.id)) as comment_count
        FROM tasks t
        LEFT JOIN users u1 ON t.assigned_to = u1.id
        LEFT JOIN users u2 ON t.created_by = u2.id

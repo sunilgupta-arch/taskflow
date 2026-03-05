@@ -1,4 +1,6 @@
 const UserModel = require('../models/User');
+const TaskService = require('../services/taskService');
+const RewardModel = require('../models/Reward');
 const { ApiResponse, getPaginationMeta } = require('../utils/response');
 const db = require('../config/db');
 
@@ -100,6 +102,100 @@ class UserController {
 
       await UserModel.update(req.user.id, { password: new_password });
       return ApiResponse.success(res, {}, 'Password changed successfully');
+    } catch (err) {
+      return ApiResponse.error(res, err.message, 400);
+    }
+  }
+
+  static async showProgress(req, res) {
+    try {
+      const targetUser = await UserModel.findById(req.params.id);
+      if (!targetUser) return res.status(404).render('error', { title: 'Not Found', message: 'User not found', code: 404, layout: false });
+
+      const selectedDate = req.query.date || new Date().toISOString().split('T')[0];
+
+      const [taskStats, rewardSummary, activeTasks, pendingTasks, recentCompleted, dayTasks] = await Promise.all([
+        TaskService.getTaskStats(req.params.id),
+        RewardModel.getUserSummary(req.params.id),
+        db.query(
+          `SELECT t.id, t.title, t.type, t.due_date, t.created_at
+           FROM tasks t WHERE t.assigned_to = ? AND t.status = 'in_progress' AND t.is_deleted = 0
+           ORDER BY t.created_at DESC`, [req.params.id]
+        ),
+        db.query(
+          `SELECT t.id, t.title, t.type, t.due_date, t.created_at
+           FROM tasks t WHERE t.assigned_to = ? AND t.status = 'pending' AND t.is_deleted = 0
+           ORDER BY t.created_at DESC`, [req.params.id]
+        ),
+        db.query(
+          `SELECT t.id, t.title, t.type, t.due_date, t.completed_at
+           FROM tasks t WHERE t.assigned_to = ? AND t.status = 'completed' AND t.is_deleted = 0
+           ORDER BY t.completed_at DESC LIMIT 10`, [req.params.id]
+        ),
+        db.query(
+          `SELECT t.id, t.title, t.type, t.status, t.due_date, t.created_at, t.completed_at
+           FROM tasks t
+           WHERE t.assigned_to = ? AND t.is_deleted = 0
+             AND (DATE(t.created_at) = ? OR DATE(t.completed_at) = ? OR (t.status IN ('in_progress','pending') AND DATE(t.due_date) = ?))
+           ORDER BY t.status DESC, t.created_at DESC`,
+          [req.params.id, selectedDate, selectedDate, selectedDate]
+        )
+      ]);
+
+      res.render('users/progress', {
+        title: `${targetUser.name} - Progress`,
+        targetUser,
+        taskStats,
+        rewardSummary,
+        activeTasks: activeTasks[0],
+        pendingTasks: pendingTasks[0],
+        recentCompleted: recentCompleted[0],
+        dayTasks: dayTasks[0],
+        selectedDate
+      });
+    } catch (err) {
+      res.status(500).render('error', { title: 'Error', message: err.message, code: 500, layout: false });
+    }
+  }
+
+  // GET /users/:id/monthly-report?month=2026-03
+  static async monthlyReport(req, res) {
+    try {
+      const userId = req.params.id;
+      const month = req.query.month || new Date().toISOString().slice(0, 7); // YYYY-MM
+      const [year, mon] = month.split('-');
+
+      const [[stats]] = await db.query(
+        `SELECT
+          COUNT(*) as total,
+          SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed,
+          SUM(CASE WHEN status = 'in_progress' THEN 1 ELSE 0 END) as in_progress,
+          SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending,
+          SUM(CASE WHEN type = 'daily' THEN 1 ELSE 0 END) as type_daily,
+          SUM(CASE WHEN type = 'weekly' THEN 1 ELSE 0 END) as type_weekly,
+          SUM(CASE WHEN type = 'adhoc' THEN 1 ELSE 0 END) as type_adhoc,
+          SUM(CASE WHEN status = 'completed' AND type = 'daily' THEN 1 ELSE 0 END) as daily_completed,
+          SUM(CASE WHEN status = 'completed' AND type = 'weekly' THEN 1 ELSE 0 END) as weekly_completed,
+          SUM(CASE WHEN status = 'completed' AND type = 'adhoc' THEN 1 ELSE 0 END) as adhoc_completed
+         FROM tasks
+         WHERE assigned_to = ? AND is_deleted = 0
+           AND (MONTH(created_at) = ? AND YEAR(created_at) = ?)`,
+        [userId, parseInt(mon), parseInt(year)]
+      );
+
+      const [dailyBreakdown] = await db.query(
+        `SELECT DATE(created_at) as date,
+          COUNT(*) as total,
+          SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed
+         FROM tasks
+         WHERE assigned_to = ? AND is_deleted = 0
+           AND MONTH(created_at) = ? AND YEAR(created_at) = ?
+         GROUP BY DATE(created_at)
+         ORDER BY date`,
+        [userId, parseInt(mon), parseInt(year)]
+      );
+
+      return ApiResponse.success(res, { stats, dailyBreakdown, month });
     } catch (err) {
       return ApiResponse.error(res, err.message, 400);
     }

@@ -83,7 +83,7 @@ class TaskController {
       ourUsers = users;
     }
 
-    res.render('tasks/create', { title: 'Create Task', ourUsers, role });
+    res.render('tasks/create', { title: 'Create Task', ourUsers, role, assignTo: req.query.assign_to || '' });
   }
 
   // POST /tasks/create
@@ -139,6 +139,28 @@ class TaskController {
       res.render('tasks/show', { title: task.title, task, attachments, comments, groupAssignees, role: req.user.role_name });
     } catch (err) {
       res.status(500).render('error', { title: 'Error', message: err.message, code: 500, layout: false });
+    }
+  }
+
+  // GET /tasks/:id/comments
+  static async getComments(req, res) {
+    try {
+      const task = await TaskModel.findById(req.params.id);
+      if (!task) return ApiResponse.error(res, 'Task not found', 404);
+
+      const [comments] = await db.query(
+        `SELECT c.*, u.name as user_name, r.name as role_name, o.org_type
+         FROM task_comments c
+         JOIN users u ON c.user_id = u.id
+         JOIN roles r ON u.role_id = r.id
+         JOIN organizations o ON u.organization_id = o.id
+         WHERE c.task_id = ?
+         ORDER BY c.created_at ASC`, [req.params.id]
+      );
+
+      return ApiResponse.success(res, { comments, task_title: task.title });
+    } catch (err) {
+      return ApiResponse.error(res, err.message, 400);
     }
   }
 
@@ -206,6 +228,16 @@ class TaskController {
     try {
       await TaskService.pickTask(req.params.id, req.user);
       return ApiResponse.success(res, {}, 'Task picked successfully');
+    } catch (err) {
+      return ApiResponse.error(res, err.message, 400);
+    }
+  }
+
+  // POST /tasks/start/:id
+  static async start(req, res) {
+    try {
+      const task = await TaskService.startTask(req.params.id, req.user.id);
+      return ApiResponse.success(res, task, 'Task started');
     } catch (err) {
       return ApiResponse.error(res, err.message, 400);
     }

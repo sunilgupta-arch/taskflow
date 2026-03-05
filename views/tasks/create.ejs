@@ -52,7 +52,7 @@
             <label style="font-size:0.75rem;color:var(--tf-text-muted);display:block;margin-bottom:0.4rem;text-transform:uppercase;letter-spacing:0.5px;">ASSIGN TO (OPTIONAL)</label>
             <select name="assigned_to" class="tf-select" multiple size="4" style="min-height:80px;">
               <% ourUsers.forEach(u => { %>
-              <option value="<%= u.id %>"><%= u.name %></option>
+              <option value="<%= u.id %>" <%= String(u.id) === String(assignTo) ? 'selected' : '' %>><%= u.name %></option>
               <% }) %>
             </select>
             <div style="font-size:0.7rem;color:var(--tf-text-muted);margin-top:4px;">
@@ -63,6 +63,20 @@
           <div class="mb-4">
             <div class="tf-alert" style="border-color:rgba(124,58,237,0.3);background:rgba(124,58,237,0.1);color:#a78bfa;">
               <i class="bi bi-info-circle me-1"></i> This task will be auto-assigned to you.
+            </div>
+          </div>
+          <% } %>
+
+          <% if (['LOCAL_ADMIN', 'LOCAL_MANAGER'].includes(role)) { %>
+          <div class="mb-4">
+            <label class="d-flex align-items-center gap-2" style="cursor:pointer;">
+              <input type="checkbox" name="client_visible" value="1" style="accent-color:var(--tf-accent);width:16px;height:16px;">
+              <span style="font-size:0.8rem;color:var(--tf-text);">
+                <i class="bi bi-eye me-1" style="color:#00d4ff;"></i> Visible to Client Team
+              </span>
+            </label>
+            <div style="font-size:0.7rem;color:var(--tf-text-muted);margin-top:4px;margin-left:24px;">
+              When enabled, this task will also appear in the client admin/manager dashboard
             </div>
           </div>
           <% } %>

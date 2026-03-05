@@ -25,7 +25,7 @@
           <th>Organization</th>
           <th>Role</th>
           <th>Weekly Off</th>
-          <th>Leave</th>
+          <th>Shift</th>
           <th>Status</th>
           <th>Joined</th>
           <th>Actions</th>
@@ -47,15 +47,29 @@
             <div style="font-size:0.7rem;color:var(--tf-text-muted);margin-top:2px;"><%= u.org_name %></div>
           </td>
           <td style="font-family:var(--tf-font-mono);font-size:0.75rem;"><%= u.role_name %></td>
-          <td style="font-size:0.8rem;color:var(--tf-text-muted);"><%= u.weekly_off_day %></td>
-          <td>
-            <% if (user.role_name === 'LOCAL_ADMIN') { %>
-            <button onclick="toggleLeave(<%= u.id %>, <%= u.leave_status %>)"
-              style="background:none;border:none;cursor:pointer;font-size:0.875rem;color:<%= u.leave_status ? '#ef4444' : 'var(--tf-text-muted)' %>;">
-              <i class="bi bi-<%= u.leave_status ? 'toggle-on' : 'toggle-off' %>"></i>
-            </button>
+          <td style="font-size:0.8rem;color:var(--tf-text-muted);">
+            <% if (['LOCAL_USER', 'LOCAL_MANAGER'].includes(u.role_name)) { %>
+              <%= u.weekly_off_day %>
             <% } else { %>
-            <span style="font-size:0.75rem;color:<%= u.leave_status ? '#ef4444' : 'var(--tf-text-muted)' %>;"><%= u.leave_status ? 'On Leave' : '—' %></span>
+              <span style="color:var(--tf-text-muted);">—</span>
+            <% } %>
+          </td>
+          <td style="font-size:0.75rem;font-family:var(--tf-font-mono);color:var(--tf-text-muted);white-space:nowrap;">
+            <% if (['LOCAL_USER', 'LOCAL_MANAGER'].includes(u.role_name)) { %>
+            <%
+              var ss = u.shift_start ? u.shift_start.substring(0, 5) : '10:00';
+              var sh = parseFloat(u.shift_hours || 8.5);
+              var startH = parseInt(ss.split(':')[0]);
+              var startM = parseInt(ss.split(':')[1]);
+              var endMin = startH * 60 + startM + sh * 60;
+              var endH = Math.floor(endMin / 60) % 24;
+              var endM = Math.round(endMin % 60);
+              var endStr = String(endH).padStart(2, '0') + ':' + String(endM).padStart(2, '0');
+            %>
+            <%= ss %> - <%= endStr %>
+            <div style="font-size:0.6rem;color:var(--tf-text-muted);"><%= sh %>h</div>
+            <% } else { %>
+              <span style="color:var(--tf-text-muted);">—</span>
             <% } %>
           </td>
           <td>
@@ -126,13 +140,25 @@
           <% }) %>
         </select>
       </div>
-      <div class="col-12">
-        <label style="font-size:0.7rem;color:var(--tf-text-muted);display:block;margin-bottom:0.3rem;">WEEKLY OFF DAY</label>
-        <select id="uWeeklyOff" class="tf-select">
-          <% ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'].forEach(d => { %>
-          <option value="<%= d %>"><%= d %></option>
-          <% }) %>
-        </select>
+      <div id="shiftFields" class="col-12">
+        <div class="row g-3">
+          <div class="col-12">
+            <label style="font-size:0.7rem;color:var(--tf-text-muted);display:block;margin-bottom:0.3rem;">WEEKLY OFF DAY</label>
+            <select id="uWeeklyOff" class="tf-select">
+              <% ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'].forEach(d => { %>
+              <option value="<%= d %>"><%= d %></option>
+              <% }) %>
+            </select>
+          </div>
+          <div class="col-6">
+            <label style="font-size:0.7rem;color:var(--tf-text-muted);display:block;margin-bottom:0.3rem;">SHIFT START</label>
+            <input type="time" id="uShiftStart" class="tf-form-control" value="10:00">
+          </div>
+          <div class="col-6">
+            <label style="font-size:0.7rem;color:var(--tf-text-muted);display:block;margin-bottom:0.3rem;">SHIFT HOURS</label>
+            <input type="number" id="uShiftHours" class="tf-form-control" value="8.5" min="1" max="24" step="0.5">
+          </div>
+        </div>
       </div>
     </div>
     
@@ -165,6 +191,20 @@
 </div>
 
 <script>
+// Map role IDs to role names for shift field visibility
+var roleMap = {};
+<% roles.forEach(r => { %>roleMap['<%= r.id %>'] = '<%= r.name %>';
+<% }) %>
+
+function toggleShiftFields() {
+  var roleId = document.getElementById('uRoleId').value;
+  var roleName = roleMap[roleId] || '';
+  var show = ['LOCAL_USER', 'LOCAL_MANAGER'].includes(roleName);
+  document.getElementById('shiftFields').style.display = show ? 'block' : 'none';
+}
+
+document.getElementById('uRoleId').addEventListener('change', toggleShiftFields);
+
 function openCreateModal() {
   document.getElementById('modalTitle').textContent = 'CREATE USER';
   document.getElementById('editUserId').value = '';
@@ -172,8 +212,14 @@ function openCreateModal() {
   document.getElementById('uEmail').value = '';
   document.getElementById('uPassword').value = '';
   document.getElementById('passwordField').style.display = 'block';
+  document.getElementById('uOrgId').selectedIndex = 0;
+  document.getElementById('uRoleId').selectedIndex = 0;
+  document.getElementById('uWeeklyOff').value = 'Sunday';
+  document.getElementById('uShiftStart').value = '10:00';
+  document.getElementById('uShiftHours').value = '8.5';
   document.getElementById('modalSubmitBtn').textContent = 'CREATE';
   document.getElementById('userModal').style.display = 'flex';
+  toggleShiftFields();
 }
 function openEditModal(u) {
   document.getElementById('modalTitle').textContent = 'EDIT USER';
@@ -181,8 +227,14 @@ function openEditModal(u) {
   document.getElementById('uName').value = u.name;
   document.getElementById('uEmail').value = u.email;
   document.getElementById('passwordField').style.display = 'none';
+  if (u.organization_id) document.getElementById('uOrgId').value = u.organization_id;
+  if (u.role_id) document.getElementById('uRoleId').value = u.role_id;
+  if (u.weekly_off_day) document.getElementById('uWeeklyOff').value = u.weekly_off_day;
+  document.getElementById('uShiftStart').value = u.shift_start ? u.shift_start.substring(0, 5) : '10:00';
+  document.getElementById('uShiftHours').value = u.shift_hours || 8.5;
   document.getElementById('modalSubmitBtn').textContent = 'UPDATE';
   document.getElementById('userModal').style.display = 'flex';
+  toggleShiftFields();
 }
 function closeUserModal() {
   document.getElementById('userModal').style.display = 'none';
@@ -195,6 +247,8 @@ async function submitUser() {
     organization_id: document.getElementById('uOrgId').value,
     role_id: document.getElementById('uRoleId').value,
     weekly_off_day: document.getElementById('uWeeklyOff').value,
+    shift_start: document.getElementById('uShiftStart').value,
+    shift_hours: document.getElementById('uShiftHours').value,
     password: document.getElementById('uPassword').value
   };
   try {
@@ -215,15 +269,6 @@ async function toggleActive(id) {
   try {
     await axios.patch(`/users/${id}/toggle`);
     showToast('Status updated');
-    setTimeout(() => location.reload(), 600);
-  } catch (e) {
-    showToast('Error', 'error');
-  }
-}
-async function toggleLeave(id, current) {
-  try {
-    await axios.patch('/users/leave', { user_id: id, leave_status: current ? 0 : 1 });
-    showToast('Leave status updated');
     setTimeout(() => location.reload(), 600);
   } catch (e) {
     showToast('Error', 'error');

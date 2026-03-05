@@ -27,9 +27,10 @@ class UserModel {
   static async create(data) {
     const hashed = await bcrypt.hash(data.password, 12);
     const [result] = await db.query(
-      `INSERT INTO users (organization_id, role_id, name, email, password, weekly_off_day)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [data.organization_id, data.role_id, data.name, data.email, hashed, data.weekly_off_day || 'Sunday']
+      `INSERT INTO users (organization_id, role_id, name, email, password, weekly_off_day, shift_start, shift_hours)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [data.organization_id, data.role_id, data.name, data.email, hashed,
+       data.weekly_off_day || 'Sunday', data.shift_start || '10:00:00', data.shift_hours || 8.5]
     );
     return result.insertId;
   }
@@ -38,7 +39,7 @@ class UserModel {
     const fields = [];
     const values = [];
     
-    const allowedFields = ['name', 'email', 'organization_id', 'role_id', 'weekly_off_day', 'leave_status', 'is_active', 'avatar'];
+    const allowedFields = ['name', 'email', 'organization_id', 'role_id', 'weekly_off_day', 'shift_start', 'shift_hours', 'leave_status', 'is_active', 'avatar'];
     allowedFields.forEach(f => {
       if (data[f] !== undefined) {
         fields.push(`${f} = ?`);
@@ -73,7 +74,7 @@ class UserModel {
     const offset = (page - 1) * limit;
 
     const [rows] = await db.query(
-      `SELECT u.id, u.name, u.email, u.weekly_off_day, u.leave_status, u.is_active, u.created_at,
+      `SELECT u.id, u.name, u.email, u.organization_id, u.role_id, u.weekly_off_day, u.shift_start, u.shift_hours, u.leave_status, u.is_active, u.created_at,
               r.name as role_name, o.name as org_name, o.org_type
        FROM users u
        JOIN roles r ON u.role_id = r.id

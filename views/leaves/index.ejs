@@ -1,0 +1,371 @@
+<!-- Header Actions -->
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+  <div class="d-flex gap-2 flex-wrap">
+    <a href="/leaves" class="btn-tf <%= !filters.status ? 'btn-tf-primary' : 'btn-tf-outline' %> text-decoration-none" style="font-size:0.75rem;">All</a>
+    <a href="/leaves?status=pending" class="btn-tf <%= filters.status === 'pending' ? 'btn-tf-primary' : 'btn-tf-outline' %> text-decoration-none" style="font-size:0.75rem;">Pending</a>
+    <a href="/leaves?status=approved" class="btn-tf <%= filters.status === 'approved' ? 'btn-tf-primary' : 'btn-tf-outline' %> text-decoration-none" style="font-size:0.75rem;">Approved</a>
+    <a href="/leaves?status=rejected" class="btn-tf <%= filters.status === 'rejected' ? 'btn-tf-primary' : 'btn-tf-outline' %> text-decoration-none" style="font-size:0.75rem;">Rejected</a>
+  </div>
+  <div class="d-flex gap-2">
+    <% if (['LOCAL_ADMIN', 'LOCAL_MANAGER'].includes(role)) { %>
+    <button class="btn-tf" style="background:rgba(124,58,237,0.1);color:#a78bfa;border:1px solid rgba(124,58,237,0.3);" onclick="openGrantModal()">
+      <i class="bi bi-person-plus me-1"></i> Grant Leave
+    </button>
+    <% } %>
+    <% if (['LOCAL_USER', 'LOCAL_MANAGER'].includes(role)) { %>
+    <button class="btn-tf btn-tf-primary" onclick="openApplyModal()">
+      <i class="bi bi-calendar-plus me-1"></i> Apply for Leave
+    </button>
+    <% } %>
+  </div>
+</div>
+
+<!-- Leave Requests Table -->
+<div class="tf-card">
+  <div class="card-header">
+    <i class="bi bi-calendar-x me-2"></i>LEAVE REQUESTS (<%= pagination.total %>)
+  </div>
+  <div style="overflow-x:auto;">
+    <table class="tf-table">
+      <thead>
+        <tr>
+          <% if (role !== 'LOCAL_USER') { %><th>Employee</th><% } %>
+          <th>From</th>
+          <th>To</th>
+          <th>Days</th>
+          <th>Reason</th>
+          <th>Status</th>
+          <th>Reviewed By</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (leaves.length > 0) { %>
+          <% leaves.forEach(function(lv) { %>
+            <%
+              var from = new Date(lv.from_date);
+              var to = new Date(lv.to_date);
+              var days = Math.round((to - from) / (1000 * 60 * 60 * 24)) + 1;
+            %>
+          <tr>
+            <% if (role !== 'LOCAL_USER') { %>
+            <td>
+              <div style="font-weight:500;font-size:0.85rem;"><%= lv.user_name %></div>
+              <div style="font-size:0.7rem;color:var(--tf-text-muted);"><%= lv.user_email %></div>
+            </td>
+            <% } %>
+            <td style="font-size:0.85rem;white-space:nowrap;"><%= from.toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'}) %></td>
+            <td style="font-size:0.85rem;white-space:nowrap;"><%= to.toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'}) %></td>
+            <td style="font-family:var(--tf-font-mono);font-size:0.85rem;"><%= days %></td>
+            <td style="font-size:0.8rem;color:var(--tf-text-muted);max-width:200px;">
+              <span title="<%= lv.reason %>"><%= lv.reason.length > 50 ? lv.reason.substring(0, 50) + '...' : lv.reason %></span>
+            </td>
+            <td>
+              <% if (lv.status === 'pending') { %>
+              <span class="badge" style="font-size:0.65rem;padding:3px 8px;border-radius:4px;background:rgba(245,158,11,0.15);color:#f59e0b;">pending</span>
+              <% } else if (lv.status === 'approved') { %>
+              <span class="badge" style="font-size:0.65rem;padding:3px 8px;border-radius:4px;background:rgba(16,185,129,0.15);color:#10b981;">approved</span>
+              <% } else { %>
+              <span class="badge" style="font-size:0.65rem;padding:3px 8px;border-radius:4px;background:rgba(239,68,68,0.15);color:#ef4444;">rejected</span>
+              <% } %>
+              <% if (lv.review_remark) { %>
+              <div style="font-size:0.65rem;color:var(--tf-text-muted);margin-top:2px;" title="<%= lv.review_remark %>">
+                <i class="bi bi-chat-left-text"></i> <%= lv.review_remark.length > 30 ? lv.review_remark.substring(0, 30) + '...' : lv.review_remark %>
+              </div>
+              <% } %>
+            </td>
+            <td style="font-size:0.8rem;color:var(--tf-text-muted);">
+              <% if (lv.reviewer_name) { %>
+                <%= lv.reviewer_name %>
+                <div style="font-size:0.65rem;"><%= lv.reviewed_at ? new Date(lv.reviewed_at).toLocaleDateString() : '' %></div>
+              <% } else { %>
+                —
+              <% } %>
+            </td>
+            <td>
+              <% if (lv.status === 'pending' && ['LOCAL_ADMIN', 'LOCAL_MANAGER'].includes(role)) { %>
+              <div class="d-flex gap-1">
+                <button class="btn-tf" style="font-size:0.65rem;padding:2px 8px;background:rgba(16,185,129,0.1);color:#10b981;border:1px solid rgba(16,185,129,0.3);"
+                  onclick="openReviewModal(<%= lv.id %>, 'approve', '<%- lv.user_name.replace(/'/g, "\\'") %>')">Approve</button>
+                <button class="btn-tf" style="font-size:0.65rem;padding:2px 8px;background:rgba(239,68,68,0.1);color:#ef4444;border:1px solid rgba(239,68,68,0.3);"
+                  onclick="openReviewModal(<%= lv.id %>, 'reject', '<%- lv.user_name.replace(/'/g, "\\'") %>')">Reject</button>
+              </div>
+              <% } else { %>
+              <span style="font-size:0.75rem;color:var(--tf-text-muted);">—</span>
+              <% } %>
+            </td>
+          </tr>
+          <% }) %>
+        <% } else { %>
+        <tr><td colspan="<%= role !== 'LOCAL_USER' ? 8 : 7 %>" style="text-align:center;color:var(--tf-text-muted);padding:2rem;">
+          <i class="bi bi-calendar-x" style="font-size:1.5rem;opacity:0.3;display:block;margin-bottom:0.5rem;"></i>
+          No leave requests found
+        </td></tr>
+        <% } %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Pagination -->
+<% if (pagination.totalPages > 1) { %>
+<div class="d-flex justify-content-center mt-3 gap-2">
+  <% if (pagination.hasPrev) { %>
+  <a href="/leaves?page=<%= pagination.page - 1 %><%= filters.status ? '&status=' + filters.status : '' %>" class="btn-tf btn-tf-outline" style="font-size:0.75rem;">← Prev</a>
+  <% } %>
+  <span style="font-family:var(--tf-font-mono);font-size:0.75rem;color:var(--tf-text-muted);align-self:center;">
+    Page <%= pagination.page %> of <%= pagination.totalPages %>
+  </span>
+  <% if (pagination.hasNext) { %>
+  <a href="/leaves?page=<%= pagination.page + 1 %><%= filters.status ? '&status=' + filters.status : '' %>" class="btn-tf btn-tf-outline" style="font-size:0.75rem;">Next →</a>
+  <% } %>
+</div>
+<% } %>
+
+<!-- Apply for Leave Modal -->
+<div id="applyModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:200;align-items:center;justify-content:center;padding:1rem;">
+  <div style="background:var(--tf-surface);border:1px solid var(--tf-border);border-radius:12px;padding:1.5rem;width:100%;max-width:450px;">
+    <h6 style="font-family:var(--tf-font-mono);margin-bottom:1.25rem;">APPLY FOR LEAVE</h6>
+
+    <div class="mb-3">
+      <label style="font-size:0.75rem;color:var(--tf-text-muted);display:block;margin-bottom:0.4rem;text-transform:uppercase;letter-spacing:0.5px;">FROM DATE *</label>
+      <input type="date" id="leaveFrom" class="tf-form-control">
+    </div>
+    <div class="mb-3">
+      <label style="font-size:0.75rem;color:var(--tf-text-muted);display:block;margin-bottom:0.4rem;text-transform:uppercase;letter-spacing:0.5px;">TO DATE *</label>
+      <input type="date" id="leaveTo" class="tf-form-control">
+    </div>
+    <div class="mb-3">
+      <label style="font-size:0.75rem;color:var(--tf-text-muted);display:block;margin-bottom:0.4rem;text-transform:uppercase;letter-spacing:0.5px;">REASON *</label>
+      <textarea id="leaveReason" class="tf-form-control" rows="3" placeholder="Reason for leave..." style="resize:vertical;"></textarea>
+    </div>
+    <div id="applyDays" style="font-size:0.8rem;color:var(--tf-accent);margin-bottom:1rem;display:none;"></div>
+
+    <div class="d-flex gap-2 justify-content-end">
+      <button class="btn-tf btn-tf-outline" onclick="closeApplyModal()">Cancel</button>
+      <button class="btn-tf btn-tf-primary" onclick="submitLeave()" id="applyBtn">SUBMIT</button>
+    </div>
+  </div>
+</div>
+
+<!-- Review Modal -->
+<div id="reviewModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:200;align-items:center;justify-content:center;padding:1rem;">
+  <div style="background:var(--tf-surface);border:1px solid var(--tf-border);border-radius:12px;padding:1.5rem;width:100%;max-width:400px;">
+    <h6 style="font-family:var(--tf-font-mono);margin-bottom:1rem;" id="reviewTitle">REVIEW LEAVE</h6>
+    <p id="reviewInfo" style="font-size:0.85rem;color:var(--tf-text-muted);margin-bottom:1rem;"></p>
+
+    <input type="hidden" id="reviewLeaveId">
+    <input type="hidden" id="reviewAction">
+
+    <div class="mb-3">
+      <label style="font-size:0.75rem;color:var(--tf-text-muted);display:block;margin-bottom:0.4rem;text-transform:uppercase;letter-spacing:0.5px;">REMARK (OPTIONAL)</label>
+      <textarea id="reviewRemark" class="tf-form-control" rows="2" placeholder="Optional remark..." style="resize:vertical;"></textarea>
+    </div>
+
+    <div class="d-flex gap-2 justify-content-end">
+      <button class="btn-tf btn-tf-outline" onclick="closeReviewModal()">Cancel</button>
+      <button class="btn-tf" id="reviewSubmitBtn" onclick="submitReview()">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<% if (['LOCAL_ADMIN', 'LOCAL_MANAGER'].includes(role)) { %>
+<!-- Grant Leave Modal -->
+<div id="grantModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:200;align-items:center;justify-content:center;padding:1rem;">
+  <div style="background:var(--tf-surface);border:1px solid var(--tf-border);border-radius:12px;padding:1.5rem;width:100%;max-width:450px;">
+    <h6 style="font-family:var(--tf-font-mono);margin-bottom:1.25rem;"><i class="bi bi-person-plus me-2" style="color:#a78bfa;"></i>GRANT LEAVE</h6>
+
+    <div class="mb-3">
+      <label style="font-size:0.75rem;color:var(--tf-text-muted);display:block;margin-bottom:0.4rem;text-transform:uppercase;letter-spacing:0.5px;">EMPLOYEE *</label>
+      <select id="grantUser" class="tf-select">
+        <option value="">Select employee...</option>
+        <% leaveUsers.forEach(function(u) { %>
+        <option value="<%= u.id %>"><%= u.name %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div class="mb-3">
+      <label style="font-size:0.75rem;color:var(--tf-text-muted);display:block;margin-bottom:0.4rem;text-transform:uppercase;letter-spacing:0.5px;">FROM DATE *</label>
+      <input type="date" id="grantFrom" class="tf-form-control">
+    </div>
+    <div class="mb-3">
+      <label style="font-size:0.75rem;color:var(--tf-text-muted);display:block;margin-bottom:0.4rem;text-transform:uppercase;letter-spacing:0.5px;">TO DATE *</label>
+      <input type="date" id="grantTo" class="tf-form-control">
+    </div>
+    <div class="mb-3">
+      <label style="font-size:0.75rem;color:var(--tf-text-muted);display:block;margin-bottom:0.4rem;text-transform:uppercase;letter-spacing:0.5px;">REASON *</label>
+      <textarea id="grantReason" class="tf-form-control" rows="2" placeholder="Reason for leave..." style="resize:vertical;"></textarea>
+    </div>
+    <div id="grantDays" style="font-size:0.8rem;color:#a78bfa;margin-bottom:1rem;display:none;"></div>
+
+    <div class="d-flex gap-2 justify-content-end">
+      <button class="btn-tf btn-tf-outline" onclick="closeGrantModal()">Cancel</button>
+      <button class="btn-tf" id="grantBtn" style="background:rgba(124,58,237,0.15);color:#a78bfa;border:1px solid rgba(124,58,237,0.3);" onclick="submitGrant()">GRANT LEAVE</button>
+    </div>
+  </div>
+</div>
+<% } %>
+
+<script>
+// Apply Modal
+function openApplyModal() {
+  var today = new Date().toISOString().split('T')[0];
+  document.getElementById('leaveFrom').value = today;
+  document.getElementById('leaveFrom').min = today;
+  document.getElementById('leaveTo').value = today;
+  document.getElementById('leaveTo').min = today;
+  document.getElementById('leaveReason').value = '';
+  document.getElementById('applyDays').style.display = 'none';
+  document.getElementById('applyModal').style.display = 'flex';
+}
+function closeApplyModal() {
+  document.getElementById('applyModal').style.display = 'none';
+}
+
+// Update day count when dates change
+document.getElementById('leaveFrom').addEventListener('change', updateDayCount);
+document.getElementById('leaveTo').addEventListener('change', function() {
+  var from = document.getElementById('leaveFrom').value;
+  if (this.value < from) this.value = from;
+  updateDayCount();
+});
+function updateDayCount() {
+  var from = document.getElementById('leaveFrom').value;
+  var to = document.getElementById('leaveTo').value;
+  var div = document.getElementById('applyDays');
+  if (from && to) {
+    var days = Math.round((new Date(to) - new Date(from)) / (1000 * 60 * 60 * 24)) + 1;
+    div.textContent = days + ' day' + (days > 1 ? 's' : '') + ' of leave';
+    div.style.display = 'block';
+    // Sync to_date min
+    document.getElementById('leaveTo').min = from;
+  }
+}
+
+async function submitLeave() {
+  var from_date = document.getElementById('leaveFrom').value;
+  var to_date = document.getElementById('leaveTo').value;
+  var reason = document.getElementById('leaveReason').value;
+
+  if (!from_date || !to_date || !reason.trim()) {
+    return showToast('All fields are required', 'error');
+  }
+
+  var btn = document.getElementById('applyBtn');
+  btn.disabled = true;
+  btn.textContent = 'SUBMITTING...';
+
+  try {
+    await axios.post('/leaves', { from_date: from_date, to_date: to_date, reason: reason });
+    showToast('Leave request submitted');
+    closeApplyModal();
+    setTimeout(function() { location.reload(); }, 800);
+  } catch (e) {
+    showToast(e.response?.data?.message || 'Failed to submit', 'error');
+    btn.disabled = false;
+    btn.textContent = 'SUBMIT';
+  }
+}
+
+// Review Modal
+function openReviewModal(id, action, userName) {
+  document.getElementById('reviewLeaveId').value = id;
+  document.getElementById('reviewAction').value = action;
+  document.getElementById('reviewRemark').value = '';
+  document.getElementById('reviewTitle').textContent = action === 'approve' ? 'APPROVE LEAVE' : 'REJECT LEAVE';
+  document.getElementById('reviewInfo').textContent = (action === 'approve' ? 'Approve' : 'Reject') + ' leave request from ' + userName + '?';
+  var btn = document.getElementById('reviewSubmitBtn');
+  if (action === 'approve') {
+    btn.textContent = 'Approve';
+    btn.style.background = 'rgba(16,185,129,0.15)';
+    btn.style.color = '#10b981';
+    btn.style.border = '1px solid rgba(16,185,129,0.3)';
+  } else {
+    btn.textContent = 'Reject';
+    btn.style.background = 'rgba(239,68,68,0.15)';
+    btn.style.color = '#ef4444';
+    btn.style.border = '1px solid rgba(239,68,68,0.3)';
+  }
+  document.getElementById('reviewModal').style.display = 'flex';
+}
+function closeReviewModal() {
+  document.getElementById('reviewModal').style.display = 'none';
+}
+
+async function submitReview() {
+  var id = document.getElementById('reviewLeaveId').value;
+  var action = document.getElementById('reviewAction').value;
+  var remark = document.getElementById('reviewRemark').value;
+
+  try {
+    await axios.patch('/leaves/' + id + '/' + action, { review_remark: remark });
+    showToast('Leave ' + (action === 'approve' ? 'approved' : 'rejected'));
+    closeReviewModal();
+    setTimeout(function() { location.reload(); }, 800);
+  } catch (e) {
+    showToast(e.response?.data?.message || 'Failed', 'error');
+  }
+}
+
+// Grant Leave Modal (admin/manager only)
+function openGrantModal() {
+  var today = new Date().toISOString().split('T')[0];
+  document.getElementById('grantUser').value = '';
+  document.getElementById('grantFrom').value = today;
+  document.getElementById('grantTo').value = today;
+  document.getElementById('grantReason').value = '';
+  document.getElementById('grantDays').style.display = 'none';
+  document.getElementById('grantBtn').disabled = false;
+  document.getElementById('grantBtn').textContent = 'GRANT LEAVE';
+  document.getElementById('grantModal').style.display = 'flex';
+}
+function closeGrantModal() {
+  document.getElementById('grantModal').style.display = 'none';
+}
+
+if (document.getElementById('grantFrom')) {
+  document.getElementById('grantFrom').addEventListener('change', updateGrantDays);
+  document.getElementById('grantTo').addEventListener('change', function() {
+    var from = document.getElementById('grantFrom').value;
+    if (this.value < from) this.value = from;
+    updateGrantDays();
+  });
+}
+function updateGrantDays() {
+  var from = document.getElementById('grantFrom').value;
+  var to = document.getElementById('grantTo').value;
+  var div = document.getElementById('grantDays');
+  if (from && to) {
+    var days = Math.round((new Date(to) - new Date(from)) / (1000 * 60 * 60 * 24)) + 1;
+    div.textContent = days + ' day' + (days > 1 ? 's' : '') + ' of leave';
+    div.style.display = 'block';
+    document.getElementById('grantTo').min = from;
+  }
+}
+
+async function submitGrant() {
+  var user_id = document.getElementById('grantUser').value;
+  var from_date = document.getElementById('grantFrom').value;
+  var to_date = document.getElementById('grantTo').value;
+  var reason = document.getElementById('grantReason').value;
+
+  if (!user_id || !from_date || !to_date || !reason.trim()) {
+    return showToast('All fields are required', 'error');
+  }
+
+  var btn = document.getElementById('grantBtn');
+  btn.disabled = true;
+  btn.textContent = 'GRANTING...';
+
+  try {
+    await axios.post('/leaves/grant', { user_id: user_id, from_date: from_date, to_date: to_date, reason: reason });
+    showToast('Leave granted successfully');
+    closeGrantModal();
+    setTimeout(function() { location.reload(); }, 800);
+  } catch (e) {
+    showToast(e.response?.data?.message || 'Failed to grant leave', 'error');
+    btn.disabled = false;
+    btn.textContent = 'GRANT LEAVE';
+  }
+}
+</script>

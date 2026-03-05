@@ -1,20 +1,114 @@
+<!-- Monthly Attendance Calendar -->
+<div class="tf-card mb-4">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span><i class="bi bi-calendar3 me-2"></i>MONTHLY ATTENDANCE</span>
+    <div class="d-flex align-items-center gap-2">
+      <a href="/attendance?month=<%= prevMonth %>" class="btn-tf btn-tf-outline" style="font-size:0.7rem;padding:3px 8px;"><i class="bi bi-chevron-left"></i></a>
+      <span style="font-family:var(--tf-font-mono);font-size:0.85rem;min-width:120px;text-align:center;">
+        <%= new Date(year, mon - 1).toLocaleString('default', { month: 'long', year: 'numeric' }) %>
+      </span>
+      <a href="/attendance?month=<%= nextMonth %>" class="btn-tf btn-tf-outline" style="font-size:0.7rem;padding:3px 8px;"><i class="bi bi-chevron-right"></i></a>
+    </div>
+  </div>
+  <div style="overflow-x:auto;padding:0.5rem;">
+    <table style="width:100%;border-collapse:collapse;font-size:0.7rem;">
+      <thead>
+        <tr>
+          <th style="padding:6px 8px;text-align:left;font-size:0.75rem;color:var(--tf-text-muted);min-width:120px;border-bottom:1px solid var(--tf-border);">Employee</th>
+          <% for (var d = 1; d <= lastDay; d++) { %>
+            <%
+              var dayDate = new Date(year, mon - 1, d);
+              var dayAbbr = dayDate.toLocaleDateString('en-US', { weekday: 'narrow' });
+              var isToday = d === new Date().getDate() && mon === new Date().getMonth() + 1 && year === new Date().getFullYear();
+            %>
+            <th style="padding:4px 2px;text-align:center;min-width:26px;border-bottom:1px solid var(--tf-border);<%= isToday ? 'background:rgba(0,212,255,0.08);' : '' %>">
+              <div style="color:var(--tf-text-muted);font-size:0.55rem;"><%= dayAbbr %></div>
+              <div style="color:var(--tf-text);<%= isToday ? 'color:#00d4ff;font-weight:700;' : '' %>"><%= d %></div>
+            </th>
+          <% } %>
+          <th style="padding:4px 6px;text-align:center;border-bottom:1px solid var(--tf-border);font-size:0.65rem;color:var(--tf-text-muted);">P</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% calendarUsers.forEach(function(u) { %>
+        <tr>
+          <td style="padding:6px 8px;font-size:0.75rem;font-weight:500;white-space:nowrap;border-bottom:1px solid var(--tf-border);">
+            <a href="/users/<%= u.id %>/progress" style="color:var(--tf-text);text-decoration:none;"><%= u.name %></a>
+          </td>
+          <%
+            var presentCount = 0;
+            for (var d = 1; d <= lastDay; d++) {
+              var st = calendarData[u.id][d];
+              if (st === 'present') presentCount++;
+              var isToday = d === new Date().getDate() && mon === new Date().getMonth() + 1 && year === new Date().getFullYear();
+              var bg = '', clr = '', icon = '';
+              if (st === 'present') { bg = 'rgba(16,185,129,0.2)'; clr = '#10b981'; icon = 'P'; }
+              else if (st === 'absent') { bg = 'rgba(239,68,68,0.15)'; clr = '#ef4444'; icon = 'A'; }
+              else if (st === 'approved_leave') { bg = 'rgba(0,212,255,0.15)'; clr = '#00d4ff'; icon = 'L'; }
+              else if (st === 'pending_leave') { bg = 'rgba(245,158,11,0.15)'; clr = '#f59e0b'; icon = '?'; }
+              else if (st === 'weekoff') { bg = 'rgba(100,116,139,0.1)'; clr = '#64748b'; icon = 'W'; }
+              else { bg = 'transparent'; clr = 'var(--tf-border)'; icon = ''; }
+          %>
+          <td style="padding:3px 1px;text-align:center;border-bottom:1px solid var(--tf-border);<%= isToday ? 'background:rgba(0,212,255,0.05);' : '' %>">
+            <% if (icon) { %>
+            <div style="width:22px;height:22px;border-radius:4px;background:<%= bg %>;color:<%= clr %>;display:inline-flex;align-items:center;justify-content:center;font-size:0.6rem;font-weight:600;font-family:var(--tf-font-mono);"
+              title="<%= st.replace('_', ' ') %>"><%= icon %></div>
+            <% } %>
+          </td>
+          <% } %>
+          <td style="padding:4px 6px;text-align:center;border-bottom:1px solid var(--tf-border);font-family:var(--tf-font-mono);font-size:0.75rem;color:#10b981;font-weight:600;">
+            <%= presentCount %>
+          </td>
+        </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+  <div class="p-2 d-flex gap-3 justify-content-center" style="border-top:1px solid var(--tf-border);">
+    <span style="font-size:0.65rem;color:var(--tf-text-muted);"><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:rgba(16,185,129,0.2);vertical-align:middle;margin-right:3px;"></span> Present</span>
+    <span style="font-size:0.65rem;color:var(--tf-text-muted);"><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:rgba(239,68,68,0.15);vertical-align:middle;margin-right:3px;"></span> Absent</span>
+    <span style="font-size:0.65rem;color:var(--tf-text-muted);"><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:rgba(0,212,255,0.15);vertical-align:middle;margin-right:3px;"></span> Leave</span>
+    <span style="font-size:0.65rem;color:var(--tf-text-muted);"><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:rgba(245,158,11,0.15);vertical-align:middle;margin-right:3px;"></span> Pending Leave</span>
+    <span style="font-size:0.65rem;color:var(--tf-text-muted);"><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:rgba(100,116,139,0.1);vertical-align:middle;margin-right:3px;"></span> Week Off</span>
+  </div>
+</div>
+
 <div class="row g-3 mb-4">
   <div class="col-md-6">
     <div class="tf-card">
       <div class="card-header"><i class="bi bi-calendar-check me-2"></i>TODAY'S ATTENDANCE — <%= new Date(today).toLocaleDateString('en-US', {weekday:'long', month:'long', day:'numeric'}) %></div>
       <div style="overflow-x:auto;">
         <table class="tf-table">
-          <thead><tr><th>User</th><th>Login</th><th>Logout</th><th>Duration</th></tr></thead>
+          <thead><tr><th>User</th><th>Shift</th><th>Login</th><th>Logout</th><th>Duration</th></tr></thead>
           <tbody>
             <% if (dailyLogs.length > 0) { %>
-              <% dailyLogs.forEach(l => { %>
+              <% dailyLogs.forEach(function(l) {
+                var ss = l.shift_start ? l.shift_start.substring(0, 5) : '10:00';
+                var sh = parseFloat(l.shift_hours || 8.5);
+                var sH = parseInt(ss.split(':')[0]), sM = parseInt(ss.split(':')[1]);
+                var eMin = sH * 60 + sM + sh * 60;
+                var eH = Math.floor(eMin / 60) % 24, eM = Math.round(eMin % 60);
+                var endStr = String(eH).padStart(2, '0') + ':' + String(eM).padStart(2, '0');
+                var loginTime = l.login_time ? new Date(l.login_time) : null;
+                var lateMin = 0;
+                if (loginTime) {
+                  var shiftStart = new Date(loginTime); shiftStart.setHours(sH, sM, 0, 0);
+                  lateMin = Math.max(0, Math.round((loginTime - shiftStart) / 60000));
+                }
+              %>
               <tr>
                 <td>
                   <div style="font-size:0.8rem;font-weight:500;"><%= l.user_name %></div>
                   <div style="font-size:0.65rem;color:var(--tf-text-muted);"><%= l.email %></div>
                 </td>
-                <td style="font-family:var(--tf-font-mono);font-size:0.75rem;color:#10b981;">
-                  <%= l.login_time ? new Date(l.login_time).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) : '—' %>
+                <td style="font-family:var(--tf-font-mono);font-size:0.7rem;color:var(--tf-text-muted);white-space:nowrap;">
+                  <%= ss %> - <%= endStr %>
+                </td>
+                <td style="font-family:var(--tf-font-mono);font-size:0.75rem;">
+                  <span style="color:#10b981;"><%= loginTime ? loginTime.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) : '—' %></span>
+                  <% if (lateMin > 5) { %>
+                  <div style="font-size:0.6rem;color:#ef4444;">+<%= lateMin %> min late</div>
+                  <% } %>
                 </td>
                 <td style="font-family:var(--tf-font-mono);font-size:0.75rem;color:var(--tf-text-muted);">
                   <%= l.logout_time ? new Date(l.logout_time).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) : 'Active' %>
@@ -25,7 +119,7 @@
               </tr>
               <% }) %>
             <% } else { %>
-            <tr><td colspan="4" style="text-align:center;padding:2rem;color:var(--tf-text-muted);">No logins today</td></tr>
+            <tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--tf-text-muted);">No logins today</td></tr>
             <% } %>
           </tbody>
         </table>

@@ -39,6 +39,7 @@
           <th>Status</th>
           <th>Due Date</th>
           <th>Reward</th>
+          <th>Remarks</th>
           <th>Actions</th>
         </tr>
       </thead>
@@ -51,6 +52,11 @@
               <a href="/tasks/<%= task.id %>" style="color:var(--tf-text);text-decoration:none;font-weight:500;">
                 <%= task.title %>
               </a>
+              <% if (task.created_by_org === 'CLIENT' && user.organization_type === 'LOCAL') { %>
+              <span title="Visible to client team" style="font-size:0.6rem;padding:1px 5px;border-radius:3px;background:rgba(0,212,255,0.1);color:#00d4ff;margin-left:4px;vertical-align:middle;">
+                <i class="bi bi-eye"></i> CLIENT
+              </span>
+              <% } %>
               <% if (task.attachment_count > 0) { %>
               <span style="font-size:0.65rem;color:var(--tf-text-muted);margin-left:4px;">
                 <i class="bi bi-paperclip"></i> <%= task.attachment_count %>
@@ -98,6 +104,16 @@
             <td style="font-family:var(--tf-font-mono);color:#f59e0b;font-size:0.8rem;">
               <%= task.reward_amount ? parseFloat(task.reward_amount).toFixed(0) + ' pts' : '—' %>
             </td>
+            <td style="text-align:center;">
+              <% if (task.comment_count > 0) { %>
+              <button class="btn-tf" style="font-size:0.75rem;padding:2px 8px;background:transparent;color:#00d4ff;border:1px solid rgba(0,212,255,0.3);"
+                onclick="openRemarksModal(<%= task.id %>)" title="<%= task.comment_count %> remark(s)">
+                <i class="bi bi-chat-left-text"></i>
+              </button>
+              <% } else { %>
+              <span style="color:var(--tf-text-muted);font-size:0.75rem;">—</span>
+              <% } %>
+            </td>
             <td>
               <div class="d-flex gap-1 flex-wrap">
                 <% if (['CLIENT_ADMIN', 'CLIENT_MANAGER', 'LOCAL_ADMIN', 'LOCAL_MANAGER'].includes(user.role_name) && !['completed','deactivated'].includes(task.status)) { %>
@@ -107,7 +123,14 @@
                 </button>
                 <% } %>
 
-                <% if (((user.role_name === 'LOCAL_USER') || (typeof isMyTasks !== 'undefined' && isMyTasks)) && task.assigned_to === user.id && !['completed','deactivated'].includes(task.status)) { %>
+                <% if (((user.role_name === 'LOCAL_USER') || (typeof isMyTasks !== 'undefined' && isMyTasks)) && task.assigned_to === user.id && task.status === 'pending') { %>
+                <button class="btn-tf" style="font-size:0.65rem;padding:2px 8px;background:rgba(0,212,255,0.1);color:#00d4ff;border:1px solid rgba(0,212,255,0.3);"
+                  onclick="startTask(<%= task.id %>)">
+                  Start
+                </button>
+                <% } %>
+
+                <% if (((user.role_name === 'LOCAL_USER') || (typeof isMyTasks !== 'undefined' && isMyTasks)) && task.assigned_to === user.id && task.status === 'in_progress') { %>
                 <button class="btn-tf" style="font-size:0.65rem;padding:2px 8px;background:rgba(16,185,129,0.1);color:#10b981;border:1px solid rgba(16,185,129,0.3);"
                   onclick="completeTask(<%= task.id %>)">
                   Complete
@@ -133,7 +156,7 @@
           <% }) %>
         <% } else { %>
         <tr>
-          <td colspan="8" style="text-align:center;padding:3rem;color:var(--tf-text-muted);">
+          <td colspan="9" style="text-align:center;padding:3rem;color:var(--tf-text-muted);">
             <i class="bi bi-inbox" style="font-size:2rem;display:block;margin-bottom:0.5rem;"></i>
             No tasks found
           </td>
@@ -186,6 +209,27 @@
   </div>
 </div>
 
+<!-- Remarks Modal -->
+<div id="remarksModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:200;align-items:center;justify-content:center;">
+  <div style="background:var(--tf-surface);border:1px solid var(--tf-border);border-radius:12px;padding:1.5rem;width:100%;max-width:500px;margin:1rem;max-height:80vh;display:flex;flex-direction:column;">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h6 style="font-family:var(--tf-font-mono);margin:0;" id="remarksModalTitle">REMARKS</h6>
+      <button class="btn-tf" style="background:transparent;border:none;color:var(--tf-text-muted);font-size:1.2rem;" onclick="closeRemarksModal()">&times;</button>
+    </div>
+    <div id="remarksContent" style="flex:1;overflow-y:auto;margin-bottom:1rem;min-height:100px;">
+      <div style="text-align:center;padding:2rem;color:var(--tf-text-muted);">Loading...</div>
+    </div>
+    <div style="border-top:1px solid var(--tf-border);padding-top:1rem;">
+      <div class="d-flex gap-2">
+        <input type="text" id="remarksNewComment" class="tf-form-control" placeholder="Write a remark..." style="font-size:0.85rem;">
+        <button class="btn-tf btn-tf-primary" style="white-space:nowrap;" onclick="submitRemark()">
+          <i class="bi bi-send me-1"></i> Post
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
 const ourUsersMap = {
   <% ourUsers.forEach(u => { %>'<%= u.id %>': '<%= u.name %>',<% }) %>
@@ -231,6 +275,16 @@ async function pickTask(taskId) {
     showToast(e.response?.data?.message || 'Failed to pick task', 'error');
   }
 }
+async function startTask(taskId) {
+  if (!confirm('Start working on this task?')) return;
+  try {
+    await axios.post(`/tasks/start/${taskId}`);
+    showToast('Task started!');
+    setTimeout(() => location.reload(), 800);
+  } catch (e) {
+    showToast(e.response?.data?.message || 'Failed to start task', 'error');
+  }
+}
 async function completeTask(taskId) {
   if (!confirm('Mark this task as completed?')) return;
   try {
@@ -260,5 +314,122 @@ async function deleteTask(taskId) {
   } catch (e) {
     showToast(e.response?.data?.message || 'Failed to delete task', 'error');
   }
+}
+
+// Remarks modal
+let currentRemarksTaskId = null;
+
+async function openRemarksModal(taskId) {
+  currentRemarksTaskId = taskId;
+  document.getElementById('remarksModal').style.display = 'flex';
+  document.getElementById('remarksContent').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--tf-text-muted);">Loading...</div>';
+  document.getElementById('remarksNewComment').value = '';
+
+  try {
+    const res = await axios.get(`/tasks/${taskId}/comments`);
+    const { comments, task_title } = res.data.data;
+    document.getElementById('remarksModalTitle').textContent = 'REMARKS — ' + task_title;
+    renderRemarks(comments);
+  } catch (e) {
+    document.getElementById('remarksContent').innerHTML = '<div style="text-align:center;padding:2rem;color:#ef4444;">Failed to load remarks</div>';
+  }
+}
+
+function renderRemarks(comments) {
+  const container = document.getElementById('remarksContent');
+  if (!comments.length) {
+    container.innerHTML = '<p style="color:var(--tf-text-muted);font-size:0.875rem;text-align:center;padding:1.5rem;">No remarks yet.</p>';
+    return;
+  }
+
+  const topLevel = comments.filter(c => !c.parent_id);
+  let html = '';
+  topLevel.forEach(c => {
+    const borderColor = c.org_type === 'CLIENT' ? 'var(--tf-accent)' : 'var(--tf-accent-2)';
+    const badgeBg = c.org_type === 'CLIENT' ? 'rgba(0,212,255,0.1)' : 'rgba(124,58,237,0.1)';
+    const badgeColor = c.org_type === 'CLIENT' ? '#00d4ff' : '#a78bfa';
+
+    html += `<div class="mb-3" style="border-left:3px solid ${borderColor};padding-left:0.75rem;">
+      <div class="d-flex align-items-center gap-2 mb-1">
+        <div class="user-avatar" style="width:26px;height:26px;font-size:0.6rem;">${c.user_name.charAt(0)}</div>
+        <span style="font-size:0.8rem;font-weight:600;">${c.user_name}</span>
+        <span class="badge" style="font-size:0.55rem;padding:1px 5px;border-radius:3px;background:${badgeBg};color:${badgeColor};">${c.role_name}</span>
+        <span style="font-size:0.65rem;color:var(--tf-text-muted);margin-left:auto;">${new Date(c.created_at).toLocaleString()}</span>
+      </div>
+      <p style="font-size:0.85rem;margin:0.25rem 0 0.5rem;color:var(--tf-text);line-height:1.5;">${escapeHtml(c.comment)}</p>
+      <button class="btn-tf" style="font-size:0.6rem;padding:1px 6px;background:transparent;color:var(--tf-text-muted);border:1px solid var(--tf-border);"
+        onclick="toggleModalReply(${c.id})">
+        <i class="bi bi-reply me-1"></i>Reply
+      </button>
+      <div id="modalReplyForm-${c.id}" style="display:none;margin-top:0.5rem;">
+        <div class="d-flex gap-2">
+          <input type="text" id="modalReplyInput-${c.id}" class="tf-form-control" placeholder="Write a reply..." style="font-size:0.8rem;">
+          <button class="btn-tf btn-tf-primary" style="font-size:0.7rem;white-space:nowrap;" onclick="submitRemark(${c.id})">Send</button>
+        </div>
+      </div>`;
+
+    // Replies
+    const replies = comments.filter(r => r.parent_id === c.id);
+    if (replies.length) {
+      html += '<div style="margin-top:0.5rem;padding-left:0.75rem;border-left:1px solid var(--tf-border);">';
+      replies.forEach(r => {
+        const rBadgeBg = r.org_type === 'CLIENT' ? 'rgba(0,212,255,0.1)' : 'rgba(124,58,237,0.1)';
+        const rBadgeColor = r.org_type === 'CLIENT' ? '#00d4ff' : '#a78bfa';
+        html += `<div class="mb-2">
+          <div class="d-flex align-items-center gap-2 mb-1">
+            <div class="user-avatar" style="width:22px;height:22px;font-size:0.55rem;">${r.user_name.charAt(0)}</div>
+            <span style="font-size:0.75rem;font-weight:600;">${r.user_name}</span>
+            <span class="badge" style="font-size:0.5rem;padding:1px 4px;border-radius:3px;background:${rBadgeBg};color:${rBadgeColor};">${r.role_name}</span>
+            <span style="font-size:0.6rem;color:var(--tf-text-muted);margin-left:auto;">${new Date(r.created_at).toLocaleString()}</span>
+          </div>
+          <p style="font-size:0.8rem;margin:0;color:var(--tf-text);line-height:1.4;">${escapeHtml(r.comment)}</p>
+        </div>`;
+      });
+      html += '</div>';
+    }
+
+    html += '</div>';
+  });
+
+  container.innerHTML = html;
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+function toggleModalReply(commentId) {
+  const form = document.getElementById('modalReplyForm-' + commentId);
+  form.style.display = form.style.display === 'none' ? 'block' : 'none';
+  if (form.style.display === 'block') {
+    document.getElementById('modalReplyInput-' + commentId).focus();
+  }
+}
+
+async function submitRemark(parentId) {
+  let input, comment;
+  if (parentId) {
+    input = document.getElementById('modalReplyInput-' + parentId);
+  } else {
+    input = document.getElementById('remarksNewComment');
+  }
+  comment = input.value.trim();
+  if (!comment) return showToast('Please enter a comment', 'error');
+
+  try {
+    await axios.post(`/tasks/${currentRemarksTaskId}/comments`, { comment, parent_id: parentId || null });
+    showToast('Comment posted!');
+    input.value = '';
+    openRemarksModal(currentRemarksTaskId); // refresh
+  } catch (e) {
+    showToast(e.response?.data?.message || 'Error posting comment', 'error');
+  }
+}
+
+function closeRemarksModal() {
+  document.getElementById('remarksModal').style.display = 'none';
+  currentRemarksTaskId = null;
 }
 </script>

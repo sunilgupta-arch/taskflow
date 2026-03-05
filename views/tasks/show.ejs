@@ -9,7 +9,14 @@
         </div>
       </div>
       <div class="p-4">
-        <h4 style="font-weight:600;margin-bottom:0.75rem;"><%= task.title %></h4>
+        <h4 style="font-weight:600;margin-bottom:0.75rem;">
+          <%= task.title %>
+          <% if (task.created_by_org === 'CLIENT' && user.organization_type === 'LOCAL') { %>
+          <span title="Visible to client team" style="font-size:0.6rem;padding:2px 6px;border-radius:4px;background:rgba(0,212,255,0.1);color:#00d4ff;vertical-align:middle;">
+            <i class="bi bi-eye"></i> VISIBLE TO CLIENT
+          </span>
+          <% } %>
+        </h4>
         <p style="color:var(--tf-text-muted);font-size:0.9rem;line-height:1.7;"><%= task.description || 'No description provided.' %></p>
         
         <div class="row g-3 mt-2">
@@ -156,7 +163,13 @@
     <div class="tf-card">
       <div class="card-header"><i class="bi bi-lightning me-2"></i>ACTIONS</div>
       <div class="p-3 d-flex flex-column gap-2">
-        <% if (user.role_name === 'LOCAL_USER' && task.assigned_to === user.id && task.status !== 'completed') { %>
+        <% if (task.assigned_to === user.id && task.status === 'pending') { %>
+        <button class="btn-tf btn-tf-primary" onclick="startTask()">
+          <i class="bi bi-play-circle me-1"></i> Start Task
+        </button>
+        <% } %>
+
+        <% if (task.assigned_to === user.id && task.status === 'in_progress') { %>
         <button class="btn-tf btn-tf-success" onclick="completeTask()">
           <i class="bi bi-check-circle me-1"></i> Mark Complete
         </button>
@@ -195,6 +208,16 @@
 </div>
 
 <script>
+async function startTask() {
+  if (!confirm('Start working on this task?')) return;
+  try {
+    await axios.post('/tasks/start/<%= task.id %>');
+    showToast('Task started!');
+    setTimeout(() => location.reload(), 800);
+  } catch (e) {
+    showToast(e.response?.data?.message || 'Error', 'error');
+  }
+}
 async function completeTask() {
   if (!confirm('Mark this task as completed?')) return;
   try {
