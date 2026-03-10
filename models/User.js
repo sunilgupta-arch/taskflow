@@ -4,7 +4,7 @@ const bcrypt = require('bcryptjs');
 class UserModel {
   static async findById(id) {
     const [rows] = await db.query(
-      `SELECT u.*, r.name as role_name, r.organization_type, o.name as org_name, o.org_type
+      `SELECT u.*, r.name as role_name, r.organization_type, o.name as org_name, o.org_type, o.timezone as org_timezone
        FROM users u 
        JOIN roles r ON u.role_id = r.id
        JOIN organizations o ON u.organization_id = o.id
@@ -15,7 +15,7 @@ class UserModel {
 
   static async findByEmail(email) {
     const [rows] = await db.query(
-      `SELECT u.*, r.name as role_name, r.organization_type, o.name as org_name, o.org_type
+      `SELECT u.*, r.name as role_name, r.organization_type, o.name as org_name, o.org_type, o.timezone as org_timezone
        FROM users u 
        JOIN roles r ON u.role_id = r.id
        JOIN organizations o ON u.organization_id = o.id

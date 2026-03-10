@@ -20,7 +20,7 @@ class AuthController {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
-        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+        maxAge: 12 * 60 * 60 * 1000 // 12 hours
       });
 
       return ApiResponse.success(res, { user, redirectUrl: '/dashboard' }, 'Login successful');
@@ -32,7 +32,7 @@ class AuthController {
   static async logout(req, res) {
     try {
       if (req.user?.id) {
-        await AuthService.recordLogout(req.user.id);
+        await AuthService.recordLogout(req.user.id, req.user.org_timezone || 'UTC');
       }
     } catch (e) {}
     

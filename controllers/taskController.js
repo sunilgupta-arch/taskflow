@@ -1,24 +1,34 @@
 const TaskModel = require('../models/Task');
+const TaskCompletion = require('../models/TaskCompletion');
 const TaskService = require('../services/taskService');
 const { ApiResponse, getPagination, getPaginationMeta } = require('../utils/response');
 const db = require('../config/db');
 const { getIO } = require('../config/socket');
+const { getToday } = require('../utils/timezone');
 
 class TaskController {
   // GET /tasks
   static async index(req, res) {
     try {
-      const { page = 1, limit = 20, status, type, search, completed_period } = req.query;
+      const { page = 1, limit = 20, status, type, search, completed_period, assigned_to } = req.query;
       const role = req.user.role_name;
 
-      const filters = { status, type, search, completed_period, page, limit, orgType: req.user.organization_type };
+      const filters = { status, type, search, completed_period, assigned_to, page, limit, orgType: req.user.organization_type };
       if (role === 'LOCAL_USER') {
         filters.user = req.user.id;
         filters.role = role;
       }
 
       const { rows, total } = await TaskModel.getAll(filters);
-      
+
+      // For recurring tasks, attach today's completion status
+      const today = getToday(req.user.org_timezone || 'UTC');
+      for (const task of rows) {
+        if (['daily', 'weekly'].includes(task.type) && task.status === 'active' && task.assigned_to) {
+          task.is_completed_today = await TaskCompletion.isCompletedForDate(task.id, task.assigned_to, today);
+        }
+      }
+
       // Get users for assignment dropdown
       const [ourUsers] = await db.query(
         `SELECT u.id, u.name, r.name as role_name FROM users u 
@@ -52,6 +62,14 @@ class TaskController {
       };
 
       const { rows, total } = await TaskModel.getAll(filters);
+
+      // For recurring tasks, attach today's completion status
+      const today = getToday(req.user.org_timezone || 'UTC');
+      for (const task of rows) {
+        if (['daily', 'weekly'].includes(task.type) && task.status === 'active' && task.assigned_to) {
+          task.is_completed_today = await TaskCompletion.isCompletedForDate(task.id, task.assigned_to, today);
+        }
+      }
 
       res.render('tasks/index', {
         title: 'My Tasks',
@@ -91,6 +109,78 @@ class TaskController {
     try {
       const task = await TaskService.createTask(req.body, req.user);
       return ApiResponse.success(res, task, 'Task created successfully', 201);
+    } catch (err) {
+      return ApiResponse.error(res, err.message, 400);
+    }
+  }
+
+  // GET /tasks/:id/edit
+  static async showEdit(req, res) {
+    try {
+      const task = await TaskModel.findById(req.params.id);
+      if (!task) return res.status(404).render('error', { title: 'Not Found', message: 'Task not found', code: 404, layout: false });
+
+      const role = req.user.role_name;
+      let ourUsers = [];
+      if (role !== 'LOCAL_USER') {
+        const [users] = await db.query(
+          `SELECT u.id, u.name FROM users u
+           JOIN organizations o ON u.organization_id = o.id
+           WHERE o.org_type = 'LOCAL' AND u.is_active = 1`
+        );
+        ourUsers = users;
+      }
+
+      // Get current assignees for grouped tasks
+      let currentAssignees = [];
+      if (task.group_id) {
+        const [rows] = await db.query(
+          `SELECT assigned_to FROM tasks WHERE group_id = ? AND is_deleted = 0`, [task.group_id]
+        );
+        currentAssignees = rows.map(r => r.assigned_to);
+      } else if (task.assigned_to) {
+        currentAssignees = [task.assigned_to];
+      }
+
+      res.render('tasks/edit', { title: 'Edit Task', task, ourUsers, role, currentAssignees });
+    } catch (err) {
+      res.status(500).render('error', { title: 'Error', message: err.message, code: 500, layout: false });
+    }
+  }
+
+  // PUT /tasks/:id
+  static async update(req, res) {
+    try {
+      const { title, description, type, due_date, reward_amount, priority } = req.body;
+      const updateData = {};
+      if (title !== undefined) updateData.title = title;
+      if (description !== undefined) updateData.description = description;
+      if (type !== undefined) updateData.type = type;
+      if (due_date !== undefined) updateData.due_date = due_date || null;
+      if (reward_amount !== undefined) updateData.reward_amount = reward_amount || null;
+      if (priority !== undefined) updateData.priority = priority;
+
+      // If type changed to/from recurring, update status accordingly
+      if (type && ['daily', 'weekly'].includes(type)) {
+        updateData.status = 'active';
+      }
+
+      const updated = await TaskModel.update(req.params.id, updateData);
+      if (!updated) return ApiResponse.error(res, 'Task not found or no changes', 404);
+
+      // If grouped task, update all siblings too
+      const task = await TaskModel.findById(req.params.id);
+      if (task.group_id) {
+        const [siblings] = await db.query(
+          `SELECT id FROM tasks WHERE group_id = ? AND id != ? AND is_deleted = 0`,
+          [task.group_id, req.params.id]
+        );
+        for (const s of siblings) {
+          await TaskModel.update(s.id, updateData);
+        }
+      }
+
+      return ApiResponse.success(res, { id: req.params.id }, 'Task updated successfully');
     } catch (err) {
       return ApiResponse.error(res, err.message, 400);
     }
@@ -136,7 +226,23 @@ class TaskController {
          ORDER BY c.created_at ASC`, [task.id]
       );
 
-      res.render('tasks/show', { title: task.title, task, attachments, comments, groupAssignees, role: req.user.role_name });
+      // For recurring tasks, check today's completion and get recent history
+      let isCompletedToday = false;
+      let recentCompletions = [];
+      const isRecurring = ['daily', 'weekly'].includes(task.type) && task.status === 'active';
+      if (isRecurring && task.assigned_to) {
+        const today = getToday(req.user.org_timezone || 'UTC');
+        isCompletedToday = await TaskCompletion.isCompletedForDate(task.id, task.assigned_to, today);
+
+        // Get last 30 days of completions
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        recentCompletions = await TaskCompletion.getCompletionsForTask(
+          task.id, thirtyDaysAgo.toISOString().split('T')[0], today
+        );
+      }
+
+      res.render('tasks/show', { title: task.title, task, attachments, comments, groupAssignees, role: req.user.role_name, isRecurring, isCompletedToday, recentCompletions });
     } catch (err) {
       res.status(500).render('error', { title: 'Error', message: err.message, code: 500, layout: false });
     }
@@ -279,6 +385,39 @@ class TaskController {
     try {
       await TaskService.deactivateTask(req.params.id);
       return ApiResponse.success(res, {}, 'Task deactivated successfully');
+    } catch (err) {
+      return ApiResponse.error(res, err.message, 400);
+    }
+  }
+
+  // POST /tasks/:id/log-completion
+  static async logCompletion(req, res) {
+    try {
+      const { date } = req.body;
+      const tz = req.user.org_timezone || 'UTC';
+      const task = await TaskService.logCompletion(req.params.id, req.user.id, date || null, tz);
+
+      const io = getIO();
+      io.to('admins').emit('task:completion-logged', {
+        message: `${req.user.name} logged completion for "${task.title}"`,
+        taskId: task.id,
+        taskTitle: task.title,
+        completedBy: req.user.name
+      });
+
+      return ApiResponse.success(res, task, 'Completion logged successfully');
+    } catch (err) {
+      return ApiResponse.error(res, err.message, 400);
+    }
+  }
+
+  // POST /tasks/:id/undo-completion
+  static async undoCompletion(req, res) {
+    try {
+      const { date } = req.body;
+      const tz = req.user.org_timezone || 'UTC';
+      const task = await TaskService.undoCompletion(req.params.id, req.user.id, date || null, tz);
+      return ApiResponse.success(res, task, 'Completion undone');
     } catch (err) {
       return ApiResponse.error(res, err.message, 400);
     }

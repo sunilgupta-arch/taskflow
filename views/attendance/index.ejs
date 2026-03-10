@@ -41,18 +41,21 @@
               var st = calendarData[u.id][d];
               if (st === 'present') presentCount++;
               var isToday = d === new Date().getDate() && mon === new Date().getMonth() + 1 && year === new Date().getFullYear();
-              var bg = '', clr = '', icon = '';
-              if (st === 'present') { bg = 'rgba(16,185,129,0.2)'; clr = '#10b981'; icon = 'P'; }
-              else if (st === 'absent') { bg = 'rgba(239,68,68,0.15)'; clr = '#ef4444'; icon = 'A'; }
-              else if (st === 'approved_leave') { bg = 'rgba(0,212,255,0.15)'; clr = '#00d4ff'; icon = 'L'; }
-              else if (st === 'pending_leave') { bg = 'rgba(245,158,11,0.15)'; clr = '#f59e0b'; icon = '?'; }
-              else if (st === 'weekoff') { bg = 'rgba(100,116,139,0.1)'; clr = '#64748b'; icon = 'W'; }
-              else { bg = 'transparent'; clr = 'var(--tf-border)'; icon = ''; }
+              var dateStr2 = year + '-' + String(mon).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+              var loginKey = u.id + '-' + dateStr2;
+              var loginTime = (typeof loginTimeMap !== 'undefined' && loginTimeMap[loginKey]) ? loginTimeMap[loginKey] : '';
+              var bg = '', clr = '', icon = '', tipText = '';
+              if (st === 'present') { bg = 'rgba(16,185,129,0.2)'; clr = '#10b981'; icon = 'P'; tipText = loginTime ? 'Login: ' + loginTime : 'Present'; }
+              else if (st === 'absent') { bg = 'rgba(239,68,68,0.15)'; clr = '#ef4444'; icon = 'A'; tipText = 'Absent'; }
+              else if (st === 'approved_leave') { bg = 'rgba(0,212,255,0.15)'; clr = '#00d4ff'; icon = 'L'; tipText = 'Approved Leave'; }
+              else if (st === 'pending_leave') { bg = 'rgba(245,158,11,0.15)'; clr = '#f59e0b'; icon = '?'; tipText = 'Pending Leave'; }
+              else if (st === 'weekoff') { bg = 'rgba(100,116,139,0.1)'; clr = '#64748b'; icon = 'W'; tipText = 'Week Off'; }
+              else { bg = 'transparent'; clr = 'var(--tf-border)'; icon = ''; tipText = ''; }
           %>
           <td style="padding:3px 1px;text-align:center;border-bottom:1px solid var(--tf-border);<%= isToday ? 'background:rgba(0,212,255,0.05);' : '' %>">
             <% if (icon) { %>
-            <div style="width:22px;height:22px;border-radius:4px;background:<%= bg %>;color:<%= clr %>;display:inline-flex;align-items:center;justify-content:center;font-size:0.6rem;font-weight:600;font-family:var(--tf-font-mono);"
-              title="<%= st.replace('_', ' ') %>"><%= icon %></div>
+            <div style="width:22px;height:22px;border-radius:4px;background:<%= bg %>;color:<%= clr %>;display:inline-flex;align-items:center;justify-content:center;font-size:0.6rem;font-weight:600;font-family:var(--tf-font-mono);cursor:default;"
+              title="<%= tipText %>"><%= icon %></div>
             <% } %>
           </td>
           <% } %>
@@ -92,8 +95,12 @@
                 var loginTime = l.login_time ? new Date(l.login_time) : null;
                 var lateMin = 0;
                 if (loginTime) {
-                  var shiftStart = new Date(loginTime); shiftStart.setHours(sH, sM, 0, 0);
-                  lateMin = Math.max(0, Math.round((loginTime - shiftStart) / 60000));
+                  var tz = timezone || 'UTC';
+                  var loginHM = loginTime.toLocaleTimeString('en-US', { timeZone: tz, hour12: false, hour: '2-digit', minute: '2-digit' });
+                  var lH = parseInt(loginHM.split(':')[0]), lM = parseInt(loginHM.split(':')[1]);
+                  var loginMins = lH * 60 + lM;
+                  var shiftMins = sH * 60 + sM;
+                  lateMin = Math.max(0, loginMins - shiftMins);
                 }
               %>
               <tr>
@@ -105,13 +112,13 @@
                   <%= ss %> - <%= endStr %>
                 </td>
                 <td style="font-family:var(--tf-font-mono);font-size:0.75rem;">
-                  <span style="color:#10b981;"><%= loginTime ? loginTime.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) : '—' %></span>
+                  <span style="color:#10b981;"><%= loginTime ? loginTime.toLocaleTimeString('en-US', {timeZone: timezone || 'UTC', hour:'2-digit',minute:'2-digit'}) : '—' %></span>
                   <% if (lateMin > 5) { %>
                   <div style="font-size:0.6rem;color:#ef4444;">+<%= lateMin %> min late</div>
                   <% } %>
                 </td>
                 <td style="font-family:var(--tf-font-mono);font-size:0.75rem;color:var(--tf-text-muted);">
-                  <%= l.logout_time ? new Date(l.logout_time).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) : 'Active' %>
+                  <%= l.logout_time ? new Date(l.logout_time).toLocaleTimeString('en-US', {timeZone: timezone || 'UTC', hour:'2-digit',minute:'2-digit'}) : 'Active' %>
                 </td>
                 <td style="font-size:0.75rem;color:var(--tf-text-muted);">
                   <%= l.duration ? l.duration.substring(0,5) + 'h' : '—' %>

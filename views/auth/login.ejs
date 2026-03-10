@@ -263,6 +263,7 @@
 
         if (res.data.success) {
           btn.textContent = 'ACCESS GRANTED';
+          localStorage.setItem('tf_login_at', Date.now().toString());
           window.location.href = res.data.data.redirectUrl || '/dashboard';
         }
       } catch (err) {

@@ -16,10 +16,10 @@ class TaskModel {
 
   static async create(data) {
     const [result] = await db.query(
-      `INSERT INTO tasks (title, description, type, assigned_to, created_by, created_by_org, group_id, due_date, reward_amount, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO tasks (title, description, type, assigned_to, created_by, created_by_org, group_id, due_date, reward_amount, status, priority)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [data.title, data.description, data.type, data.assigned_to || null, data.created_by,
-       data.created_by_org || 'CLIENT', data.group_id || null, data.due_date || null, data.reward_amount || null, data.status || 'pending']
+       data.created_by_org || 'CLIENT', data.group_id || null, data.due_date || null, data.reward_amount || null, data.status || 'pending', data.priority || 'medium']
     );
     return result.insertId;
   }
@@ -28,7 +28,7 @@ class TaskModel {
     const fields = [];
     const values = [];
 
-    const allowed = ['title', 'description', 'type', 'assigned_to', 'group_id', 'due_date', 'reward_amount', 'status', 'completed_at', 'created_by_org'];
+    const allowed = ['title', 'description', 'type', 'assigned_to', 'group_id', 'due_date', 'reward_amount', 'status', 'completed_at', 'created_by_org', 'is_deleted', 'priority'];
     allowed.forEach(f => {
       if (data[f] !== undefined) {
         fields.push(`${f} = ?`);
@@ -99,7 +99,7 @@ class TaskModel {
          LEFT JOIN users u1 ON t.assigned_to = u1.id
          LEFT JOIN users u2 ON t.created_by = u2.id
          ${whereClause}
-         ORDER BY t.created_at DESC
+         ORDER BY FIELD(t.priority, 'urgent', 'high', 'medium', 'low'), t.created_at DESC
          LIMIT ? OFFSET ?`,
         [...params, parseInt(limit), parseInt(offset)]
       );
@@ -127,6 +127,7 @@ class TaskModel {
               ANY_VALUE(t.created_by_org) as created_by_org,
               MAX(t.created_at) as created_at,
               ANY_VALUE(t.completed_at) as completed_at,
+              ANY_VALUE(t.priority) as priority,
               ANY_VALUE(t.updated_at) as updated_at,
               ANY_VALUE(u1.name) as assigned_to_name,
               ANY_VALUE(u2.name) as created_by_name,
@@ -140,7 +141,7 @@ class TaskModel {
        LEFT JOIN users u2 ON t.created_by = u2.id
        ${whereClause}
        GROUP BY COALESCE(t.group_id, t.id)
-       ORDER BY MAX(t.created_at) DESC
+       ORDER BY FIELD(ANY_VALUE(t.priority), 'urgent', 'high', 'medium', 'low'), MAX(t.created_at) DESC
        LIMIT ? OFFSET ?`,
       [...params, parseInt(limit), parseInt(offset)]
     );
@@ -167,20 +168,39 @@ class TaskModel {
   }
 
   static async getCompletionStats(period = 'today') {
-    let dateFilter;
+    let adhocDateFilter, recurringDateFilter;
     switch (period) {
-      case 'today': dateFilter = 'DATE(completed_at) = CURDATE()'; break;
-      case 'week': dateFilter = 'YEARWEEK(completed_at) = YEARWEEK(NOW())'; break;
-      case 'month': dateFilter = 'MONTH(completed_at) = MONTH(NOW()) AND YEAR(completed_at) = YEAR(NOW())'; break;
-      case 'year': dateFilter = 'YEAR(completed_at) = YEAR(NOW())'; break;
-      default: dateFilter = '1=1';
+      case 'today':
+        adhocDateFilter = 'DATE(completed_at) = CURDATE()';
+        recurringDateFilter = 'completion_date = CURDATE()';
+        break;
+      case 'week':
+        adhocDateFilter = 'YEARWEEK(completed_at) = YEARWEEK(NOW())';
+        recurringDateFilter = 'YEARWEEK(completion_date) = YEARWEEK(NOW())';
+        break;
+      case 'month':
+        adhocDateFilter = 'MONTH(completed_at) = MONTH(NOW()) AND YEAR(completed_at) = YEAR(NOW())';
+        recurringDateFilter = 'MONTH(completion_date) = MONTH(NOW()) AND YEAR(completion_date) = YEAR(NOW())';
+        break;
+      case 'year':
+        adhocDateFilter = 'YEAR(completed_at) = YEAR(NOW())';
+        recurringDateFilter = 'YEAR(completion_date) = YEAR(NOW())';
+        break;
+      default:
+        adhocDateFilter = '1=1';
+        recurringDateFilter = '1=1';
     }
 
-    const [[stats]] = await db.query(
-      `SELECT COUNT(*) as total FROM tasks 
-       WHERE status = 'completed' AND is_deleted = 0 AND ${dateFilter}`
+    const [[adhoc]] = await db.query(
+      `SELECT COUNT(*) as total FROM tasks
+       WHERE status = 'completed' AND is_deleted = 0 AND type = 'adhoc' AND ${adhocDateFilter}`
     );
-    return stats.total;
+    const [[recurring]] = await db.query(
+      `SELECT COUNT(*) as total FROM task_completions tc
+       JOIN tasks t ON tc.task_id = t.id
+       WHERE t.is_deleted = 0 AND ${recurringDateFilter}`
+    );
+    return (parseInt(adhoc.total) || 0) + (parseInt(recurring.total) || 0);
   }
 }
 

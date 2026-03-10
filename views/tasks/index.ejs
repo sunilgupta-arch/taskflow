@@ -7,6 +7,7 @@
       <option value="pending" <%= filters.status === 'pending' ? 'selected' : '' %>>Pending</option>
       <option value="in_progress" <%= filters.status === 'in_progress' ? 'selected' : '' %>>In Progress</option>
       <option value="completed" <%= filters.status === 'completed' ? 'selected' : '' %>>Completed</option>
+      <option value="active" <%= filters.status === 'active' ? 'selected' : '' %>>Active (Recurring)</option>
       <option value="deactivated" <%= filters.status === 'deactivated' ? 'selected' : '' %>>Deactivated</option>
     </select>
     <select name="type" class="tf-select" style="max-width:130px;">
@@ -35,6 +36,7 @@
           <th>#</th>
           <th>Task</th>
           <th>Type</th>
+          <th>Priority</th>
           <th>Assigned To</th>
           <th>Status</th>
           <th>Due Date</th>
@@ -70,6 +72,11 @@
             </td>
             <td><span class="badge badge-<%= task.type %>" style="font-size:0.65rem;border-radius:4px;padding:2px 6px;"><%= task.type === 'adhoc' ? 'one time' : task.type %></span></td>
             <td>
+              <% const pColors = { urgent: { bg: 'rgba(239,68,68,0.15)', color: '#ef4444' }, high: { bg: 'rgba(245,158,11,0.15)', color: '#f59e0b' }, medium: { bg: 'rgba(59,130,246,0.15)', color: '#3b82f6' }, low: { bg: 'rgba(107,114,128,0.15)', color: '#6b7280' } }; %>
+              <% const pc = pColors[task.priority] || pColors.medium; %>
+              <span class="badge" style="font-size:0.65rem;border-radius:4px;padding:2px 6px;background:<%= pc.bg %>;color:<%= pc.color %>;"><%= (task.priority || 'medium').toUpperCase() %></span>
+            </td>
+            <td>
               <% if (task.assignee_names) { %>
                 <% const names = task.assignee_names.split(', '); %>
                 <% if (names.length === 1) { %>
@@ -94,9 +101,21 @@
               <% } %>
             </td>
             <td>
+              <% if (task.status === 'active') { %>
+                <% if (task.is_completed_today) { %>
+                <span class="badge" style="font-size:0.65rem;border-radius:4px;padding:3px 8px;background:rgba(16,185,129,0.15);color:#10b981;">
+                  <i class="bi bi-check-circle-fill"></i> Done Today
+                </span>
+                <% } else { %>
+                <span class="badge" style="font-size:0.65rem;border-radius:4px;padding:3px 8px;background:rgba(245,158,11,0.15);color:#f59e0b;">
+                  <i class="bi bi-circle"></i> Pending Today
+                </span>
+                <% } %>
+              <% } else { %>
               <span class="badge badge-<%= task.status %>" style="font-size:0.65rem;border-radius:4px;padding:3px 8px;">
                 <%= task.status.replace('_', ' ') %>
               </span>
+              <% } %>
             </td>
             <td style="font-size:0.8rem;color:<%= task.due_date && new Date(task.due_date) < new Date() && task.status !== 'completed' ? '#ef4444' : 'var(--tf-text-muted)' %>;">
               <%= task.due_date ? new Date(task.due_date).toLocaleDateString() : '—' %>
@@ -117,20 +136,35 @@
             <td>
               <div class="d-flex gap-1 flex-wrap">
                 <% if (['CLIENT_ADMIN', 'CLIENT_MANAGER', 'LOCAL_ADMIN', 'LOCAL_MANAGER'].includes(user.role_name) && !['completed','deactivated'].includes(task.status)) { %>
+                <a href="/tasks/<%= task.id %>/edit" class="btn-tf text-decoration-none" style="font-size:0.65rem;padding:2px 8px;background:transparent;color:#a78bfa;border:1px solid rgba(124,58,237,0.3);">
+                  Edit
+                </a>
                 <button class="btn-tf" style="font-size:0.65rem;padding:2px 8px;background:transparent;color:#00d4ff;border:1px solid rgba(0,212,255,0.3);"
                   onclick="openAssignModal(<%= task.id %>, '<%= task.assignee_names || '' %>')">
                   Assign
                 </button>
                 <% } %>
 
-                <% if (((user.role_name === 'LOCAL_USER') || (typeof isMyTasks !== 'undefined' && isMyTasks)) && task.assigned_to === user.id && task.status === 'pending') { %>
+                <% if (task.status === 'active' && task.assigned_to === user.id) { %>
+                  <% if (task.is_completed_today) { %>
+                  <button class="btn-tf" style="font-size:0.65rem;padding:2px 8px;background:rgba(239,68,68,0.1);color:#ef4444;border:1px solid rgba(239,68,68,0.3);"
+                    onclick="undoCompletion(<%= task.id %>)">
+                    Undo
+                  </button>
+                  <% } else { %>
+                  <button class="btn-tf" style="font-size:0.65rem;padding:2px 8px;background:rgba(16,185,129,0.1);color:#10b981;border:1px solid rgba(16,185,129,0.3);"
+                    onclick="logCompletion(<%= task.id %>)">
+                    Log
+                  </button>
+                  <% } %>
+                <% } else if (((user.role_name === 'LOCAL_USER') || (typeof isMyTasks !== 'undefined' && isMyTasks)) && task.assigned_to === user.id && task.status === 'pending') { %>
                 <button class="btn-tf" style="font-size:0.65rem;padding:2px 8px;background:rgba(0,212,255,0.1);color:#00d4ff;border:1px solid rgba(0,212,255,0.3);"
                   onclick="startTask(<%= task.id %>)">
                   Start
                 </button>
                 <% } %>
 
-                <% if (((user.role_name === 'LOCAL_USER') || (typeof isMyTasks !== 'undefined' && isMyTasks)) && task.assigned_to === user.id && task.status === 'in_progress') { %>
+                <% if (task.status !== 'active' && ((user.role_name === 'LOCAL_USER') || (typeof isMyTasks !== 'undefined' && isMyTasks)) && task.assigned_to === user.id && task.status === 'in_progress') { %>
                 <button class="btn-tf" style="font-size:0.65rem;padding:2px 8px;background:rgba(16,185,129,0.1);color:#10b981;border:1px solid rgba(16,185,129,0.3);"
                   onclick="completeTask(<%= task.id %>)">
                   Complete
@@ -156,7 +190,7 @@
           <% }) %>
         <% } else { %>
         <tr>
-          <td colspan="9" style="text-align:center;padding:3rem;color:var(--tf-text-muted);">
+          <td colspan="10" style="text-align:center;padding:3rem;color:var(--tf-text-muted);">
             <i class="bi bi-inbox" style="font-size:2rem;display:block;margin-bottom:0.5rem;"></i>
             No tasks found
           </td>
@@ -293,6 +327,26 @@ async function completeTask(taskId) {
     setTimeout(() => location.reload(), 800);
   } catch (e) {
     showToast(e.response?.data?.message || 'Failed to complete task', 'error');
+  }
+}
+async function logCompletion(taskId) {
+  if (!confirm('Log today\'s completion for this task?')) return;
+  try {
+    await axios.post(`/tasks/${taskId}/log-completion`);
+    showToast('Completion logged!');
+    setTimeout(() => location.reload(), 800);
+  } catch (e) {
+    showToast(e.response?.data?.message || 'Failed to log completion', 'error');
+  }
+}
+async function undoCompletion(taskId) {
+  if (!confirm('Undo today\'s completion?')) return;
+  try {
+    await axios.post(`/tasks/${taskId}/undo-completion`);
+    showToast('Completion undone');
+    setTimeout(() => location.reload(), 800);
+  } catch (e) {
+    showToast(e.response?.data?.message || 'Failed to undo completion', 'error');
   }
 }
 async function deactivateTask(taskId) {

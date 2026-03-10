@@ -181,16 +181,18 @@ const isManager = ['CLIENT_MANAGER', 'LOCAL_MANAGER'].includes(user.role_name);
       <thead>
         <tr>
           <th>User</th>
-          <th>Total Tasks</th>
-          <th>Completed</th>
-          <th>In Progress</th>
+          <th>Total</th>
+          <th>Done</th>
+          <th>Active</th>
           <th>Pending</th>
+          <th>Recurring</th>
+          <th>Deactivated</th>
           <th>Progress</th>
           <th>Rewards</th>
         </tr>
       </thead>
       <tbody>
-        <% perUserStats.forEach(u => { 
+        <% perUserStats.forEach(u => {
            const progress = u.total_tasks > 0 ? Math.round((u.completed / u.total_tasks) * 100) : 0;
            const reward = perUserRewards?.find(r => r.id === u.id);
         %>
@@ -205,6 +207,8 @@ const isManager = ['CLIENT_MANAGER', 'LOCAL_MANAGER'].includes(user.role_name);
           <td><span style="color:#10b981;font-family:var(--tf-font-mono);"><%= u.completed %></span></td>
           <td><span style="color:#00d4ff;font-family:var(--tf-font-mono);"><%= u.in_progress %></span></td>
           <td><span style="color:#f59e0b;font-family:var(--tf-font-mono);"><%= u.pending %></span></td>
+          <td><span style="color:#8b5cf6;font-family:var(--tf-font-mono);"><%= u.active_recurring || 0 %></span></td>
+          <td><span style="color:#64748b;font-family:var(--tf-font-mono);"><%= u.deactivated || 0 %></span></td>
           <td style="min-width:100px;">
             <div class="tf-progress">
               <div class="tf-progress-bar" style="width:<%= progress %>%"></div>
@@ -282,35 +286,159 @@ const isManager = ['CLIENT_MANAGER', 'LOCAL_MANAGER'].includes(user.role_name);
   </div>
 </div>
 
-<!-- Recent Tasks -->
+<!-- Day Tasks with Date Navigation -->
+<%
+  const selDate = typeof selectedDate !== 'undefined' ? selectedDate : new Date().toISOString().split('T')[0];
+  const dateObj = new Date(selDate + 'T00:00:00');
+  const prevDate = new Date(dateObj); prevDate.setDate(prevDate.getDate() - 1);
+  const nextDate = new Date(dateObj); nextDate.setDate(nextDate.getDate() + 1);
+  const prevStr = prevDate.toISOString().split('T')[0];
+  const nextStr = nextDate.toISOString().split('T')[0];
+  const isTodayView = typeof isToday !== 'undefined' ? isToday : true;
+  const todayStr = isTodayView ? selDate : '__not_today__';
+  const displayDate = dateObj.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+%>
 <div class="tf-card">
   <div class="card-header d-flex align-items-center justify-content-between">
-    <span><i class="bi bi-list-task me-2"></i>MY RECENT TASKS</span>
-    <a href="/tasks" style="font-size:0.75rem;color:var(--tf-accent);text-decoration:none;">View All →</a>
+    <span>
+      <i class="bi bi-calendar-check me-2"></i>MY TASKS
+      <% if (isTodayView) { %>
+        <span style="font-size:0.7rem;padding:2px 8px;border-radius:4px;background:rgba(16,185,129,0.15);color:#10b981;margin-left:6px;">TODAY</span>
+      <% } else if (typeof isPast !== 'undefined' && isPast) { %>
+        <span style="font-size:0.7rem;padding:2px 8px;border-radius:4px;background:rgba(107,114,128,0.15);color:#6b7280;margin-left:6px;">PAST</span>
+      <% } else if (typeof isFuture !== 'undefined' && isFuture) { %>
+        <span style="font-size:0.7rem;padding:2px 8px;border-radius:4px;background:rgba(59,130,246,0.15);color:#3b82f6;margin-left:6px;">UPCOMING</span>
+      <% } %>
+    </span>
+    <a href="/tasks/my" style="font-size:0.75rem;color:var(--tf-accent);text-decoration:none;">View All →</a>
   </div>
+
+  <!-- Date Navigation -->
+  <div class="d-flex align-items-center justify-content-between p-3" style="border-bottom:1px solid var(--tf-border);">
+    <a href="/dashboard?date=<%= prevStr %>" class="btn-tf btn-tf-outline" style="font-size:0.75rem;padding:4px 12px;text-decoration:none;">
+      <i class="bi bi-chevron-left"></i> Prev
+    </a>
+    <div class="text-center">
+      <div style="font-size:0.9rem;font-weight:600;"><%= displayDate %></div>
+      <% if (!isTodayView) { %>
+      <a href="/dashboard" style="font-size:0.7rem;color:var(--tf-accent);text-decoration:none;">
+        <i class="bi bi-arrow-return-left me-1"></i>Back to Today
+      </a>
+      <% } %>
+    </div>
+    <a href="/dashboard?date=<%= nextStr %>" class="btn-tf btn-tf-outline" style="font-size:0.75rem;padding:4px 12px;text-decoration:none;">
+      Next <i class="bi bi-chevron-right"></i>
+    </a>
+  </div>
+
   <table class="tf-table">
     <thead>
-      <tr><th>Task</th><th>Type</th><th>Status</th><th>Due</th><th>Reward</th></tr>
+      <tr><th>Task</th><th>Type</th><th>Priority</th><th>Status</th><th>Reward</th><th>Action</th></tr>
     </thead>
     <tbody>
-      <% if (recentTasks && recentTasks.length > 0) { %>
-        <% recentTasks.forEach(t => { %>
+      <% if (typeof dayTasks !== 'undefined' && dayTasks && dayTasks.length > 0) { %>
+        <% const pColors = { urgent: { bg: 'rgba(239,68,68,0.15)', color: '#ef4444' }, high: { bg: 'rgba(245,158,11,0.15)', color: '#f59e0b' }, medium: { bg: 'rgba(59,130,246,0.15)', color: '#3b82f6' }, low: { bg: 'rgba(107,114,128,0.15)', color: '#6b7280' } }; %>
+        <% dayTasks.forEach(t => { %>
+        <% const isRecurring = t.is_recurring == 1; %>
+        <% const isCompletedForDate = t.is_completed_for_date > 0; %>
         <tr>
           <td>
             <a href="/tasks/<%= t.id %>" style="color:var(--tf-text);text-decoration:none;font-weight:500;"><%= t.title %></a>
           </td>
-          <td><span class="badge badge-<%= t.type %>" style="font-size:0.65rem;border-radius:4px;padding:2px 6px;"><%= t.type %></span></td>
-          <td><span class="badge badge-<%= t.status %>" style="font-size:0.65rem;border-radius:4px;padding:2px 6px;"><%= t.status.replace('_',' ') %></span></td>
-          <td style="font-size:0.8rem;color:var(--tf-text-muted);"><%= t.due_date ? new Date(t.due_date).toLocaleDateString() : '—' %></td>
+          <td><span class="badge badge-<%= t.type %>" style="font-size:0.65rem;border-radius:4px;padding:2px 6px;"><%= t.type === 'adhoc' ? 'one time' : t.type %></span></td>
+          <td>
+            <% const pc = pColors[t.priority] || pColors.medium; %>
+            <span class="badge" style="font-size:0.65rem;border-radius:4px;padding:2px 6px;background:<%= pc.bg %>;color:<%= pc.color %>;"><%= (t.priority || 'medium').toUpperCase() %></span>
+          </td>
+          <td>
+            <% if (isRecurring) { %>
+              <% if (isCompletedForDate) { %>
+              <span class="badge" style="font-size:0.65rem;border-radius:4px;padding:3px 8px;background:rgba(16,185,129,0.15);color:#10b981;">
+                <i class="bi bi-check-circle-fill"></i> Done
+              </span>
+              <% } else { %>
+              <span class="badge" style="font-size:0.65rem;border-radius:4px;padding:3px 8px;background:rgba(245,158,11,0.15);color:#f59e0b;">
+                <i class="bi bi-circle"></i> Pending
+              </span>
+              <% } %>
+            <% } else { %>
+            <span class="badge badge-<%= t.status %>" style="font-size:0.65rem;border-radius:4px;padding:2px 6px;"><%= t.status.replace('_',' ') %></span>
+            <% } %>
+          </td>
           <td style="font-family:var(--tf-font-mono);color:#f59e0b;font-size:0.8rem;">
             <%= t.reward_amount ? parseFloat(t.reward_amount).toFixed(0) + ' pts' : '—' %>
+          </td>
+          <td>
+            <% if (isRecurring && isTodayView) { %>
+              <% if (isCompletedForDate) { %>
+              <button class="btn-tf" style="font-size:0.65rem;padding:2px 8px;background:rgba(239,68,68,0.1);color:#ef4444;border:1px solid rgba(239,68,68,0.3);"
+                onclick="undoDayCompletion(<%= t.id %>)">Undo</button>
+              <% } else { %>
+              <button class="btn-tf" style="font-size:0.65rem;padding:2px 8px;background:rgba(16,185,129,0.1);color:#10b981;border:1px solid rgba(16,185,129,0.3);"
+                onclick="logDayCompletion(<%= t.id %>)">Log</button>
+              <% } %>
+            <% } else if (!isRecurring && t.status === 'pending' && isTodayView) { %>
+              <button class="btn-tf" style="font-size:0.65rem;padding:2px 8px;background:rgba(0,212,255,0.1);color:#00d4ff;border:1px solid rgba(0,212,255,0.3);"
+                onclick="startDayTask(<%= t.id %>)">Start</button>
+            <% } else if (!isRecurring && t.status === 'in_progress' && isTodayView) { %>
+              <button class="btn-tf" style="font-size:0.65rem;padding:2px 8px;background:rgba(16,185,129,0.1);color:#10b981;border:1px solid rgba(16,185,129,0.3);"
+                onclick="completeDayTask(<%= t.id %>)">Complete</button>
+            <% } else { %>
+              <a href="/tasks/<%= t.id %>" style="font-size:0.65rem;color:var(--tf-accent);text-decoration:none;">View</a>
+            <% } %>
           </td>
         </tr>
         <% }) %>
       <% } else { %>
-      <tr><td colspan="5" style="text-align:center;color:var(--tf-text-muted);padding:2rem;">No tasks assigned yet</td></tr>
+      <tr><td colspan="6" style="text-align:center;color:var(--tf-text-muted);padding:2rem;">
+        <i class="bi bi-check-all" style="font-size:1.5rem;display:block;margin-bottom:0.5rem;"></i>
+        No tasks for this date
+      </td></tr>
       <% } %>
     </tbody>
   </table>
 </div>
+
+<script>
+async function logDayCompletion(taskId) {
+  if (!confirm('Log completion for this task?')) return;
+  try {
+    await axios.post('/tasks/' + taskId + '/log-completion');
+    showToast('Completion logged!');
+    setTimeout(() => location.reload(), 800);
+  } catch (e) {
+    showToast(e.response?.data?.message || 'Error', 'error');
+  }
+}
+async function undoDayCompletion(taskId) {
+  if (!confirm('Undo completion?')) return;
+  try {
+    await axios.post('/tasks/' + taskId + '/undo-completion');
+    showToast('Completion undone');
+    setTimeout(() => location.reload(), 800);
+  } catch (e) {
+    showToast(e.response?.data?.message || 'Error', 'error');
+  }
+}
+async function startDayTask(taskId) {
+  if (!confirm('Start this task?')) return;
+  try {
+    await axios.post('/tasks/start/' + taskId);
+    showToast('Task started!');
+    setTimeout(() => location.reload(), 800);
+  } catch (e) {
+    showToast(e.response?.data?.message || 'Error', 'error');
+  }
+}
+async function completeDayTask(taskId) {
+  if (!confirm('Mark as completed?')) return;
+  try {
+    await axios.post('/tasks/complete/' + taskId);
+    showToast('Task completed!');
+    setTimeout(() => location.reload(), 800);
+  } catch (e) {
+    showToast(e.response?.data?.message || 'Error', 'error');
+  }
+}
+</script>
 <% } %>

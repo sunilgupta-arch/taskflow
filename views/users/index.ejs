@@ -35,7 +35,7 @@
         <% users.forEach(u => { %>
         <tr>
           <td>
-            <div style="font-weight:500;"><%= u.name %></div>
+            <a href="/users/<%= u.id %>/progress" style="font-weight:500;color:var(--tf-accent);text-decoration:none;"><%= u.name %></a>
             <div style="font-size:0.7rem;color:var(--tf-text-muted);"><%= u.email %></div>
           </td>
           <td>

@@ -13,6 +13,10 @@ const LeaveController = require('../controllers/leaveController');
 // Dashboard
 router.get('/dashboard', authenticate, DashboardController.show);
 
+// Self-service progress & reports (any authenticated user)
+router.get('/my-progress', authenticate, UserController.showMyProgress);
+router.get('/my-monthly-report', authenticate, UserController.myMonthlyReport);
+
 // Users
 router.get('/users', authenticate, requireRoles('LOCAL_ADMIN', 'LOCAL_MANAGER'), UserController.index);
 router.post('/users', authenticate, requireRoles('LOCAL_ADMIN', 'LOCAL_MANAGER'), UserController.create);

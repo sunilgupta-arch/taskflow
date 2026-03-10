@@ -1,6 +1,8 @@
 const TaskModel = require('../models/Task');
+const TaskCompletion = require('../models/TaskCompletion');
 const RewardModel = require('../models/Reward');
 const db = require('../config/db');
+const { getToday } = require('../utils/timezone');
 
 class TaskService {
   static async createTask(data, creator) {
@@ -15,10 +17,13 @@ class TaskService {
     const effectiveOrg = (data.client_visible && ['LOCAL_ADMIN', 'LOCAL_MANAGER'].includes(role))
       ? 'CLIENT' : orgType;
 
+    const isRecurring = ['daily', 'weekly'].includes(data.type);
+
     const baseData = {
       ...data,
       created_by: creator.id,
-      created_by_org: effectiveOrg
+      created_by_org: effectiveOrg,
+      status: isRecurring ? 'active' : 'pending'
     };
     delete baseData.client_visible;
 
@@ -86,6 +91,12 @@ class TaskService {
     const task = await TaskModel.findById(taskId);
     if (!task) throw new Error('Task not found');
     if (task.assigned_to !== userId) throw new Error('You can only start tasks assigned to you');
+
+    // Recurring tasks don't have a start flow — they're always active
+    if (['daily', 'weekly'].includes(task.type) && task.status === 'active') {
+      throw new Error('Recurring tasks do not need to be started. Use "Log Completion" instead.');
+    }
+
     if (task.status !== 'pending') throw new Error('Only pending tasks can be started');
 
     await TaskModel.update(taskId, { status: 'in_progress' });
@@ -93,17 +104,21 @@ class TaskService {
   }
 
   static async completeTask(taskId, userId) {
+    const task = await TaskModel.findById(taskId);
+    if (!task) throw new Error('Task not found');
+    if (task.assigned_to !== userId) throw new Error('You can only complete tasks assigned to you');
+
+    // Recurring tasks use logCompletion instead
+    if (['daily', 'weekly'].includes(task.type) && task.status === 'active') {
+      return this.logCompletion(taskId, userId);
+    }
+
+    // Adhoc task: original flow
+    if (task.status === 'completed') throw new Error('Task already completed');
+
     const conn = await db.getConnection();
     try {
       await conn.beginTransaction();
-
-      const [rows] = await conn.query(
-        `SELECT * FROM tasks WHERE id = ? AND is_deleted = 0 FOR UPDATE`, [taskId]
-      );
-      const task = rows[0];
-      if (!task) throw new Error('Task not found');
-      if (task.assigned_to !== userId) throw new Error('You can only complete tasks assigned to you');
-      if (task.status === 'completed') throw new Error('Task already completed');
 
       await conn.query(
         `UPDATE tasks SET status = 'completed', completed_at = NOW() WHERE id = ?`, [taskId]
@@ -120,6 +135,92 @@ class TaskService {
 
       await conn.commit();
       return TaskModel.findById(taskId);
+    } catch (err) {
+      await conn.rollback();
+      throw err;
+    } finally {
+      conn.release();
+    }
+  }
+
+  /**
+   * Log completion for a recurring task for today (or a specific date).
+   */
+  static async logCompletion(taskId, userId, date = null, timezone = 'UTC') {
+    const task = await TaskModel.findById(taskId);
+    if (!task) throw new Error('Task not found');
+    if (task.assigned_to !== userId) throw new Error('You can only log completion for tasks assigned to you');
+    if (!['daily', 'weekly'].includes(task.type)) throw new Error('Only recurring tasks can be logged');
+    if (task.status !== 'active') throw new Error('Task is not active');
+
+    const completionDate = date || getToday(timezone);
+
+    const conn = await db.getConnection();
+    try {
+      await conn.beginTransaction();
+
+      // Check if already completed for this date
+      const [[existing]] = await conn.query(
+        `SELECT id FROM task_completions WHERE task_id = ? AND user_id = ? AND completion_date = ?`,
+        [taskId, userId, completionDate]
+      );
+      if (existing) throw new Error('Already completed for this date');
+
+      await conn.query(
+        `INSERT INTO task_completions (task_id, user_id, completion_date) VALUES (?, ?, ?)`,
+        [taskId, userId, completionDate]
+      );
+
+      // Create reward entry if applicable
+      if (task.reward_amount && parseFloat(task.reward_amount) > 0) {
+        await conn.query(
+          `INSERT INTO rewards_ledger (user_id, task_id, reward_amount, status)
+           VALUES (?, ?, ?, 'pending')`,
+          [userId, taskId, task.reward_amount]
+        );
+      }
+
+      await conn.commit();
+      return task;
+    } catch (err) {
+      await conn.rollback();
+      throw err;
+    } finally {
+      conn.release();
+    }
+  }
+
+  /**
+   * Undo completion for a recurring task for today (or a specific date).
+   */
+  static async undoCompletion(taskId, userId, date = null, timezone = 'UTC') {
+    const task = await TaskModel.findById(taskId);
+    if (!task) throw new Error('Task not found');
+    if (task.assigned_to !== userId) throw new Error('You can only undo completion for tasks assigned to you');
+
+    const completionDate = date || getToday(timezone);
+
+    const conn = await db.getConnection();
+    try {
+      await conn.beginTransaction();
+
+      const [result] = await conn.query(
+        `DELETE FROM task_completions WHERE task_id = ? AND user_id = ? AND completion_date = ?`,
+        [taskId, userId, completionDate]
+      );
+      if (result.affectedRows === 0) throw new Error('No completion found for this date');
+
+      // Remove the reward entry for this date (latest pending one for this task)
+      if (task.reward_amount && parseFloat(task.reward_amount) > 0) {
+        await conn.query(
+          `DELETE FROM rewards_ledger WHERE user_id = ? AND task_id = ? AND status = 'pending'
+           ORDER BY created_at DESC LIMIT 1`,
+          [userId, taskId]
+        );
+      }
+
+      await conn.commit();
+      return task;
     } catch (err) {
       await conn.rollback();
       throw err;
@@ -163,6 +264,7 @@ class TaskService {
         group_id: groupId,
         due_date: template.due_date,
         reward_amount: template.reward_amount,
+        priority: template.priority || 'medium',
         status: 'pending'
       });
     }
@@ -231,7 +333,8 @@ class TaskService {
     let userFilter = userId ? `AND (t.assigned_to = ${db.escape(userId)} OR t.created_by = ${db.escape(userId)})` : '';
     let orgFilter = orgType === 'CLIENT' ? "AND t.created_by_org = 'CLIENT'" : '';
 
-    const [[stats]] = await db.query(
+    // Adhoc task stats (status-based)
+    const [[adhocStats]] = await db.query(
       `SELECT
         COUNT(*) as total,
         SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending,
@@ -241,12 +344,45 @@ class TaskService {
         SUM(CASE WHEN status = 'completed' AND YEARWEEK(completed_at) = YEARWEEK(NOW()) THEN 1 ELSE 0 END) as completed_this_week,
         SUM(CASE WHEN status = 'completed' AND MONTH(completed_at) = MONTH(NOW()) AND YEAR(completed_at) = YEAR(NOW()) THEN 1 ELSE 0 END) as completed_this_month,
         SUM(CASE WHEN status = 'completed' AND YEAR(completed_at) = YEAR(NOW()) THEN 1 ELSE 0 END) as completed_this_year,
-        SUM(CASE WHEN type = 'daily' THEN 1 ELSE 0 END) as type_daily,
-        SUM(CASE WHEN type = 'weekly' THEN 1 ELSE 0 END) as type_weekly,
         SUM(CASE WHEN type = 'adhoc' THEN 1 ELSE 0 END) as type_adhoc
-       FROM tasks t WHERE is_deleted = 0 ${userFilter} ${orgFilter}`
+       FROM tasks t WHERE is_deleted = 0 AND type = 'adhoc' ${userFilter} ${orgFilter}`
     );
-    return stats;
+
+    // Recurring task stats (from task_completions)
+    let recurringUserFilter = userId ? `AND t.assigned_to = ${db.escape(userId)}` : '';
+    const [[recurringStats]] = await db.query(
+      `SELECT
+        COUNT(DISTINCT t.id) as total,
+        COUNT(DISTINCT CASE WHEN t.type = 'daily' THEN t.id END) as type_daily,
+        COUNT(DISTINCT CASE WHEN t.type = 'weekly' THEN t.id END) as type_weekly
+       FROM tasks t WHERE t.is_deleted = 0 AND t.type IN ('daily','weekly') AND t.status = 'active' ${recurringUserFilter} ${orgFilter}`
+    );
+
+    const [[completionStats]] = await db.query(
+      `SELECT
+        COUNT(*) as completed,
+        SUM(CASE WHEN tc.completion_date = CURDATE() THEN 1 ELSE 0 END) as completed_today,
+        SUM(CASE WHEN YEARWEEK(tc.completion_date) = YEARWEEK(NOW()) THEN 1 ELSE 0 END) as completed_this_week,
+        SUM(CASE WHEN MONTH(tc.completion_date) = MONTH(NOW()) AND YEAR(tc.completion_date) = YEAR(NOW()) THEN 1 ELSE 0 END) as completed_this_month,
+        SUM(CASE WHEN YEAR(tc.completion_date) = YEAR(NOW()) THEN 1 ELSE 0 END) as completed_this_year
+       FROM task_completions tc
+       JOIN tasks t ON tc.task_id = t.id
+       WHERE t.is_deleted = 0 ${recurringUserFilter} ${orgFilter}`
+    );
+
+    return {
+      total: (parseInt(adhocStats.total) || 0) + (parseInt(recurringStats.total) || 0),
+      pending: parseInt(adhocStats.pending) || 0,
+      in_progress: parseInt(adhocStats.in_progress) || 0,
+      completed: (parseInt(adhocStats.completed) || 0) + (parseInt(completionStats.completed) || 0),
+      completed_today: (parseInt(adhocStats.completed_today) || 0) + (parseInt(completionStats.completed_today) || 0),
+      completed_this_week: (parseInt(adhocStats.completed_this_week) || 0) + (parseInt(completionStats.completed_this_week) || 0),
+      completed_this_month: (parseInt(adhocStats.completed_this_month) || 0) + (parseInt(completionStats.completed_this_month) || 0),
+      completed_this_year: (parseInt(adhocStats.completed_this_year) || 0) + (parseInt(completionStats.completed_this_year) || 0),
+      type_daily: parseInt(recurringStats.type_daily) || 0,
+      type_weekly: parseInt(recurringStats.type_weekly) || 0,
+      type_adhoc: parseInt(adhocStats.type_adhoc) || 0
+    };
   }
 
   static async getCompletionPerUser(orgType = null) {
@@ -254,13 +390,16 @@ class TaskService {
 
     const [rows] = await db.query(
       `SELECT u.id, u.name, u.email,
-        COUNT(t.id) as total_tasks,
-        SUM(CASE WHEN t.status = 'completed' THEN 1 ELSE 0 END) as completed,
-        SUM(CASE WHEN t.status = 'in_progress' THEN 1 ELSE 0 END) as in_progress,
-        SUM(CASE WHEN t.status = 'pending' THEN 1 ELSE 0 END) as pending
+        (SELECT COUNT(*) FROM tasks t WHERE t.assigned_to = u.id AND t.is_deleted = 0 ${orgFilter}) as total_tasks,
+        (SELECT COUNT(*) FROM tasks t WHERE t.assigned_to = u.id AND t.is_deleted = 0 AND t.type = 'adhoc' AND t.status = 'completed' ${orgFilter})
+        + (SELECT COUNT(*) FROM task_completions tc JOIN tasks t ON tc.task_id = t.id WHERE t.assigned_to = u.id AND t.is_deleted = 0 ${orgFilter}) as completed,
+        (SELECT COUNT(*) FROM tasks t WHERE t.assigned_to = u.id AND t.is_deleted = 0 AND t.status = 'in_progress' ${orgFilter}) as in_progress,
+        (SELECT COUNT(*) FROM tasks t WHERE t.assigned_to = u.id AND t.is_deleted = 0 AND t.status = 'pending' ${orgFilter}) as pending,
+        (SELECT COUNT(*) FROM tasks t WHERE t.assigned_to = u.id AND t.is_deleted = 0 AND t.status = 'active' ${orgFilter}) as active_recurring,
+        (SELECT COUNT(*) FROM tasks t WHERE t.assigned_to = u.id AND t.is_deleted = 0 AND t.status = 'deactivated' ${orgFilter}) as deactivated
        FROM users u
-       LEFT JOIN tasks t ON u.id = t.assigned_to AND t.is_deleted = 0 ${orgFilter}
-       WHERE u.is_active = 1
+       JOIN roles r ON u.role_id = r.id
+       WHERE u.is_active = 1 AND r.name NOT IN ('CLIENT_ADMIN', 'CLIENT_MANAGER')
        GROUP BY u.id
        ORDER BY completed DESC`
     );

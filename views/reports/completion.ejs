@@ -48,18 +48,20 @@
       <div style="overflow-x:auto;">
         <table class="tf-table">
           <thead>
-            <tr><th>User</th><th>Total</th><th>Done</th><th>Active</th><th>Pending</th><th>Rate</th></tr>
+            <tr><th>User</th><th>Total</th><th>Done</th><th>Active</th><th>Pending</th><th>Recurring</th><th>Deactivated</th><th>Rate</th></tr>
           </thead>
           <tbody>
-            <% perUser.forEach(u => { 
+            <% perUser.forEach(u => {
               const rate = u.total_tasks > 0 ? Math.round((u.completed/u.total_tasks)*100) : 0;
             %>
             <tr>
-              <td style="font-size:0.875rem;font-weight:500;"><%= u.name %></td>
+              <td style="font-size:0.875rem;font-weight:500;"><a href="/tasks?assigned_to=<%= u.id %>" style="color:inherit;text-decoration:none;"><%= u.name %></a></td>
               <td style="font-family:var(--tf-font-mono);"><%= u.total_tasks %></td>
               <td style="color:#10b981;font-family:var(--tf-font-mono);"><%= u.completed %></td>
               <td style="color:#00d4ff;font-family:var(--tf-font-mono);"><%= u.in_progress %></td>
               <td style="color:#f59e0b;font-family:var(--tf-font-mono);"><%= u.pending %></td>
+              <td style="color:#8b5cf6;font-family:var(--tf-font-mono);"><%= u.active_recurring || 0 %></td>
+              <td style="color:#64748b;font-family:var(--tf-font-mono);"><%= u.deactivated || 0 %></td>
               <td style="min-width:80px;">
                 <div class="tf-progress">
                   <div class="tf-progress-bar" style="width:<%= rate %>%;"></div>

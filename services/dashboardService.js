@@ -1,13 +1,14 @@
 const db = require('../config/db');
 const TaskService = require('./taskService');
 const RewardModel = require('../models/Reward');
+const { getToday, getDayOfWeek } = require('../utils/timezone');
 
 class DashboardService {
-  static async getAdminDashboard(orgType = null) {
+  static async getAdminDashboard(orgType = null, timezone = 'UTC') {
     const [taskStats, rewardSummary, attendanceSummary, perUserStats, perUserRewards] = await Promise.all([
       TaskService.getTaskStats(null, orgType),
       RewardModel.getGlobalSummary(),
-      this.getAttendanceSummary(),
+      this.getAttendanceSummary(timezone),
       TaskService.getCompletionPerUser(orgType),
       RewardModel.getPerUserSummary()
     ]);
@@ -21,27 +22,62 @@ class DashboardService {
     };
   }
 
-  static async getUserDashboard(userId) {
-    const [taskStats, rewardSummary, recentTasks] = await Promise.all([
+  static async getUserDashboard(userId, viewDate = null, timezone = 'UTC') {
+    const today = getToday(timezone);
+    const selectedDate = viewDate || today;
+    const isToday = selectedDate === today;
+    const isFuture = selectedDate > today;
+    const isPast = selectedDate < today;
+
+    const [taskStats, rewardSummary, dayTasks] = await Promise.all([
       TaskService.getTaskStats(userId),
       RewardModel.getUserSummary(userId),
-      db.query(
-        `SELECT t.id, t.title, t.status, t.type, t.due_date, t.reward_amount, t.created_at
-         FROM tasks t WHERE t.assigned_to = ? AND t.is_deleted = 0
-         ORDER BY t.created_at DESC LIMIT 5`, [userId]
-      )
+      this.getTasksForDate(userId, selectedDate, today)
     ]);
 
     return {
       taskStats,
       rewardSummary,
-      recentTasks: recentTasks[0]
+      dayTasks,
+      selectedDate,
+      isToday,
+      isFuture,
+      isPast
     };
   }
 
-  static async getAttendanceSummary() {
-    const today = new Date().toISOString().split('T')[0];
-    const dayOfWeek = new Date().toLocaleDateString('en-US', { weekday: 'long' });
+  /**
+   * Get a user's tasks relevant to a specific date:
+   * - Active daily tasks (always relevant) with completion status for that date
+   * - Active weekly tasks with completion status for that date
+   * - Adhoc tasks: pending/in_progress ones, or ones completed on that date, or due on that date
+   */
+  static async getTasksForDate(userId, date, today) {
+    const [rows] = await db.query(
+      `SELECT t.id, t.title, t.status, t.type, t.priority, t.due_date, t.reward_amount, t.created_at,
+              CASE WHEN t.type IN ('daily','weekly') AND t.status = 'active' THEN 1 ELSE 0 END as is_recurring,
+              (SELECT COUNT(*) FROM task_completions tc WHERE tc.task_id = t.id AND tc.user_id = ? AND tc.completion_date = ?) as is_completed_for_date
+       FROM tasks t
+       WHERE t.assigned_to = ? AND t.is_deleted = 0
+         AND (
+           -- Active recurring tasks (daily/weekly) are always shown
+           (t.type IN ('daily','weekly') AND t.status = 'active')
+           -- Adhoc: pending or in_progress (show on today and future)
+           OR (t.type = 'adhoc' AND t.status IN ('pending','in_progress') AND ? >= ?)
+           -- Adhoc: due on this date
+           OR (t.type = 'adhoc' AND t.due_date = ?)
+           -- Adhoc: completed on this date
+           OR (t.type = 'adhoc' AND t.status = 'completed' AND DATE(t.completed_at) = ?)
+         )
+       ORDER BY FIELD(t.priority, 'urgent', 'high', 'medium', 'low'), t.created_at DESC`,
+      [userId, date, userId, date, today, date, date]
+    );
+    return rows;
+  }
+
+  static async getAttendanceSummary(timezone = 'UTC') {
+    const today = getToday(timezone);
+    const dayOfWeek = getDayOfWeek(timezone);
 
     const [[summary]] = await db.query(
       `SELECT

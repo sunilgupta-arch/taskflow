@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS organizations (
   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(100) NOT NULL,
   org_type ENUM('CLIENT', 'LOCAL') NOT NULL,
+  timezone VARCHAR(50) NOT NULL DEFAULT 'UTC',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
@@ -72,7 +73,8 @@ CREATE TABLE IF NOT EXISTS tasks (
   group_id INT UNSIGNED DEFAULT NULL,
   due_date DATE DEFAULT NULL,
   reward_amount DECIMAL(10,2) DEFAULT NULL,
-  status ENUM('pending','in_progress','completed','deactivated') DEFAULT 'pending',
+  status ENUM('pending','in_progress','completed','deactivated','active') DEFAULT 'pending',
+  priority ENUM('low','medium','high','urgent') NOT NULL DEFAULT 'medium',
   is_deleted TINYINT(1) DEFAULT 0,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   completed_at TIMESTAMP DEFAULT NULL,
@@ -85,7 +87,8 @@ CREATE TABLE IF NOT EXISTS tasks (
   INDEX idx_type (type),
   INDEX idx_deleted (is_deleted),
   INDEX idx_group (group_id),
-  INDEX idx_created_by_org (created_by_org)
+  INDEX idx_created_by_org (created_by_org),
+  INDEX idx_priority (priority)
 ) ENGINE=InnoDB;
 
 -- ============================================================
@@ -192,6 +195,27 @@ CREATE TABLE IF NOT EXISTS leave_requests (
   INDEX idx_user (user_id),
   INDEX idx_status (status),
   INDEX idx_dates (from_date, to_date)
+) ENGINE=InnoDB;
+
+-- ============================================================
+-- NOTES (Personal user notes / diary)
+-- ============================================================
+-- ============================================================
+-- TASK COMPLETIONS (for recurring daily/weekly tasks)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS task_completions (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  task_id INT UNSIGNED NOT NULL,
+  user_id INT UNSIGNED NOT NULL,
+  completion_date DATE NOT NULL,
+  notes TEXT DEFAULT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE RESTRICT,
+  UNIQUE KEY uk_task_user_date (task_id, user_id, completion_date),
+  INDEX idx_user_date (user_id, completion_date),
+  INDEX idx_task (task_id),
+  INDEX idx_date (completion_date)
 ) ENGINE=InnoDB;
 
 -- ============================================================

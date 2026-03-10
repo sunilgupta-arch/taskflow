@@ -3,6 +3,7 @@ const TaskService = require('../services/taskService');
 const RewardModel = require('../models/Reward');
 const { ApiResponse, getPaginationMeta } = require('../utils/response');
 const db = require('../config/db');
+const { getToday } = require('../utils/timezone');
 
 class UserController {
   static async index(req, res) {
@@ -107,40 +108,93 @@ class UserController {
     }
   }
 
-  static async showProgress(req, res) {
+  // GET /my-progress — self-service progress page for any authenticated user
+  static async showMyProgress(req, res) {
+    req.params.id = String(req.user.id);
+    return UserController.showProgress(req, res, true);
+  }
+
+  // GET /my-monthly-report — self-service monthly report for any authenticated user
+  static async myMonthlyReport(req, res) {
+    req.params.id = String(req.user.id);
+    return UserController.monthlyReport(req, res);
+  }
+
+  static async showProgress(req, res, isSelf = false) {
     try {
       const targetUser = await UserModel.findById(req.params.id);
       if (!targetUser) return res.status(404).render('error', { title: 'Not Found', message: 'User not found', code: 404, layout: false });
 
-      const selectedDate = req.query.date || new Date().toISOString().split('T')[0];
+      const tz = req.user.org_timezone || targetUser.org_timezone || 'UTC';
+      const selectedDate = req.query.date || getToday(tz);
 
-      const [taskStats, rewardSummary, activeTasks, pendingTasks, recentCompleted, dayTasks] = await Promise.all([
+      const [taskStats, rewardSummary, activeTasks, pendingTasks, recentAdhocCompleted, adhocDayTasks, recurringTasks] = await Promise.all([
         TaskService.getTaskStats(req.params.id),
         RewardModel.getUserSummary(req.params.id),
         db.query(
-          `SELECT t.id, t.title, t.type, t.due_date, t.created_at
-           FROM tasks t WHERE t.assigned_to = ? AND t.status = 'in_progress' AND t.is_deleted = 0
+          `SELECT t.id, t.title, t.type, t.due_date, t.created_at, u.name as created_by_name
+           FROM tasks t LEFT JOIN users u ON t.created_by = u.id
+           WHERE t.assigned_to = ? AND t.status = 'in_progress' AND t.is_deleted = 0
            ORDER BY t.created_at DESC`, [req.params.id]
         ),
         db.query(
-          `SELECT t.id, t.title, t.type, t.due_date, t.created_at
-           FROM tasks t WHERE t.assigned_to = ? AND t.status = 'pending' AND t.is_deleted = 0
+          `SELECT t.id, t.title, t.type, t.due_date, t.created_at, u.name as created_by_name
+           FROM tasks t LEFT JOIN users u ON t.created_by = u.id
+           WHERE t.assigned_to = ? AND t.status = 'pending' AND t.is_deleted = 0
            ORDER BY t.created_at DESC`, [req.params.id]
         ),
+        // Recently completed adhoc tasks
         db.query(
-          `SELECT t.id, t.title, t.type, t.due_date, t.completed_at
-           FROM tasks t WHERE t.assigned_to = ? AND t.status = 'completed' AND t.is_deleted = 0
+          `SELECT t.id, t.title, t.type, t.due_date, t.completed_at, u.name as created_by_name
+           FROM tasks t LEFT JOIN users u ON t.created_by = u.id
+           WHERE t.assigned_to = ? AND t.status = 'completed' AND t.type = 'adhoc' AND t.is_deleted = 0
            ORDER BY t.completed_at DESC LIMIT 10`, [req.params.id]
         ),
+        // Adhoc day tasks (original logic)
         db.query(
-          `SELECT t.id, t.title, t.type, t.status, t.due_date, t.created_at, t.completed_at
-           FROM tasks t
-           WHERE t.assigned_to = ? AND t.is_deleted = 0
+          `SELECT t.id, t.title, t.type, t.status, t.due_date, t.created_at, t.completed_at, u.name as created_by_name
+           FROM tasks t LEFT JOIN users u ON t.created_by = u.id
+           WHERE t.assigned_to = ? AND t.type = 'adhoc' AND t.is_deleted = 0
              AND (DATE(t.created_at) = ? OR DATE(t.completed_at) = ? OR (t.status IN ('in_progress','pending') AND DATE(t.due_date) = ?))
            ORDER BY t.status DESC, t.created_at DESC`,
           [req.params.id, selectedDate, selectedDate, selectedDate]
+        ),
+        // All active recurring tasks with completion status for selected date
+        db.query(
+          `SELECT t.id, t.title, t.type, t.created_at, t.status, t.due_date,
+                  u.name as created_by_name,
+                  tc.id IS NOT NULL as is_completed,
+                  tc.created_at as completed_at
+           FROM tasks t
+           LEFT JOIN users u ON t.created_by = u.id
+           LEFT JOIN task_completions tc ON tc.task_id = t.id AND tc.user_id = t.assigned_to AND tc.completion_date = ?
+           WHERE t.assigned_to = ? AND t.type IN ('daily','weekly') AND t.status = 'active' AND t.is_deleted = 0
+           ORDER BY t.type, t.title`,
+          [selectedDate, req.params.id]
         )
       ]);
+
+      // Merge recurring tasks into dayTasks with proper status display
+      const recurringDayTasks = recurringTasks[0].map(t => ({
+        ...t,
+        status: t.is_completed ? 'completed' : 'active',
+        is_recurring: true
+      }));
+
+      const dayTasks = [...recurringDayTasks, ...adhocDayTasks[0].map(t => ({ ...t, is_recurring: false }))];
+
+      // Build recent completed: combine adhoc completed + recent recurring completions
+      const [recentRecurringCompleted] = await db.query(
+        `SELECT t.id, t.title, t.type, t.due_date, tc.created_at as completed_at, u.name as created_by_name
+         FROM task_completions tc
+         JOIN tasks t ON tc.task_id = t.id
+         LEFT JOIN users u ON t.created_by = u.id
+         WHERE tc.user_id = ? AND t.is_deleted = 0
+         ORDER BY tc.completion_date DESC LIMIT 10`, [req.params.id]
+      );
+      const recentCompleted = [...recentAdhocCompleted[0], ...recentRecurringCompleted]
+        .sort((a, b) => new Date(b.completed_at) - new Date(a.completed_at))
+        .slice(0, 10);
 
       res.render('users/progress', {
         title: `${targetUser.name} - Progress`,
@@ -149,9 +203,10 @@ class UserController {
         rewardSummary,
         activeTasks: activeTasks[0],
         pendingTasks: pendingTasks[0],
-        recentCompleted: recentCompleted[0],
-        dayTasks: dayTasks[0],
-        selectedDate
+        recentCompleted,
+        dayTasks,
+        selectedDate,
+        isSelf
       });
     } catch (err) {
       res.status(500).render('error', { title: 'Error', message: err.message, code: 500, layout: false });
@@ -165,35 +220,97 @@ class UserController {
       const month = req.query.month || new Date().toISOString().slice(0, 7); // YYYY-MM
       const [year, mon] = month.split('-');
 
-      const [[stats]] = await db.query(
+      // Adhoc stats for the month
+      const [[adhocStats]] = await db.query(
         `SELECT
           COUNT(*) as total,
           SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed,
           SUM(CASE WHEN status = 'in_progress' THEN 1 ELSE 0 END) as in_progress,
           SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending,
-          SUM(CASE WHEN type = 'daily' THEN 1 ELSE 0 END) as type_daily,
-          SUM(CASE WHEN type = 'weekly' THEN 1 ELSE 0 END) as type_weekly,
-          SUM(CASE WHEN type = 'adhoc' THEN 1 ELSE 0 END) as type_adhoc,
-          SUM(CASE WHEN status = 'completed' AND type = 'daily' THEN 1 ELSE 0 END) as daily_completed,
-          SUM(CASE WHEN status = 'completed' AND type = 'weekly' THEN 1 ELSE 0 END) as weekly_completed,
-          SUM(CASE WHEN status = 'completed' AND type = 'adhoc' THEN 1 ELSE 0 END) as adhoc_completed
+          COUNT(*) as type_adhoc,
+          SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as adhoc_completed
          FROM tasks
-         WHERE assigned_to = ? AND is_deleted = 0
+         WHERE assigned_to = ? AND is_deleted = 0 AND type = 'adhoc'
            AND (MONTH(created_at) = ? AND YEAR(created_at) = ?)`,
         [userId, parseInt(mon), parseInt(year)]
       );
 
-      const [dailyBreakdown] = await db.query(
+      // Recurring task counts (active recurring tasks assigned to this user)
+      const [[recurringCounts]] = await db.query(
+        `SELECT
+          SUM(CASE WHEN type = 'daily' THEN 1 ELSE 0 END) as type_daily,
+          SUM(CASE WHEN type = 'weekly' THEN 1 ELSE 0 END) as type_weekly
+         FROM tasks
+         WHERE assigned_to = ? AND is_deleted = 0 AND type IN ('daily','weekly') AND status = 'active'`,
+        [userId]
+      );
+
+      // Recurring completions in this month
+      const [[recurringCompletions]] = await db.query(
+        `SELECT
+          COUNT(*) as completed,
+          SUM(CASE WHEN t.type = 'daily' THEN 1 ELSE 0 END) as daily_completed,
+          SUM(CASE WHEN t.type = 'weekly' THEN 1 ELSE 0 END) as weekly_completed
+         FROM task_completions tc
+         JOIN tasks t ON tc.task_id = t.id
+         WHERE tc.user_id = ? AND t.is_deleted = 0
+           AND MONTH(tc.completion_date) = ? AND YEAR(tc.completion_date) = ?`,
+        [userId, parseInt(mon), parseInt(year)]
+      );
+
+      const stats = {
+        total: (parseInt(adhocStats.total) || 0) + (parseInt(recurringCounts.type_daily) || 0) + (parseInt(recurringCounts.type_weekly) || 0),
+        completed: (parseInt(adhocStats.completed) || 0) + (parseInt(recurringCompletions.completed) || 0),
+        in_progress: parseInt(adhocStats.in_progress) || 0,
+        pending: parseInt(adhocStats.pending) || 0,
+        type_daily: parseInt(recurringCounts.type_daily) || 0,
+        type_weekly: parseInt(recurringCounts.type_weekly) || 0,
+        type_adhoc: parseInt(adhocStats.type_adhoc) || 0,
+        daily_completed: parseInt(recurringCompletions.daily_completed) || 0,
+        weekly_completed: parseInt(recurringCompletions.weekly_completed) || 0,
+        adhoc_completed: parseInt(adhocStats.adhoc_completed) || 0
+      };
+
+      // Daily breakdown: combine adhoc + recurring completions per day
+      const [adhocDaily] = await db.query(
         `SELECT DATE(created_at) as date,
           COUNT(*) as total,
           SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed
          FROM tasks
-         WHERE assigned_to = ? AND is_deleted = 0
+         WHERE assigned_to = ? AND is_deleted = 0 AND type = 'adhoc'
            AND MONTH(created_at) = ? AND YEAR(created_at) = ?
          GROUP BY DATE(created_at)
          ORDER BY date`,
         [userId, parseInt(mon), parseInt(year)]
       );
+
+      const [recurringDaily] = await db.query(
+        `SELECT tc.completion_date as date, COUNT(*) as completed
+         FROM task_completions tc
+         JOIN tasks t ON tc.task_id = t.id
+         WHERE tc.user_id = ? AND t.is_deleted = 0
+           AND MONTH(tc.completion_date) = ? AND YEAR(tc.completion_date) = ?
+         GROUP BY tc.completion_date
+         ORDER BY date`,
+        [userId, parseInt(mon), parseInt(year)]
+      );
+
+      // Merge daily breakdowns
+      const dailyMap = new Map();
+      for (const row of adhocDaily) {
+        const d = row.date instanceof Date ? row.date.toISOString().split('T')[0] : String(row.date).split('T')[0];
+        dailyMap.set(d, { date: row.date, total: parseInt(row.total) || 0, completed: parseInt(row.completed) || 0 });
+      }
+      for (const row of recurringDaily) {
+        const d = row.date instanceof Date ? row.date.toISOString().split('T')[0] : String(row.date).split('T')[0];
+        if (dailyMap.has(d)) {
+          dailyMap.get(d).completed += parseInt(row.completed) || 0;
+          dailyMap.get(d).total += parseInt(row.completed) || 0;
+        } else {
+          dailyMap.set(d, { date: row.date, total: parseInt(row.completed) || 0, completed: parseInt(row.completed) || 0 });
+        }
+      }
+      const dailyBreakdown = [...dailyMap.values()].sort((a, b) => new Date(a.date) - new Date(b.date));
 
       return ApiResponse.success(res, { stats, dailyBreakdown, month });
     } catch (err) {

@@ -7,10 +7,11 @@ class DashboardController {
       const role = req.user.role_name;
       let data = {};
 
+      const tz = req.user.org_timezone || 'UTC';
       if (['CLIENT_ADMIN', 'LOCAL_ADMIN', 'CLIENT_MANAGER', 'LOCAL_MANAGER'].includes(role)) {
-        data = await DashboardService.getAdminDashboard(req.user.organization_type);
+        data = await DashboardService.getAdminDashboard(req.user.organization_type, tz);
       } else {
-        data = await DashboardService.getUserDashboard(req.user.id);
+        data = await DashboardService.getUserDashboard(req.user.id, req.query.date || null, tz);
       }
 
       res.render('dashboard/index', {

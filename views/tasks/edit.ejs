@@ -1,0 +1,103 @@
+<div class="row justify-content-center">
+  <div class="col-lg-7">
+    <div class="tf-card">
+      <div class="card-header"><i class="bi bi-pencil-square me-2"></i>EDIT TASK #<%= task.id %></div>
+      <div class="p-4">
+        <div id="formError" class="tf-alert" style="display:none;border-color:rgba(239,68,68,0.3);background:rgba(239,68,68,0.1);color:#fca5a5;margin-bottom:1rem;"></div>
+
+        <form id="editTaskForm">
+          <div class="mb-3">
+            <label style="font-size:0.75rem;color:var(--tf-text-muted);display:block;margin-bottom:0.4rem;text-transform:uppercase;letter-spacing:0.5px;">TITLE *</label>
+            <input type="text" id="taskTitle" name="title" class="tf-form-control" value="<%= task.title %>" required maxlength="255">
+          </div>
+
+          <div class="mb-3">
+            <label style="font-size:0.75rem;color:var(--tf-text-muted);display:block;margin-bottom:0.4rem;text-transform:uppercase;letter-spacing:0.5px;">DESCRIPTION</label>
+            <textarea id="taskDesc" name="description" class="tf-form-control" rows="4" style="resize:vertical;"><%= task.description || '' %></textarea>
+          </div>
+
+          <div class="row g-3 mb-3">
+            <div class="col-md-3">
+              <label style="font-size:0.75rem;color:var(--tf-text-muted);display:block;margin-bottom:0.4rem;text-transform:uppercase;letter-spacing:0.5px;">TYPE *</label>
+              <select name="type" class="tf-select" required>
+                <option value="adhoc" <%= task.type === 'adhoc' ? 'selected' : '' %>>One Time</option>
+                <option value="daily" <%= task.type === 'daily' ? 'selected' : '' %>>Daily (Recurring)</option>
+                <option value="weekly" <%= task.type === 'weekly' ? 'selected' : '' %>>Weekly (Recurring)</option>
+              </select>
+            </div>
+            <div class="col-md-3">
+              <label style="font-size:0.75rem;color:var(--tf-text-muted);display:block;margin-bottom:0.4rem;text-transform:uppercase;letter-spacing:0.5px;">PRIORITY *</label>
+              <select name="priority" class="tf-select" required>
+                <option value="low" <%= task.priority === 'low' ? 'selected' : '' %>>Low</option>
+                <option value="medium" <%= (task.priority === 'medium' || !task.priority) ? 'selected' : '' %>>Medium</option>
+                <option value="high" <%= task.priority === 'high' ? 'selected' : '' %>>High</option>
+                <option value="urgent" <%= task.priority === 'urgent' ? 'selected' : '' %>>Urgent</option>
+              </select>
+            </div>
+            <div class="col-md-3">
+              <label style="font-size:0.75rem;color:var(--tf-text-muted);display:block;margin-bottom:0.4rem;text-transform:uppercase;letter-spacing:0.5px;">DUE DATE</label>
+              <input type="date" name="due_date" class="tf-form-control" value="<%= task.due_date ? new Date(task.due_date).toISOString().split('T')[0] : '' %>">
+            </div>
+            <div class="col-md-3">
+              <label style="font-size:0.75rem;color:var(--tf-text-muted);display:block;margin-bottom:0.4rem;text-transform:uppercase;letter-spacing:0.5px;">REWARD (PTS)</label>
+              <input type="number" name="reward_amount" class="tf-form-control" value="<%= task.reward_amount ? parseFloat(task.reward_amount) : '' %>" placeholder="0" min="0" step="1">
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label style="font-size:0.75rem;color:var(--tf-text-muted);display:block;margin-bottom:0.4rem;text-transform:uppercase;letter-spacing:0.5px;">STATUS</label>
+            <div style="font-size:0.85rem;padding:8px 12px;background:var(--tf-surface-2);border-radius:6px;color:var(--tf-text);">
+              <span class="badge badge-<%= task.status %>" style="font-size:0.65rem;border-radius:4px;padding:3px 8px;"><%= task.status.replace('_', ' ') %></span>
+              <span style="font-size:0.7rem;color:var(--tf-text-muted);margin-left:8px;">Status is managed via task actions (Start, Complete, Deactivate)</span>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label style="font-size:0.75rem;color:var(--tf-text-muted);display:block;margin-bottom:0.4rem;text-transform:uppercase;letter-spacing:0.5px;">ASSIGNED TO</label>
+            <div style="font-size:0.85rem;padding:8px 12px;background:var(--tf-surface-2);border-radius:6px;color:var(--tf-text);">
+              <%= task.assigned_to_name || 'Unassigned' %>
+              <span style="font-size:0.7rem;color:var(--tf-text-muted);margin-left:8px;">Use the Assign button on the task list to change assignees</span>
+            </div>
+          </div>
+
+          <div class="d-flex gap-2">
+            <a href="/tasks/<%= task.id %>" class="btn-tf btn-tf-outline text-decoration-none">Cancel</a>
+            <button type="submit" class="btn-tf btn-tf-primary flex-grow-1" id="submitBtn">
+              SAVE CHANGES
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.getElementById('editTaskForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = document.getElementById('submitBtn');
+  const errDiv = document.getElementById('formError');
+
+  btn.disabled = true;
+  btn.textContent = 'SAVING...';
+  errDiv.style.display = 'none';
+
+  const formData = {};
+  new FormData(e.target).forEach((v, k) => {
+    formData[k] = v;
+  });
+
+  try {
+    const res = await axios.put('/tasks/<%= task.id %>', formData);
+    if (res.data.success) {
+      showToast('Task updated successfully!');
+      setTimeout(() => window.location.href = '/tasks/<%= task.id %>', 800);
+    }
+  } catch (err) {
+    errDiv.textContent = err.response?.data?.message || 'Failed to update task';
+    errDiv.style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = 'SAVE CHANGES';
+  }
+});
+</script>

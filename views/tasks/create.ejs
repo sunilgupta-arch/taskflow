@@ -27,7 +27,7 @@
           </div>
 
           <div class="row g-3 mb-3">
-            <div class="<%= role === 'LOCAL_USER' ? 'col-md-6' : 'col-md-4' %>">
+            <div class="col-md-3">
               <label style="font-size:0.75rem;color:var(--tf-text-muted);display:block;margin-bottom:0.4rem;text-transform:uppercase;letter-spacing:0.5px;">TYPE *</label>
               <select name="type" class="tf-select" required>
                 <option value="adhoc">One Time</option>
@@ -35,12 +35,21 @@
                 <option value="weekly">Weekly (Recurring)</option>
               </select>
             </div>
-            <div class="<%= role === 'LOCAL_USER' ? 'col-md-6' : 'col-md-4' %>">
+            <div class="col-md-3">
+              <label style="font-size:0.75rem;color:var(--tf-text-muted);display:block;margin-bottom:0.4rem;text-transform:uppercase;letter-spacing:0.5px;">PRIORITY *</label>
+              <select name="priority" class="tf-select" required>
+                <option value="low">Low</option>
+                <option value="medium" selected>Medium</option>
+                <option value="high">High</option>
+                <option value="urgent">Urgent</option>
+              </select>
+            </div>
+            <div class="col-md-3">
               <label style="font-size:0.75rem;color:var(--tf-text-muted);display:block;margin-bottom:0.4rem;text-transform:uppercase;letter-spacing:0.5px;">DUE DATE</label>
               <input type="date" name="due_date" class="tf-form-control">
             </div>
             <% if (role !== 'LOCAL_USER') { %>
-            <div class="col-md-4">
+            <div class="col-md-3">
               <label style="font-size:0.75rem;color:var(--tf-text-muted);display:block;margin-bottom:0.4rem;text-transform:uppercase;letter-spacing:0.5px;">REWARD (PTS)</label>
               <input type="number" name="reward_amount" class="tf-form-control" placeholder="0" min="0" step="1">
             </div>

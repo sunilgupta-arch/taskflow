@@ -16,7 +16,11 @@ router.post('/assign', requireRoles('CLIENT_ADMIN', 'CLIENT_MANAGER', 'LOCAL_ADM
 router.post('/pick/:id', requireRoles('LOCAL_USER'), TaskController.pick);
 router.post('/start/:id', requireRoles('LOCAL_USER', 'LOCAL_MANAGER', 'LOCAL_ADMIN'), TaskController.start);
 router.post('/complete/:id', requireRoles('LOCAL_USER', 'LOCAL_MANAGER', 'LOCAL_ADMIN'), auditLog('COMPLETE', 'task'), TaskController.complete);
+router.post('/:id/log-completion', requireRoles('LOCAL_USER', 'LOCAL_MANAGER', 'LOCAL_ADMIN'), auditLog('LOG_COMPLETION', 'task'), TaskController.logCompletion);
+router.post('/:id/undo-completion', requireRoles('LOCAL_USER', 'LOCAL_MANAGER', 'LOCAL_ADMIN'), auditLog('UNDO_COMPLETION', 'task'), TaskController.undoCompletion);
 router.post('/deactivate/:id', requireRoles('CLIENT_ADMIN', 'CLIENT_MANAGER', 'LOCAL_ADMIN', 'LOCAL_MANAGER'), auditLog('DEACTIVATE', 'task'), TaskController.deactivate);
+router.get('/:id/edit', requireRoles('CLIENT_ADMIN', 'CLIENT_MANAGER', 'LOCAL_ADMIN', 'LOCAL_MANAGER'), TaskController.showEdit);
+router.put('/:id', requireRoles('CLIENT_ADMIN', 'CLIENT_MANAGER', 'LOCAL_ADMIN', 'LOCAL_MANAGER'), auditLog('UPDATE', 'task'), TaskController.update);
 router.get('/:id', TaskController.show);
 router.get('/:id/comments', TaskController.getComments);
 router.post('/:id/comments', TaskController.addComment);

@@ -5,6 +5,9 @@
         <span><i class="bi bi-file-text me-2"></i>TASK DETAILS</span>
         <div class="d-flex gap-2">
           <span class="badge badge-<%= task.type %>" style="font-size:0.65rem;border-radius:4px;padding:3px 8px;"><%= task.type %></span>
+          <% const pColors = { urgent: { bg: 'rgba(239,68,68,0.15)', color: '#ef4444' }, high: { bg: 'rgba(245,158,11,0.15)', color: '#f59e0b' }, medium: { bg: 'rgba(59,130,246,0.15)', color: '#3b82f6' }, low: { bg: 'rgba(107,114,128,0.15)', color: '#6b7280' } }; %>
+          <% const pc = pColors[task.priority] || pColors.medium; %>
+          <span class="badge" style="font-size:0.65rem;border-radius:4px;padding:3px 8px;background:<%= pc.bg %>;color:<%= pc.color %>;"><%= (task.priority || 'medium').toUpperCase() %></span>
           <span class="badge badge-<%= task.status %>" style="font-size:0.65rem;border-radius:4px;padding:3px 8px;"><%= task.status.replace('_',' ') %></span>
         </div>
       </div>
@@ -163,6 +166,20 @@
     <div class="tf-card">
       <div class="card-header"><i class="bi bi-lightning me-2"></i>ACTIONS</div>
       <div class="p-3 d-flex flex-column gap-2">
+        <% if (task.status === 'active' && task.assigned_to === user.id) { %>
+          <% if (typeof isCompletedToday !== 'undefined' && isCompletedToday) { %>
+          <button class="btn-tf" style="background:rgba(239,68,68,0.1);color:#ef4444;border:1px solid rgba(239,68,68,0.3);" onclick="undoCompletion()">
+            <i class="bi bi-arrow-counterclockwise me-1"></i> Undo Today's Completion
+          </button>
+          <div style="font-size:0.75rem;color:#10b981;text-align:center;margin-top:4px;">
+            <i class="bi bi-check-circle-fill"></i> Completed today
+          </div>
+          <% } else { %>
+          <button class="btn-tf btn-tf-success" onclick="logCompletion()">
+            <i class="bi bi-check-circle me-1"></i> Log Today's Completion
+          </button>
+          <% } %>
+        <% } else { %>
         <% if (task.assigned_to === user.id && task.status === 'pending') { %>
         <button class="btn-tf btn-tf-primary" onclick="startTask()">
           <i class="bi bi-play-circle me-1"></i> Start Task
@@ -174,19 +191,47 @@
           <i class="bi bi-check-circle me-1"></i> Mark Complete
         </button>
         <% } %>
-        
+
         <% if (!task.assigned_to && user.role_name === 'LOCAL_USER') { %>
         <button class="btn-tf btn-tf-primary" onclick="pickTask()">
           <i class="bi bi-hand-index me-1"></i> Pick This Task
         </button>
         <% } %>
+        <% } %>
         
+        <% if (['CLIENT_ADMIN', 'CLIENT_MANAGER', 'LOCAL_ADMIN', 'LOCAL_MANAGER'].includes(user.role_name) && !['completed','deactivated'].includes(task.status)) { %>
+        <a href="/tasks/<%= task.id %>/edit" class="btn-tf btn-tf-outline text-center text-decoration-none">
+          <i class="bi bi-pencil me-1"></i> Edit Task
+        </a>
+        <% } %>
+
         <a href="/tasks" class="btn-tf btn-tf-outline text-center text-decoration-none">
           <i class="bi bi-arrow-left me-1"></i> Back to Tasks
         </a>
       </div>
     </div>
     
+    <% if (task.status === 'active' && typeof recentCompletions !== 'undefined' && recentCompletions) { %>
+    <div class="tf-card mt-3">
+      <div class="card-header"><i class="bi bi-calendar-check me-2"></i>RECENT COMPLETIONS</div>
+      <div class="p-3">
+        <% if (recentCompletions.length > 0) { %>
+        <% recentCompletions.forEach(rc => { %>
+        <div class="d-flex align-items-center gap-2 mb-2" style="font-size:0.8rem;">
+          <i class="bi bi-check-circle-fill" style="color:#10b981;"></i>
+          <span><%= new Date(rc.completion_date).toLocaleDateString() %></span>
+          <% if (rc.notes) { %>
+          <span style="color:var(--tf-text-muted);font-size:0.7rem;">— <%= rc.notes %></span>
+          <% } %>
+        </div>
+        <% }) %>
+        <% } else { %>
+        <p style="color:var(--tf-text-muted);font-size:0.8rem;">No completions logged yet.</p>
+        <% } %>
+      </div>
+    </div>
+    <% } %>
+
     <div class="tf-card mt-3">
       <div class="card-header"><i class="bi bi-clock me-2"></i>TIMELINE</div>
       <div class="p-3">
@@ -208,6 +253,26 @@
 </div>
 
 <script>
+async function logCompletion() {
+  if (!confirm('Log today\'s completion for this task?')) return;
+  try {
+    await axios.post('/tasks/<%= task.id %>/log-completion');
+    showToast('Completion logged!');
+    setTimeout(() => location.reload(), 800);
+  } catch (e) {
+    showToast(e.response?.data?.message || 'Error', 'error');
+  }
+}
+async function undoCompletion() {
+  if (!confirm('Undo today\'s completion?')) return;
+  try {
+    await axios.post('/tasks/<%= task.id %>/undo-completion');
+    showToast('Completion undone');
+    setTimeout(() => location.reload(), 800);
+  } catch (e) {
+    showToast(e.response?.data?.message || 'Error', 'error');
+  }
+}
 async function startTask() {
   if (!confirm('Start working on this task?')) return;
   try {

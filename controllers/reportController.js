@@ -2,6 +2,7 @@ const TaskService = require('../services/taskService');
 const RewardModel = require('../models/Reward');
 const db = require('../config/db');
 const { ApiResponse } = require('../utils/response');
+const { getToday } = require('../utils/timezone');
 
 class ReportController {
   static async completionReport(req, res) {
@@ -11,13 +12,38 @@ class ReportController {
         TaskService.getCompletionPerUser()
       ]);
 
-      // Monthly breakdown
-      const [monthly] = await db.query(
+      // Monthly breakdown (dual-source: adhoc from tasks + recurring from task_completions)
+      const [adhocMonthly] = await db.query(
         `SELECT MONTH(completed_at) as month, YEAR(completed_at) as year, COUNT(*) as count
-         FROM tasks WHERE status = 'completed' AND is_deleted = 0
+         FROM tasks WHERE status = 'completed' AND is_deleted = 0 AND type = 'adhoc'
          AND completed_at >= DATE_SUB(NOW(), INTERVAL 12 MONTH)
          GROUP BY year, month ORDER BY year, month`
       );
+      const [recurringMonthly] = await db.query(
+        `SELECT MONTH(tc.completion_date) as month, YEAR(tc.completion_date) as year, COUNT(*) as count
+         FROM task_completions tc
+         JOIN tasks t ON tc.task_id = t.id
+         WHERE t.is_deleted = 0
+         AND tc.completion_date >= DATE_SUB(NOW(), INTERVAL 12 MONTH)
+         GROUP BY year, month ORDER BY year, month`
+      );
+
+      // Merge monthly data
+      const monthlyMap = new Map();
+      adhocMonthly.forEach(r => {
+        const key = `${r.year}-${r.month}`;
+        monthlyMap.set(key, { month: r.month, year: r.year, count: parseInt(r.count) });
+      });
+      recurringMonthly.forEach(r => {
+        const key = `${r.year}-${r.month}`;
+        const existing = monthlyMap.get(key);
+        if (existing) {
+          existing.count += parseInt(r.count);
+        } else {
+          monthlyMap.set(key, { month: r.month, year: r.year, count: parseInt(r.count) });
+        }
+      });
+      const monthly = [...monthlyMap.values()].sort((a, b) => a.year - b.year || a.month - b.month);
 
       res.render('reports/completion', {
         title: 'Completion Report',
@@ -51,7 +77,8 @@ class ReportController {
 
   static async attendanceReport(req, res) {
     try {
-      const today = new Date().toISOString().split('T')[0];
+      const tz = req.user.org_timezone || 'UTC';
+      const today = getToday(tz);
       const month = req.query.month || today.slice(0, 7); // 'YYYY-MM'
       const [yearStr, monStr] = month.split('-');
       const year = parseInt(yearStr);
@@ -87,7 +114,7 @@ class ReportController {
            ORDER BY u.name`
         ),
         db.query(
-          `SELECT user_id, date FROM attendance_logs
+          `SELECT user_id, date, login_time FROM attendance_logs
            WHERE date >= ? AND date <= ?`,
           [startDate, endDate]
         ),
@@ -100,9 +127,14 @@ class ReportController {
 
       // Build calendar data
       const attendanceSet = new Set();
+      const loginTimeMap = new Map();
       attendanceDays[0].forEach(row => {
         const d = row.date instanceof Date ? row.date.toISOString().split('T')[0] : String(row.date).split('T')[0];
         attendanceSet.add(`${row.user_id}-${d}`);
+        if (row.login_time) {
+          const lt = new Date(row.login_time);
+          loginTimeMap.set(`${row.user_id}-${d}`, lt.toLocaleTimeString('en-US', { timeZone: tz, hour: '2-digit', minute: '2-digit', hour12: true }));
+        }
       });
 
       const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -160,12 +192,14 @@ class ReportController {
         today,
         calendarUsers: activeUsers[0],
         calendarData,
+        loginTimeMap: Object.fromEntries(loginTimeMap),
         month,
         year,
         mon,
         lastDay,
         prevMonth,
-        nextMonth
+        nextMonth,
+        timezone: tz
       });
     } catch (err) {
       res.status(500).render('error', { title: 'Error', message: err.message, code: 500, layout: false });

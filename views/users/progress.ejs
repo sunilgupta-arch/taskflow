@@ -1,6 +1,11 @@
+<%
+const selfView = typeof isSelf !== 'undefined' && isSelf;
+const progressUrl = selfView ? '/my-progress' : '/users/' + targetUser.id + '/progress';
+const reportUrl = selfView ? '/my-monthly-report' : '/users/' + targetUser.id + '/monthly-report';
+%>
 <!-- User Header -->
 <div class="tf-card mb-3">
-  <div class="p-3 d-flex align-items-center gap-3">
+  <div class="p-3 d-flex align-items-center gap-3 flex-wrap">
     <div class="user-avatar" style="width:48px;height:48px;font-size:1.2rem;"><%= targetUser.name.charAt(0) %></div>
     <div class="flex-grow-1">
       <h5 style="margin:0;font-weight:600;"><%= targetUser.name %></h5>
@@ -14,9 +19,11 @@
         <%= targetUser.role_name %>
       </span>
     </div>
+    <% if (!selfView) { %>
     <a href="/tasks/create?assign_to=<%= targetUser.id %>" class="btn-tf text-decoration-none" style="font-size:0.75rem;padding:4px 12px;background:rgba(0,212,255,0.1);color:#00d4ff;border:1px solid rgba(0,212,255,0.3);">
       <i class="bi bi-plus-circle me-1"></i> Create Task
     </a>
+    <% } %>
     <button class="btn-tf" style="font-size:0.75rem;padding:4px 12px;background:rgba(124,58,237,0.1);color:#a78bfa;border:1px solid rgba(124,58,237,0.3);"
       onclick="openMonthlyReport()">
       <i class="bi bi-calendar-month me-1"></i> Monthly Report
@@ -33,9 +40,9 @@
     <i class="bi bi-calendar3" style="color:var(--tf-accent);font-size:1.1rem;"></i>
     <span style="font-size:0.8rem;color:var(--tf-text-muted);font-family:var(--tf-font-mono);">DAY REPORT</span>
     <input type="date" id="dateSelect" value="<%= selectedDate %>" class="tf-form-control" style="max-width:180px;font-size:0.85rem;"
-      onchange="window.location.href='/users/<%= targetUser.id %>/progress?date=' + this.value">
+      onchange="window.location.href='<%= progressUrl %>?date=' + this.value">
     <% if (selectedDate !== new Date().toISOString().split('T')[0]) { %>
-    <a href="/users/<%= targetUser.id %>/progress" class="btn-tf btn-tf-outline" style="font-size:0.7rem;padding:3px 10px;">Today</a>
+    <a href="<%= progressUrl %>" class="btn-tf btn-tf-outline" style="font-size:0.7rem;padding:3px 10px;">Today</a>
     <% } %>
   </div>
 </div>
@@ -49,7 +56,7 @@
   <div style="overflow-x:auto;">
     <table class="tf-table">
       <thead>
-        <tr><th>Task</th><th>Type</th><th>Status</th><th>Time</th></tr>
+        <tr><th>Task</th><th>Type</th><th>Status</th><th>Created By</th><th>Time</th></tr>
       </thead>
       <tbody>
         <% if (dayTasks.length > 0) { %>
@@ -57,13 +64,30 @@
           <tr>
             <td>
               <a href="/tasks/<%= t.id %>" style="color:var(--tf-text);text-decoration:none;font-weight:500;font-size:0.85rem;">
-                <%= t.title %>
+                <span style="color:var(--tf-text-muted);font-family:var(--tf-font-mono);font-size:0.75rem;">#<%= t.id %></span> <%= t.title %>
               </a>
             </td>
             <td><span class="badge badge-<%= t.type %>" style="font-size:0.6rem;padding:2px 6px;border-radius:3px;"><%= t.type === 'adhoc' ? 'one time' : t.type %></span></td>
-            <td><span class="badge badge-<%= t.status %>" style="font-size:0.6rem;padding:2px 6px;border-radius:3px;"><%= t.status.replace('_', ' ') %></span></td>
+            <td>
+              <% if (t.is_recurring) { %>
+                <% if (t.is_completed) { %>
+                <span class="badge" style="font-size:0.6rem;padding:2px 6px;border-radius:3px;background:rgba(16,185,129,0.15);color:#10b981;">
+                  <i class="bi bi-check-circle-fill"></i> done
+                </span>
+                <% } else { %>
+                <span class="badge" style="font-size:0.6rem;padding:2px 6px;border-radius:3px;background:rgba(245,158,11,0.15);color:#f59e0b;">
+                  <i class="bi bi-circle"></i> pending
+                </span>
+                <% } %>
+              <% } else { %>
+              <span class="badge badge-<%= t.status %>" style="font-size:0.6rem;padding:2px 6px;border-radius:3px;"><%= t.status.replace('_', ' ') %></span>
+              <% } %>
+            </td>
+            <td style="font-size:0.8rem;color:var(--tf-text-muted);"><%= t.created_by_name || '—' %></td>
             <td style="font-size:0.75rem;color:var(--tf-text-muted);">
-              <% if (t.status === 'completed' && t.completed_at) { %>
+              <% if (t.is_recurring && t.is_completed) { %>
+                Completed
+              <% } else if (t.status === 'completed' && t.completed_at) { %>
                 Completed: <%= new Date(t.completed_at).toLocaleTimeString() %>
               <% } else { %>
                 Created: <%= new Date(t.created_at).toLocaleTimeString() %>
@@ -72,7 +96,7 @@
           </tr>
           <% }) %>
         <% } else { %>
-        <tr><td colspan="4" style="text-align:center;color:var(--tf-text-muted);padding:1.5rem;">No task activity on this day</td></tr>
+        <tr><td colspan="5" style="text-align:center;color:var(--tf-text-muted);padding:1.5rem;">No task activity on this day</td></tr>
         <% } %>
       </tbody>
     </table>
@@ -164,7 +188,7 @@ const progress = total > 0 ? Math.round((completed / total) * 100) : 0;
           <div class="d-flex align-items-center gap-2 mb-2 p-2" style="background:var(--tf-surface-2);border-radius:6px;border-left:3px solid #00d4ff;">
             <div class="flex-grow-1">
               <a href="/tasks/<%= t.id %>" style="color:var(--tf-text);text-decoration:none;font-weight:500;font-size:0.85rem;">
-                <%= t.title %>
+                <span style="color:var(--tf-text-muted);font-family:var(--tf-font-mono);font-size:0.75rem;">#<%= t.id %></span> <%= t.title %>
               </a>
               <div style="font-size:0.7rem;color:var(--tf-text-muted);margin-top:2px;">
                 <span class="badge badge-<%= t.type %>" style="font-size:0.6rem;padding:1px 5px;border-radius:3px;"><%= t.type === 'adhoc' ? 'one time' : t.type %></span>
@@ -173,6 +197,7 @@ const progress = total > 0 ? Math.round((completed / total) * 100) : 0;
                   Due: <%= new Date(t.due_date).toLocaleDateString() %>
                 </span>
                 <% } %>
+                <span style="margin-left:6px;"><i class="bi bi-person" style="font-size:0.6rem;"></i> <%= t.created_by_name || '—' %></span>
               </div>
             </div>
             <span class="badge badge-in_progress" style="font-size:0.6rem;padding:2px 6px;border-radius:3px;">in progress</span>
@@ -197,7 +222,7 @@ const progress = total > 0 ? Math.round((completed / total) * 100) : 0;
           <div class="d-flex align-items-center gap-2 mb-2 p-2" style="background:var(--tf-surface-2);border-radius:6px;border-left:3px solid #f59e0b;">
             <div class="flex-grow-1">
               <a href="/tasks/<%= t.id %>" style="color:var(--tf-text);text-decoration:none;font-weight:500;font-size:0.85rem;">
-                <%= t.title %>
+                <span style="color:var(--tf-text-muted);font-family:var(--tf-font-mono);font-size:0.75rem;">#<%= t.id %></span> <%= t.title %>
               </a>
               <div style="font-size:0.7rem;color:var(--tf-text-muted);margin-top:2px;">
                 <span class="badge badge-<%= t.type %>" style="font-size:0.6rem;padding:1px 5px;border-radius:3px;"><%= t.type === 'adhoc' ? 'one time' : t.type %></span>
@@ -206,6 +231,7 @@ const progress = total > 0 ? Math.round((completed / total) * 100) : 0;
                   Due: <%= new Date(t.due_date).toLocaleDateString() %>
                 </span>
                 <% } %>
+                <span style="margin-left:6px;"><i class="bi bi-person" style="font-size:0.6rem;"></i> <%= t.created_by_name || '—' %></span>
               </div>
             </div>
             <span class="badge badge-pending" style="font-size:0.6rem;padding:2px 6px;border-radius:3px;">pending</span>
@@ -229,7 +255,7 @@ const progress = total > 0 ? Math.round((completed / total) * 100) : 0;
       <div style="overflow-x:auto;">
         <table class="tf-table">
           <thead>
-            <tr><th>Task</th><th>Type</th><th>Completed</th></tr>
+            <tr><th>Task</th><th>Type</th><th>Created By</th><th>Completed</th></tr>
           </thead>
           <tbody>
             <% if (recentCompleted.length > 0) { %>
@@ -237,15 +263,16 @@ const progress = total > 0 ? Math.round((completed / total) * 100) : 0;
               <tr>
                 <td>
                   <a href="/tasks/<%= t.id %>" style="color:var(--tf-text);text-decoration:none;font-weight:500;font-size:0.85rem;">
-                    <%= t.title %>
+                    <span style="color:var(--tf-text-muted);font-family:var(--tf-font-mono);font-size:0.75rem;">#<%= t.id %></span> <%= t.title %>
                   </a>
                 </td>
                 <td><span class="badge badge-<%= t.type %>" style="font-size:0.6rem;padding:2px 6px;border-radius:3px;"><%= t.type === 'adhoc' ? 'one time' : t.type %></span></td>
+                <td style="font-size:0.8rem;color:var(--tf-text-muted);"><%= t.created_by_name || '—' %></td>
                 <td style="font-size:0.8rem;color:#10b981;"><%= t.completed_at ? new Date(t.completed_at).toLocaleString() : '—' %></td>
               </tr>
               <% }) %>
             <% } else { %>
-            <tr><td colspan="3" style="text-align:center;color:var(--tf-text-muted);padding:1.5rem;">No completed tasks yet</td></tr>
+            <tr><td colspan="4" style="text-align:center;color:var(--tf-text-muted);padding:1.5rem;">No completed tasks yet</td></tr>
             <% } %>
           </tbody>
         </table>
@@ -336,7 +363,7 @@ async function loadMonthlyReport() {
   container.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--tf-text-muted);">Loading...</div>';
 
   try {
-    const res = await axios.get('/users/<%= targetUser.id %>/monthly-report?month=' + month);
+    const res = await axios.get('<%= reportUrl %>?month=' + month);
     const { stats, dailyBreakdown } = res.data.data;
     const [year, mon] = month.split('-');
     const monthName = new Date(year, mon - 1).toLocaleString('default', { month: 'long', year: 'numeric' });
@@ -400,7 +427,7 @@ async function loadMonthlyReport() {
         const dateStr = dateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
         const dateVal = d.date.split('T')[0];
         html += '<tr>';
-        html += '<td><a href="/users/<%= targetUser.id %>/progress?date=' + dateVal + '" style="color:var(--tf-accent);text-decoration:none;" onclick="closeMonthlyReport()">' + dateStr + '</a></td>';
+        html += '<td><a href="<%= progressUrl %>?date=' + dateVal + '" style="color:var(--tf-accent);text-decoration:none;" onclick="closeMonthlyReport()">' + dateStr + '</a></td>';
         html += '<td style="font-family:var(--tf-font-mono);">' + d.total + '</td>';
         html += '<td style="font-family:var(--tf-font-mono);color:#10b981;">' + d.completed + '</td>';
         html += '<td><div class="d-flex align-items-center gap-2"><div class="tf-progress" style="flex:1;height:4px;"><div class="tf-progress-bar" style="width:' + dayRate + '%"></div></div><span style="font-size:0.7rem;font-family:var(--tf-font-mono);color:var(--tf-text-muted);min-width:30px;">' + dayRate + '%</span></div></td>';

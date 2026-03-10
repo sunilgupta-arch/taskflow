@@ -520,6 +520,11 @@
 
     <div class="nav-section-label mt-2">Personal</div>
     <div class="nav-item">
+      <a href="/my-progress" class="<%= typeof title !== 'undefined' && title.includes('Progress') ? 'active' : '' %>">
+        <i class="bi bi-bar-chart-line"></i> My Progress
+      </a>
+    </div>
+    <div class="nav-item">
       <a href="/notes" class="<%= typeof title !== 'undefined' && title === 'My Notes' ? 'active' : '' %>">
         <i class="bi bi-journal-text"></i> My Notes
       </a>
@@ -654,6 +659,9 @@ function showToast(message, type = 'success') {
   });
 })();
 
+// User's timezone
+var USER_TIMEZONE = '<%= typeof user !== "undefined" && user.org_timezone ? user.org_timezone : "UTC" %>';
+
 // Global Axios defaults
 axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
 
@@ -665,6 +673,29 @@ axios.interceptors.response.use(
     return Promise.reject(err);
   }
 );
+
+// Auto-logout after 12 hours
+(function() {
+  var TWELVE_HOURS = 12 * 60 * 60 * 1000;
+  var loginAt = localStorage.getItem('tf_login_at');
+  if (!loginAt) {
+    localStorage.setItem('tf_login_at', Date.now().toString());
+    loginAt = Date.now();
+  } else {
+    loginAt = parseInt(loginAt);
+  }
+  var elapsed = Date.now() - loginAt;
+  var remaining = TWELVE_HOURS - elapsed;
+  if (remaining <= 0) {
+    localStorage.removeItem('tf_login_at');
+    window.location.href = '/auth/logout';
+  } else {
+    setTimeout(function() {
+      localStorage.removeItem('tf_login_at');
+      window.location.href = '/auth/logout';
+    }, remaining);
+  }
+})();
 
 // Socket.IO - Real-time notifications
 (function() {
