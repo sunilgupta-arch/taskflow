@@ -151,7 +151,7 @@ class TaskController {
   // PUT /tasks/:id
   static async update(req, res) {
     try {
-      const { title, description, type, due_date, reward_amount, priority } = req.body;
+      const { title, description, type, due_date, reward_amount, priority, client_visible } = req.body;
       const updateData = {};
       if (title !== undefined) updateData.title = title;
       if (description !== undefined) updateData.description = description;
@@ -159,6 +159,9 @@ class TaskController {
       if (due_date !== undefined) updateData.due_date = due_date || null;
       if (reward_amount !== undefined) updateData.reward_amount = reward_amount || null;
       if (priority !== undefined) updateData.priority = priority;
+      if (['LOCAL_ADMIN', 'LOCAL_MANAGER'].includes(req.user.role_name)) {
+        updateData.created_by_org = client_visible === '1' ? 'CLIENT' : 'LOCAL';
+      }
 
       // If type changed to/from recurring, update status accordingly
       if (type && ['daily', 'weekly'].includes(type)) {
