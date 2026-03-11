@@ -68,26 +68,33 @@ const isManager = ['CLIENT_MANAGER', 'LOCAL_MANAGER'].includes(user.role_name);
 
 <!-- Task Types -->
 <div class="row g-3 mb-4">
-  <div class="col-6 col-md-4">
-    <a href="/tasks?type=daily" class="stat-card stat-card-link" style="--stat-color: #06b6d4;">
-      <div class="stat-value"><%= taskStats.type_daily || 0 %></div>
-      <div class="stat-label">Daily Tasks</div>
-      <i class="bi bi-calendar-day stat-icon"></i>
+  <div class="col-6 col-md-3">
+    <a href="/tasks?type=recurring" class="stat-card stat-card-link" style="--stat-color: #06b6d4;">
+      <div class="stat-value"><%= (taskStats.type_daily || 0) + (taskStats.type_weekly || 0) + (taskStats.type_monthly || 0) %></div>
+      <div class="stat-label">Recurring Tasks</div>
+      <i class="bi bi-arrow-repeat stat-icon"></i>
     </a>
   </div>
-  <div class="col-6 col-md-4">
-    <a href="/tasks?type=weekly" class="stat-card stat-card-link" style="--stat-color: #8b5cf6;">
-      <div class="stat-value"><%= taskStats.type_weekly || 0 %></div>
-      <div class="stat-label">Weekly Tasks</div>
-      <i class="bi bi-calendar-week stat-icon"></i>
-    </a>
-  </div>
-  <div class="col-6 col-md-4">
-    <a href="/tasks?type=adhoc" class="stat-card stat-card-link" style="--stat-color: #f97316;">
-      <div class="stat-value"><%= taskStats.type_adhoc || 0 %></div>
+  <div class="col-6 col-md-3">
+    <a href="/tasks?type=once" class="stat-card stat-card-link" style="--stat-color: #f97316;">
+      <div class="stat-value"><%= taskStats.type_once || 0 %></div>
       <div class="stat-label">One Time Tasks</div>
       <i class="bi bi-lightning stat-icon"></i>
     </a>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card" style="--stat-color: #8b5cf6;">
+      <div class="stat-value"><%= taskStats.type_daily || 0 %></div>
+      <div class="stat-label">Daily</div>
+      <i class="bi bi-calendar-day stat-icon"></i>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card" style="--stat-color: #ec4899;">
+      <div class="stat-value"><%= (taskStats.type_weekly || 0) + (taskStats.type_monthly || 0) %></div>
+      <div class="stat-label">Weekly / Monthly</div>
+      <i class="bi bi-calendar-week stat-icon"></i>
+    </div>
   </div>
 </div>
 
@@ -264,25 +271,25 @@ const isManager = ['CLIENT_MANAGER', 'LOCAL_MANAGER'].includes(user.role_name);
 <!-- Task Types -->
 <div class="row g-3 mb-4">
   <div class="col-6 col-md-4">
-    <a href="/tasks/my?type=daily" class="stat-card stat-card-link" style="--stat-color: #06b6d4;">
-      <div class="stat-value"><%= taskStats?.type_daily || 0 %></div>
-      <div class="stat-label">Daily Tasks</div>
-      <i class="bi bi-calendar-day stat-icon"></i>
+    <a href="/tasks/my?type=recurring" class="stat-card stat-card-link" style="--stat-color: #06b6d4;">
+      <div class="stat-value"><%= (taskStats?.type_daily || 0) + (taskStats?.type_weekly || 0) + (taskStats?.type_monthly || 0) %></div>
+      <div class="stat-label">Recurring Tasks</div>
+      <i class="bi bi-arrow-repeat stat-icon"></i>
     </a>
   </div>
   <div class="col-6 col-md-4">
-    <a href="/tasks/my?type=weekly" class="stat-card stat-card-link" style="--stat-color: #8b5cf6;">
-      <div class="stat-value"><%= taskStats?.type_weekly || 0 %></div>
-      <div class="stat-label">Weekly Tasks</div>
-      <i class="bi bi-calendar-week stat-icon"></i>
-    </a>
-  </div>
-  <div class="col-6 col-md-4">
-    <a href="/tasks/my?type=adhoc" class="stat-card stat-card-link" style="--stat-color: #f97316;">
-      <div class="stat-value"><%= taskStats?.type_adhoc || 0 %></div>
+    <a href="/tasks/my?type=once" class="stat-card stat-card-link" style="--stat-color: #f97316;">
+      <div class="stat-value"><%= taskStats?.type_once || 0 %></div>
       <div class="stat-label">One Time Tasks</div>
       <i class="bi bi-lightning stat-icon"></i>
     </a>
+  </div>
+  <div class="col-6 col-md-4">
+    <div class="stat-card" style="--stat-color: #8b5cf6;">
+      <div class="stat-value"><%= (taskStats?.type_daily || 0) %>/<%= (taskStats?.type_weekly || 0) %>/<%= (taskStats?.type_monthly || 0) %></div>
+      <div class="stat-label">Daily / Weekly / Monthly</div>
+      <i class="bi bi-calendar-week stat-icon"></i>
+    </div>
   </div>
 </div>
 
@@ -345,7 +352,7 @@ const isManager = ['CLIENT_MANAGER', 'LOCAL_MANAGER'].includes(user.role_name);
           <td>
             <a href="/tasks/<%= t.id %>" style="color:var(--tf-text);text-decoration:none;font-weight:500;"><%= t.title %></a>
           </td>
-          <td><span class="badge badge-<%= t.type %>" style="font-size:0.65rem;border-radius:4px;padding:2px 6px;"><%= t.type === 'adhoc' ? 'one time' : t.type %></span></td>
+          <td><span class="badge badge-<%= t.type %>" style="font-size:0.65rem;border-radius:4px;padding:2px 6px;"><%= t.type === 'once' ? 'one time' : t.type %></span></td>
           <td>
             <% const pc = pColors[t.priority] || pColors.medium; %>
             <span class="badge" style="font-size:0.65rem;border-radius:4px;padding:2px 6px;background:<%= pc.bg %>;color:<%= pc.color %>;"><%= (t.priority || 'medium').toUpperCase() %></span>

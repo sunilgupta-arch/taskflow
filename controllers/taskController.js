@@ -24,7 +24,7 @@ class TaskController {
       // For recurring tasks, attach today's completion status
       const today = getToday(req.user.org_timezone || 'UTC');
       for (const task of rows) {
-        if (['daily', 'weekly'].includes(task.type) && task.status === 'active' && task.assigned_to) {
+        if (task.type === 'recurring' && task.status === 'active' && task.assigned_to) {
           task.is_completed_today = await TaskCompletion.isCompletedForDate(task.id, task.assigned_to, today);
         }
       }
@@ -66,7 +66,7 @@ class TaskController {
       // For recurring tasks, attach today's completion status
       const today = getToday(req.user.org_timezone || 'UTC');
       for (const task of rows) {
-        if (['daily', 'weekly'].includes(task.type) && task.status === 'active' && task.assigned_to) {
+        if (task.type === 'recurring' && task.status === 'active' && task.assigned_to) {
           task.is_completed_today = await TaskCompletion.isCompletedForDate(task.id, task.assigned_to, today);
         }
       }
@@ -151,7 +151,7 @@ class TaskController {
   // PUT /tasks/:id
   static async update(req, res) {
     try {
-      const { title, description, type, due_date, reward_amount, priority, client_visible } = req.body;
+      const { title, description, type, recurrence_pattern, recurrence_days, deadline_time, recurrence_end_date, due_date, reward_amount, priority, client_visible } = req.body;
       const updateData = {};
       if (title !== undefined) updateData.title = title;
       if (description !== undefined) updateData.description = description;
@@ -163,9 +163,18 @@ class TaskController {
         updateData.created_by_org = client_visible === '1' ? 'CLIENT' : 'LOCAL';
       }
 
-      // If type changed to/from recurring, update status accordingly
-      if (type && ['daily', 'weekly'].includes(type)) {
+      // Handle recurrence fields
+      if (type === 'recurring') {
         updateData.status = 'active';
+        updateData.recurrence_pattern = recurrence_pattern || null;
+        updateData.recurrence_days = recurrence_days || null;
+        updateData.deadline_time = deadline_time || null;
+        updateData.recurrence_end_date = recurrence_end_date || null;
+      } else if (type === 'once') {
+        updateData.recurrence_pattern = null;
+        updateData.recurrence_days = null;
+        updateData.deadline_time = null;
+        updateData.recurrence_end_date = null;
       }
 
       const updated = await TaskModel.update(req.params.id, updateData);
@@ -232,7 +241,7 @@ class TaskController {
       // For recurring tasks, check today's completion and get recent history
       let isCompletedToday = false;
       let recentCompletions = [];
-      const isRecurring = ['daily', 'weekly'].includes(task.type) && task.status === 'active';
+      const isRecurring = task.type === 'recurring' && task.status === 'active';
       if (isRecurring && task.assigned_to) {
         const today = getToday(req.user.org_timezone || 'UTC');
         isCompletedToday = await TaskCompletion.isCompletedForDate(task.id, task.assigned_to, today);

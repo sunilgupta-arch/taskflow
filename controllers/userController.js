@@ -147,14 +147,14 @@ class UserController {
         db.query(
           `SELECT t.id, t.title, t.type, t.due_date, t.completed_at, u.name as created_by_name
            FROM tasks t LEFT JOIN users u ON t.created_by = u.id
-           WHERE t.assigned_to = ? AND t.status = 'completed' AND t.type = 'adhoc' AND t.is_deleted = 0
+           WHERE t.assigned_to = ? AND t.status = 'completed' AND t.type = 'once' AND t.is_deleted = 0
            ORDER BY t.completed_at DESC LIMIT 10`, [req.params.id]
         ),
         // Adhoc day tasks (original logic)
         db.query(
           `SELECT t.id, t.title, t.type, t.status, t.due_date, t.created_at, t.completed_at, u.name as created_by_name
            FROM tasks t LEFT JOIN users u ON t.created_by = u.id
-           WHERE t.assigned_to = ? AND t.type = 'adhoc' AND t.is_deleted = 0
+           WHERE t.assigned_to = ? AND t.type = 'once' AND t.is_deleted = 0
              AND (DATE(t.created_at) = ? OR DATE(t.completed_at) = ? OR (t.status IN ('in_progress','pending') AND DATE(t.due_date) = ?))
            ORDER BY t.status DESC, t.created_at DESC`,
           [req.params.id, selectedDate, selectedDate, selectedDate]
@@ -168,7 +168,7 @@ class UserController {
            FROM tasks t
            LEFT JOIN users u ON t.created_by = u.id
            LEFT JOIN task_completions tc ON tc.task_id = t.id AND tc.user_id = t.assigned_to AND tc.completion_date = ?
-           WHERE t.assigned_to = ? AND t.type IN ('daily','weekly') AND t.status = 'active' AND t.is_deleted = 0
+           WHERE t.assigned_to = ? AND t.type = 'recurring' AND t.status = 'active' AND t.is_deleted = 0
            ORDER BY t.type, t.title`,
           [selectedDate, req.params.id]
         )
@@ -227,10 +227,10 @@ class UserController {
           SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed,
           SUM(CASE WHEN status = 'in_progress' THEN 1 ELSE 0 END) as in_progress,
           SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending,
-          COUNT(*) as type_adhoc,
-          SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as adhoc_completed
+          COUNT(*) as type_once,
+          SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as once_completed
          FROM tasks
-         WHERE assigned_to = ? AND is_deleted = 0 AND type = 'adhoc'
+         WHERE assigned_to = ? AND is_deleted = 0 AND type = 'once'
            AND (MONTH(created_at) = ? AND YEAR(created_at) = ?)`,
         [userId, parseInt(mon), parseInt(year)]
       );
@@ -238,10 +238,11 @@ class UserController {
       // Recurring task counts (active recurring tasks assigned to this user)
       const [[recurringCounts]] = await db.query(
         `SELECT
-          SUM(CASE WHEN type = 'daily' THEN 1 ELSE 0 END) as type_daily,
-          SUM(CASE WHEN type = 'weekly' THEN 1 ELSE 0 END) as type_weekly
+          SUM(CASE WHEN recurrence_pattern = 'daily' THEN 1 ELSE 0 END) as type_daily,
+          SUM(CASE WHEN recurrence_pattern = 'weekly' THEN 1 ELSE 0 END) as type_weekly,
+          SUM(CASE WHEN recurrence_pattern = 'monthly' THEN 1 ELSE 0 END) as type_monthly
          FROM tasks
-         WHERE assigned_to = ? AND is_deleted = 0 AND type IN ('daily','weekly') AND status = 'active'`,
+         WHERE assigned_to = ? AND is_deleted = 0 AND type = 'recurring' AND status = 'active'`,
         [userId]
       );
 
@@ -249,8 +250,8 @@ class UserController {
       const [[recurringCompletions]] = await db.query(
         `SELECT
           COUNT(*) as completed,
-          SUM(CASE WHEN t.type = 'daily' THEN 1 ELSE 0 END) as daily_completed,
-          SUM(CASE WHEN t.type = 'weekly' THEN 1 ELSE 0 END) as weekly_completed
+          SUM(CASE WHEN t.recurrence_pattern = 'daily' THEN 1 ELSE 0 END) as daily_completed,
+          SUM(CASE WHEN t.recurrence_pattern = 'weekly' THEN 1 ELSE 0 END) as weekly_completed
          FROM task_completions tc
          JOIN tasks t ON tc.task_id = t.id
          WHERE tc.user_id = ? AND t.is_deleted = 0
@@ -259,16 +260,17 @@ class UserController {
       );
 
       const stats = {
-        total: (parseInt(adhocStats.total) || 0) + (parseInt(recurringCounts.type_daily) || 0) + (parseInt(recurringCounts.type_weekly) || 0),
+        total: (parseInt(adhocStats.total) || 0) + (parseInt(recurringCounts.type_daily) || 0) + (parseInt(recurringCounts.type_weekly) || 0) + (parseInt(recurringCounts.type_monthly) || 0),
         completed: (parseInt(adhocStats.completed) || 0) + (parseInt(recurringCompletions.completed) || 0),
         in_progress: parseInt(adhocStats.in_progress) || 0,
         pending: parseInt(adhocStats.pending) || 0,
         type_daily: parseInt(recurringCounts.type_daily) || 0,
         type_weekly: parseInt(recurringCounts.type_weekly) || 0,
-        type_adhoc: parseInt(adhocStats.type_adhoc) || 0,
+        type_monthly: parseInt(recurringCounts.type_monthly) || 0,
+        type_once: parseInt(adhocStats.type_once) || 0,
         daily_completed: parseInt(recurringCompletions.daily_completed) || 0,
         weekly_completed: parseInt(recurringCompletions.weekly_completed) || 0,
-        adhoc_completed: parseInt(adhocStats.adhoc_completed) || 0
+        once_completed: parseInt(adhocStats.once_completed) || 0
       };
 
       // Daily breakdown: combine adhoc + recurring completions per day
@@ -277,7 +279,7 @@ class UserController {
           COUNT(*) as total,
           SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed
          FROM tasks
-         WHERE assigned_to = ? AND is_deleted = 0 AND type = 'adhoc'
+         WHERE assigned_to = ? AND is_deleted = 0 AND type = 'once'
            AND MONTH(created_at) = ? AND YEAR(created_at) = ?
          GROUP BY DATE(created_at)
          ORDER BY date`,

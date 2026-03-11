@@ -12,9 +12,8 @@
     </select>
     <select name="type" class="tf-select" style="max-width:130px;">
       <option value="">All Types</option>
-      <option value="daily" <%= filters.type === 'daily' ? 'selected' : '' %>>Daily</option>
-      <option value="weekly" <%= filters.type === 'weekly' ? 'selected' : '' %>>Weekly</option>
-      <option value="adhoc" <%= filters.type === 'adhoc' ? 'selected' : '' %>>One Time</option>
+      <option value="recurring" <%= filters.type === 'recurring' ? 'selected' : '' %>>Recurring</option>
+      <option value="once" <%= filters.type === 'once' ? 'selected' : '' %>>One Time</option>
     </select>
     <button type="submit" class="btn-tf btn-tf-outline">Filter</button>
   </form>
@@ -70,7 +69,21 @@
               </div>
               <% } %>
             </td>
-            <td><span class="badge badge-<%= task.type %>" style="font-size:0.65rem;border-radius:4px;padding:2px 6px;"><%= task.type === 'adhoc' ? 'one time' : task.type %></span></td>
+            <td>
+              <span class="badge badge-<%= task.type %>" style="font-size:0.65rem;border-radius:4px;padding:2px 6px;"><%= task.type === 'once' ? 'one time' : task.type %></span>
+              <% if (task.type === 'recurring' && task.recurrence_pattern) { %>
+              <div style="font-size:0.6rem;color:var(--tf-text-muted);margin-top:2px;">
+                <% if (task.recurrence_pattern === 'daily') { %>
+                  Every day
+                <% } else if (task.recurrence_pattern === 'weekly' && task.recurrence_days) { %>
+                  <% const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']; %>
+                  <%= task.recurrence_days.split(',').map(d => dayNames[parseInt(d.trim())]).join(', ') %>
+                <% } else if (task.recurrence_pattern === 'monthly' && task.recurrence_days) { %>
+                  <%= task.recurrence_days.split(',').map(d => d.trim() + ['st','nd','rd'][((parseInt(d.trim())+90)%100-10)%10-1] || d.trim() + 'th').join(', ') %>
+                <% } %>
+              </div>
+              <% } %>
+            </td>
             <td>
               <% const pColors = { urgent: { bg: 'rgba(239,68,68,0.15)', color: '#ef4444' }, high: { bg: 'rgba(245,158,11,0.15)', color: '#f59e0b' }, medium: { bg: 'rgba(59,130,246,0.15)', color: '#3b82f6' }, low: { bg: 'rgba(107,114,128,0.15)', color: '#6b7280' } }; %>
               <% const pc = pColors[task.priority] || pColors.medium; %>

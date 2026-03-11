@@ -20,9 +20,14 @@ module.exports = {
   },
 
   TASK_TYPE: {
+    ONCE: 'once',
+    RECURRING: 'recurring'
+  },
+
+  RECURRENCE_PATTERN: {
     DAILY: 'daily',
     WEEKLY: 'weekly',
-    ADHOC: 'adhoc'
+    MONTHLY: 'monthly'
   },
 
   REWARD_STATUS: {

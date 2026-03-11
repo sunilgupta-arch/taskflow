@@ -4,7 +4,18 @@
       <div class="card-header d-flex justify-content-between align-items-center">
         <span><i class="bi bi-file-text me-2"></i>TASK DETAILS</span>
         <div class="d-flex gap-2">
-          <span class="badge badge-<%= task.type %>" style="font-size:0.65rem;border-radius:4px;padding:3px 8px;"><%= task.type %></span>
+          <span class="badge badge-<%= task.type %>" style="font-size:0.65rem;border-radius:4px;padding:3px 8px;"><%= task.type === 'once' ? 'one time' : task.type %></span>
+          <% if (task.type === 'recurring' && task.recurrence_pattern) { %>
+          <span class="badge" style="font-size:0.6rem;border-radius:4px;padding:3px 8px;background:rgba(124,58,237,0.1);color:#a78bfa;">
+            <% if (task.recurrence_pattern === 'daily') { %>every day
+            <% } else if (task.recurrence_pattern === 'weekly' && task.recurrence_days) { %>
+              <% const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']; %>
+              <%= task.recurrence_days.split(',').map(d => dayNames[parseInt(d.trim())]).join(', ') %>
+            <% } else if (task.recurrence_pattern === 'monthly' && task.recurrence_days) { %>
+              monthly: <%= task.recurrence_days %>
+            <% } %>
+          </span>
+          <% } %>
           <% const pColors = { urgent: { bg: 'rgba(239,68,68,0.15)', color: '#ef4444' }, high: { bg: 'rgba(245,158,11,0.15)', color: '#f59e0b' }, medium: { bg: 'rgba(59,130,246,0.15)', color: '#3b82f6' }, low: { bg: 'rgba(107,114,128,0.15)', color: '#6b7280' } }; %>
           <% const pc = pColors[task.priority] || pColors.medium; %>
           <span class="badge" style="font-size:0.65rem;border-radius:4px;padding:3px 8px;background:<%= pc.bg %>;color:<%= pc.color %>;"><%= (task.priority || 'medium').toUpperCase() %></span>
@@ -44,8 +55,13 @@
             </div>
           </div>
           <div class="col-6 col-md-3">
+            <% if (task.type === 'recurring') { %>
+            <div style="font-size:0.65rem;color:var(--tf-text-muted);text-transform:uppercase;letter-spacing:0.5px;">Deadline Time</div>
+            <div style="font-size:0.875rem;margin-top:2px;"><%= task.deadline_time || 'None' %></div>
+            <% } else { %>
             <div style="font-size:0.65rem;color:var(--tf-text-muted);text-transform:uppercase;letter-spacing:0.5px;">Due Date</div>
             <div style="font-size:0.875rem;margin-top:2px;"><%= task.due_date ? new Date(task.due_date).toLocaleDateString() : 'None' %></div>
+            <% } %>
           </div>
           <div class="col-6 col-md-3">
             <div style="font-size:0.65rem;color:var(--tf-text-muted);text-transform:uppercase;letter-spacing:0.5px;">Reward</div>
@@ -54,6 +70,14 @@
             </div>
           </div>
         </div>
+        <% if (task.type === 'recurring' && task.recurrence_end_date) { %>
+        <div class="row g-3 mt-1">
+          <div class="col-6 col-md-3">
+            <div style="font-size:0.65rem;color:var(--tf-text-muted);text-transform:uppercase;letter-spacing:0.5px;">Ends On</div>
+            <div style="font-size:0.875rem;margin-top:2px;"><%= new Date(task.recurrence_end_date).toLocaleDateString() %></div>
+          </div>
+        </div>
+        <% } %>
       </div>
     </div>
 

@@ -29,10 +29,9 @@
           <div class="row g-3 mb-3">
             <div class="col-md-3">
               <label style="font-size:0.75rem;color:var(--tf-text-muted);display:block;margin-bottom:0.4rem;text-transform:uppercase;letter-spacing:0.5px;">TYPE *</label>
-              <select name="type" class="tf-select" required>
-                <option value="adhoc">One Time</option>
-                <option value="daily">Daily (Recurring)</option>
-                <option value="weekly">Weekly (Recurring)</option>
+              <select name="type" id="taskType" class="tf-select" required>
+                <option value="once">One Time</option>
+                <option value="recurring">Recurring</option>
               </select>
             </div>
             <div class="col-md-3">
@@ -54,6 +53,57 @@
               <input type="number" name="reward_amount" class="tf-form-control" placeholder="0" min="0" step="1">
             </div>
             <% } %>
+          </div>
+
+          <!-- Recurrence Options (shown only when type=recurring) -->
+          <div id="recurrenceOptions" style="display:none;" class="mb-3">
+            <div class="row g-3">
+              <div class="col-md-4">
+                <label style="font-size:0.75rem;color:var(--tf-text-muted);display:block;margin-bottom:0.4rem;text-transform:uppercase;letter-spacing:0.5px;">PATTERN *</label>
+                <select name="recurrence_pattern" id="recurrencePattern" class="tf-select">
+                  <option value="daily">Every Day</option>
+                  <option value="weekly" selected>Specific Days of Week</option>
+                  <option value="monthly">Specific Dates of Month</option>
+                </select>
+              </div>
+              <div class="col-md-4">
+                <label style="font-size:0.75rem;color:var(--tf-text-muted);display:block;margin-bottom:0.4rem;text-transform:uppercase;letter-spacing:0.5px;">DEADLINE TIME</label>
+                <input type="time" name="deadline_time" class="tf-form-control">
+              </div>
+              <div class="col-md-4">
+                <label style="font-size:0.75rem;color:var(--tf-text-muted);display:block;margin-bottom:0.4rem;text-transform:uppercase;letter-spacing:0.5px;">END DATE (OPTIONAL)</label>
+                <input type="date" name="recurrence_end_date" class="tf-form-control">
+              </div>
+            </div>
+
+            <!-- Weekly: Day of week checkboxes -->
+            <div id="weeklyDays" class="mt-3">
+              <label style="font-size:0.75rem;color:var(--tf-text-muted);display:block;margin-bottom:0.4rem;text-transform:uppercase;letter-spacing:0.5px;">SELECT DAYS *</label>
+              <div class="d-flex flex-wrap gap-2">
+                <% const days = [{v:0,l:'Sun'},{v:1,l:'Mon'},{v:2,l:'Tue'},{v:3,l:'Wed'},{v:4,l:'Thu'},{v:5,l:'Fri'},{v:6,l:'Sat'}]; %>
+                <% days.forEach(d => { %>
+                <label style="cursor:pointer;padding:6px 14px;border:1px solid var(--tf-border);border-radius:6px;font-size:0.8rem;color:var(--tf-text);transition:all 0.2s;" class="day-check-label">
+                  <input type="checkbox" class="weekday-cb" value="<%= d.v %>" style="display:none;">
+                  <%= d.l %>
+                </label>
+                <% }) %>
+              </div>
+            </div>
+
+            <!-- Monthly: Date picker -->
+            <div id="monthlyDates" style="display:none;" class="mt-3">
+              <label style="font-size:0.75rem;color:var(--tf-text-muted);display:block;margin-bottom:0.4rem;text-transform:uppercase;letter-spacing:0.5px;">SELECT DATES *</label>
+              <div class="d-flex flex-wrap gap-1">
+                <% for (let i = 1; i <= 31; i++) { %>
+                <label style="cursor:pointer;width:36px;height:36px;display:flex;align-items:center;justify-content:center;border:1px solid var(--tf-border);border-radius:6px;font-size:0.75rem;color:var(--tf-text);transition:all 0.2s;" class="date-check-label">
+                  <input type="checkbox" class="monthdate-cb" value="<%= i %>" style="display:none;">
+                  <%= i %>
+                </label>
+                <% } %>
+              </div>
+            </div>
+
+            <input type="hidden" name="recurrence_days" id="recurrenceDaysInput">
           </div>
 
           <% if (role !== 'LOCAL_USER') { %>
@@ -103,33 +153,79 @@
 </div>
 
 <script>
-const typeSelect = document.querySelector('select[name="type"]');
+const typeSelect = document.getElementById('taskType');
 const dueDateInput = document.querySelector('input[name="due_date"]');
-
-function getToday() {
-  return new Date().toISOString().split('T')[0];
-}
+const recurrenceOptions = document.getElementById('recurrenceOptions');
+const recurrencePattern = document.getElementById('recurrencePattern');
+const weeklyDays = document.getElementById('weeklyDays');
+const monthlyDates = document.getElementById('monthlyDates');
+const recurrenceDaysInput = document.getElementById('recurrenceDaysInput');
 
 function handleTypeChange() {
-  const type = typeSelect.value;
-  if (type === 'daily') {
-    dueDateInput.value = getToday();
-    dueDateInput.readOnly = true;
-    dueDateInput.style.opacity = '0.6';
-  } else {
+  const isRecurring = typeSelect.value === 'recurring';
+  recurrenceOptions.style.display = isRecurring ? 'block' : 'none';
+  if (!isRecurring) {
     dueDateInput.readOnly = false;
     dueDateInput.style.opacity = '1';
-    if (type === 'adhoc') dueDateInput.value = '';
   }
+  handlePatternChange();
 }
 
+function handlePatternChange() {
+  const pattern = recurrencePattern.value;
+  weeklyDays.style.display = pattern === 'weekly' ? 'block' : 'none';
+  monthlyDates.style.display = pattern === 'monthly' ? 'block' : 'none';
+}
+
+function updateRecurrenceDays() {
+  const pattern = recurrencePattern.value;
+  let selected = [];
+  if (pattern === 'weekly') {
+    selected = [...document.querySelectorAll('.weekday-cb:checked')].map(cb => cb.value);
+  } else if (pattern === 'monthly') {
+    selected = [...document.querySelectorAll('.monthdate-cb:checked')].map(cb => cb.value);
+  }
+  recurrenceDaysInput.value = selected.join(',');
+}
+
+// Toggle visual state for day/date checkboxes
+document.querySelectorAll('.day-check-label, .date-check-label').forEach(label => {
+  const cb = label.querySelector('input[type="checkbox"]');
+  cb.addEventListener('change', () => {
+    if (cb.checked) {
+      label.style.background = 'rgba(0,212,255,0.15)';
+      label.style.borderColor = '#00d4ff';
+      label.style.color = '#00d4ff';
+    } else {
+      label.style.background = 'transparent';
+      label.style.borderColor = 'var(--tf-border)';
+      label.style.color = 'var(--tf-text)';
+    }
+    updateRecurrenceDays();
+  });
+  label.addEventListener('click', (e) => {
+    if (e.target !== cb) { cb.checked = !cb.checked; cb.dispatchEvent(new Event('change')); e.preventDefault(); }
+  });
+});
+
 typeSelect.addEventListener('change', handleTypeChange);
+recurrencePattern.addEventListener('change', () => { handlePatternChange(); updateRecurrenceDays(); });
 handleTypeChange();
 
 document.getElementById('createTaskForm').addEventListener('submit', async (e) => {
   e.preventDefault();
   const btn = document.getElementById('submitBtn');
   const errDiv = document.getElementById('formError');
+
+  // Validate recurrence days if recurring
+  if (typeSelect.value === 'recurring' && recurrencePattern.value !== 'daily') {
+    updateRecurrenceDays();
+    if (!recurrenceDaysInput.value) {
+      errDiv.textContent = recurrencePattern.value === 'weekly' ? 'Please select at least one day of the week' : 'Please select at least one date of the month';
+      errDiv.style.display = 'block';
+      return;
+    }
+  }
 
   btn.disabled = true;
   btn.textContent = 'CREATING...';
@@ -145,6 +241,14 @@ document.getElementById('createTaskForm').addEventListener('submit', async (e) =
       formData[k] = v;
     }
   });
+
+  // Clean up: don't send recurrence fields for one-time tasks
+  if (formData.type === 'once') {
+    delete formData.recurrence_pattern;
+    delete formData.recurrence_days;
+    delete formData.deadline_time;
+    delete formData.recurrence_end_date;
+  }
 
   try {
     const res = await axios.post('/tasks/create', formData);

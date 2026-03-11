@@ -7,7 +7,8 @@
     "start": "node server.js",
     "dev": "nodemon server.js",
     "seed": "node utils/seeder.js",
-    "migrate": "node utils/migrate.js"
+    "migrate": "node utils/migrate.js",
+    "migrate:latest": "node utils/migrate-latest.js"
   },
   "dependencies": {
     "axios": "^1.6.2",

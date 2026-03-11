@@ -15,7 +15,7 @@ class ReportController {
       // Monthly breakdown (dual-source: adhoc from tasks + recurring from task_completions)
       const [adhocMonthly] = await db.query(
         `SELECT MONTH(completed_at) as month, YEAR(completed_at) as year, COUNT(*) as count
-         FROM tasks WHERE status = 'completed' AND is_deleted = 0 AND type = 'adhoc'
+         FROM tasks WHERE status = 'completed' AND is_deleted = 0 AND type = 'once'
          AND completed_at >= DATE_SUB(NOW(), INTERVAL 12 MONTH)
          GROUP BY year, month ORDER BY year, month`
       );

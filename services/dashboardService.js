@@ -55,19 +55,19 @@ class DashboardService {
   static async getTasksForDate(userId, date, today) {
     const [rows] = await db.query(
       `SELECT t.id, t.title, t.status, t.type, t.priority, t.due_date, t.reward_amount, t.created_at,
-              CASE WHEN t.type IN ('daily','weekly') AND t.status = 'active' THEN 1 ELSE 0 END as is_recurring,
+              CASE WHEN t.type = 'recurring' AND t.status = 'active' THEN 1 ELSE 0 END as is_recurring,
               (SELECT COUNT(*) FROM task_completions tc WHERE tc.task_id = t.id AND tc.user_id = ? AND tc.completion_date = ?) as is_completed_for_date
        FROM tasks t
        WHERE t.assigned_to = ? AND t.is_deleted = 0
          AND (
-           -- Active recurring tasks (daily/weekly) are always shown
-           (t.type IN ('daily','weekly') AND t.status = 'active')
-           -- Adhoc: pending or in_progress (show on today and future)
-           OR (t.type = 'adhoc' AND t.status IN ('pending','in_progress') AND ? >= ?)
-           -- Adhoc: due on this date
-           OR (t.type = 'adhoc' AND t.due_date = ?)
-           -- Adhoc: completed on this date
-           OR (t.type = 'adhoc' AND t.status = 'completed' AND DATE(t.completed_at) = ?)
+           -- Active recurring tasks are always shown
+           (t.type = 'recurring' AND t.status = 'active')
+           -- One-time: pending or in_progress (show on today and future)
+           OR (t.type = 'once' AND t.status IN ('pending','in_progress') AND ? >= ?)
+           -- One-time: due on this date
+           OR (t.type = 'once' AND t.due_date = ?)
+           -- One-time: completed on this date
+           OR (t.type = 'once' AND t.status = 'completed' AND DATE(t.completed_at) = ?)
          )
        ORDER BY FIELD(t.priority, 'urgent', 'high', 'medium', 'low'), t.created_at DESC`,
       [userId, date, userId, date, today, date, date]

@@ -16,9 +16,11 @@ class TaskModel {
 
   static async create(data) {
     const [result] = await db.query(
-      `INSERT INTO tasks (title, description, type, assigned_to, created_by, created_by_org, group_id, due_date, reward_amount, status, priority)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [data.title, data.description, data.type, data.assigned_to || null, data.created_by,
+      `INSERT INTO tasks (title, description, type, recurrence_pattern, recurrence_days, deadline_time, recurrence_end_date, assigned_to, created_by, created_by_org, group_id, due_date, reward_amount, status, priority)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [data.title, data.description, data.type, data.recurrence_pattern || null, data.recurrence_days || null,
+       data.deadline_time || null, data.recurrence_end_date || null,
+       data.assigned_to || null, data.created_by,
        data.created_by_org || 'CLIENT', data.group_id || null, data.due_date || null, data.reward_amount || null, data.status || 'pending', data.priority || 'medium']
     );
     return result.insertId;
@@ -28,7 +30,7 @@ class TaskModel {
     const fields = [];
     const values = [];
 
-    const allowed = ['title', 'description', 'type', 'assigned_to', 'group_id', 'due_date', 'reward_amount', 'status', 'completed_at', 'created_by_org', 'is_deleted', 'priority'];
+    const allowed = ['title', 'description', 'type', 'recurrence_pattern', 'recurrence_days', 'deadline_time', 'recurrence_end_date', 'assigned_to', 'group_id', 'due_date', 'reward_amount', 'status', 'completed_at', 'created_by_org', 'is_deleted', 'priority'];
     allowed.forEach(f => {
       if (data[f] !== undefined) {
         fields.push(`${f} = ?`);
@@ -117,6 +119,10 @@ class TaskModel {
               ANY_VALUE(t.title) as title,
               ANY_VALUE(t.description) as description,
               ANY_VALUE(t.type) as type,
+              ANY_VALUE(t.recurrence_pattern) as recurrence_pattern,
+              ANY_VALUE(t.recurrence_days) as recurrence_days,
+              ANY_VALUE(t.deadline_time) as deadline_time,
+              ANY_VALUE(t.recurrence_end_date) as recurrence_end_date,
               ANY_VALUE(t.assigned_to) as assigned_to,
               ANY_VALUE(t.created_by) as created_by,
               ANY_VALUE(t.group_id) as group_id,
@@ -193,7 +199,7 @@ class TaskModel {
 
     const [[adhoc]] = await db.query(
       `SELECT COUNT(*) as total FROM tasks
-       WHERE status = 'completed' AND is_deleted = 0 AND type = 'adhoc' AND ${adhocDateFilter}`
+       WHERE status = 'completed' AND is_deleted = 0 AND type = 'once' AND ${adhocDateFilter}`
     );
     const [[recurring]] = await db.query(
       `SELECT COUNT(*) as total FROM task_completions tc
