@@ -53,8 +53,12 @@ router.put('/notes/:id', authenticate, NoteController.update);
 router.delete('/notes/:id', authenticate, NoteController.destroy);
 
 // Backups (LOCAL_ADMIN only)
+const multer = require('multer');
+const backupUpload = multer({ dest: require('path').join(__dirname, '..', 'backups', 'uploads'), limits: { fileSize: 100 * 1024 * 1024 } }); // 100MB max
+
 router.get('/backups', authenticate, requireRoles('LOCAL_ADMIN'), BackupController.index);
 router.post('/backups/create', authenticate, requireRoles('LOCAL_ADMIN'), BackupController.create);
+router.post('/backups/upload-restore', authenticate, requireRoles('LOCAL_ADMIN'), backupUpload.single('backup'), BackupController.uploadRestore);
 router.post('/backups/restore/:id', authenticate, requireRoles('LOCAL_ADMIN'), BackupController.restore);
 router.post('/backups/settings', authenticate, requireRoles('LOCAL_ADMIN'), BackupController.updateSettings);
 router.get('/backups/download/:id', authenticate, requireRoles('LOCAL_ADMIN'), BackupController.download);

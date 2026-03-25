@@ -60,10 +60,16 @@
   </div>
 
   <div class="col-md-3">
-    <div class="stat-card" style="--stat-color:#10b981;height:100%;display:flex;flex-direction:column;justify-content:center;align-items:center;cursor:pointer;" onclick="createBackup()" id="backupBtn">
-      <i class="bi bi-download" style="font-size:2rem;color:var(--tf-success);margin-bottom:0.5rem;"></i>
-      <div style="font-family:var(--tf-font-mono);font-size:0.8rem;font-weight:600;">CREATE BACKUP NOW</div>
-      <div style="font-size:0.65rem;color:var(--tf-text-muted);margin-top:0.25rem;">Manual snapshot</div>
+    <div class="d-flex flex-column gap-2 h-100">
+      <div class="stat-card" style="--stat-color:#10b981;flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;cursor:pointer;" onclick="createBackup()" id="backupBtn">
+        <i class="bi bi-download" style="font-size:1.5rem;color:var(--tf-success);margin-bottom:0.25rem;"></i>
+        <div style="font-family:var(--tf-font-mono);font-size:0.7rem;font-weight:600;">CREATE BACKUP</div>
+      </div>
+      <div class="stat-card" style="--stat-color:#f59e0b;flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;cursor:pointer;" onclick="document.getElementById('restoreFileInput').click()">
+        <i class="bi bi-upload" style="font-size:1.5rem;color:#f59e0b;margin-bottom:0.25rem;"></i>
+        <div style="font-family:var(--tf-font-mono);font-size:0.7rem;font-weight:600;">RESTORE BACKUP</div>
+        <input type="file" id="restoreFileInput" accept=".sql" style="display:none;" onchange="uploadRestore(this)">
+      </div>
     </div>
   </div>
 </div>
@@ -248,5 +254,37 @@ function disableSchedule() {
   }).catch(function(e) {
     showToast(e.response?.data?.message || 'Failed', 'error');
   });
+}
+
+async function uploadRestore(input) {
+  var file = input.files[0];
+  if (!file) return;
+  input.value = '';
+
+  if (!file.name.endsWith('.sql')) {
+    showToast('Only .sql backup files are allowed', 'error');
+    return;
+  }
+
+  if (!confirm('⚠️ UPLOAD & RESTORE\n\nThis will OVERWRITE the current database with:\n' + file.name + '\n\nA safety backup of the current state will be created first.\n\nAre you sure?')) return;
+  if (!confirm('Final confirmation: Restore database from uploaded file "' + file.name + '"?')) return;
+
+  showToast('Creating safety backup before restore...', 'info');
+
+  try {
+    await axios.post('/backups/create');
+    showToast('Safety backup created. Uploading and restoring...', 'info');
+
+    var formData = new FormData();
+    formData.append('backup', file);
+
+    var res = await axios.post('/backups/upload-restore', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+    showToast(res.data.message);
+    setTimeout(function() { location.reload(); }, 1500);
+  } catch (e) {
+    showToast(e.response?.data?.message || 'Restore failed', 'error');
+  }
 }
 </script>

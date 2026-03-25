@@ -686,8 +686,11 @@ axios.interceptors.response.use(
   }
 );
 
-// Shift-based auto-logout
+// Shift-based auto-logout (skip for admins)
 (function() {
+  var userRole = '<%= user.role_name %>';
+  if (userRole === 'LOCAL_ADMIN' || userRole === 'CLIENT_ADMIN') return;
+
   var SHIFT_START = '<%= user.shift_start || "10:00:00" %>';
   var SHIFT_HOURS = parseFloat('<%= user.shift_hours || 8.5 %>');
   var WARN_BEFORE_MIN = 5;       // Show warning 5 min before shift ends

@@ -81,6 +81,24 @@ class BackupController {
   }
 
   /**
+   * POST /backups/upload-restore — Upload a .sql file and restore from it.
+   */
+  static async uploadRestore(req, res) {
+    try {
+      if (!req.file) return res.status(400).json({ success: false, message: 'No file uploaded' });
+      if (!req.file.originalname.endsWith('.sql')) {
+        return res.status(400).json({ success: false, message: 'Only .sql files are allowed' });
+      }
+
+      const result = await backupService.restoreFromFile(req.file.path, req.file.originalname, req.user.id);
+      res.json({ success: true, message: `Database restored from uploaded file: ${req.file.originalname}` });
+    } catch (err) {
+      console.error('Upload restore error:', err);
+      res.status(500).json({ success: false, message: `Restore failed: ${err.message}` });
+    }
+  }
+
+  /**
    * GET /backups/download/:id — Download a backup file.
    */
   static async download(req, res) {

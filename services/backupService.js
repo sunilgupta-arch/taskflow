@@ -45,18 +45,25 @@ async function createDump() {
     // Get all tables
     const [tables] = await conn.query('SHOW TABLES');
     const tableKey = `Tables_in_${dbName}`;
+    const tableNames = tables.map(row => row[tableKey]);
 
-    for (const row of tables) {
-      const tableName = row[tableKey];
+    // Phase 1: Drop ALL tables first (avoids FK ordering issues)
+    lines.push('-- --------------------------------------------------------');
+    lines.push('-- Drop all tables');
+    lines.push('-- --------------------------------------------------------');
+    for (const tableName of tableNames) {
+      lines.push(`DROP TABLE IF EXISTS \`${tableName}\`;`);
+    }
+    lines.push('');
 
-      // Schema
+    // Phase 2: Create tables + insert data
+    for (const tableName of tableNames) {
       const [createResult] = await conn.query(`SHOW CREATE TABLE \`${tableName}\``);
       const createSQL = createResult[0]['Create Table'];
 
       lines.push(`-- --------------------------------------------------------`);
       lines.push(`-- Table: ${tableName}`);
       lines.push(`-- --------------------------------------------------------`);
-      lines.push(`DROP TABLE IF EXISTS \`${tableName}\`;`);
       lines.push(createSQL + ';');
       lines.push('');
 
@@ -76,6 +83,7 @@ async function createDump() {
               if (v instanceof Date) return `'${v.toISOString().slice(0, 19).replace('T', ' ')}'`;
               if (typeof v === 'number') return v;
               if (Buffer.isBuffer(v)) return `X'${v.toString('hex')}'`;
+              if (typeof v === 'object') return `'${JSON.stringify(v).replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'`;
               return `'${String(v).replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\n/g, '\\n').replace(/\r/g, '\\r')}'`;
             });
             return `(${vals.join(', ')})`;
@@ -242,9 +250,61 @@ async function cleanupOldBackups() {
   }
 }
 
+/**
+ * Restore from an uploaded .sql file.
+ * Validates it's a TaskFlow backup, then executes it.
+ */
+async function restoreFromFile(uploadedPath, originalName, userId) {
+  const sql = fs.readFileSync(uploadedPath, 'utf8');
+
+  // Validate: must contain TaskFlow backup header or DROP TABLE/INSERT statements
+  if (!sql.includes('TaskFlow Database Backup') && !sql.includes('DROP TABLE') && !sql.includes('INSERT INTO')) {
+    fs.unlinkSync(uploadedPath);
+    throw new Error('Invalid backup file — does not appear to be a valid TaskFlow database backup');
+  }
+
+  // Copy to backups dir for record keeping
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+  const filename = `taskflow_uploaded_${timestamp}.sql`;
+  const destPath = path.join(BACKUP_DIR, filename);
+  fs.copyFileSync(uploadedPath, destPath);
+  fs.unlinkSync(uploadedPath);
+  const stats = fs.statSync(destPath);
+
+  // Log the upload
+  const [logResult] = await db.query(
+    'INSERT INTO backup_logs (filename, file_size, type, status, created_by, notes) VALUES (?, ?, ?, ?, ?, ?)',
+    [filename, stats.size, 'manual', 'restoring', userId, `Uploaded restore from: ${originalName}`]
+  );
+  const logId = logResult.insertId;
+
+  const conn = await createConnection();
+
+  try {
+    await conn.query(sql);
+    await conn.end();
+
+    const freshConn = await createConnection();
+    await freshConn.query('UPDATE backup_logs SET status = ? WHERE id = ?', ['restored', logId]);
+    await freshConn.end();
+
+    return { success: true, filename };
+  } catch (err) {
+    try {
+      await conn.end();
+      const freshConn = await createConnection();
+      await freshConn.query('UPDATE backup_logs SET status = ?, notes = ? WHERE id = ?',
+        ['failed', `Restore failed: ${err.message}`, logId]);
+      await freshConn.end();
+    } catch (_) {}
+    throw err;
+  }
+}
+
 module.exports = {
   createBackup,
   restoreBackup,
+  restoreFromFile,
   getSettings,
   updateSettings,
   getBackupLogs,
