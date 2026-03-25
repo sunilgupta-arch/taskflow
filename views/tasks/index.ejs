@@ -158,30 +158,17 @@
                 </button>
                 <% } %>
 
-                <% if (task.status === 'active' && task.assigned_to === user.id) { %>
-                  <% if (task.is_completed_today) { %>
-                  <button class="btn-tf" style="font-size:0.65rem;padding:2px 8px;background:rgba(239,68,68,0.1);color:#ef4444;border:1px solid rgba(239,68,68,0.3);"
-                    onclick="undoCompletion(<%= task.id %>)">
-                    Undo
+                <% if (task.assigned_to === user.id && !['deactivated'].includes(task.status)) { %>
+                  <% if (task.status === 'pending') { %>
+                  <button class="btn-tf" style="font-size:0.65rem;padding:2px 8px;background:rgba(0,212,255,0.1);color:#00d4ff;border:1px solid rgba(0,212,255,0.3);"
+                    onclick="startTask(<%= task.id %>)">
+                    <i class="bi bi-play-fill"></i> Start
                   </button>
-                  <% } else { %>
-                  <button class="btn-tf" style="font-size:0.65rem;padding:2px 8px;background:rgba(16,185,129,0.1);color:#10b981;border:1px solid rgba(16,185,129,0.3);"
-                    onclick="logCompletion(<%= task.id %>)">
-                    Log
+                  <% } else if (task.status === 'in_progress' || task.status === 'completed' || task.status === 'active') { %>
+                  <button class="btn-tf" style="font-size:0.65rem;padding:2px 8px;background:rgba(107,114,128,0.1);color:#6b7280;border:1px solid rgba(107,114,128,0.3);cursor:not-allowed;opacity:0.6;" disabled>
+                    <i class="bi bi-play-fill"></i> Start
                   </button>
                   <% } %>
-                <% } else if (((user.role_name === 'LOCAL_USER') || (typeof isMyTasks !== 'undefined' && isMyTasks)) && task.assigned_to === user.id && task.status === 'pending') { %>
-                <button class="btn-tf" style="font-size:0.65rem;padding:2px 8px;background:rgba(0,212,255,0.1);color:#00d4ff;border:1px solid rgba(0,212,255,0.3);"
-                  onclick="startTask(<%= task.id %>)">
-                  Start
-                </button>
-                <% } %>
-
-                <% if (task.status !== 'active' && ((user.role_name === 'LOCAL_USER') || (typeof isMyTasks !== 'undefined' && isMyTasks)) && task.assigned_to === user.id && task.status === 'in_progress') { %>
-                <button class="btn-tf" style="font-size:0.65rem;padding:2px 8px;background:rgba(16,185,129,0.1);color:#10b981;border:1px solid rgba(16,185,129,0.3);"
-                  onclick="completeTask(<%= task.id %>)">
-                  Complete
-                </button>
                 <% } %>
 
                 <% if ((['CLIENT_ADMIN', 'CLIENT_MANAGER'].includes(user.role_name) || (['LOCAL_ADMIN', 'LOCAL_MANAGER'].includes(user.role_name) && task.created_by_org === 'LOCAL')) && task.status !== 'deactivated' && task.status !== 'completed') { %>

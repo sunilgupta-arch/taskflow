@@ -1,3 +1,170 @@
+<% if (user.org_type === 'CLIENT') { %>
+<!-- CLIENT VIEW: Today's Team Status -->
+<style>
+  .status-card {
+    border-radius: 16px;
+    padding: 1.25rem 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  .status-card:hover { transform: translateY(-2px); }
+  .status-card .avatar {
+    width: 52px; height: 52px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--tf-font-mono);
+    font-size: 1.1rem; font-weight: 700;
+    flex-shrink: 0;
+  }
+  .status-card .name {
+    font-size: 1.1rem;
+    font-weight: 600;
+    line-height: 1.2;
+  }
+  .status-card .meta {
+    font-size: 0.75rem;
+    margin-top: 2px;
+  }
+
+  /* Present - green glow */
+  .status-present {
+    background: rgba(16, 185, 129, 0.08);
+    border: 1px solid rgba(16, 185, 129, 0.25);
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.15), inset 0 0 20px rgba(16, 185, 129, 0.03);
+  }
+  .status-present .avatar { background: rgba(16, 185, 129, 0.2); color: #10b981; }
+  .status-present .name { color: #10b981; }
+  .status-present .meta { color: rgba(16, 185, 129, 0.7); }
+
+  /* Absent - red glow */
+  .status-absent {
+    background: rgba(239, 68, 68, 0.06);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    box-shadow: 0 0 20px rgba(239, 68, 68, 0.1), inset 0 0 20px rgba(239, 68, 68, 0.02);
+  }
+  .status-absent .avatar { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
+  .status-absent .name { color: #ef4444; }
+  .status-absent .meta { color: rgba(239, 68, 68, 0.6); }
+
+  /* On Leave - orange glow */
+  .status-leave {
+    background: rgba(245, 158, 11, 0.06);
+    border: 1px solid rgba(245, 158, 11, 0.2);
+    box-shadow: 0 0 20px rgba(245, 158, 11, 0.1), inset 0 0 20px rgba(245, 158, 11, 0.02);
+  }
+  .status-leave .avatar { background: rgba(245, 158, 11, 0.15); color: #f59e0b; }
+  .status-leave .name { color: #f59e0b; }
+  .status-leave .meta { color: rgba(245, 158, 11, 0.6); }
+
+  /* Week Off - grey */
+  .status-weekoff {
+    background: rgba(100, 116, 139, 0.06);
+    border: 1px solid rgba(100, 116, 139, 0.15);
+    box-shadow: 0 0 15px rgba(100, 116, 139, 0.08);
+  }
+  .status-weekoff .avatar { background: rgba(100, 116, 139, 0.15); color: #64748b; }
+  .status-weekoff .name { color: #94a3b8; }
+  .status-weekoff .meta { color: rgba(100, 116, 139, 0.6); }
+
+  /* Light theme adjustments */
+  [data-bs-theme="light"] .status-present { background: rgba(16, 185, 129, 0.06); box-shadow: 0 0 20px rgba(16, 185, 129, 0.1); }
+  [data-bs-theme="light"] .status-absent { background: rgba(239, 68, 68, 0.04); box-shadow: 0 0 20px rgba(239, 68, 68, 0.08); }
+  [data-bs-theme="light"] .status-leave { background: rgba(245, 158, 11, 0.04); box-shadow: 0 0 20px rgba(245, 158, 11, 0.08); }
+</style>
+
+<%
+  // Build today's status for each user
+  var todayDay = new Date(today).getDate();
+  var presentUsers = [];
+  var otherUsers = [];
+  calendarUsers.forEach(function(u) {
+    var st = calendarData[u.id] && calendarData[u.id][todayDay] ? calendarData[u.id][todayDay] : 'absent';
+    var loginKey = u.id + '-' + today;
+    var loginTime = (typeof loginTimeMap !== 'undefined' && loginTimeMap[loginKey]) ? loginTimeMap[loginKey] : '';
+    var info = { id: u.id, name: u.name, status: st, loginTime: loginTime };
+    if (st === 'present') presentUsers.push(info);
+    else otherUsers.push(info);
+  });
+%>
+
+<!-- Summary Stats -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="stat-card" style="--stat-color:#10b981;">
+      <div class="stat-value"><%= presentUsers.length %></div>
+      <div class="stat-label">Present Today</div>
+      <i class="bi bi-person-check stat-icon"></i>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card" style="--stat-color:#ef4444;">
+      <div class="stat-value"><%= otherUsers.filter(function(u){ return u.status === 'absent'; }).length %></div>
+      <div class="stat-label">Absent</div>
+      <i class="bi bi-person-x stat-icon"></i>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card" style="--stat-color:#f59e0b;">
+      <div class="stat-value"><%= otherUsers.filter(function(u){ return u.status === 'approved_leave' || u.status === 'pending_leave'; }).length %></div>
+      <div class="stat-label">On Leave</div>
+      <i class="bi bi-calendar-x stat-icon"></i>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card" style="--stat-color:#64748b;">
+      <div class="stat-value"><%= otherUsers.filter(function(u){ return u.status === 'weekoff'; }).length %></div>
+      <div class="stat-label">Week Off</div>
+      <i class="bi bi-moon stat-icon"></i>
+    </div>
+  </div>
+</div>
+
+<div class="tf-card mb-4">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span><i class="bi bi-people me-2"></i>TEAM STATUS — <%= new Date(today).toLocaleDateString('en-US', {weekday:'long', month:'long', day:'numeric', year:'numeric'}) %></span>
+    <span style="font-size:0.75rem;color:var(--tf-text-muted);"><%= calendarUsers.length %> members</span>
+  </div>
+  <div class="p-3">
+    <div class="row g-3">
+      <% presentUsers.forEach(function(u) { %>
+      <div class="col-md-6 col-lg-4">
+        <div class="status-card status-present">
+          <div class="avatar"><%= u.name.charAt(0).toUpperCase() %></div>
+          <div>
+            <div class="name"><%= u.name %></div>
+            <div class="meta"><i class="bi bi-check-circle-fill me-1"></i>Present<%= u.loginTime ? ' · Login ' + u.loginTime : '' %></div>
+          </div>
+        </div>
+      </div>
+      <% }) %>
+
+      <% otherUsers.forEach(function(u) {
+        var cssClass = 'status-absent';
+        var icon = 'bi-x-circle-fill';
+        var label = 'Absent';
+        if (u.status === 'approved_leave') { cssClass = 'status-leave'; icon = 'bi-calendar-check'; label = 'On Leave'; }
+        else if (u.status === 'pending_leave') { cssClass = 'status-leave'; icon = 'bi-calendar-event'; label = 'Leave Pending'; }
+        else if (u.status === 'weekoff') { cssClass = 'status-weekoff'; icon = 'bi-moon-fill'; label = 'Week Off'; }
+      %>
+      <div class="col-md-6 col-lg-4">
+        <div class="status-card <%= cssClass %>">
+          <div class="avatar"><%= u.name.charAt(0).toUpperCase() %></div>
+          <div>
+            <div class="name"><%= u.name %></div>
+            <div class="meta"><i class="bi <%= icon %> me-1"></i><%= label %></div>
+          </div>
+        </div>
+      </div>
+      <% }) %>
+    </div>
+  </div>
+</div>
+
+<% } else { %>
+<!-- LOCAL VIEW: Full Monthly Attendance -->
+
 <!-- Monthly Attendance Calendar -->
 <div class="tf-card mb-4">
   <div class="card-header d-flex justify-content-between align-items-center">
@@ -159,3 +326,4 @@
     </div>
   </div>
 </div>
+<% } %>

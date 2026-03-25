@@ -376,20 +376,15 @@ const isManager = ['CLIENT_MANAGER', 'LOCAL_MANAGER'].includes(user.role_name);
             <%= t.reward_amount ? parseFloat(t.reward_amount).toFixed(0) + ' pts' : '—' %>
           </td>
           <td>
-            <% if (isRecurring && isTodayView) { %>
-              <% if (isCompletedForDate) { %>
-              <button class="btn-tf" style="font-size:0.65rem;padding:2px 8px;background:rgba(239,68,68,0.1);color:#ef4444;border:1px solid rgba(239,68,68,0.3);"
-                onclick="undoDayCompletion(<%= t.id %>)">Undo</button>
-              <% } else { %>
-              <button class="btn-tf" style="font-size:0.65rem;padding:2px 8px;background:rgba(16,185,129,0.1);color:#10b981;border:1px solid rgba(16,185,129,0.3);"
-                onclick="logDayCompletion(<%= t.id %>)">Log</button>
-              <% } %>
-            <% } else if (!isRecurring && t.status === 'pending' && isTodayView) { %>
+            <% if (!isRecurring && t.status === 'pending' && isTodayView) { %>
               <button class="btn-tf" style="font-size:0.65rem;padding:2px 8px;background:rgba(0,212,255,0.1);color:#00d4ff;border:1px solid rgba(0,212,255,0.3);"
-                onclick="startDayTask(<%= t.id %>)">Start</button>
-            <% } else if (!isRecurring && t.status === 'in_progress' && isTodayView) { %>
-              <button class="btn-tf" style="font-size:0.65rem;padding:2px 8px;background:rgba(16,185,129,0.1);color:#10b981;border:1px solid rgba(16,185,129,0.3);"
-                onclick="completeDayTask(<%= t.id %>)">Complete</button>
+                onclick="startDayTask(<%= t.id %>)">
+                <i class="bi bi-play-fill"></i> Start
+              </button>
+            <% } else if (t.status === 'pending' || t.status === 'in_progress' || t.status === 'active') { %>
+              <a href="/tasks/<%= t.id %>" class="btn-tf text-decoration-none" style="font-size:0.65rem;padding:2px 8px;background:rgba(0,212,255,0.05);color:var(--tf-accent);border:1px solid rgba(0,212,255,0.2);">
+                <i class="bi bi-box-arrow-up-right"></i> Open
+              </a>
             <% } else { %>
               <a href="/tasks/<%= t.id %>" style="font-size:0.65rem;color:var(--tf-accent);text-decoration:none;">View</a>
             <% } %>
@@ -407,41 +402,11 @@ const isManager = ['CLIENT_MANAGER', 'LOCAL_MANAGER'].includes(user.role_name);
 </div>
 
 <script>
-async function logDayCompletion(taskId) {
-  if (!confirm('Log completion for this task?')) return;
-  try {
-    await axios.post('/tasks/' + taskId + '/log-completion');
-    showToast('Completion logged!');
-    setTimeout(() => location.reload(), 800);
-  } catch (e) {
-    showToast(e.response?.data?.message || 'Error', 'error');
-  }
-}
-async function undoDayCompletion(taskId) {
-  if (!confirm('Undo completion?')) return;
-  try {
-    await axios.post('/tasks/' + taskId + '/undo-completion');
-    showToast('Completion undone');
-    setTimeout(() => location.reload(), 800);
-  } catch (e) {
-    showToast(e.response?.data?.message || 'Error', 'error');
-  }
-}
 async function startDayTask(taskId) {
   if (!confirm('Start this task?')) return;
   try {
     await axios.post('/tasks/start/' + taskId);
     showToast('Task started!');
-    setTimeout(() => location.reload(), 800);
-  } catch (e) {
-    showToast(e.response?.data?.message || 'Error', 'error');
-  }
-}
-async function completeDayTask(taskId) {
-  if (!confirm('Mark as completed?')) return;
-  try {
-    await axios.post('/tasks/complete/' + taskId);
-    showToast('Task completed!');
     setTimeout(() => location.reload(), 800);
   } catch (e) {
     showToast(e.response?.data?.message || 'Error', 'error');

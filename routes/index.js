@@ -9,6 +9,7 @@ const RewardController = require('../controllers/rewardController');
 const ReportController = require('../controllers/reportController');
 const NoteController = require('../controllers/noteController');
 const LeaveController = require('../controllers/leaveController');
+const BackupController = require('../controllers/backupController');
 
 // Dashboard
 router.get('/dashboard', authenticate, DashboardController.show);
@@ -50,5 +51,13 @@ router.get('/notes', authenticate, NoteController.index);
 router.post('/notes', authenticate, NoteController.create);
 router.put('/notes/:id', authenticate, NoteController.update);
 router.delete('/notes/:id', authenticate, NoteController.destroy);
+
+// Backups (LOCAL_ADMIN only)
+router.get('/backups', authenticate, requireRoles('LOCAL_ADMIN'), BackupController.index);
+router.post('/backups/create', authenticate, requireRoles('LOCAL_ADMIN'), BackupController.create);
+router.post('/backups/restore/:id', authenticate, requireRoles('LOCAL_ADMIN'), BackupController.restore);
+router.post('/backups/settings', authenticate, requireRoles('LOCAL_ADMIN'), BackupController.updateSettings);
+router.get('/backups/download/:id', authenticate, requireRoles('LOCAL_ADMIN'), BackupController.download);
+router.delete('/backups/:id', authenticate, requireRoles('LOCAL_ADMIN'), BackupController.destroy);
 
 module.exports = router;

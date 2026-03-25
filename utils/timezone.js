@@ -7,7 +7,11 @@ function getNow(timezone = 'UTC') {
   const now = new Date();
   const str = now.toLocaleString('en-CA', { timeZone: timezone, hour12: false });
   // en-CA gives YYYY-MM-DD, HH:MM:SS format
-  return new Date(str.replace(',', ''));
+  // Parse parts manually to avoid local timezone reinterpretation
+  const [datePart, timePart] = str.replace(',', '').trim().split(' ');
+  const [year, month, day] = datePart.split('-').map(Number);
+  const [hour, minute, second] = (timePart || '00:00:00').split(':').map(Number);
+  return new Date(Date.UTC(year, month - 1, day, hour, minute, second));
 }
 
 function getToday(timezone = 'UTC') {

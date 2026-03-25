@@ -1,0 +1,252 @@
+<!-- Schedule + Actions Row -->
+<div class="row g-3 mb-4">
+  <!-- Schedule Card -->
+  <div class="col-md-6">
+    <div class="tf-card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-clock-history me-2"></i>SCHEDULED BACKUP</span>
+        <% if (settings.scheduled_time) { %>
+          <span class="badge badge-completed" style="font-size:0.65rem;border-radius:4px;padding:2px 8px;">ACTIVE</span>
+        <% } else { %>
+          <span class="badge badge-deactivated" style="font-size:0.65rem;border-radius:4px;padding:2px 8px;">DISABLED</span>
+        <% } %>
+      </div>
+      <div class="p-3">
+        <form id="scheduleForm" onsubmit="saveSchedule(event)">
+          <div class="row g-3 align-items-end">
+            <div class="col-sm-5">
+              <label style="font-size:0.7rem;color:var(--tf-text-muted);display:block;margin-bottom:0.3rem;text-transform:uppercase;letter-spacing:0.5px;">DAILY BACKUP TIME</label>
+              <input type="time" id="scheduledTime" class="tf-form-control"
+                     value="<%= settings.scheduled_time ? settings.scheduled_time.substring(0, 5) : '' %>"
+                     placeholder="HH:MM">
+            </div>
+            <div class="col-sm-4">
+              <label style="font-size:0.7rem;color:var(--tf-text-muted);display:block;margin-bottom:0.3rem;text-transform:uppercase;letter-spacing:0.5px;">MAX BACKUPS</label>
+              <input type="number" id="maxBackups" class="tf-form-control" min="1" max="100"
+                     value="<%= settings.max_backups || 30 %>">
+            </div>
+            <div class="col-sm-3 d-flex gap-2">
+              <button type="submit" class="btn-tf btn-tf-primary flex-grow-1" style="font-size:0.7rem;">
+                <i class="bi bi-save me-1"></i>Save
+              </button>
+              <% if (settings.scheduled_time) { %>
+              <button type="button" class="btn-tf btn-tf-danger" style="font-size:0.7rem;padding:0.4rem 0.6rem;" onclick="disableSchedule()" title="Disable schedule">
+                <i class="bi bi-x-lg"></i>
+              </button>
+              <% } %>
+            </div>
+          </div>
+        </form>
+        <div style="font-size:0.7rem;color:var(--tf-text-muted);margin-top:0.75rem;">
+          <i class="bi bi-info-circle me-1"></i>
+          <% if (settings.scheduled_time) { %>
+            System will auto-backup daily at <strong style="color:var(--tf-accent);"><%= settings.scheduled_time.substring(0, 5) %></strong>.
+            Old backups beyond <strong><%= settings.max_backups %></strong> will be auto-deleted.
+          <% } else { %>
+            Set a time to enable daily automatic backups.
+          <% } %>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Manual Backup Card -->
+  <div class="col-md-3">
+    <div class="stat-card" style="--stat-color:#00d4ff;height:100%;display:flex;flex-direction:column;justify-content:center;">
+      <div class="stat-value" style="font-size:1.5rem;"><%= pagination.total %></div>
+      <div class="stat-label">Total Backups</div>
+      <i class="bi bi-database stat-icon"></i>
+    </div>
+  </div>
+
+  <div class="col-md-3">
+    <div class="stat-card" style="--stat-color:#10b981;height:100%;display:flex;flex-direction:column;justify-content:center;align-items:center;cursor:pointer;" onclick="createBackup()" id="backupBtn">
+      <i class="bi bi-download" style="font-size:2rem;color:var(--tf-success);margin-bottom:0.5rem;"></i>
+      <div style="font-family:var(--tf-font-mono);font-size:0.8rem;font-weight:600;">CREATE BACKUP NOW</div>
+      <div style="font-size:0.65rem;color:var(--tf-text-muted);margin-top:0.25rem;">Manual snapshot</div>
+    </div>
+  </div>
+</div>
+
+<!-- Backup List -->
+<div class="tf-card">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span><i class="bi bi-archive me-2"></i>BACKUP HISTORY</span>
+    <span style="font-size:0.7rem;color:var(--tf-text-muted);"><%= pagination.total %> backups</span>
+  </div>
+  <div style="overflow-x:auto;">
+    <table class="tf-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Filename</th>
+          <th>Size</th>
+          <th>Type</th>
+          <th>Status</th>
+          <th>Created By</th>
+          <th>Date</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (backups.length > 0) { %>
+          <% backups.forEach((b, i) => { %>
+          <tr>
+            <td style="font-family:var(--tf-font-mono);font-size:0.75rem;color:var(--tf-text-muted);">
+              <%= (pagination.page - 1) * pagination.limit + i + 1 %>
+            </td>
+            <td>
+              <div style="font-size:0.8rem;font-weight:500;font-family:var(--tf-font-mono);">
+                <%= b.filename %>
+              </div>
+            </td>
+            <td style="font-family:var(--tf-font-mono);font-size:0.8rem;">
+              <%= b.file_size > 1048576 ? (b.file_size / 1048576).toFixed(1) + ' MB' : (b.file_size / 1024).toFixed(1) + ' KB' %>
+            </td>
+            <td>
+              <span class="badge badge-<%= b.type === 'scheduled' ? 'daily' : 'once' %>" style="font-size:0.65rem;border-radius:4px;padding:2px 6px;">
+                <%= b.type %>
+              </span>
+            </td>
+            <td>
+              <span class="badge badge-<%= b.status === 'success' ? 'completed' : b.status === 'restored' ? 'paid' : b.status === 'restoring' ? 'in_progress' : 'deactivated' %>" style="font-size:0.65rem;border-radius:4px;padding:2px 6px;">
+                <%= b.status %>
+              </span>
+              <% if (b.notes && b.status === 'failed') { %>
+                <div style="font-size:0.6rem;color:var(--tf-danger);margin-top:2px;" title="<%= b.notes %>">
+                  <i class="bi bi-exclamation-triangle"></i> <%= b.notes.substring(0, 40) %>...
+                </div>
+              <% } %>
+            </td>
+            <td style="font-size:0.8rem;">
+              <%= b.created_by_name || (b.type === 'scheduled' ? 'System' : '—') %>
+            </td>
+            <td style="font-size:0.75rem;color:var(--tf-text-muted);">
+              <%= new Date(b.created_at).toLocaleString('en-US', { month:'short', day:'numeric', year:'numeric', hour:'2-digit', minute:'2-digit' }) %>
+            </td>
+            <td>
+              <div class="d-flex gap-1">
+                <% if (b.status === 'success') { %>
+                <button class="btn-tf btn-tf-outline" style="font-size:0.6rem;padding:2px 6px;" onclick="restoreBackup(<%= b.id %>, '<%= b.filename %>')" title="Restore this backup">
+                  <i class="bi bi-arrow-counterclockwise"></i> Restore
+                </button>
+                <% } %>
+                <a href="/backups/download/<%= b.id %>" class="btn-tf btn-tf-outline" style="font-size:0.6rem;padding:2px 6px;" title="Download">
+                  <i class="bi bi-download"></i>
+                </a>
+                <button class="btn-tf btn-tf-danger" style="font-size:0.6rem;padding:2px 6px;" onclick="deleteBackup(<%= b.id %>)" title="Delete">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+          <% }) %>
+        <% } else { %>
+        <tr>
+          <td colspan="8" style="text-align:center;padding:2rem;color:var(--tf-text-muted);">
+            <i class="bi bi-database" style="font-size:2rem;display:block;margin-bottom:0.5rem;opacity:0.3;"></i>
+            No backups yet. Click "Create Backup Now" to get started.
+          </td>
+        </tr>
+        <% } %>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Pagination -->
+  <% if (pagination.totalPages > 1) { %>
+  <div class="d-flex justify-content-center p-3 gap-2">
+    <% for (let p = 1; p <= pagination.totalPages; p++) { %>
+    <a href="/backups?page=<%= p %>"
+       class="btn-tf <%= p === pagination.page ? 'btn-tf-primary' : 'btn-tf-outline' %>"
+       style="font-size:0.7rem;padding:4px 10px;">
+      <%= p %>
+    </a>
+    <% } %>
+  </div>
+  <% } %>
+</div>
+
+<script>
+async function createBackup() {
+  var btn = document.getElementById('backupBtn');
+  btn.style.opacity = '0.5';
+  btn.style.pointerEvents = 'none';
+
+  showToast('Creating backup... This may take a moment.', 'info');
+
+  try {
+    var res = await axios.post('/backups/create');
+    showToast(res.data.message);
+    setTimeout(function() { location.reload(); }, 1000);
+  } catch (e) {
+    showToast(e.response?.data?.message || 'Backup failed', 'error');
+    btn.style.opacity = '1';
+    btn.style.pointerEvents = 'auto';
+  }
+}
+
+async function restoreBackup(id, filename) {
+  if (!confirm('⚠️ RESTORE WARNING\n\nThis will OVERWRITE the current database with:\n' + filename + '\n\nA backup of the current state will be created first.\n\nAre you sure?')) return;
+  if (!confirm('Final confirmation: Restore database from ' + filename + '?')) return;
+
+  showToast('Creating safety backup before restore...', 'info');
+
+  try {
+    // Create a safety backup first
+    await axios.post('/backups/create');
+    showToast('Safety backup created. Restoring...', 'info');
+
+    var res = await axios.post('/backups/restore/' + id);
+    showToast(res.data.message);
+    setTimeout(function() { location.reload(); }, 1500);
+  } catch (e) {
+    showToast(e.response?.data?.message || 'Restore failed', 'error');
+  }
+}
+
+async function deleteBackup(id) {
+  if (!confirm('Delete this backup permanently?')) return;
+  try {
+    await axios.delete('/backups/' + id);
+    showToast('Backup deleted');
+    setTimeout(function() { location.reload(); }, 800);
+  } catch (e) {
+    showToast(e.response?.data?.message || 'Delete failed', 'error');
+  }
+}
+
+function saveSchedule(e) {
+  e.preventDefault();
+  var time = document.getElementById('scheduledTime').value;
+  var max = document.getElementById('maxBackups').value;
+
+  if (!time) {
+    showToast('Please set a time for the daily backup', 'error');
+    return;
+  }
+
+  axios.post('/backups/settings', {
+    scheduled_time: time + ':00',
+    max_backups: parseInt(max) || 30
+  }).then(function(res) {
+    showToast(res.data.message);
+    setTimeout(function() { location.reload(); }, 800);
+  }).catch(function(e) {
+    showToast(e.response?.data?.message || 'Failed to save settings', 'error');
+  });
+}
+
+function disableSchedule() {
+  if (!confirm('Disable scheduled daily backup?')) return;
+  axios.post('/backups/settings', {
+    scheduled_time: null,
+    max_backups: parseInt(document.getElementById('maxBackups').value) || 30
+  }).then(function(res) {
+    showToast('Scheduled backup disabled');
+    setTimeout(function() { location.reload(); }, 800);
+  }).catch(function(e) {
+    showToast(e.response?.data?.message || 'Failed', 'error');
+  });
+}
+</script>

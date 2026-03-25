@@ -4,5 +4,6 @@ logs/
 uploads/tasks/*
 !uploads/tasks/.gitkeep
 public/dist/
+backups/
 *.log
 .DS_Store

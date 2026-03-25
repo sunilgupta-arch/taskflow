@@ -69,7 +69,17 @@ class TaskModel {
       params.push(user);
     }
 
-    if (status) { where.push('t.status = ?'); params.push(status); }
+    if (status) {
+      if (status === 'pending') {
+        // "Pending" should include actual pending tasks AND active recurring tasks (shown as "Pending Today")
+        where.push("(t.status = 'pending' OR (t.status = 'active' AND t.type = 'recurring'))");
+      } else if (status === 'completed') {
+        // "Completed" should only match truly completed one-time tasks (not active recurring)
+        where.push('t.status = ?'); params.push(status);
+      } else {
+        where.push('t.status = ?'); params.push(status);
+      }
+    }
     if (type) { where.push('t.type = ?'); params.push(type); }
     if (assigned_to) { where.push('t.assigned_to = ?'); params.push(assigned_to); }
     if (created_by) { where.push('t.created_by = ?'); params.push(created_by); }
@@ -101,7 +111,7 @@ class TaskModel {
          LEFT JOIN users u1 ON t.assigned_to = u1.id
          LEFT JOIN users u2 ON t.created_by = u2.id
          ${whereClause}
-         ORDER BY FIELD(t.priority, 'urgent', 'high', 'medium', 'low'), t.created_at DESC
+         ORDER BY FIELD(t.status, 'pending', 'in_progress', 'active', 'completed', 'deactivated'), FIELD(t.priority, 'urgent', 'high', 'medium', 'low'), t.created_at DESC
          LIMIT ? OFFSET ?`,
         [...params, parseInt(limit), parseInt(offset)]
       );
@@ -147,7 +157,7 @@ class TaskModel {
        LEFT JOIN users u2 ON t.created_by = u2.id
        ${whereClause}
        GROUP BY COALESCE(t.group_id, t.id)
-       ORDER BY FIELD(ANY_VALUE(t.priority), 'urgent', 'high', 'medium', 'low'), MAX(t.created_at) DESC
+       ORDER BY FIELD(ANY_VALUE(t.status), 'pending', 'in_progress', 'active', 'completed', 'deactivated'), FIELD(ANY_VALUE(t.priority), 'urgent', 'high', 'medium', 'low'), MAX(t.created_at) DESC
        LIMIT ? OFFSET ?`,
       [...params, parseInt(limit), parseInt(offset)]
     );

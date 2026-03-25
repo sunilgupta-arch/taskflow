@@ -11,6 +11,8 @@ const cookie = require('cookie');
 const db = require('./config/db');
 const { init: initSocket } = require('./config/socket');
 
+const autoMigrate = require('./utils/auto-migrate');
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -75,66 +77,69 @@ app.use((err, req, res, next) => {
 });
 
 // ============================================================
-// Start Cron Jobs
+// Start Server (migrations first, then listen)
 // ============================================================
-const { startCronJobs } = require('./utils/cronJobs');
-startCronJobs();
+(async () => {
+  // Run pending migrations before anything else
+  await autoMigrate();
 
-// ============================================================
-// Start Server + Socket.IO
-// ============================================================
-const server = http.createServer(app);
-const io = initSocket(server);
+  // Start Cron Jobs
+  const { startCronJobs } = require('./utils/cronJobs');
+  startCronJobs();
 
-// Socket.IO authentication middleware
-io.use(async (socket, next) => {
-  try {
-    const rawCookie = socket.handshake.headers.cookie || '';
-    const cookies = cookie.parse(rawCookie);
-    const token = cookies.token;
+  const server = http.createServer(app);
+  const io = initSocket(server);
 
-    if (!token) return next(new Error('Authentication required'));
+  // Socket.IO authentication middleware
+  io.use(async (socket, next) => {
+    try {
+      const rawCookie = socket.handshake.headers.cookie || '';
+      const cookies = cookie.parse(rawCookie);
+      const token = cookies.token;
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const [users] = await db.query(
-      `SELECT u.*, r.name as role_name, r.organization_type, o.name as org_name, o.org_type
-       FROM users u
-       JOIN roles r ON u.role_id = r.id
-       JOIN organizations o ON u.organization_id = o.id
-       WHERE u.id = ? AND u.is_active = 1`,
-      [decoded.id]
-    );
+      if (!token) return next(new Error('Authentication required'));
 
-    if (!users.length) return next(new Error('User not found'));
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const [users] = await db.query(
+        `SELECT u.*, r.name as role_name, r.organization_type, o.name as org_name, o.org_type
+         FROM users u
+         JOIN roles r ON u.role_id = r.id
+         JOIN organizations o ON u.organization_id = o.id
+         WHERE u.id = ? AND u.is_active = 1`,
+        [decoded.id]
+      );
 
-    socket.user = users[0];
-    next();
-  } catch (err) {
-    next(new Error('Invalid token'));
-  }
-});
+      if (!users.length) return next(new Error('User not found'));
 
-// Socket.IO connection handler
-io.on('connection', (socket) => {
-  const user = socket.user;
+      socket.user = users[0];
+      next();
+    } catch (err) {
+      next(new Error('Invalid token'));
+    }
+  });
 
-  // Join user-specific room
-  socket.join(`user:${user.id}`);
+  // Socket.IO connection handler
+  io.on('connection', (socket) => {
+    const user = socket.user;
 
-  // Join admins room if user is admin or manager
-  if (['CLIENT_ADMIN', 'CLIENT_MANAGER', 'LOCAL_ADMIN', 'LOCAL_MANAGER'].includes(user.role_name)) {
-    socket.join('admins');
-  }
-});
+    // Join user-specific room
+    socket.join(`user:${user.id}`);
 
-server.listen(PORT, () => {
-  console.log(`\n🚀 TaskFlow running at http://localhost:${PORT}`);
-  console.log(`🔌 Socket.IO ready`);
-  console.log(`📦 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`\nDefault credentials:`);
-  console.log(`  Client Admin : cfc.admin@taskflow.com / Password@123`);
-  console.log(`  Local Admin  : our.admin@taskflow.com / Password@123`);
-  console.log(`  Local User   : our.user1@taskflow.com / Password@123\n`);
-});
+    // Join admins room if user is admin or manager
+    if (['CLIENT_ADMIN', 'CLIENT_MANAGER', 'LOCAL_ADMIN', 'LOCAL_MANAGER'].includes(user.role_name)) {
+      socket.join('admins');
+    }
+  });
+
+  server.listen(PORT, () => {
+    console.log(`\n🚀 TaskFlow running at http://localhost:${PORT}`);
+    console.log(`🔌 Socket.IO ready`);
+    console.log(`📦 Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`\nDefault credentials:`);
+    console.log(`  Client Admin : cfc.admin@taskflow.com / Password@123`);
+    console.log(`  Local Admin  : our.admin@taskflow.com / Password@123`);
+    console.log(`  Local User   : our.user1@taskflow.com / Password@123\n`);
+  });
+})();
 
 module.exports = app;

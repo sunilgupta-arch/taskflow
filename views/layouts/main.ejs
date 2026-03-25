@@ -549,6 +549,14 @@
       </a>
     </div>
     <% } %>
+
+    <% if (user.role_name === 'LOCAL_ADMIN') { %>
+    <div class="nav-item">
+      <a href="/backups" class="<%= typeof title !== 'undefined' && title === 'Database Backups' ? 'active' : '' %>">
+        <i class="bi bi-database-down"></i> Backups
+      </a>
+    </div>
+    <% } %>
   </nav>
 
   <div class="sidebar-footer">
@@ -678,27 +686,171 @@ axios.interceptors.response.use(
   }
 );
 
-// Auto-logout after 12 hours
+// Shift-based auto-logout
 (function() {
-  var TWELVE_HOURS = 12 * 60 * 60 * 1000;
+  var SHIFT_START = '<%= user.shift_start || "10:00:00" %>';
+  var SHIFT_HOURS = parseFloat('<%= user.shift_hours || 8.5 %>');
+  var WARN_BEFORE_MIN = 5;       // Show warning 5 min before shift ends
+  var EXTENSION_MS = 2.5 * 60 * 60 * 1000; // 2.5 hours max extension
+  var HARD_LIMIT_MS = 16 * 60 * 60 * 1000; // 16 hours absolute max (safety)
+
+  // Get current time in user's timezone as {h, m, s}
+  function getTzTime() {
+    var str = new Date().toLocaleTimeString('en-GB', { timeZone: USER_TIMEZONE, hour12: false });
+    var p = str.split(':');
+    return { h: parseInt(p[0]), m: parseInt(p[1]), s: parseInt(p[2] || 0) };
+  }
+
+  // Calculate ms until shift ends today
+  function getMsUntilShiftEnd() {
+    var parts = SHIFT_START.split(':');
+    var startMin = parseInt(parts[0]) * 60 + parseInt(parts[1]);
+    var endMin = startMin + Math.round(SHIFT_HOURS * 60);
+    var tz = getTzTime();
+    var nowMin = tz.h * 60 + tz.m;
+    var diffMin = endMin - nowMin;
+    return (diffMin * 60 - tz.s) * 1000;
+  }
+
+  var msUntilShiftEnd = getMsUntilShiftEnd();
+  var now = Date.now();
+  var shiftEndMs = now + msUntilShiftEnd;
+
+  // If user already clicked "Continue" previously, resume extension countdown
+  var extended = localStorage.getItem('tf_shift_extended');
+  if (extended) {
+    var extendDeadline = parseInt(extended);
+    if (now >= extendDeadline) {
+      localStorage.removeItem('tf_shift_extended');
+      localStorage.removeItem('tf_login_at');
+      window.location.href = '/auth/logout';
+      return;
+    }
+    var extRemaining = extendDeadline - now;
+    // Only show modal if less than 5 min left on extension
+    if (extRemaining <= 5 * 60 * 1000) {
+      showExtensionMode(extendDeadline);
+    }
+    setTimeout(function() {
+      localStorage.removeItem('tf_shift_extended');
+      localStorage.removeItem('tf_login_at');
+      window.location.href = '/auth/logout';
+    }, extRemaining);
+    // Schedule warning 5 min before extension expires
+    var warnIn = extRemaining - (5 * 60 * 1000);
+    if (warnIn > 0) {
+      setTimeout(function() { showExtensionMode(extendDeadline); }, warnIn);
+    }
+    return;
+  }
+
+  // Track login time for hard limit
   var loginAt = localStorage.getItem('tf_login_at');
   if (!loginAt) {
-    localStorage.setItem('tf_login_at', Date.now().toString());
-    loginAt = Date.now();
+    localStorage.setItem('tf_login_at', now.toString());
+    loginAt = now;
   } else {
     loginAt = parseInt(loginAt);
   }
-  var elapsed = Date.now() - loginAt;
-  var remaining = TWELVE_HOURS - elapsed;
-  if (remaining <= 0) {
+
+  // Schedule warning: 30 min before shift end
+  var msUntilWarning = msUntilShiftEnd - (WARN_BEFORE_MIN * 60 * 1000);
+
+  if (msUntilShiftEnd <= 0) {
+    // Shift already over — show warning immediately, give 5 min to decide
+    setTimeout(function() { showShiftWarning(5 * 60 * 1000); }, 500);
+  } else if (msUntilWarning <= 0) {
+    // Within 30-min warning window
+    setTimeout(function() { showShiftWarning(msUntilShiftEnd); }, 500);
+  } else {
+    // Schedule warning for later
+    setTimeout(function() { showShiftWarning(WARN_BEFORE_MIN * 60 * 1000); }, msUntilWarning);
+  }
+
+  // Hard limit: 16 hours absolute max
+  var hardRemaining = HARD_LIMIT_MS - (now - loginAt);
+  if (hardRemaining <= 0) {
     localStorage.removeItem('tf_login_at');
     window.location.href = '/auth/logout';
   } else {
     setTimeout(function() {
       localStorage.removeItem('tf_login_at');
+      localStorage.removeItem('tf_shift_extended');
       window.location.href = '/auth/logout';
-    }, remaining);
+    }, hardRemaining);
   }
+
+  function showShiftWarning(autoLogoutIn) {
+    var modal = document.getElementById('shiftWarningModal');
+    if (!modal || modal.dataset.shown === '1') return;
+    modal.dataset.shown = '1';
+    modal.style.display = 'flex';
+
+    var deadline = Date.now() + autoLogoutIn;
+    startCountdown(deadline, false);
+
+    // Auto-logout when countdown hits 0
+    setTimeout(function() {
+      if (localStorage.getItem('tf_shift_extended')) return;
+      localStorage.removeItem('tf_login_at');
+      window.location.href = '/auth/logout';
+    }, autoLogoutIn);
+  }
+
+  function showExtensionMode(deadline) {
+    var modal = document.getElementById('shiftWarningModal');
+    if (modal) { modal.style.display = 'flex'; modal.dataset.shown = '1'; }
+    var btns = document.getElementById('shiftWarningBtns');
+    if (btns) btns.innerHTML = '<button class="btn-tf btn-tf-danger" style="padding:0.6rem 1.5rem;font-size:0.85rem;" onclick="shiftLogout()"><i class="bi bi-box-arrow-right me-1"></i> Logout Now</button>';
+    var labelEl = document.getElementById('shiftCountdownLabel');
+    if (labelEl) labelEl.textContent = 'Extended session ends in:';
+    startCountdown(deadline, true);
+  }
+
+  function startCountdown(deadline) {
+    var el = document.getElementById('shiftCountdown');
+    if (!el) return;
+
+    function tick() {
+      var rem = Math.max(0, deadline - Date.now());
+      var h = Math.floor(rem / 3600000);
+      var m = Math.floor((rem % 3600000) / 60000);
+      var s = Math.floor((rem % 60000) / 1000);
+      el.textContent = (h > 0 ? h + 'h ' : '') + String(m).padStart(2, '0') + 'm ' + String(s).padStart(2, '0') + 's';
+      if (rem > 0) setTimeout(tick, 1000);
+    }
+    tick();
+  }
+
+  // Button handlers
+  window.shiftContinue = function() {
+    var deadline = Date.now() + EXTENSION_MS;
+    localStorage.setItem('tf_shift_extended', deadline.toString());
+
+    // Close the modal — user can keep working
+    var modal = document.getElementById('shiftWarningModal');
+    if (modal) modal.style.display = 'none';
+    showToast('Session extended by 2.5 hours', 'info');
+
+    // Show warning again 5 min before extension expires
+    var warnAt = EXTENSION_MS - (5 * 60 * 1000);
+    setTimeout(function() {
+      showExtensionMode(deadline);
+    }, warnAt > 0 ? warnAt : 0);
+
+    // Hard logout when extension expires
+    setTimeout(function() {
+      localStorage.removeItem('tf_shift_extended');
+      localStorage.removeItem('tf_login_at');
+      window.location.href = '/auth/logout';
+    }, EXTENSION_MS);
+  };
+
+  window.shiftLogout = function() {
+    localStorage.removeItem('tf_login_at');
+    localStorage.removeItem('tf_shift_extended');
+    window.location.href = '/auth/logout';
+  };
 })();
 
 // Socket.IO - Real-time notifications
@@ -807,6 +959,31 @@ async function submitChangePassword() {
   }
 }
 </script>
+
+<!-- Shift Warning Modal -->
+<div id="shiftWarningModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:300;align-items:center;justify-content:center;padding:1rem;">
+  <div style="background:var(--tf-surface);border:1px solid var(--tf-border);border-radius:16px;padding:2rem;width:100%;max-width:440px;text-align:center;">
+    <div style="width:64px;height:64px;border-radius:50%;background:rgba(245,158,11,0.15);display:flex;align-items:center;justify-content:center;margin:0 auto 1.25rem;">
+      <i class="bi bi-clock-history" style="font-size:1.75rem;color:#f59e0b;"></i>
+    </div>
+    <h5 style="font-family:var(--tf-font-mono);margin-bottom:0.5rem;font-weight:700;">SHIFT ENDING</h5>
+    <p id="shiftCountdownLabel" style="font-size:0.85rem;color:var(--tf-text-muted);margin-bottom:1.25rem;">Your shift is ending. Session will logout in:</p>
+    <div id="shiftCountdown" style="font-family:var(--tf-font-mono);font-size:2.5rem;font-weight:700;color:#f59e0b;margin-bottom:1.5rem;letter-spacing:1px;">
+      --m --s
+    </div>
+    <div id="shiftWarningBtns" class="d-flex gap-2 justify-content-center">
+      <button class="btn-tf btn-tf-danger" style="padding:0.6rem 1.5rem;font-size:0.85rem;" onclick="shiftLogout()">
+        <i class="bi bi-box-arrow-right me-1"></i> Logout Now
+      </button>
+      <button class="btn-tf btn-tf-primary" style="padding:0.6rem 1.5rem;font-size:0.85rem;" onclick="shiftContinue()">
+        <i class="bi bi-play-circle me-1"></i> Continue (2.5 hrs)
+      </button>
+    </div>
+    <div style="font-size:0.7rem;color:var(--tf-text-muted);margin-top:1rem;">
+      <i class="bi bi-info-circle me-1"></i>Session will auto-logout after extension period
+    </div>
+  </div>
+</div>
 
 <%- script %>
 
