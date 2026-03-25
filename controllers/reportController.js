@@ -77,7 +77,9 @@ class ReportController {
 
   static async attendanceReport(req, res) {
     try {
-      const tz = req.user.org_timezone || 'UTC';
+      // Always use LOCAL org timezone for attendance (data belongs to LOCAL team)
+      const [orgs] = await db.query("SELECT timezone FROM organizations WHERE org_type = 'LOCAL' LIMIT 1");
+      const tz = (orgs.length && orgs[0].timezone) || req.user.org_timezone || 'UTC';
       const today = getToday(tz);
       const month = req.query.month || today.slice(0, 7); // 'YYYY-MM'
       const [yearStr, monStr] = month.split('-');

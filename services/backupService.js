@@ -157,7 +157,9 @@ async function restoreBackup(backupId, userId) {
   const conn = await createConnection();
 
   try {
-    const sql = fs.readFileSync(filePath, 'utf8');
+    let sql = fs.readFileSync(filePath, 'utf8');
+    // Fix corrupted JSON columns from old backups
+    sql = sql.replace(/'?\[object Object\]'?/g, "'{}'");
     await conn.query(sql);
     await conn.end();
 
@@ -262,6 +264,9 @@ async function restoreFromFile(uploadedPath, originalName, userId) {
     fs.unlinkSync(uploadedPath);
     throw new Error('Invalid backup file — does not appear to be a valid TaskFlow database backup');
   }
+
+  // Fix corrupted JSON columns: replace '[object Object]' with valid empty JSON
+  sql = sql.replace(/'?\[object Object\]'?/g, "'{}'");
 
   // Copy to backups dir for record keeping
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
