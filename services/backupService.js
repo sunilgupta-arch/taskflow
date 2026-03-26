@@ -18,6 +18,7 @@ function createConnection(opts = {}) {
     user: process.env.DB_USER || 'root',
     password: process.env.DB_PASSWORD || '',
     database: process.env.DB_NAME || 'taskflow_db',
+    timezone: process.env.DB_TIMEZONE || '+00:00',
     multipleStatements: true,
     ...opts
   });
@@ -37,6 +38,7 @@ async function createDump() {
   lines.push('');
   lines.push('SET FOREIGN_KEY_CHECKS = 0;');
   lines.push('SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";');
+  lines.push("SET time_zone = '+00:00';");
   lines.push('SET AUTOCOMMIT = 0;');
   lines.push('START TRANSACTION;');
   lines.push('');
@@ -257,7 +259,7 @@ async function cleanupOldBackups() {
  * Validates it's a TaskFlow backup, then executes it.
  */
 async function restoreFromFile(uploadedPath, originalName, userId) {
-  const sql = fs.readFileSync(uploadedPath, 'utf8');
+  let sql = fs.readFileSync(uploadedPath, 'utf8');
 
   // Validate: must contain TaskFlow backup header or DROP TABLE/INSERT statements
   if (!sql.includes('TaskFlow Database Backup') && !sql.includes('DROP TABLE') && !sql.includes('INSERT INTO')) {

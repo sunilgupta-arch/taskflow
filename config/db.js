@@ -7,6 +7,7 @@ const pool = mysql.createPool({
   user: process.env.DB_USER || 'root',
   password: process.env.DB_PASSWORD || '',
   database: process.env.DB_NAME || 'taskflow_db',
+  timezone: process.env.DB_TIMEZONE || '+00:00',
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,

@@ -206,7 +206,9 @@ notesData[<%= note.id %>] = { id: <%= note.id %>, title: <%- JSON.stringify(note
 function openCreateModal() {
   document.getElementById('noteModalTitle').textContent = 'NEW NOTE';
   document.getElementById('editNoteId').value = '';
-  document.getElementById('nTitle').value = '';
+  var now = new Date();
+  var defaultTitle = now.toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric', year:'numeric' }) + ' — ' + now.toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit' });
+  document.getElementById('nTitle').value = defaultTitle;
   document.getElementById('nContent').value = '';
   document.getElementById('noteModalSubmitBtn').textContent = 'CREATE';
   document.getElementById('noteModal').style.display = 'flex';

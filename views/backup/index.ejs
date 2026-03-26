@@ -104,6 +104,9 @@
             <td>
               <div style="font-size:0.8rem;font-weight:500;font-family:var(--tf-font-mono);">
                 <%= b.filename %>
+                <% if (i === 0 && pagination.page === 1) { %>
+                  <span style="font-size:0.55rem;background:#10b981;color:#fff;padding:1px 5px;border-radius:3px;margin-left:6px;font-family:var(--tf-font-sans);vertical-align:middle;">LATEST</span>
+                <% } %>
               </div>
             </td>
             <td style="font-family:var(--tf-font-mono);font-size:0.8rem;">
