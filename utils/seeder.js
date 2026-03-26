@@ -7,9 +7,9 @@ async function seed() {
 
   try {
     // Organizations
-    await db.query(`INSERT IGNORE INTO organizations (id, name, org_type) VALUES
-      (1, 'Client Organization', 'CLIENT'),
-      (2, 'Local Organization', 'LOCAL')`);
+    await db.query(`INSERT IGNORE INTO organizations (id, name, org_type, timezone) VALUES
+      (1, 'Client Organization', 'CLIENT', 'America/New_York'),
+      (2, 'Local Organization', 'LOCAL', 'Asia/Kolkata')`);
     console.log('Organizations seeded');
 
     // Roles

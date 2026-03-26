@@ -140,7 +140,6 @@ class ReportController {
       });
 
       const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-      const todayDate = new Date(today);
 
       const calendarData = {};
       activeUsers[0].forEach(u => {
@@ -150,7 +149,7 @@ class ReportController {
           const dateStr = `${year}-${String(mon).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
           const dayName = dayNames[dateObj.getDay()];
 
-          if (dateObj > todayDate) {
+          if (dateStr > today) {
             // Check if there's a pending/approved leave for future
             let futureStatus = 'future';
             for (const lv of leaveData[0]) {

@@ -1,5 +1,6 @@
 const cron = require('node-cron');
 const db = require('../config/db');
+const { getToday } = require('./timezone');
 
 /**
  * NOTE: Daily/weekly task regeneration crons have been removed.
@@ -12,7 +13,9 @@ const db = require('../config/db');
  */
 const attendanceCleanupJob = cron.schedule('59 23 * * *', async () => {
   try {
-    const today = new Date().toISOString().split('T')[0];
+    const [[org]] = await db.query("SELECT timezone FROM organizations WHERE org_type = 'LOCAL' LIMIT 1");
+    const tz = (org && org.timezone) || 'UTC';
+    const today = getToday(tz);
     await db.query(
       `UPDATE attendance_logs SET logout_time = '23:59:59'
        WHERE date = ? AND logout_time IS NULL`, [today]

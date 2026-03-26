@@ -2,6 +2,7 @@ const LeaveRequest = require('../models/LeaveRequest');
 const db = require('../config/db');
 const { ApiResponse, getPaginationMeta } = require('../utils/response');
 const { getIO } = require('../config/socket');
+const { getToday } = require('../utils/timezone');
 
 class LeaveController {
   static async index(req, res) {
@@ -54,7 +55,7 @@ class LeaveController {
         return ApiResponse.error(res, 'From date cannot be after to date', 400);
       }
 
-      const today = new Date().toISOString().split('T')[0];
+      const today = getToday(req.user.org_timezone || 'UTC');
       if (from_date < today) {
         return ApiResponse.error(res, 'Cannot apply for leave in the past', 400);
       }

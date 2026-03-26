@@ -217,7 +217,7 @@ class UserController {
   static async monthlyReport(req, res) {
     try {
       const userId = req.params.id;
-      const month = req.query.month || new Date().toISOString().slice(0, 7); // YYYY-MM
+      const month = req.query.month || getToday(req.user.org_timezone || 'UTC').slice(0, 7); // YYYY-MM
       const [year, mon] = month.split('-');
 
       // Adhoc stats for the month
