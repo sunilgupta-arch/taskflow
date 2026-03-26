@@ -261,12 +261,13 @@
                 var eMin = sH * 60 + sM + sh * 60;
                 var eH = Math.floor(eMin / 60) % 24, eM = Math.round(eMin % 60);
                 var endStr = String(eH).padStart(2, '0') + ':' + String(eM).padStart(2, '0');
-                var loginTime = l.login_time ? new Date(l.login_time) : null;
                 var lateMin = 0;
-                if (loginTime) {
-                  var tz = timezone || 'UTC';
-                  var loginHM = loginTime.toLocaleTimeString('en-US', { timeZone: tz, hour12: false, hour: '2-digit', minute: '2-digit' });
+                if (l.loginFormatted) {
+                  var loginHM = l.loginFormatted.split(' ')[0];
+                  var loginAmPm = l.loginFormatted.split(' ')[1];
                   var lH = parseInt(loginHM.split(':')[0]), lM = parseInt(loginHM.split(':')[1]);
+                  if (loginAmPm === 'PM' && lH !== 12) lH += 12;
+                  if (loginAmPm === 'AM' && lH === 12) lH = 0;
                   var loginMins = lH * 60 + lM;
                   var shiftMins = sH * 60 + sM;
                   lateMin = Math.max(0, loginMins - shiftMins);
@@ -281,13 +282,13 @@
                   <%= ss %> - <%= endStr %>
                 </td>
                 <td style="font-family:var(--tf-font-mono);font-size:0.75rem;">
-                  <span style="color:#10b981;"><%= loginTime ? loginTime.toLocaleTimeString('en-US', {timeZone: timezone || 'UTC', hour:'2-digit',minute:'2-digit'}) : '—' %></span>
+                  <span style="color:#10b981;"><%= l.loginFormatted || '—' %></span>
                   <% if (lateMin > 5) { %>
                   <div style="font-size:0.6rem;color:#ef4444;">+<%= lateMin %> min late</div>
                   <% } %>
                 </td>
                 <td style="font-family:var(--tf-font-mono);font-size:0.75rem;color:var(--tf-text-muted);">
-                  <%= l.logout_time ? new Date(l.logout_time).toLocaleTimeString('en-US', {timeZone: timezone || 'UTC', hour:'2-digit',minute:'2-digit'}) : 'Active' %>
+                  <%= l.logoutFormatted || 'Active' %>
                 </td>
                 <td style="font-size:0.75rem;color:var(--tf-text-muted);">
                   <%= l.duration ? l.duration.substring(0,5) + 'h' : '—' %>

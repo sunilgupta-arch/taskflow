@@ -23,14 +23,49 @@ function getDayOfWeek(timezone = 'UTC') {
   return new Date().toLocaleDateString('en-US', { timeZone: timezone, weekday: 'long' });
 }
 
+/**
+ * Get UTC offset in minutes for common IANA timezones.
+ * Avoids reliance on full ICU support in Node.js.
+ */
+function getTimezoneOffsetMinutes(timezone) {
+  const offsets = {
+    'UTC': 0,
+    'Asia/Kolkata': 330,
+    'Asia/Calcutta': 330,
+    'America/New_York': -300,
+    'America/Chicago': -360,
+    'America/Denver': -420,
+    'America/Los_Angeles': -480,
+    'Europe/London': 0,
+    'Europe/Berlin': 60,
+    'Europe/Paris': 60,
+    'Asia/Dubai': 240,
+    'Asia/Singapore': 480,
+    'Asia/Tokyo': 540,
+    'Australia/Sydney': 660,
+  };
+  if (offsets.hasOwnProperty(timezone)) return offsets[timezone];
+  // Fallback: try Intl (works if full ICU is available)
+  try {
+    const now = new Date();
+    const utcStr = now.toLocaleString('en-US', { timeZone: 'UTC' });
+    const tzStr = now.toLocaleString('en-US', { timeZone: timezone });
+    return Math.round((new Date(tzStr) - new Date(utcStr)) / 60000);
+  } catch (e) {
+    return 0;
+  }
+}
+
 function formatTime(date, timezone = 'UTC') {
   if (!date) return null;
-  return new Date(date).toLocaleTimeString('en-US', {
-    timeZone: timezone,
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: true
-  });
+  const d = new Date(date);
+  const offsetMs = getTimezoneOffsetMinutes(timezone) * 60000;
+  const local = new Date(d.getTime() + offsetMs);
+  let h = local.getUTCHours();
+  const m = local.getUTCMinutes();
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  h = h % 12 || 12;
+  return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0') + ' ' + ampm;
 }
 
 /**

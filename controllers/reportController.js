@@ -2,7 +2,7 @@ const TaskService = require('../services/taskService');
 const RewardModel = require('../models/Reward');
 const db = require('../config/db');
 const { ApiResponse } = require('../utils/response');
-const { getToday } = require('../utils/timezone');
+const { getToday, formatTime } = require('../utils/timezone');
 
 class ReportController {
   static async completionReport(req, res) {
@@ -134,8 +134,7 @@ class ReportController {
         const d = row.date instanceof Date ? row.date.toISOString().split('T')[0] : String(row.date).split('T')[0];
         attendanceSet.add(`${row.user_id}-${d}`);
         if (row.login_time) {
-          const lt = new Date(row.login_time);
-          loginTimeMap.set(`${row.user_id}-${d}`, lt.toLocaleTimeString('en-US', { timeZone: tz, hour: '2-digit', minute: '2-digit', hour12: true }));
+          loginTimeMap.set(`${row.user_id}-${d}`, formatTime(row.login_time, tz));
         }
       });
 
@@ -186,9 +185,16 @@ class ReportController {
       const prevMonth = mon === 1 ? `${year - 1}-12` : `${year}-${String(mon - 1).padStart(2, '0')}`;
       const nextMonth = mon === 12 ? `${year + 1}-01` : `${year}-${String(mon + 1).padStart(2, '0')}`;
 
+      // Pre-format login/logout times (avoids ICU dependency in EJS)
+      const formattedDailyLogs = dailyLogs[0].map(l => ({
+        ...l,
+        loginFormatted: formatTime(l.login_time, tz),
+        logoutFormatted: formatTime(l.logout_time, tz)
+      }));
+
       res.render('attendance/index', {
         title: 'Attendance Dashboard',
-        dailyLogs: dailyLogs[0],
+        dailyLogs: formattedDailyLogs,
         weeklyStats: weeklyStats[0],
         today,
         calendarUsers: activeUsers[0],
