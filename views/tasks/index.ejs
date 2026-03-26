@@ -15,6 +15,14 @@
       <option value="recurring" <%= filters.type === 'recurring' ? 'selected' : '' %>>Recurring</option>
       <option value="once" <%= filters.type === 'once' ? 'selected' : '' %>>One Time</option>
     </select>
+    <% if (typeof isMyTasks !== 'undefined' && isMyTasks) { %>
+    <select name="schedule" class="tf-select" style="max-width:140px;">
+      <option value="">All Schedule</option>
+      <option value="today" <%= filters.schedule === 'today' ? 'selected' : '' %>>Today's Tasks</option>
+      <option value="daily" <%= filters.schedule === 'daily' ? 'selected' : '' %>>Daily Tasks</option>
+      <option value="weekly" <%= filters.schedule === 'weekly' ? 'selected' : '' %>>Weekly Tasks</option>
+    </select>
+    <% } %>
     <button type="submit" class="btn-tf btn-tf-outline">Filter</button>
   </form>
   
@@ -38,7 +46,7 @@
           <th>Priority</th>
           <th>Assigned To</th>
           <th>Status</th>
-          <th>Due Date</th>
+          <th>Due / Ends</th>
           <th>Reward</th>
           <th>Remarks</th>
           <th>Actions</th>
@@ -130,9 +138,18 @@
               </span>
               <% } %>
             </td>
+            <% if (task.type === 'recurring') { %>
+            <td style="font-size:0.8rem;color:var(--tf-text-muted);">
+              <% if (task.recurrence_end_date) { %>
+                <div style="font-size:0.6rem;color:var(--tf-text-muted);margin-bottom:1px;">Ends</div>
+                <%= new Date(task.recurrence_end_date).toLocaleDateString() %>
+              <% } else { %>—<% } %>
+            </td>
+            <% } else { %>
             <td style="font-size:0.8rem;color:<%= task.due_date && new Date(task.due_date) < new Date() && task.status !== 'completed' ? '#ef4444' : 'var(--tf-text-muted)' %>;">
               <%= task.due_date ? new Date(task.due_date).toLocaleDateString() : '—' %>
             </td>
+            <% } %>
             <td style="font-family:var(--tf-font-mono);color:#f59e0b;font-size:0.8rem;">
               <%= task.reward_amount ? parseFloat(task.reward_amount).toFixed(0) + ' pts' : '—' %>
             </td>
@@ -159,12 +176,27 @@
                 <% } %>
 
                 <% if (task.assigned_to === user.id && !['deactivated'].includes(task.status)) { %>
-                  <% if (task.status === 'pending') { %>
+                  <% if (task.type === 'recurring' && task.status === 'active') { %>
+                    <% if (task.is_completed_today) { %>
+                    <button class="btn-tf" style="font-size:0.65rem;padding:2px 8px;background:rgba(16,185,129,0.1);color:#10b981;border:1px solid rgba(16,185,129,0.3);cursor:not-allowed;opacity:0.6;" disabled>
+                      <i class="bi bi-check-circle-fill"></i> Done
+                    </button>
+                    <% } else if (task.is_started_today) { %>
+                    <a href="/tasks/<%= task.id %>" class="btn-tf text-decoration-none" style="font-size:0.65rem;padding:2px 8px;background:rgba(245,158,11,0.15);color:#f59e0b;border:1px solid rgba(245,158,11,0.4);">
+                      <i class="bi bi-hourglass-split"></i> In Progress
+                    </a>
+                    <% } else { %>
+                    <button class="btn-tf" style="font-size:0.65rem;padding:2px 8px;background:rgba(0,212,255,0.1);color:#00d4ff;border:1px solid rgba(0,212,255,0.3);"
+                      onclick="startSession(<%= task.id %>)">
+                      <i class="bi bi-play-fill"></i> Start
+                    </button>
+                    <% } %>
+                  <% } else if (task.status === 'pending') { %>
                   <button class="btn-tf" style="font-size:0.65rem;padding:2px 8px;background:rgba(0,212,255,0.1);color:#00d4ff;border:1px solid rgba(0,212,255,0.3);"
                     onclick="startTask(<%= task.id %>)">
                     <i class="bi bi-play-fill"></i> Start
                   </button>
-                  <% } else if (task.status === 'in_progress' || task.status === 'completed' || task.status === 'active') { %>
+                  <% } else if (task.status === 'in_progress' || task.status === 'completed') { %>
                   <button class="btn-tf" style="font-size:0.65rem;padding:2px 8px;background:rgba(107,114,128,0.1);color:#6b7280;border:1px solid rgba(107,114,128,0.3);cursor:not-allowed;opacity:0.6;" disabled>
                     <i class="bi bi-play-fill"></i> Start
                   </button>
@@ -329,14 +361,13 @@ async function completeTask(taskId) {
     showToast(e.response?.data?.message || 'Failed to complete task', 'error');
   }
 }
-async function logCompletion(taskId) {
-  if (!confirm('Log today\'s completion for this task?')) return;
+async function startSession(taskId) {
   try {
-    await axios.post(`/tasks/${taskId}/log-completion`);
-    showToast('Completion logged!');
+    await axios.post(`/tasks/${taskId}/start-session`);
+    showToast('Task started! Open the task to complete it.');
     setTimeout(() => location.reload(), 800);
   } catch (e) {
-    showToast(e.response?.data?.message || 'Failed to log completion', 'error');
+    showToast(e.response?.data?.message || 'Failed to start task', 'error');
   }
 }
 async function undoCompletion(taskId) {

@@ -2,17 +2,57 @@ const db = require('../config/db');
 
 class TaskCompletion {
   /**
-   * Log a completion for a recurring task on a specific date.
-   * Uses INSERT IGNORE to be idempotent (unique key prevents duplicates).
+   * Log a completion for a recurring task on a specific date (direct/admin use).
+   * Sets completed_at immediately without a start step.
    */
   static async logCompletion(taskId, userId, date, notes = null) {
     const [result] = await db.query(
-      `INSERT INTO task_completions (task_id, user_id, completion_date, notes)
-       VALUES (?, ?, ?, ?)
-       ON DUPLICATE KEY UPDATE notes = COALESCE(VALUES(notes), notes)`,
+      `INSERT INTO task_completions (task_id, user_id, completion_date, notes, completed_at)
+       VALUES (?, ?, ?, ?, NOW())
+       ON DUPLICATE KEY UPDATE notes = COALESCE(VALUES(notes), notes), completed_at = COALESCE(completed_at, NOW())`,
       [taskId, userId, date, notes]
     );
     return result.insertId || result.affectedRows > 0;
+  }
+
+  /**
+   * Start a session for today — inserts a record with started_at = NOW().
+   */
+  static async startSession(taskId, userId, date) {
+    const [result] = await db.query(
+      `INSERT INTO task_completions (task_id, user_id, completion_date, started_at)
+       VALUES (?, ?, ?, NOW())`,
+      [taskId, userId, date]
+    );
+    return result.insertId;
+  }
+
+  /**
+   * Complete a started session — sets completed_at and calculates duration.
+   */
+  static async completeSession(taskId, userId, date) {
+    const [result] = await db.query(
+      `UPDATE task_completions
+       SET completed_at = NOW(),
+           duration_minutes = TIMESTAMPDIFF(MINUTE, started_at, NOW())
+       WHERE task_id = ? AND user_id = ? AND completion_date = ?
+         AND started_at IS NOT NULL AND completed_at IS NULL`,
+      [taskId, userId, date]
+    );
+    return result.affectedRows > 0;
+  }
+
+  /**
+   * Get today's session record for a task (returns null, started, or completed state).
+   */
+  static async getTodaySession(taskId, userId, date) {
+    const [[row]] = await db.query(
+      `SELECT id, started_at, completed_at, duration_minutes
+       FROM task_completions
+       WHERE task_id = ? AND user_id = ? AND completion_date = ?`,
+      [taskId, userId, date]
+    );
+    return row || null;
   }
 
   /**
@@ -31,7 +71,15 @@ class TaskCompletion {
    */
   static async isCompletedForDate(taskId, userId, date) {
     const [[row]] = await db.query(
-      `SELECT id FROM task_completions WHERE task_id = ? AND user_id = ? AND completion_date = ?`,
+      `SELECT id FROM task_completions WHERE task_id = ? AND user_id = ? AND completion_date = ? AND completed_at IS NOT NULL`,
+      [taskId, userId, date]
+    );
+    return !!row;
+  }
+
+  static async isStartedToday(taskId, userId, date) {
+    const [[row]] = await db.query(
+      `SELECT id FROM task_completions WHERE task_id = ? AND user_id = ? AND completion_date = ? AND started_at IS NOT NULL AND completed_at IS NULL`,
       [taskId, userId, date]
     );
     return !!row;
@@ -61,6 +109,7 @@ class TaskCompletion {
        FROM task_completions tc
        JOIN users u ON tc.user_id = u.id
        WHERE tc.task_id = ? AND tc.completion_date >= ? AND tc.completion_date <= ?
+         AND tc.completed_at IS NOT NULL
        ORDER BY tc.completion_date DESC`,
       [taskId, startDate, endDate]
     );

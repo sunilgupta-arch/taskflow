@@ -191,16 +191,31 @@
       <div class="card-header"><i class="bi bi-lightning me-2"></i>ACTIONS</div>
       <div class="p-3 d-flex flex-column gap-2">
         <% if (task.status === 'active' && task.assigned_to === user.id) { %>
-          <% if (typeof isCompletedToday !== 'undefined' && isCompletedToday) { %>
-          <button class="btn-tf" style="background:rgba(239,68,68,0.1);color:#ef4444;border:1px solid rgba(239,68,68,0.3);" onclick="undoCompletion()">
-            <i class="bi bi-arrow-counterclockwise me-1"></i> Undo Today's Completion
-          </button>
-          <div style="font-size:0.75rem;color:#10b981;text-align:center;margin-top:4px;">
-            <i class="bi bi-check-circle-fill"></i> Completed today
+          <% if (isCompletedToday) { %>
+          <div style="font-size:0.8rem;color:#10b981;text-align:center;padding:8px;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.25);border-radius:8px;">
+            <i class="bi bi-check-circle-fill me-1"></i> Completed today
+            <% if (todaySession && todaySession.duration_minutes != null) { %>
+            <div style="font-size:0.7rem;color:var(--tf-text-muted);margin-top:3px;">
+              <i class="bi bi-clock me-1"></i><%= todaySession.duration_minutes %> min
+            </div>
+            <% } %>
           </div>
+          <button class="btn-tf" style="background:rgba(239,68,68,0.1);color:#ef4444;border:1px solid rgba(239,68,68,0.3);font-size:0.8rem;" onclick="undoCompletion()">
+            <i class="bi bi-arrow-counterclockwise me-1"></i> Undo
+          </button>
+          <% } else if (isStartedToday) { %>
+          <div style="font-size:0.75rem;color:#f59e0b;text-align:center;padding:6px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25);border-radius:8px;margin-bottom:4px;">
+            <i class="bi bi-hourglass-split me-1"></i> In progress…
+          </div>
+          <button class="btn-tf btn-tf-success" onclick="completeSession()">
+            <i class="bi bi-check-circle me-1"></i> Complete Task
+          </button>
+          <button class="btn-tf" style="background:rgba(239,68,68,0.1);color:#ef4444;border:1px solid rgba(239,68,68,0.3);font-size:0.8rem;" onclick="undoCompletion()">
+            <i class="bi bi-x me-1"></i> Cancel Start
+          </button>
           <% } else { %>
-          <button class="btn-tf btn-tf-success" onclick="logCompletion()">
-            <i class="bi bi-check-circle me-1"></i> Log Today's Completion
+          <button class="btn-tf btn-tf-primary" onclick="startSession()">
+            <i class="bi bi-play-circle me-1"></i> Start Task
           </button>
           <% } %>
         <% } else { %>
@@ -242,8 +257,11 @@
         <% if (recentCompletions.length > 0) { %>
         <% recentCompletions.forEach(rc => { %>
         <div class="d-flex align-items-center gap-2 mb-2" style="font-size:0.8rem;">
-          <i class="bi bi-check-circle-fill" style="color:#10b981;"></i>
+          <i class="bi bi-check-circle-fill" style="color:#10b981;flex-shrink:0;"></i>
           <span><%= new Date(rc.completion_date).toLocaleDateString() %></span>
+          <% if (rc.duration_minutes != null) { %>
+          <span style="font-family:var(--tf-font-mono);font-size:0.7rem;color:#00d4ff;margin-left:auto;"><%= rc.duration_minutes %> min</span>
+          <% } %>
           <% if (rc.notes) { %>
           <span style="color:var(--tf-text-muted);font-size:0.7rem;">— <%= rc.notes %></span>
           <% } %>
@@ -277,21 +295,30 @@
 </div>
 
 <script>
-async function logCompletion() {
-  if (!confirm('Log today\'s completion for this task?')) return;
+async function startSession() {
   try {
-    await axios.post('/tasks/<%= task.id %>/log-completion');
-    showToast('Completion logged!');
+    await axios.post('/tasks/<%= task.id %>/start-session');
+    showToast('Task started! Complete it when done.');
+    setTimeout(() => location.reload(), 800);
+  } catch (e) {
+    showToast(e.response?.data?.message || 'Error', 'error');
+  }
+}
+async function completeSession() {
+  if (!confirm('Mark this task as completed?')) return;
+  try {
+    await axios.post('/tasks/<%= task.id %>/complete-session');
+    showToast('Task completed!');
     setTimeout(() => location.reload(), 800);
   } catch (e) {
     showToast(e.response?.data?.message || 'Error', 'error');
   }
 }
 async function undoCompletion() {
-  if (!confirm('Undo today\'s completion?')) return;
+  if (!confirm('Undo today\'s session?')) return;
   try {
     await axios.post('/tasks/<%= task.id %>/undo-completion');
-    showToast('Completion undone');
+    showToast('Session undone');
     setTimeout(() => location.reload(), 800);
   } catch (e) {
     showToast(e.response?.data?.message || 'Error', 'error');

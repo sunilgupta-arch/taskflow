@@ -233,6 +233,69 @@ class TaskService {
     }
   }
 
+  static async startSession(taskId, userId, timezone = 'UTC') {
+    const task = await TaskModel.findById(taskId);
+    if (!task) throw new Error('Task not found');
+    if (task.assigned_to !== userId) throw new Error('You can only start tasks assigned to you');
+    if (task.type !== 'recurring') throw new Error('Only recurring tasks use session tracking');
+    if (task.status !== 'active') throw new Error('Task is not active');
+
+    const today = getToday(timezone);
+
+    const [[existing]] = await db.query(
+      `SELECT id, started_at, completed_at FROM task_completions WHERE task_id = ? AND user_id = ? AND completion_date = ?`,
+      [taskId, userId, today]
+    );
+    if (existing && existing.completed_at) throw new Error('Task already completed for today');
+    if (existing && existing.started_at) throw new Error('Task already started for today');
+
+    await TaskCompletion.startSession(taskId, userId, today);
+    return task;
+  }
+
+  static async completeSession(taskId, userId, timezone = 'UTC') {
+    const task = await TaskModel.findById(taskId);
+    if (!task) throw new Error('Task not found');
+    if (task.assigned_to !== userId) throw new Error('You can only complete tasks assigned to you');
+    if (task.type !== 'recurring') throw new Error('Only recurring tasks use session tracking');
+    if (task.status !== 'active') throw new Error('Task is not active');
+
+    const today = getToday(timezone);
+
+    const [[session]] = await db.query(
+      `SELECT id, started_at, completed_at FROM task_completions WHERE task_id = ? AND user_id = ? AND completion_date = ?`,
+      [taskId, userId, today]
+    );
+    if (!session) throw new Error('Task has not been started today');
+    if (session.completed_at) throw new Error('Task already completed for today');
+
+    const conn = await db.getConnection();
+    try {
+      await conn.beginTransaction();
+
+      await conn.query(
+        `UPDATE task_completions SET completed_at = NOW(), duration_minutes = TIMESTAMPDIFF(MINUTE, started_at, NOW())
+         WHERE task_id = ? AND user_id = ? AND completion_date = ?`,
+        [taskId, userId, today]
+      );
+
+      if (task.reward_amount && parseFloat(task.reward_amount) > 0) {
+        await conn.query(
+          `INSERT INTO rewards_ledger (user_id, task_id, reward_amount, status) VALUES (?, ?, ?, 'pending')`,
+          [userId, taskId, task.reward_amount]
+        );
+      }
+
+      await conn.commit();
+      return task;
+    } catch (err) {
+      await conn.rollback();
+      throw err;
+    } finally {
+      conn.release();
+    }
+  }
+
   static async updateGroupAssignees(taskId, userIds) {
     const task = await TaskModel.findById(taskId);
     if (!task) throw new Error('Task not found');

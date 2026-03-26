@@ -54,7 +54,7 @@ class TaskModel {
     return result.affectedRows > 0;
   }
 
-  static async getAll({ status, type, assigned_to, created_by, search, completed_period, page = 1, limit = 20, user, role, orgType } = {}) {
+  static async getAll({ status, type, assigned_to, created_by, search, completed_period, schedule, page = 1, limit = 20, user, role, orgType } = {}) {
     let where = ['t.is_deleted = 0'];
     let params = [];
 
@@ -93,6 +93,21 @@ class TaskModel {
         case 'month': where.push('MONTH(t.completed_at) = MONTH(NOW()) AND YEAR(t.completed_at) = YEAR(NOW())'); break;
         case 'year': where.push('YEAR(t.completed_at) = YEAR(NOW())'); break;
       }
+    }
+
+    // Schedule filter: today / daily / weekly
+    if (schedule === 'daily') {
+      where.push("t.type = 'recurring' AND t.recurrence_pattern = 'daily'");
+    } else if (schedule === 'weekly') {
+      where.push("t.type = 'recurring' AND t.recurrence_pattern = 'weekly'");
+    } else if (schedule === 'today') {
+      // Daily recurring active tasks + weekly recurring scheduled for today's day + one-time tasks due today
+      where.push(`(
+        (t.type = 'recurring' AND t.recurrence_pattern = 'daily' AND t.status = 'active')
+        OR (t.type = 'recurring' AND t.recurrence_pattern = 'weekly' AND t.status = 'active'
+            AND FIND_IN_SET(DAYOFWEEK(CURDATE()) - 1, t.recurrence_days) > 0)
+        OR (t.type = 'once' AND t.due_date = CURDATE() AND t.status IN ('pending', 'in_progress'))
+      )`);
     }
 
     const whereClause = `WHERE ${where.join(' AND ')}`;

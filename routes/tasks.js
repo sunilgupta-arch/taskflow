@@ -16,6 +16,8 @@ router.post('/assign', requireRoles('CLIENT_ADMIN', 'CLIENT_MANAGER', 'LOCAL_ADM
 router.post('/pick/:id', requireRoles('LOCAL_USER'), TaskController.pick);
 router.post('/start/:id', requireRoles('LOCAL_USER', 'LOCAL_MANAGER', 'LOCAL_ADMIN'), TaskController.start);
 router.post('/complete/:id', requireRoles('LOCAL_USER', 'LOCAL_MANAGER', 'LOCAL_ADMIN'), auditLog('COMPLETE', 'task'), TaskController.complete);
+router.post('/:id/start-session', requireRoles('LOCAL_USER', 'LOCAL_MANAGER', 'LOCAL_ADMIN'), auditLog('START_SESSION', 'task'), TaskController.startSession);
+router.post('/:id/complete-session', requireRoles('LOCAL_USER', 'LOCAL_MANAGER', 'LOCAL_ADMIN'), auditLog('COMPLETE_SESSION', 'task'), TaskController.completeSession);
 router.post('/:id/log-completion', requireRoles('LOCAL_USER', 'LOCAL_MANAGER', 'LOCAL_ADMIN'), auditLog('LOG_COMPLETION', 'task'), TaskController.logCompletion);
 router.post('/:id/undo-completion', requireRoles('LOCAL_USER', 'LOCAL_MANAGER', 'LOCAL_ADMIN'), auditLog('UNDO_COMPLETION', 'task'), TaskController.undoCompletion);
 router.post('/deactivate/:id', requireRoles('CLIENT_ADMIN', 'CLIENT_MANAGER', 'LOCAL_ADMIN', 'LOCAL_MANAGER'), auditLog('DEACTIVATE', 'task'), TaskController.deactivate);

@@ -15,6 +15,12 @@ const pool = mysql.createPool({
   keepAliveInitialDelay: 0
 });
 
+// Force UTC timezone on every pool connection so TIMESTAMP values are
+// returned as UTC regardless of the MySQL server's system timezone.
+pool.on('connection', function (connection) {
+  connection.query("SET time_zone = '+00:00'");
+});
+
 pool.getConnection()
   .then(conn => {
     console.log('✅ Database connected successfully');

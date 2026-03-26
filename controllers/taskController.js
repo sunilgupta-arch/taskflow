@@ -21,11 +21,13 @@ class TaskController {
 
       const { rows, total } = await TaskModel.getAll(filters);
 
-      // For recurring tasks, attach today's completion status
+      // For recurring tasks, attach today's session status
       const today = getToday(req.user.org_timezone || 'UTC');
       for (const task of rows) {
         if (task.type === 'recurring' && task.status === 'active' && task.assigned_to) {
-          task.is_completed_today = await TaskCompletion.isCompletedForDate(task.id, task.assigned_to, today);
+          const session = await TaskCompletion.getTodaySession(task.id, task.assigned_to, today);
+          task.is_started_today = !!(session && session.started_at && !session.completed_at);
+          task.is_completed_today = !!(session && session.completed_at);
         }
       }
 
@@ -53,9 +55,9 @@ class TaskController {
   // GET /tasks/my
   static async myTasks(req, res) {
     try {
-      const { page = 1, limit = 20, status, type, search } = req.query;
+      const { page = 1, limit = 20, status, type, search, schedule = 'today' } = req.query;
       const filters = {
-        status, type, search, page, limit,
+        status, type, search, schedule, page, limit,
         orgType: req.user.organization_type,
         user: req.user.id,
         role: 'LOCAL_USER' // reuse individual-row query path
@@ -63,11 +65,13 @@ class TaskController {
 
       const { rows, total } = await TaskModel.getAll(filters);
 
-      // For recurring tasks, attach today's completion status
+      // For recurring tasks, attach today's session status
       const today = getToday(req.user.org_timezone || 'UTC');
       for (const task of rows) {
         if (task.type === 'recurring' && task.status === 'active' && task.assigned_to) {
-          task.is_completed_today = await TaskCompletion.isCompletedForDate(task.id, task.assigned_to, today);
+          const session = await TaskCompletion.getTodaySession(task.id, task.assigned_to, today);
+          task.is_started_today = !!(session && session.started_at && !session.completed_at);
+          task.is_completed_today = !!(session && session.completed_at);
         }
       }
 
@@ -76,7 +80,7 @@ class TaskController {
         tasks: rows,
         pagination: getPaginationMeta(total, page, limit),
         ourUsers: [],
-        filters: { status, type, search },
+        filters: { status, type, search, schedule },
         role: req.user.role_name,
         isMyTasks: true
       });
@@ -240,11 +244,15 @@ class TaskController {
 
       // For recurring tasks, check today's completion and get recent history
       let isCompletedToday = false;
+      let isStartedToday = false;
+      let todaySession = null;
       let recentCompletions = [];
       const isRecurring = task.type === 'recurring' && task.status === 'active';
       if (isRecurring && task.assigned_to) {
         const today = getToday(req.user.org_timezone || 'UTC');
-        isCompletedToday = await TaskCompletion.isCompletedForDate(task.id, task.assigned_to, today);
+        todaySession = await TaskCompletion.getTodaySession(task.id, task.assigned_to, today);
+        isStartedToday = !!(todaySession && todaySession.started_at && !todaySession.completed_at);
+        isCompletedToday = !!(todaySession && todaySession.completed_at);
 
         // Get last 30 days of completions
         const thirtyDaysAgo = new Date();
@@ -254,7 +262,7 @@ class TaskController {
         );
       }
 
-      res.render('tasks/show', { title: task.title, task, attachments, comments, groupAssignees, role: req.user.role_name, isRecurring, isCompletedToday, recentCompletions });
+      res.render('tasks/show', { title: task.title, task, attachments, comments, groupAssignees, role: req.user.role_name, isRecurring, isCompletedToday, isStartedToday, todaySession, recentCompletions });
     } catch (err) {
       res.status(500).render('error', { title: 'Error', message: err.message, code: 500, layout: false });
     }
@@ -356,6 +364,35 @@ class TaskController {
     try {
       const task = await TaskService.startTask(req.params.id, req.user.id);
       return ApiResponse.success(res, task, 'Task started');
+    } catch (err) {
+      return ApiResponse.error(res, err.message, 400);
+    }
+  }
+
+  // POST /tasks/:id/start-session  (recurring tasks)
+  static async startSession(req, res) {
+    try {
+      const tz = req.user.org_timezone || 'UTC';
+      const task = await TaskService.startSession(req.params.id, req.user.id, tz);
+      return ApiResponse.success(res, task, 'Task started');
+    } catch (err) {
+      return ApiResponse.error(res, err.message, 400);
+    }
+  }
+
+  // POST /tasks/:id/complete-session  (recurring tasks)
+  static async completeSession(req, res) {
+    try {
+      const tz = req.user.org_timezone || 'UTC';
+      const task = await TaskService.completeSession(req.params.id, req.user.id, tz);
+
+      const io = getIO();
+      io.to('admins').emit('task:completed', {
+        message: `${req.user.name} completed "${task.title}"`,
+        taskId: task.id, taskTitle: task.title, completedBy: req.user.name
+      });
+
+      return ApiResponse.success(res, task, 'Task completed');
     } catch (err) {
       return ApiResponse.error(res, err.message, 400);
     }
