@@ -1,0 +1,89 @@
+<!-- Punctuality Report -->
+<div class="tf-card mb-4">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span><i class="bi bi-clock-history me-2"></i>PUNCTUALITY REPORT</span>
+    <div class="d-flex align-items-center gap-2">
+      <a href="/reports/punctuality?month=<%= prevMonth %>" class="btn-tf btn-tf-outline" style="font-size:0.7rem;padding:3px 8px;"><i class="bi bi-chevron-left"></i></a>
+      <span style="font-family:var(--tf-font-mono);font-size:0.85rem;min-width:120px;text-align:center;">
+        <%= new Date(year, mon - 1).toLocaleString('default', { month: 'long', year: 'numeric' }) %>
+      </span>
+      <a href="/reports/punctuality?month=<%= nextMonth %>" class="btn-tf btn-tf-outline" style="font-size:0.7rem;padding:3px 8px;"><i class="bi bi-chevron-right"></i></a>
+      <a href="/reports" class="btn-tf btn-tf-outline" style="font-size:0.7rem;padding:3px 10px;margin-left:8px;"><i class="bi bi-arrow-left me-1"></i>All Reports</a>
+    </div>
+  </div>
+</div>
+
+<!-- Summary Stats -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="stat-card" style="--stat-color:#10b981;"><div class="stat-value"><%= summary.onTime %></div><div class="stat-label">On Time (avg/day)</div></div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card" style="--stat-color:#f59e0b;"><div class="stat-value"><%= summary.late %></div><div class="stat-label">Late (avg/day)</div></div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card" style="--stat-color:#3b82f6;"><div class="stat-value"><%= summary.avgDelay %></div><div class="stat-label">Avg Delay (min)</div></div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card" style="--stat-color:#7c3aed;"><div class="stat-value"><%= summary.totalDays %></div><div class="stat-label">Working Days</div></div>
+  </div>
+</div>
+
+<!-- Per-User Punctuality Table -->
+<div class="tf-card">
+  <div class="card-header"><i class="bi bi-people me-2"></i>EMPLOYEE PUNCTUALITY</div>
+  <% if (users.length === 0) { %>
+  <div class="p-4 text-center" style="color:var(--tf-text-muted);font-size:0.85rem;">No attendance data for this month</div>
+  <% } else { %>
+  <div style="overflow-x:auto;">
+    <table class="tf-table">
+      <thead>
+        <tr>
+          <th>Employee</th>
+          <th>Shift Start</th>
+          <th>Days Present</th>
+          <th>On Time</th>
+          <th>Late</th>
+          <th>Avg Login</th>
+          <th>Avg Delay</th>
+          <th>Punctuality</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% users.forEach(u => {
+          var pctOnTime = u.daysPresent > 0 ? Math.round((u.onTime / u.daysPresent) * 100) : 0;
+          var pctColor = pctOnTime >= 90 ? '#10b981' : pctOnTime >= 70 ? '#f59e0b' : '#ef4444';
+        %>
+        <tr>
+          <td style="font-size:0.85rem;font-weight:500;">
+            <a href="/users/<%= u.id %>/progress" style="color:var(--tf-text);text-decoration:none;"><%= u.name %></a>
+          </td>
+          <td style="font-size:0.75rem;font-family:var(--tf-font-mono);color:var(--tf-text-muted);"><%= u.shiftStart %></td>
+          <td style="font-family:var(--tf-font-mono);"><%= u.daysPresent %></td>
+          <td style="font-family:var(--tf-font-mono);color:#10b981;"><%= u.onTime %></td>
+          <td style="font-family:var(--tf-font-mono);color:<%= u.late > 0 ? '#ef4444' : 'var(--tf-text-muted)' %>;"><%= u.late %></td>
+          <td style="font-size:0.75rem;font-family:var(--tf-font-mono);color:var(--tf-text-muted);"><%= u.avgLogin %></td>
+          <td>
+            <% if (u.avgDelayMin > 0) { %>
+            <span style="font-family:var(--tf-font-mono);font-size:0.8rem;color:<%= u.avgDelayMin > 30 ? '#ef4444' : u.avgDelayMin > 10 ? '#f59e0b' : '#10b981' %>;">
+              +<%= u.avgDelayMin %>m
+            </span>
+            <% } else { %>
+            <span style="font-family:var(--tf-font-mono);font-size:0.8rem;color:#10b981;">—</span>
+            <% } %>
+          </td>
+          <td style="min-width:100px;">
+            <div class="d-flex align-items-center gap-2">
+              <div class="tf-progress" style="flex:1;">
+                <div class="tf-progress-bar" style="width:<%= pctOnTime %>%;background:<%= pctColor %>;"></div>
+              </div>
+              <span style="font-family:var(--tf-font-mono);font-size:0.7rem;color:<%= pctColor %>;min-width:32px;"><%= pctOnTime %>%</span>
+            </div>
+          </td>
+        </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+  <% } %>
+</div>

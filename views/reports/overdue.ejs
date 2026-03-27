@@ -1,0 +1,143 @@
+<!-- Overdue / Late Tasks Report -->
+<div class="tf-card mb-4">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span><i class="bi bi-exclamation-triangle me-2"></i>OVERDUE TASKS REPORT</span>
+    <a href="/reports" class="btn-tf btn-tf-outline" style="font-size:0.7rem;padding:3px 10px;"><i class="bi bi-arrow-left me-1"></i>All Reports</a>
+  </div>
+</div>
+
+<!-- Summary Stats -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="stat-card" style="--stat-color:#ef4444;"><div class="stat-value"><%= overdueOnce.length %></div><div class="stat-label">Overdue One-Time</div></div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card" style="--stat-color:#f97316;"><div class="stat-value"><%= missedRecurring.length %></div><div class="stat-label">Missed Recurring (7d)</div></div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card" style="--stat-color:#f59e0b;"><div class="stat-value"><%= usersWithOverdue %></div><div class="stat-label">Users Affected</div></div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card" style="--stat-color:#00d4ff;"><div class="stat-value"><%= totalUsers %></div><div class="stat-label">Total Users</div></div>
+  </div>
+</div>
+
+<div class="row g-3">
+  <!-- Overdue One-Time Tasks -->
+  <div class="col-lg-6">
+    <div class="tf-card">
+      <div class="card-header"><i class="bi bi-clock me-2" style="color:#ef4444;"></i>OVERDUE ONE-TIME TASKS</div>
+      <% if (overdueOnce.length === 0) { %>
+      <div class="p-4 text-center" style="color:var(--tf-text-muted);font-size:0.85rem;">
+        <i class="bi bi-check-circle" style="font-size:1.5rem;color:#10b981;display:block;margin-bottom:0.5rem;"></i>
+        No overdue one-time tasks
+      </div>
+      <% } else { %>
+      <div style="overflow-x:auto;">
+        <table class="tf-table">
+          <thead>
+            <tr><th>Task</th><th>Assigned To</th><th>Priority</th><th>Due Date</th><th>Days Late</th></tr>
+          </thead>
+          <tbody>
+            <% overdueOnce.forEach(t => {
+              var priorityColors = { urgent: '#ef4444', high: '#f59e0b', medium: '#3b82f6', low: '#6b7280' };
+              var clr = priorityColors[t.priority] || '#6b7280';
+            %>
+            <tr>
+              <td style="font-size:0.8rem;max-width:180px;">
+                <a href="/tasks/<%= t.id %>" style="color:var(--tf-text);text-decoration:none;font-weight:500;"><%= t.title %></a>
+              </td>
+              <td style="font-size:0.8rem;"><%= t.user_name %></td>
+              <td>
+                <span style="font-size:0.6rem;padding:2px 6px;border-radius:4px;background:<%= clr %>20;color:<%= clr %>;font-weight:600;text-transform:uppercase;"><%= t.priority %></span>
+              </td>
+              <td style="font-size:0.75rem;font-family:var(--tf-font-mono);color:var(--tf-text-muted);">
+                <%= t.due_date ? new Date(t.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—' %>
+              </td>
+              <td>
+                <span style="font-family:var(--tf-font-mono);font-size:0.8rem;font-weight:700;color:<%= t.days_late > 7 ? '#ef4444' : t.days_late > 3 ? '#f97316' : '#f59e0b' %>;">
+                  <%= t.days_late %>d
+                </span>
+              </td>
+            </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+      <% } %>
+    </div>
+  </div>
+
+  <!-- Missed Recurring Tasks (last 7 days) -->
+  <div class="col-lg-6">
+    <div class="tf-card">
+      <div class="card-header"><i class="bi bi-arrow-repeat me-2" style="color:#f97316;"></i>MISSED RECURRING TASKS (LAST 7 DAYS)</div>
+      <% if (missedRecurring.length === 0) { %>
+      <div class="p-4 text-center" style="color:var(--tf-text-muted);font-size:0.85rem;">
+        <i class="bi bi-check-circle" style="font-size:1.5rem;color:#10b981;display:block;margin-bottom:0.5rem;"></i>
+        No missed recurring tasks
+      </div>
+      <% } else { %>
+      <div style="overflow-x:auto;">
+        <table class="tf-table">
+          <thead>
+            <tr><th>Task</th><th>Assigned To</th><th>Date</th><th>Pattern</th></tr>
+          </thead>
+          <tbody>
+            <% missedRecurring.forEach(t => { %>
+            <tr>
+              <td style="font-size:0.8rem;max-width:180px;">
+                <a href="/tasks/<%= t.id %>" style="color:var(--tf-text);text-decoration:none;font-weight:500;"><%= t.title %></a>
+              </td>
+              <td style="font-size:0.8rem;"><%= t.user_name %></td>
+              <td style="font-size:0.75rem;font-family:var(--tf-font-mono);color:var(--tf-text-muted);">
+                <%= new Date(t.missed_date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) %>
+              </td>
+              <td>
+                <span style="font-size:0.6rem;padding:2px 6px;border-radius:4px;background:rgba(124,58,237,0.15);color:#a78bfa;"><%= t.recurrence_pattern %></span>
+              </td>
+            </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+      <% } %>
+    </div>
+  </div>
+</div>
+
+<!-- Per-User Overdue Summary -->
+<div class="tf-card mt-3">
+  <div class="card-header"><i class="bi bi-people me-2"></i>OVERDUE BY EMPLOYEE</div>
+  <% if (perUser.length === 0) { %>
+  <div class="p-4 text-center" style="color:var(--tf-text-muted);font-size:0.85rem;">All clear — no overdue tasks!</div>
+  <% } else { %>
+  <div style="overflow-x:auto;">
+    <table class="tf-table">
+      <thead>
+        <tr><th>Employee</th><th>Overdue (One-Time)</th><th>Missed (Recurring)</th><th>Total</th><th>Severity</th></tr>
+      </thead>
+      <tbody>
+        <% perUser.forEach(u => {
+          var total = u.overdue_once + u.missed_recurring;
+          var sevColor = total > 5 ? '#ef4444' : total > 2 ? '#f97316' : '#f59e0b';
+        %>
+        <tr>
+          <td style="font-size:0.85rem;font-weight:500;">
+            <a href="/users/<%= u.id %>/progress" style="color:var(--tf-text);text-decoration:none;"><%= u.name %></a>
+          </td>
+          <td style="font-family:var(--tf-font-mono);color:#ef4444;"><%= u.overdue_once %></td>
+          <td style="font-family:var(--tf-font-mono);color:#f97316;"><%= u.missed_recurring %></td>
+          <td style="font-family:var(--tf-font-mono);font-weight:700;color:<%= sevColor %>;"><%= total %></td>
+          <td style="min-width:80px;">
+            <div class="tf-progress">
+              <div class="tf-progress-bar" style="width:<%= Math.min(total * 10, 100) %>%;background:<%= sevColor %>;"></div>
+            </div>
+          </td>
+        </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+  <% } %>
+</div>

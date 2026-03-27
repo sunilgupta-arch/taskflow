@@ -497,18 +497,18 @@
     <% if (['LOCAL_ADMIN', 'CLIENT_ADMIN', 'LOCAL_MANAGER', 'CLIENT_MANAGER'].includes(user.role_name)) { %>
     <div class="nav-section-label mt-2">Reports</div>
     <div class="nav-item">
-      <a href="/reports/completion">
-        <i class="bi bi-graph-up"></i> Completion
-      </a>
-    </div>
-    <div class="nav-item">
-      <a href="/reports/rewards">
-        <i class="bi bi-cash-stack"></i> Rewards
+      <a href="/reports" class="<%= typeof title !== 'undefined' && title === 'Reports' ? 'active' : '' %>">
+        <i class="bi bi-speedometer2"></i> All Reports
       </a>
     </div>
     <div class="nav-item">
       <a href="/reports/task-completion" class="<%= typeof title !== 'undefined' && title === 'Task Completion Report' ? 'active' : '' %>">
         <i class="bi bi-clipboard-data"></i> Task Report
+      </a>
+    </div>
+    <div class="nav-item">
+      <a href="/reports/overdue" class="<%= typeof title !== 'undefined' && title === 'Overdue Tasks' ? 'active' : '' %>">
+        <i class="bi bi-exclamation-triangle"></i> Overdue
       </a>
     </div>
     <% if (['LOCAL_ADMIN', 'LOCAL_MANAGER', 'CLIENT_ADMIN', 'CLIENT_MANAGER'].includes(user.role_name)) { %>

@@ -1,0 +1,83 @@
+<!-- Workload Distribution Report -->
+<div class="tf-card mb-4">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span><i class="bi bi-pie-chart me-2"></i>WORKLOAD DISTRIBUTION</span>
+    <a href="/reports" class="btn-tf btn-tf-outline" style="font-size:0.7rem;padding:3px 10px;"><i class="bi bi-arrow-left me-1"></i>All Reports</a>
+  </div>
+</div>
+
+<!-- Summary Stats -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="stat-card" style="--stat-color:#00d4ff;"><div class="stat-value"><%= summary.totalActive %></div><div class="stat-label">Total Active Tasks</div></div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card" style="--stat-color:#7c3aed;"><div class="stat-value"><%= summary.totalRecurring %></div><div class="stat-label">Recurring Tasks</div></div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card" style="--stat-color:#f97316;"><div class="stat-value"><%= summary.totalOnce %></div><div class="stat-label">Pending One-Time</div></div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card" style="--stat-color:#f59e0b;"><div class="stat-value"><%= summary.avgLoad %></div><div class="stat-label">Avg Tasks/User</div></div>
+  </div>
+</div>
+
+<!-- Workload Table -->
+<div class="tf-card">
+  <div class="card-header"><i class="bi bi-people me-2"></i>TASK LOAD PER EMPLOYEE</div>
+  <% if (users.length === 0) { %>
+  <div class="p-4 text-center" style="color:var(--tf-text-muted);font-size:0.85rem;">No active users found</div>
+  <% } else { %>
+  <div style="overflow-x:auto;">
+    <table class="tf-table">
+      <thead>
+        <tr>
+          <th>Employee</th>
+          <th>Recurring</th>
+          <th>Pending</th>
+          <th>In Progress</th>
+          <th>Total Load</th>
+          <th>Distribution</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% var maxLoad = Math.max(...users.map(u => u.totalLoad), 1); %>
+        <% users.forEach(u => {
+          var loadColor = u.totalLoad > summary.avgLoad * 1.5 ? '#ef4444' : u.totalLoad > summary.avgLoad ? '#f59e0b' : '#10b981';
+          var loadLabel = u.totalLoad > summary.avgLoad * 1.5 ? 'Overloaded' : u.totalLoad > summary.avgLoad ? 'Above Avg' : u.totalLoad === 0 ? 'No Tasks' : 'Normal';
+        %>
+        <tr>
+          <td style="font-size:0.85rem;font-weight:500;">
+            <a href="/users/<%= u.id %>/progress" style="color:var(--tf-text);text-decoration:none;"><%= u.name %></a>
+          </td>
+          <td style="font-family:var(--tf-font-mono);color:#7c3aed;"><%= u.recurring %></td>
+          <td style="font-family:var(--tf-font-mono);color:#f97316;"><%= u.pending %></td>
+          <td style="font-family:var(--tf-font-mono);color:#3b82f6;"><%= u.inProgress %></td>
+          <td style="font-family:var(--tf-font-mono);font-weight:700;color:<%= loadColor %>;"><%= u.totalLoad %></td>
+          <td style="min-width:160px;">
+            <div class="d-flex align-items-center gap-2">
+              <div class="tf-progress" style="flex:1;">
+                <% var recurPct = u.totalLoad > 0 ? Math.round((u.recurring / maxLoad) * 100) : 0; %>
+                <% var pendPct = u.totalLoad > 0 ? Math.round((u.pending / maxLoad) * 100) : 0; %>
+                <% var progPct = u.totalLoad > 0 ? Math.round((u.inProgress / maxLoad) * 100) : 0; %>
+                <div style="display:flex;height:100%;border-radius:4px;overflow:hidden;">
+                  <% if (recurPct > 0) { %><div style="width:<%= recurPct %>%;background:#7c3aed;height:8px;" title="Recurring: <%= u.recurring %>"></div><% } %>
+                  <% if (pendPct > 0) { %><div style="width:<%= pendPct %>%;background:#f97316;height:8px;" title="Pending: <%= u.pending %>"></div><% } %>
+                  <% if (progPct > 0) { %><div style="width:<%= progPct %>%;background:#3b82f6;height:8px;" title="In Progress: <%= u.inProgress %>"></div><% } %>
+                </div>
+              </div>
+              <span style="font-size:0.6rem;padding:2px 6px;border-radius:4px;background:<%= loadColor %>15;color:<%= loadColor %>;white-space:nowrap;"><%= loadLabel %></span>
+            </div>
+          </td>
+        </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+  <div class="p-2 d-flex gap-3 justify-content-center flex-wrap" style="border-top:1px solid var(--tf-border);">
+    <span style="font-size:0.65rem;color:var(--tf-text-muted);"><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:#7c3aed;vertical-align:middle;margin-right:3px;"></span> Recurring</span>
+    <span style="font-size:0.65rem;color:var(--tf-text-muted);"><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:#f97316;vertical-align:middle;margin-right:3px;"></span> Pending</span>
+    <span style="font-size:0.65rem;color:var(--tf-text-muted);"><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:#3b82f6;vertical-align:middle;margin-right:3px;"></span> In Progress</span>
+  </div>
+  <% } %>
+</div>

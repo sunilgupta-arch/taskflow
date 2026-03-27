@@ -72,7 +72,7 @@ class DashboardService {
            OR (t.type = 'once' AND t.status = 'completed' AND DATE(t.completed_at) = ?)
          )
        ORDER BY FIELD(t.priority, 'urgent', 'high', 'medium', 'low'), t.created_at DESC`,
-      [userId, date, date, userId, date, today, date, date]
+      [userId, date, userId, date, date, today, date, date]
     );
     return rows;
   }
