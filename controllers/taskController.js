@@ -1,10 +1,11 @@
 const TaskModel = require('../models/Task');
 const TaskCompletion = require('../models/TaskCompletion');
 const TaskService = require('../services/taskService');
+const DashboardService = require('../services/dashboardService');
 const { ApiResponse, getPagination, getPaginationMeta } = require('../utils/response');
 const db = require('../config/db');
 const { getIO } = require('../config/socket');
-const { getToday } = require('../utils/timezone');
+const { getToday, isScheduledForDate } = require('../utils/timezone');
 
 class TaskController {
   // GET /tasks
@@ -44,7 +45,7 @@ class TaskController {
         tasks: rows,
         pagination: getPaginationMeta(total, page, limit),
         ourUsers,
-        filters: { status, type, search, completed_period },
+        filters: { status, type, search, completed_period, assigned_to },
         role
       });
     } catch (err) {
@@ -124,7 +125,17 @@ class TaskController {
       const task = await TaskModel.findById(req.params.id);
       if (!task) return res.status(404).render('error', { title: 'Not Found', message: 'Task not found', code: 404, layout: false });
 
+      // LOCAL_USER can only edit tasks they created, within 24 hours
       const role = req.user.role_name;
+      if (role === 'LOCAL_USER') {
+        if (task.created_by !== req.user.id) {
+          return res.status(403).render('error', { title: 'Forbidden', message: 'You can only edit tasks you created', code: 403, layout: false });
+        }
+        const hoursSinceCreation = (Date.now() - new Date(task.created_at).getTime()) / 3600000;
+        if (hoursSinceCreation > 24) {
+          return res.status(403).render('error', { title: 'Forbidden', message: 'You can only edit tasks within 24 hours of creation', code: 403, layout: false });
+        }
+      }
       let ourUsers = [];
       if (role !== 'LOCAL_USER') {
         const [users] = await db.query(
@@ -155,6 +166,18 @@ class TaskController {
   // PUT /tasks/:id
   static async update(req, res) {
     try {
+      // LOCAL_USER can only update tasks they created, within 24 hours
+      if (req.user.role_name === 'LOCAL_USER') {
+        const task = await TaskModel.findById(req.params.id);
+        if (!task || task.created_by !== req.user.id) {
+          return ApiResponse.error(res, 'You can only edit tasks you created', 403);
+        }
+        const hoursSinceCreation = (Date.now() - new Date(task.created_at).getTime()) / 3600000;
+        if (hoursSinceCreation > 24) {
+          return ApiResponse.error(res, 'You can only edit tasks within 24 hours of creation', 403);
+        }
+      }
+
       const { title, description, type, recurrence_pattern, recurrence_days, deadline_time, recurrence_end_date, due_date, reward_amount, priority, client_visible } = req.body;
       const updateData = {};
       if (title !== undefined) updateData.title = title;
@@ -432,6 +455,17 @@ class TaskController {
   // POST /tasks/deactivate/:id
   static async deactivate(req, res) {
     try {
+      // LOCAL_USER can only deactivate tasks they created, within 24 hours
+      if (req.user.role_name === 'LOCAL_USER') {
+        const task = await TaskModel.findById(req.params.id);
+        if (!task || task.created_by !== req.user.id) {
+          return ApiResponse.error(res, 'You can only deactivate tasks you created', 403);
+        }
+        const hoursSinceCreation = (Date.now() - new Date(task.created_at).getTime()) / 3600000;
+        if (hoursSinceCreation > 24) {
+          return ApiResponse.error(res, 'You can only modify tasks within 24 hours of creation', 403);
+        }
+      }
       await TaskService.deactivateTask(req.params.id);
       return ApiResponse.success(res, {}, 'Task deactivated successfully');
     } catch (err) {
@@ -472,9 +506,42 @@ class TaskController {
     }
   }
 
+  // GET /tasks/pending-today (JSON API for pending tasks reminder)
+  static async pendingToday(req, res) {
+    try {
+      const userId = req.user.id;
+      const tz = req.user.org_timezone || 'UTC';
+      const today = getToday(tz);
+      const tasks = await DashboardService.getTasksForDate(userId, today, today);
+
+      // Filter to only incomplete tasks for today
+      const pending = tasks.filter(t => {
+        if (t.type === 'recurring' && t.is_completed_for_date) return false;
+        if (t.type === 'recurring' && !isScheduledForDate(t, today)) return false;
+        if (t.type === 'once' && t.status === 'completed') return false;
+        return true;
+      });
+
+      return ApiResponse.success(res, { tasks: pending, count: pending.length });
+    } catch (err) {
+      return ApiResponse.error(res, err.message, 500);
+    }
+  }
+
   // DELETE /tasks/:id
   static async destroy(req, res) {
     try {
+      // LOCAL_USER can only delete tasks they created, within 24 hours
+      if (req.user.role_name === 'LOCAL_USER') {
+        const task = await TaskModel.findById(req.params.id);
+        if (!task || task.created_by !== req.user.id) {
+          return ApiResponse.error(res, 'You can only delete tasks you created', 403);
+        }
+        const hoursSinceCreation = (Date.now() - new Date(task.created_at).getTime()) / 3600000;
+        if (hoursSinceCreation > 24) {
+          return ApiResponse.error(res, 'You can only delete tasks within 24 hours of creation', 403);
+        }
+      }
       await TaskService.deleteTask(req.params.id);
       return ApiResponse.success(res, {}, 'Task deleted');
     } catch (err) {

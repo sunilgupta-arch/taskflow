@@ -102,12 +102,14 @@ class TaskModel {
       where.push("t.type = 'recurring' AND t.recurrence_pattern = 'weekly'");
     } else if (schedule === 'today') {
       // Daily recurring active tasks + weekly recurring scheduled for today's day + one-time tasks due today
+      // Exclude users who are on their weekly off today
       where.push(`(
         (t.type = 'recurring' AND t.recurrence_pattern = 'daily' AND t.status = 'active')
         OR (t.type = 'recurring' AND t.recurrence_pattern = 'weekly' AND t.status = 'active'
             AND FIND_IN_SET(DAYOFWEEK(CURDATE()) - 1, t.recurrence_days) > 0)
         OR (t.type = 'once' AND t.due_date = CURDATE() AND t.status IN ('pending', 'in_progress'))
       )`);
+      where.push(`(SELECT weekly_off_day FROM users WHERE id = t.assigned_to) != DAYNAME(CURDATE())`);
     }
 
     const whereClause = `WHERE ${where.join(' AND ')}`;
@@ -126,7 +128,7 @@ class TaskModel {
          LEFT JOIN users u1 ON t.assigned_to = u1.id
          LEFT JOIN users u2 ON t.created_by = u2.id
          ${whereClause}
-         ORDER BY FIELD(t.status, 'pending', 'in_progress', 'active', 'completed', 'deactivated'), FIELD(t.priority, 'urgent', 'high', 'medium', 'low'), t.created_at DESC
+         ORDER BY FIELD(t.status, 'in_progress', 'pending', 'active', 'completed', 'deactivated'), FIELD(t.priority, 'urgent', 'high', 'medium', 'low'), t.created_at DESC
          LIMIT ? OFFSET ?`,
         [...params, parseInt(limit), parseInt(offset)]
       );
@@ -163,6 +165,7 @@ class TaskModel {
               ANY_VALUE(u1.name) as assigned_to_name,
               ANY_VALUE(u2.name) as created_by_name,
               GROUP_CONCAT(DISTINCT u1.name ORDER BY u1.name SEPARATOR ', ') as assignee_names,
+              GROUP_CONCAT(DISTINCT CONCAT(u1.id, ':', u1.name) ORDER BY u1.name SEPARATOR ', ') as assignee_id_names,
               GROUP_CONCAT(DISTINCT t.id) as grouped_task_ids,
               COUNT(DISTINCT t.id) as assignee_count,
               (SELECT COUNT(*) FROM task_attachments ta WHERE ta.task_id = MIN(t.id)) as attachment_count,
@@ -172,7 +175,7 @@ class TaskModel {
        LEFT JOIN users u2 ON t.created_by = u2.id
        ${whereClause}
        GROUP BY COALESCE(t.group_id, t.id)
-       ORDER BY FIELD(ANY_VALUE(t.status), 'pending', 'in_progress', 'active', 'completed', 'deactivated'), FIELD(ANY_VALUE(t.priority), 'urgent', 'high', 'medium', 'low'), MAX(t.created_at) DESC
+       ORDER BY FIELD(ANY_VALUE(t.status), 'in_progress', 'pending', 'active', 'completed', 'deactivated'), FIELD(ANY_VALUE(t.priority), 'urgent', 'high', 'medium', 'low'), MAX(t.created_at) DESC
        LIMIT ? OFFSET ?`,
       [...params, parseInt(limit), parseInt(offset)]
     );

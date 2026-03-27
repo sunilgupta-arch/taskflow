@@ -108,4 +108,16 @@ function isScheduledForDate(task, dateStr) {
   return false;
 }
 
-module.exports = { getNow, getToday, getDayOfWeek, formatTime, isScheduledForDate };
+/**
+ * Convert IANA timezone to MySQL offset string (e.g. '+05:30')
+ */
+function getTimezoneOffsetString(timezone) {
+  const mins = getTimezoneOffsetMinutes(timezone);
+  const sign = mins >= 0 ? '+' : '-';
+  const absMins = Math.abs(mins);
+  const h = Math.floor(absMins / 60);
+  const m = absMins % 60;
+  return `${sign}${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
+
+module.exports = { getNow, getToday, getDayOfWeek, formatTime, getTimezoneOffsetMinutes, getTimezoneOffsetString, isScheduledForDate };

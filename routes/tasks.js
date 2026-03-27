@@ -10,6 +10,7 @@ router.use(authenticate);
 
 router.get('/', TaskController.index);
 router.get('/my', TaskController.myTasks);
+router.get('/pending-today', TaskController.pendingToday);
 router.get('/create', requireRoles('CLIENT_ADMIN', 'CLIENT_MANAGER', 'LOCAL_ADMIN', 'LOCAL_MANAGER', 'LOCAL_USER'), TaskController.showCreate);
 router.post('/create', requireRoles('CLIENT_ADMIN', 'CLIENT_MANAGER', 'LOCAL_ADMIN', 'LOCAL_MANAGER', 'LOCAL_USER'), auditLog('CREATE', 'task'), TaskController.create);
 router.post('/assign', requireRoles('CLIENT_ADMIN', 'CLIENT_MANAGER', 'LOCAL_ADMIN', 'LOCAL_MANAGER'), auditLog('ASSIGN', 'task'), TaskController.assign);
@@ -20,13 +21,13 @@ router.post('/:id/start-session', requireRoles('LOCAL_USER', 'LOCAL_MANAGER', 'L
 router.post('/:id/complete-session', requireRoles('LOCAL_USER', 'LOCAL_MANAGER', 'LOCAL_ADMIN'), auditLog('COMPLETE_SESSION', 'task'), TaskController.completeSession);
 router.post('/:id/log-completion', requireRoles('LOCAL_USER', 'LOCAL_MANAGER', 'LOCAL_ADMIN'), auditLog('LOG_COMPLETION', 'task'), TaskController.logCompletion);
 router.post('/:id/undo-completion', requireRoles('LOCAL_USER', 'LOCAL_MANAGER', 'LOCAL_ADMIN'), auditLog('UNDO_COMPLETION', 'task'), TaskController.undoCompletion);
-router.post('/deactivate/:id', requireRoles('CLIENT_ADMIN', 'CLIENT_MANAGER', 'LOCAL_ADMIN', 'LOCAL_MANAGER'), auditLog('DEACTIVATE', 'task'), TaskController.deactivate);
-router.get('/:id/edit', requireRoles('CLIENT_ADMIN', 'CLIENT_MANAGER', 'LOCAL_ADMIN', 'LOCAL_MANAGER'), TaskController.showEdit);
-router.put('/:id', requireRoles('CLIENT_ADMIN', 'CLIENT_MANAGER', 'LOCAL_ADMIN', 'LOCAL_MANAGER'), auditLog('UPDATE', 'task'), TaskController.update);
+router.post('/deactivate/:id', requireRoles('CLIENT_ADMIN', 'CLIENT_MANAGER', 'LOCAL_ADMIN', 'LOCAL_MANAGER', 'LOCAL_USER'), auditLog('DEACTIVATE', 'task'), TaskController.deactivate);
+router.get('/:id/edit', requireRoles('CLIENT_ADMIN', 'CLIENT_MANAGER', 'LOCAL_ADMIN', 'LOCAL_MANAGER', 'LOCAL_USER'), TaskController.showEdit);
+router.put('/:id', requireRoles('CLIENT_ADMIN', 'CLIENT_MANAGER', 'LOCAL_ADMIN', 'LOCAL_MANAGER', 'LOCAL_USER'), auditLog('UPDATE', 'task'), TaskController.update);
 router.get('/:id', TaskController.show);
 router.get('/:id/comments', TaskController.getComments);
 router.post('/:id/comments', TaskController.addComment);
 router.post('/:id/upload', upload.array('files', 5), TaskController.uploadAttachments);
-router.delete('/:id', requireRoles('CLIENT_ADMIN', 'LOCAL_ADMIN'), TaskController.destroy);
+router.delete('/:id', requireRoles('CLIENT_ADMIN', 'LOCAL_ADMIN', 'LOCAL_USER'), TaskController.destroy);
 
 module.exports = router;

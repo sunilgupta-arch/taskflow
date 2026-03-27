@@ -1,0 +1,136 @@
+<!-- Today's Status Card -->
+<div class="tf-card mb-4">
+  <div class="card-header"><i class="bi bi-person-check me-2"></i>TODAY — <%= new Date(today + 'T00:00:00Z').toLocaleDateString('en-US', {timeZone:'UTC', weekday:'long', month:'long', day:'numeric'}) %></div>
+  <div style="padding:1.25rem;">
+    <div class="row g-3 align-items-center">
+      <div class="col-sm-6 col-md-3">
+        <div style="font-size:0.7rem;color:var(--tf-text-muted);margin-bottom:2px;">Shift</div>
+        <div style="font-family:var(--tf-font-mono);font-size:0.95rem;">
+          <%
+            var sH = parseInt(shift.start.split(':')[0]), sM = parseInt(shift.start.split(':')[1]);
+            var eMin = sH * 60 + sM + shift.hours * 60;
+            var eH = Math.floor(eMin / 60) % 24, eM = Math.round(eMin % 60);
+            var endStr = String(eH).padStart(2, '0') + ':' + String(eM).padStart(2, '0');
+          %>
+          <%= shift.start %> - <%= endStr %>
+        </div>
+      </div>
+      <div class="col-sm-6 col-md-3">
+        <div style="font-size:0.7rem;color:var(--tf-text-muted);margin-bottom:2px;">Login</div>
+        <div style="font-family:var(--tf-font-mono);font-size:0.95rem;color:#10b981;">
+          <%= todayLog ? todayLog.loginFormatted || '—' : '—' %>
+        </div>
+      </div>
+      <div class="col-sm-6 col-md-3">
+        <div style="font-size:0.7rem;color:var(--tf-text-muted);margin-bottom:2px;">Logout</div>
+        <div style="font-family:var(--tf-font-mono);font-size:0.95rem;color:var(--tf-text-muted);">
+          <%= todayLog && todayLog.logoutFormatted ? todayLog.logoutFormatted : (todayLog ? 'Active' : '—') %>
+        </div>
+      </div>
+      <div class="col-sm-6 col-md-3">
+        <div style="font-size:0.7rem;color:var(--tf-text-muted);margin-bottom:2px;">Duration</div>
+        <div style="font-family:var(--tf-font-mono);font-size:0.95rem;">
+          <%= todayLog && todayLog.duration ? todayLog.duration.substring(0,5) + 'h' : '—' %>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Monthly Calendar -->
+<div class="tf-card mb-4">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span><i class="bi bi-calendar3 me-2"></i>MY ATTENDANCE</span>
+    <div class="d-flex align-items-center gap-2">
+      <a href="/my-attendance?month=<%= prevMonth %>" class="btn-tf btn-tf-outline" style="font-size:0.7rem;padding:3px 8px;"><i class="bi bi-chevron-left"></i></a>
+      <span style="font-family:var(--tf-font-mono);font-size:0.85rem;min-width:120px;text-align:center;">
+        <%= new Date(year, mon - 1).toLocaleString('default', { month: 'long', year: 'numeric' }) %>
+      </span>
+      <a href="/my-attendance?month=<%= nextMonth %>" class="btn-tf btn-tf-outline" style="font-size:0.7rem;padding:3px 8px;"><i class="bi bi-chevron-right"></i></a>
+    </div>
+  </div>
+  <div style="padding:1rem;">
+    <div class="row g-2">
+      <% for (var d = 1; d <= lastDay; d++) {
+        var cd = calendarData[d];
+        var dateStr = year + '-' + String(mon).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+        var todayParts = today.split('-');
+        var isToday = d === parseInt(todayParts[2]) && mon === parseInt(todayParts[1]) && year === parseInt(todayParts[0]);
+        var bg = '', clr = '', icon = '', label = '';
+        if (cd.status === 'present') { bg = 'rgba(16,185,129,0.12)'; clr = '#10b981'; icon = 'bi-check-circle-fill'; label = 'Present'; }
+        else if (cd.status === 'absent') { bg = 'rgba(239,68,68,0.1)'; clr = '#ef4444'; icon = 'bi-x-circle-fill'; label = 'Absent'; }
+        else if (cd.status === 'leave') { bg = 'rgba(0,212,255,0.1)'; clr = '#00d4ff'; icon = 'bi-calendar-check'; label = 'Leave'; }
+        else if (cd.status === 'pending_leave') { bg = 'rgba(245,158,11,0.1)'; clr = '#f59e0b'; icon = 'bi-hourglass-split'; label = 'Pending'; }
+        else if (cd.status === 'off') { bg = 'rgba(100,116,139,0.08)'; clr = '#64748b'; icon = 'bi-moon'; label = 'Off'; }
+        else if (cd.status === 'future') { bg = 'transparent'; clr = 'var(--tf-text-muted)'; icon = ''; label = ''; }
+        else { bg = 'rgba(239,68,68,0.1)'; clr = '#ef4444'; icon = 'bi-x-circle-fill'; label = 'Absent'; }
+      %>
+      <div class="col-6 col-sm-4 col-md-3 col-lg-2">
+        <div style="border:1px solid var(--tf-border);border-radius:10px;padding:0.6rem 0.7rem;background:<%= bg %>;<%= isToday ? 'border-color:#00d4ff;box-shadow:0 0 8px rgba(0,212,255,0.15);' : '' %>">
+          <div class="d-flex justify-content-between align-items-center" style="margin-bottom:4px;">
+            <span style="font-family:var(--tf-font-mono);font-size:0.8rem;font-weight:600;<%= isToday ? 'color:#00d4ff;' : 'color:var(--tf-text);' %>"><%= d %></span>
+            <span style="font-size:0.6rem;color:var(--tf-text-muted);"><%= cd.dayName.substring(0, 3) %></span>
+          </div>
+          <% if (icon) { %>
+          <div style="font-size:0.65rem;color:<%= clr %>;">
+            <i class="bi <%= icon %>" style="font-size:0.6rem;"></i> <%= label %>
+          </div>
+          <% } %>
+          <% if (cd.log) { %>
+          <div style="font-family:var(--tf-font-mono);font-size:0.6rem;color:var(--tf-text-muted);margin-top:2px;">
+            <%= cd.log.loginFormatted || '' %><%= cd.log.logoutFormatted ? ' - ' + cd.log.logoutFormatted : '' %>
+          </div>
+          <% if (cd.log.duration) { %>
+          <div style="font-family:var(--tf-font-mono);font-size:0.6rem;color:#10b981;"><%= cd.log.duration.substring(0,5) %>h</div>
+          <% } %>
+          <% } %>
+        </div>
+      </div>
+      <% } %>
+    </div>
+  </div>
+  <div class="p-2 d-flex gap-3 justify-content-center flex-wrap" style="border-top:1px solid var(--tf-border);">
+    <span style="font-size:0.65rem;color:var(--tf-text-muted);"><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:rgba(16,185,129,0.2);vertical-align:middle;margin-right:3px;"></span> Present</span>
+    <span style="font-size:0.65rem;color:var(--tf-text-muted);"><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:rgba(239,68,68,0.15);vertical-align:middle;margin-right:3px;"></span> Absent</span>
+    <span style="font-size:0.65rem;color:var(--tf-text-muted);"><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:rgba(0,212,255,0.15);vertical-align:middle;margin-right:3px;"></span> Leave</span>
+    <span style="font-size:0.65rem;color:var(--tf-text-muted);"><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:rgba(245,158,11,0.15);vertical-align:middle;margin-right:3px;"></span> Pending Leave</span>
+    <span style="font-size:0.65rem;color:var(--tf-text-muted);"><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:rgba(100,116,139,0.1);vertical-align:middle;margin-right:3px;"></span> Week Off</span>
+  </div>
+</div>
+
+<!-- Monthly Summary -->
+<div class="tf-card">
+  <div class="card-header"><i class="bi bi-bar-chart me-2"></i>MONTHLY SUMMARY</div>
+  <div style="padding:1rem;">
+    <div class="row g-3 text-center">
+      <div class="col-4">
+        <div style="font-family:var(--tf-font-mono);font-size:1.5rem;font-weight:700;color:#10b981;"><%= totalPresent %></div>
+        <div style="font-size:0.7rem;color:var(--tf-text-muted);">Days Present</div>
+      </div>
+      <div class="col-4">
+        <%
+          var workingDays = 0;
+          for (var d = 1; d <= lastDay; d++) {
+            var cd2 = calendarData[d];
+            if (cd2.status !== 'off' && cd2.status !== 'future') workingDays++;
+          }
+          var absentDays = workingDays - totalPresent;
+          // Subtract leave days
+          for (var d = 1; d <= lastDay; d++) {
+            var cd3 = calendarData[d];
+            if (cd3.status === 'leave') absentDays--;
+          }
+          if (absentDays < 0) absentDays = 0;
+        %>
+        <div style="font-family:var(--tf-font-mono);font-size:1.5rem;font-weight:700;color:#ef4444;"><%= absentDays %></div>
+        <div style="font-size:0.7rem;color:var(--tf-text-muted);">Days Absent</div>
+      </div>
+      <div class="col-4">
+        <div style="font-family:var(--tf-font-mono);font-size:1.5rem;font-weight:700;color:var(--tf-text);">
+          <%= workingDays > 0 ? Math.round((totalPresent / workingDays) * 100) : 0 %>%
+        </div>
+        <div style="font-size:0.7rem;color:var(--tf-text-muted);">Attendance Rate</div>
+      </div>
+    </div>
+  </div>
+</div>

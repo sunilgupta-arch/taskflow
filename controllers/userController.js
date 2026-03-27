@@ -196,6 +196,10 @@ class UserController {
         .sort((a, b) => new Date(b.completed_at) - new Date(a.completed_at))
         .slice(0, 10);
 
+      // Check if selected date is user's weekly off
+      const selectedDayName = new Date(selectedDate + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long' });
+      const isWeekOff = targetUser.weekly_off_day === selectedDayName;
+
       res.render('users/progress', {
         title: `${targetUser.name} - Progress`,
         targetUser,
@@ -204,9 +208,10 @@ class UserController {
         activeTasks: activeTasks[0],
         pendingTasks: pendingTasks[0],
         recentCompleted,
-        dayTasks,
+        dayTasks: isWeekOff ? [] : dayTasks,
         selectedDate,
-        isSelf
+        isSelf,
+        isWeekOff
       });
     } catch (err) {
       res.status(500).render('error', { title: 'Error', message: err.message, code: 500, layout: false });

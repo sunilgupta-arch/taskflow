@@ -15,6 +15,14 @@
       <option value="recurring" <%= filters.type === 'recurring' ? 'selected' : '' %>>Recurring</option>
       <option value="once" <%= filters.type === 'once' ? 'selected' : '' %>>One Time</option>
     </select>
+    <% if (['CLIENT_ADMIN', 'CLIENT_MANAGER', 'LOCAL_ADMIN', 'LOCAL_MANAGER'].includes(user.role_name)) { %>
+    <select name="assigned_to" class="tf-select" style="max-width:160px;">
+      <option value="">All Employees</option>
+      <% ourUsers.forEach(function(u) { %>
+      <option value="<%= u.id %>" <%= filters.assigned_to == u.id ? 'selected' : '' %>><%= u.name %></option>
+      <% }) %>
+    </select>
+    <% } %>
     <% if (typeof isMyTasks !== 'undefined' && isMyTasks) { %>
     <select name="schedule" class="tf-select" style="max-width:140px;">
       <option value="">All Schedule</option>
@@ -98,17 +106,41 @@
               <span class="badge" style="font-size:0.65rem;border-radius:4px;padding:2px 6px;background:<%= pc.bg %>;color:<%= pc.color %>;"><%= (task.priority || 'medium').toUpperCase() %></span>
             </td>
             <td>
-              <% if (task.assignee_names) { %>
-                <% const names = task.assignee_names.split(', '); %>
-                <% if (names.length === 1) { %>
-                  <span style="font-size:0.8rem;"><%= names[0] %></span>
+              <%
+                var isAdmin = ['CLIENT_ADMIN', 'CLIENT_MANAGER', 'LOCAL_ADMIN', 'LOCAL_MANAGER'].includes(user.role_name);
+                // Parse assignee_id_names (format: "id:name, id:name") for linking
+                var assigneeLinks = [];
+                if (task.assignee_id_names) {
+                  task.assignee_id_names.split(', ').forEach(function(pair) {
+                    var sep = pair.indexOf(':');
+                    if (sep > 0) assigneeLinks.push({ id: pair.substring(0, sep), name: pair.substring(sep + 1) });
+                  });
+                }
+                // Fallback for LOCAL_USER query (single assignee)
+                if (assigneeLinks.length === 0 && task.assigned_to && task.assigned_to_name) {
+                  assigneeLinks.push({ id: task.assigned_to, name: task.assigned_to_name });
+                }
+              %>
+              <% if (assigneeLinks.length > 0) { %>
+                <% if (assigneeLinks.length === 1) { %>
+                  <% if (isAdmin) { %>
+                  <a href="/users/<%= assigneeLinks[0].id %>/progress" style="font-size:0.8rem;color:#00d4ff;text-decoration:none;" title="View tasks"><%= assigneeLinks[0].name %></a>
+                  <% } else { %>
+                  <span style="font-size:0.8rem;"><%= assigneeLinks[0].name %></span>
+                  <% } %>
                 <% } else { %>
                   <span class="assignee-group" style="font-size:0.8rem;cursor:pointer;color:#00d4ff;" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'">
-                    <%= names.length %> users <i class="bi bi-chevron-down" style="font-size:0.6rem;"></i>
+                    <%= assigneeLinks.length %> users <i class="bi bi-chevron-down" style="font-size:0.6rem;"></i>
                   </span>
                   <div style="display:none;font-size:0.75rem;margin-top:4px;padding:6px 8px;background:rgba(0,212,255,0.05);border:1px solid rgba(0,212,255,0.15);border-radius:6px;">
-                    <% names.forEach(name => { %>
-                      <div style="padding:2px 0;color:var(--tf-text-muted);"><i class="bi bi-person" style="margin-right:4px;"></i><%= name %></div>
+                    <% assigneeLinks.forEach(function(a) { %>
+                      <div style="padding:2px 0;">
+                        <% if (isAdmin) { %>
+                        <a href="/users/<%= a.id %>/progress" style="color:#00d4ff;text-decoration:none;"><i class="bi bi-person" style="margin-right:4px;"></i><%= a.name %></a>
+                        <% } else { %>
+                        <span style="color:var(--tf-text-muted);"><i class="bi bi-person" style="margin-right:4px;"></i><%= a.name %></span>
+                        <% } %>
+                      </div>
                     <% }) %>
                   </div>
                 <% } %>
@@ -142,12 +174,20 @@
             <td style="font-size:0.8rem;color:var(--tf-text-muted);">
               <% if (task.recurrence_end_date) { %>
                 <div style="font-size:0.6rem;color:var(--tf-text-muted);margin-bottom:1px;">Ends</div>
-                <%= new Date(task.recurrence_end_date).toLocaleDateString() %>
+                <%= new Date(task.recurrence_end_date).toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' }) %>
               <% } else { %>—<% } %>
             </td>
             <% } else { %>
-            <td style="font-size:0.8rem;color:<%= task.due_date && new Date(task.due_date) < new Date() && task.status !== 'completed' ? '#ef4444' : 'var(--tf-text-muted)' %>;">
-              <%= task.due_date ? new Date(task.due_date).toLocaleDateString() : '—' %>
+            <%
+              var isOverdue = task.due_date && new Date(task.due_date) < new Date() && task.status !== 'completed';
+            %>
+            <td style="font-size:0.8rem;color:<%= isOverdue ? '#ef4444' : 'var(--tf-text-muted)' %>;">
+              <% if (task.due_date) { %>
+                <%= new Date(task.due_date).toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' }) %>
+                <% if (isOverdue) { %>
+                <div style="font-size:0.6rem;color:#ef4444;">Overdue</div>
+                <% } %>
+              <% } else { %>—<% } %>
             </td>
             <% } %>
             <td style="font-family:var(--tf-font-mono);color:#f59e0b;font-size:0.8rem;">
@@ -165,10 +205,15 @@
             </td>
             <td>
               <div class="d-flex gap-1 flex-wrap">
-                <% if (['CLIENT_ADMIN', 'CLIENT_MANAGER', 'LOCAL_ADMIN', 'LOCAL_MANAGER'].includes(user.role_name) && !['completed','deactivated'].includes(task.status)) { %>
+                <%
+                  var isOwnerWithin24h = user.role_name === 'LOCAL_USER' && task.created_by === user.id && ((Date.now() - new Date(task.created_at).getTime()) / 3600000) <= 24;
+                %>
+                <% if ((['CLIENT_ADMIN', 'CLIENT_MANAGER', 'LOCAL_ADMIN', 'LOCAL_MANAGER'].includes(user.role_name) || isOwnerWithin24h) && !['completed','deactivated'].includes(task.status)) { %>
                 <a href="/tasks/<%= task.id %>/edit" class="btn-tf text-decoration-none" style="font-size:0.65rem;padding:2px 8px;background:transparent;color:#a78bfa;border:1px solid rgba(124,58,237,0.3);">
                   Edit
                 </a>
+                <% } %>
+                <% if (['CLIENT_ADMIN', 'CLIENT_MANAGER', 'LOCAL_ADMIN', 'LOCAL_MANAGER'].includes(user.role_name) && !['completed','deactivated'].includes(task.status)) { %>
                 <button class="btn-tf" style="font-size:0.65rem;padding:2px 8px;background:transparent;color:#00d4ff;border:1px solid rgba(0,212,255,0.3);"
                   onclick="openAssignModal(<%= task.id %>, '<%= task.assignee_names || '' %>')">
                   Assign
@@ -203,14 +248,14 @@
                   <% } %>
                 <% } %>
 
-                <% if ((['CLIENT_ADMIN', 'CLIENT_MANAGER'].includes(user.role_name) || (['LOCAL_ADMIN', 'LOCAL_MANAGER'].includes(user.role_name) && task.created_by_org === 'LOCAL')) && task.status !== 'deactivated' && task.status !== 'completed') { %>
+                <% if (((['CLIENT_ADMIN', 'CLIENT_MANAGER'].includes(user.role_name)) || (['LOCAL_ADMIN', 'LOCAL_MANAGER'].includes(user.role_name) && task.created_by_org === 'LOCAL') || isOwnerWithin24h) && task.status !== 'deactivated' && task.status !== 'completed') { %>
                 <button class="btn-tf" style="font-size:0.65rem;padding:2px 8px;background:rgba(245,158,11,0.1);color:#f59e0b;border:1px solid rgba(245,158,11,0.3);"
                   onclick="deactivateTask(<%= task.id %>)">
                   Deactivate
                 </button>
                 <% } %>
 
-                <% if ((['CLIENT_ADMIN'].includes(user.role_name) || (user.role_name === 'LOCAL_ADMIN' && task.created_by_org === 'LOCAL')) && task.status === 'deactivated') { %>
+                <% if (((['CLIENT_ADMIN'].includes(user.role_name)) || (user.role_name === 'LOCAL_ADMIN' && task.created_by_org === 'LOCAL') || isOwnerWithin24h) && task.status === 'deactivated') { %>
                 <button class="btn-tf" style="font-size:0.65rem;padding:2px 8px;background:rgba(239,68,68,0.1);color:#ef4444;border:1px solid rgba(239,68,68,0.3);"
                   onclick="deleteTask(<%= task.id %>)">
                   Delete

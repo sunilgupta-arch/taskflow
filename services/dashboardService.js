@@ -58,7 +58,9 @@ class DashboardService {
               CASE WHEN t.type = 'recurring' AND t.status = 'active' THEN 1 ELSE 0 END as is_recurring,
               (SELECT COUNT(*) FROM task_completions tc WHERE tc.task_id = t.id AND tc.user_id = ? AND tc.completion_date = ?) as is_completed_for_date
        FROM tasks t
+       JOIN users u_assignee ON u_assignee.id = t.assigned_to
        WHERE t.assigned_to = ? AND t.is_deleted = 0
+         AND u_assignee.weekly_off_day != DAYNAME(?)
          AND (
            -- Active recurring tasks are always shown
            (t.type = 'recurring' AND t.status = 'active')
@@ -70,7 +72,7 @@ class DashboardService {
            OR (t.type = 'once' AND t.status = 'completed' AND DATE(t.completed_at) = ?)
          )
        ORDER BY FIELD(t.priority, 'urgent', 'high', 'medium', 'low'), t.created_at DESC`,
-      [userId, date, userId, date, today, date, date]
+      [userId, date, date, userId, date, today, date, date]
     );
     return rows;
   }

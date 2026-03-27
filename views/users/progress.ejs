@@ -51,8 +51,23 @@ const reportUrl = selfView ? '/my-monthly-report' : '/users/' + targetUser.id + 
 <div class="tf-card mb-3">
   <div class="card-header">
     <i class="bi bi-calendar-event me-2" style="color:#06b6d4;"></i>TASKS FOR <%= new Date(selectedDate + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) %>
+    <% if (isWeekOff) { %>
+    <span style="font-size:0.7rem;background:rgba(100,116,139,0.15);color:#94a3b8;padding:2px 8px;border-radius:4px;margin-left:8px;">WEEK OFF</span>
+    <% } else { %>
     (<%= dayTasks.length %>)
+    <% } %>
   </div>
+  <% if (isWeekOff) { %>
+  <div style="text-align:center;padding:3rem 1rem;">
+    <div style="width:80px;height:80px;border-radius:50%;background:rgba(100,116,139,0.1);display:flex;align-items:center;justify-content:center;margin:0 auto 1.25rem;">
+      <i class="bi bi-moon-stars" style="font-size:2rem;color:#64748b;"></i>
+    </div>
+    <h4 style="font-family:var(--tf-font-mono);color:#64748b;font-weight:700;margin-bottom:0.5rem;">WEEK OFF</h4>
+    <p style="font-size:0.85rem;color:var(--tf-text-muted);margin:0;">
+      <%= targetUser.name %>'s weekly off is on <strong><%= targetUser.weekly_off_day %></strong>
+    </p>
+  </div>
+  <% } else { %>
   <div style="overflow-x:auto;">
     <table class="tf-table">
       <thead>
@@ -101,12 +116,26 @@ const reportUrl = selfView ? '/my-monthly-report' : '/users/' + targetUser.id + 
       </tbody>
     </table>
   </div>
+  <% } %>
 </div>
 
 <%
 const total = parseInt(taskStats.total) || 0;
 const completed = parseInt(taskStats.completed) || 0;
 const progress = total > 0 ? Math.round((completed / total) * 100) : 0;
+
+// Count today's pending (recurring not done + one-time pending/in_progress)
+var pendingToday = 0;
+var doneToday = 0;
+dayTasks.forEach(function(t) {
+  if (t.is_recurring) {
+    if (t.is_completed) doneToday++;
+    else pendingToday++;
+  } else {
+    if (t.status === 'completed') doneToday++;
+    else pendingToday++;
+  }
+});
 %>
 
 <!-- Status Stats -->
@@ -120,9 +149,16 @@ const progress = total > 0 ? Math.round((completed / total) * 100) : 0;
   </div>
   <div class="col-6 col-md-3">
     <div class="stat-card" style="--stat-color: #f59e0b;">
-      <div class="stat-value"><%= taskStats.pending || 0 %></div>
-      <div class="stat-label">Pending</div>
+      <div class="stat-value"><%= pendingToday %></div>
+      <div class="stat-label">Pending Today</div>
       <i class="bi bi-hourglass stat-icon"></i>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card" style="--stat-color: #10b981;">
+      <div class="stat-value"><%= doneToday %></div>
+      <div class="stat-label">Done Today</div>
+      <i class="bi bi-check-circle stat-icon"></i>
     </div>
   </div>
   <div class="col-6 col-md-3">
@@ -130,13 +166,6 @@ const progress = total > 0 ? Math.round((completed / total) * 100) : 0;
       <div class="stat-value"><%= taskStats.in_progress || 0 %></div>
       <div class="stat-label">In Progress</div>
       <i class="bi bi-play-circle stat-icon"></i>
-    </div>
-  </div>
-  <div class="col-6 col-md-3">
-    <div class="stat-card" style="--stat-color: #10b981;">
-      <div class="stat-value"><%= taskStats.completed || 0 %></div>
-      <div class="stat-label">Completed</div>
-      <i class="bi bi-check-circle stat-icon"></i>
     </div>
   </div>
 </div>
@@ -210,15 +239,16 @@ const progress = total > 0 ? Math.round((completed / total) * 100) : 0;
     </div>
   </div>
 
-  <!-- Pending Tasks -->
+  <!-- Pending Today -->
   <div class="col-md-6">
     <div class="tf-card h-100">
       <div class="card-header">
-        <i class="bi bi-hourglass me-2" style="color:#f59e0b;"></i>PENDING TASKS (<%= pendingTasks.length %>)
+        <i class="bi bi-hourglass me-2" style="color:#f59e0b;"></i>PENDING TODAY (<%= pendingToday %>)
       </div>
       <div class="p-3">
-        <% if (pendingTasks.length > 0) { %>
-          <% pendingTasks.forEach(t => { %>
+        <% var pendingDayTasks = dayTasks.filter(function(t) { return t.is_recurring ? !t.is_completed : t.status !== 'completed'; }); %>
+        <% if (pendingDayTasks.length > 0) { %>
+          <% pendingDayTasks.forEach(function(t) { %>
           <div class="d-flex align-items-center gap-2 mb-2 p-2" style="background:var(--tf-surface-2);border-radius:6px;border-left:3px solid #f59e0b;">
             <div class="flex-grow-1">
               <a href="/tasks/<%= t.id %>" style="color:var(--tf-text);text-decoration:none;font-weight:500;font-size:0.85rem;">
@@ -226,19 +256,14 @@ const progress = total > 0 ? Math.round((completed / total) * 100) : 0;
               </a>
               <div style="font-size:0.7rem;color:var(--tf-text-muted);margin-top:2px;">
                 <span class="badge badge-<%= t.type %>" style="font-size:0.6rem;padding:1px 5px;border-radius:3px;"><%= t.type === 'once' ? 'one time' : t.type %></span>
-                <% if (t.due_date) { %>
-                <span style="margin-left:6px;color:<%= new Date(t.due_date) < new Date() ? '#ef4444' : 'var(--tf-text-muted)' %>;">
-                  Due: <%= new Date(t.due_date).toLocaleDateString() %>
-                </span>
-                <% } %>
                 <span style="margin-left:6px;"><i class="bi bi-person" style="font-size:0.6rem;"></i> <%= t.created_by_name || '—' %></span>
               </div>
             </div>
-            <span class="badge badge-pending" style="font-size:0.6rem;padding:2px 6px;border-radius:3px;">pending</span>
+            <span class="badge" style="font-size:0.6rem;padding:2px 6px;border-radius:3px;background:rgba(245,158,11,0.15);color:#f59e0b;">pending</span>
           </div>
           <% }) %>
         <% } else { %>
-        <p style="color:var(--tf-text-muted);font-size:0.85rem;text-align:center;padding:1rem;">No pending tasks</p>
+        <p style="color:var(--tf-text-muted);font-size:0.85rem;text-align:center;padding:1rem;">All tasks done for today!</p>
         <% } %>
       </div>
     </div>
