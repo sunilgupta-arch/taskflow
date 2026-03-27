@@ -506,6 +506,11 @@
         <i class="bi bi-cash-stack"></i> Rewards
       </a>
     </div>
+    <div class="nav-item">
+      <a href="/reports/task-completion" class="<%= typeof title !== 'undefined' && title === 'Task Completion Report' ? 'active' : '' %>">
+        <i class="bi bi-clipboard-data"></i> Task Report
+      </a>
+    </div>
     <% if (['LOCAL_ADMIN', 'LOCAL_MANAGER', 'CLIENT_ADMIN', 'CLIENT_MANAGER'].includes(user.role_name)) { %>
     <div class="nav-item">
       <a href="/attendance">

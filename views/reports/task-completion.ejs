@@ -1,0 +1,188 @@
+<!-- Task Completion Calendar -->
+<div class="tf-card mb-4">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span><i class="bi bi-clipboard-data me-2"></i>TASK COMPLETION REPORT</span>
+    <div class="d-flex align-items-center gap-2">
+      <a href="/reports/task-completion?month=<%= prevMonth %>" class="btn-tf btn-tf-outline" style="font-size:0.7rem;padding:3px 8px;"><i class="bi bi-chevron-left"></i></a>
+      <span style="font-family:var(--tf-font-mono);font-size:0.85rem;min-width:120px;text-align:center;">
+        <%= new Date(year, mon - 1).toLocaleString('default', { month: 'long', year: 'numeric' }) %>
+      </span>
+      <a href="/reports/task-completion?month=<%= nextMonth %>" class="btn-tf btn-tf-outline" style="font-size:0.7rem;padding:3px 8px;"><i class="bi bi-chevron-right"></i></a>
+    </div>
+  </div>
+  <div style="overflow-x:auto;padding:0.5rem;">
+    <table style="width:100%;border-collapse:collapse;font-size:0.7rem;">
+      <thead>
+        <tr>
+          <th style="padding:6px 8px;text-align:left;font-size:0.75rem;color:var(--tf-text-muted);min-width:120px;border-bottom:1px solid var(--tf-border);position:sticky;left:0;background:var(--tf-surface);z-index:2;">Employee</th>
+          <% for (var d = 1; d <= lastDay; d++) { %>
+            <%
+              var dayDate = new Date(year, mon - 1, d);
+              var dayAbbr = dayDate.toLocaleDateString('en-US', { weekday: 'narrow' });
+              var todayParts = today.split('-');
+              var isToday = d === parseInt(todayParts[2]) && mon === parseInt(todayParts[1]) && year === parseInt(todayParts[0]);
+            %>
+            <th style="padding:4px 2px;text-align:center;min-width:36px;border-bottom:1px solid var(--tf-border);<%= isToday ? 'background:rgba(0,212,255,0.08);' : '' %>">
+              <div style="color:var(--tf-text-muted);font-size:0.55rem;"><%= dayAbbr %></div>
+              <div style="color:var(--tf-text);<%= isToday ? 'color:#00d4ff;font-weight:700;' : '' %>"><%= d %></div>
+            </th>
+          <% } %>
+          <th style="padding:4px 6px;text-align:center;border-bottom:1px solid var(--tf-border);font-size:0.65rem;color:var(--tf-text-muted);min-width:40px;">Score</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% users.forEach(function(u) { %>
+        <tr>
+          <td style="padding:6px 8px;font-size:0.75rem;font-weight:500;white-space:nowrap;border-bottom:1px solid var(--tf-border);position:sticky;left:0;background:var(--tf-surface);z-index:1;">
+            <a href="/users/<%= u.id %>/progress" style="color:var(--tf-text);text-decoration:none;"><%= u.name %></a>
+          </td>
+          <%
+            var totalScore = 0;
+            var totalPossible = 0;
+            for (var d = 1; d <= lastDay; d++) {
+              var cell = gridData[u.id][d];
+              var todayParts2 = today.split('-');
+              var isToday = d === parseInt(todayParts2[2]) && mon === parseInt(todayParts2[1]) && year === parseInt(todayParts2[0]);
+              var dateStr = year + '-' + String(mon).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+
+              if (!cell.isOff && !cell.isFuture && cell.total > 0) {
+                totalScore += cell.done;
+                totalPossible += cell.total;
+              }
+
+              var bg = 'transparent', clr = 'var(--tf-text-muted)', cellText = '', cursor = 'default', title = '';
+              if (cell.isFuture) {
+                bg = 'transparent'; clr = 'var(--tf-border)'; cellText = '';
+              } else if (cell.isOff) {
+                bg = 'rgba(100,116,139,0.08)'; clr = '#64748b'; cellText = 'W';
+                title = 'Week Off';
+              } else if (cell.total === 0) {
+                cellText = '—'; clr = 'var(--tf-border)';
+              } else {
+                cursor = 'pointer';
+                var pct = Math.round((cell.done / cell.total) * 100);
+                cellText = cell.done + '/' + cell.total;
+                title = cell.done + ' of ' + cell.total + ' completed (' + pct + '%)';
+                if (pct === 100) {
+                  bg = 'rgba(16,185,129,0.18)'; clr = '#10b981';
+                } else if (pct >= 50) {
+                  bg = 'rgba(245,158,11,0.15)'; clr = '#f59e0b';
+                } else if (pct > 0) {
+                  bg = 'rgba(249,115,22,0.15)'; clr = '#f97316';
+                } else {
+                  bg = 'rgba(239,68,68,0.12)'; clr = '#ef4444';
+                }
+              }
+          %>
+          <td style="padding:3px 1px;text-align:center;border-bottom:1px solid var(--tf-border);<%= isToday ? 'background:rgba(0,212,255,0.05);' : '' %>"
+            title="<%= title %>">
+            <% if (cell.total > 0 && !cell.isOff && !cell.isFuture) { %>
+            <div style="min-width:30px;padding:2px 3px;border-radius:4px;background:<%= bg %>;color:<%= clr %>;font-size:0.6rem;font-weight:600;font-family:var(--tf-font-mono);cursor:<%= cursor %>;"
+              onclick="showTaskDetail(<%= u.id %>, '<%= dateStr %>')"><%= cellText %></div>
+            <% } else if (cell.isOff) { %>
+            <div style="width:22px;height:22px;border-radius:4px;background:<%= bg %>;color:<%= clr %>;display:inline-flex;align-items:center;justify-content:center;font-size:0.6rem;font-weight:600;font-family:var(--tf-font-mono);"
+              title="<%= title %>">W</div>
+            <% } else { %>
+            <span style="color:var(--tf-border);font-size:0.6rem;"><%= cellText %></span>
+            <% } %>
+          </td>
+          <% } %>
+          <td style="padding:4px 6px;text-align:center;border-bottom:1px solid var(--tf-border);font-family:var(--tf-font-mono);font-size:0.75rem;font-weight:600;">
+            <% if (totalPossible > 0) { %>
+              <% var scorePct = Math.round((totalScore / totalPossible) * 100); %>
+              <span style="color:<%= scorePct >= 80 ? '#10b981' : scorePct >= 50 ? '#f59e0b' : '#ef4444' %>;"><%= scorePct %>%</span>
+            <% } else { %>
+              <span style="color:var(--tf-text-muted);">—</span>
+            <% } %>
+          </td>
+        </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+  <div class="p-2 d-flex gap-3 justify-content-center flex-wrap" style="border-top:1px solid var(--tf-border);">
+    <span style="font-size:0.65rem;color:var(--tf-text-muted);"><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:rgba(16,185,129,0.2);vertical-align:middle;margin-right:3px;"></span> 100%</span>
+    <span style="font-size:0.65rem;color:var(--tf-text-muted);"><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:rgba(245,158,11,0.15);vertical-align:middle;margin-right:3px;"></span> 50-99%</span>
+    <span style="font-size:0.65rem;color:var(--tf-text-muted);"><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:rgba(249,115,22,0.15);vertical-align:middle;margin-right:3px;"></span> 1-49%</span>
+    <span style="font-size:0.65rem;color:var(--tf-text-muted);"><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:rgba(239,68,68,0.15);vertical-align:middle;margin-right:3px;"></span> 0%</span>
+    <span style="font-size:0.65rem;color:var(--tf-text-muted);"><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:rgba(100,116,139,0.1);vertical-align:middle;margin-right:3px;"></span> Week Off</span>
+  </div>
+</div>
+
+<!-- Task Detail Modal -->
+<div id="taskDetailModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:200;align-items:center;justify-content:center;padding:1rem;">
+  <div style="background:var(--tf-surface);border:1px solid var(--tf-border);border-radius:16px;width:100%;max-width:520px;overflow:hidden;">
+    <div style="padding:1.25rem 1.5rem;border-bottom:1px solid var(--tf-border);display:flex;justify-content:space-between;align-items:center;">
+      <div>
+        <h6 id="taskDetailTitle" style="font-family:var(--tf-font-mono);margin:0;font-weight:700;">TASKS</h6>
+        <div id="taskDetailSubtitle" style="font-size:0.75rem;color:var(--tf-text-muted);margin-top:2px;"></div>
+      </div>
+      <button onclick="document.getElementById('taskDetailModal').style.display='none'" style="background:none;border:none;color:var(--tf-text-muted);font-size:1.2rem;cursor:pointer;padding:4px;">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+    <div id="taskDetailList" style="max-height:400px;overflow-y:auto;padding:0.5rem 0;">
+      <div style="text-align:center;padding:2rem;color:var(--tf-text-muted);">Loading...</div>
+    </div>
+    <div id="taskDetailSummary" style="padding:0.75rem 1.5rem;border-top:1px solid var(--tf-border);font-size:0.75rem;color:var(--tf-text-muted);text-align:center;"></div>
+  </div>
+</div>
+
+<script>
+function showTaskDetail(userId, date) {
+  var modal = document.getElementById('taskDetailModal');
+  var list = document.getElementById('taskDetailList');
+  var title = document.getElementById('taskDetailTitle');
+  var subtitle = document.getElementById('taskDetailSubtitle');
+  var summary = document.getElementById('taskDetailSummary');
+
+  list.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--tf-text-muted);">Loading...</div>';
+  modal.style.display = 'flex';
+
+  var dateDisplay = new Date(date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+
+  axios.get('/reports/task-day-detail?userId=' + userId + '&date=' + date).then(function(res) {
+    var data = res.data.data;
+    title.textContent = data.userName;
+    subtitle.textContent = dateDisplay;
+
+    if (!data.tasks || data.tasks.length === 0) {
+      list.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--tf-text-muted);">No tasks for this day</div>';
+      summary.textContent = '';
+      return;
+    }
+
+    var done = 0;
+    var html = '';
+    data.tasks.forEach(function(t) {
+      if (t.is_completed) done++;
+      var priorityColors = { urgent: '#ef4444', high: '#f59e0b', medium: '#3b82f6', low: '#6b7280' };
+      var clr = priorityColors[t.priority] || '#6b7280';
+      var statusBg, statusClr, statusText;
+      if (t.is_completed) {
+        statusBg = 'rgba(16,185,129,0.15)'; statusClr = '#10b981'; statusText = 'Done';
+      } else {
+        statusBg = 'rgba(245,158,11,0.15)'; statusClr = '#f59e0b'; statusText = 'Pending';
+      }
+      var typeLabel = t.type === 'recurring'
+        ? '<span style="font-size:0.55rem;background:rgba(124,58,237,0.15);color:#a78bfa;padding:1px 5px;border-radius:4px;">recurring</span>'
+        : '<span style="font-size:0.55rem;background:rgba(249,115,22,0.15);color:#f97316;padding:1px 5px;border-radius:4px;">one time</span>';
+
+      html += '<a href="/tasks/' + t.id + '" style="display:flex;align-items:center;gap:0.6rem;padding:0.55rem 1.5rem;text-decoration:none;color:var(--tf-text);border-bottom:1px solid var(--tf-border);transition:background 0.15s;" onmouseover="this.style.background=\'rgba(0,212,255,0.04)\'" onmouseout="this.style.background=\'transparent\'">' +
+        '<span style="width:8px;height:8px;border-radius:50%;background:' + clr + ';flex-shrink:0;"></span>' +
+        '<div style="flex-grow:1;min-width:0;">' +
+          '<div style="font-size:0.8rem;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + t.title + '</div>' +
+          '<div style="margin-top:2px;">' + typeLabel + '</div>' +
+        '</div>' +
+        '<span style="font-size:0.6rem;padding:2px 8px;border-radius:4px;background:' + statusBg + ';color:' + statusClr + ';white-space:nowrap;">' + statusText + '</span>' +
+      '</a>';
+    });
+
+    list.innerHTML = html;
+    var pct = Math.round((done / data.tasks.length) * 100);
+    summary.innerHTML = '<strong>' + done + '</strong> of <strong>' + data.tasks.length + '</strong> completed <span style="margin-left:8px;font-weight:600;color:' + (pct >= 80 ? '#10b981' : pct >= 50 ? '#f59e0b' : '#ef4444') + '">(' + pct + '%)</span>';
+  }).catch(function() {
+    list.innerHTML = '<div style="text-align:center;padding:2rem;color:#ef4444;">Failed to load tasks</div>';
+  });
+}
+</script>

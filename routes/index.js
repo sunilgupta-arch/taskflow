@@ -38,6 +38,8 @@ router.post('/rewards/mark-paid/:id', authenticate, requireRoles('LOCAL_ADMIN'),
 router.get('/reports/completion', authenticate, requireRoles('CLIENT_ADMIN', 'LOCAL_ADMIN', 'CLIENT_MANAGER', 'LOCAL_MANAGER'), ReportController.completionReport);
 router.get('/reports/rewards', authenticate, requireRoles('CLIENT_ADMIN', 'LOCAL_ADMIN', 'CLIENT_MANAGER', 'LOCAL_MANAGER'), ReportController.rewardReport);
 router.get('/attendance', authenticate, requireRoles('LOCAL_ADMIN', 'LOCAL_MANAGER', 'CLIENT_ADMIN', 'CLIENT_MANAGER'), ReportController.attendanceReport);
+router.get('/reports/task-completion', authenticate, requireRoles('LOCAL_ADMIN', 'LOCAL_MANAGER', 'CLIENT_ADMIN', 'CLIENT_MANAGER'), ReportController.taskCompletionReport);
+router.get('/reports/task-day-detail', authenticate, requireRoles('LOCAL_ADMIN', 'LOCAL_MANAGER', 'CLIENT_ADMIN', 'CLIENT_MANAGER'), ReportController.taskDayDetail);
 router.get('/my-attendance', authenticate, ReportController.myAttendance);
 
 // Leaves (LOCAL roles only: users/managers apply, admin/manager approve/reject)

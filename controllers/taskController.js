@@ -22,13 +22,16 @@ class TaskController {
 
       const { rows, total } = await TaskModel.getAll(filters);
 
-      // For recurring tasks, attach today's session status
+      // For recurring tasks, attach today's session status and schedule check
       const today = getToday(req.user.org_timezone || 'UTC');
       for (const task of rows) {
-        if (task.type === 'recurring' && task.status === 'active' && task.assigned_to) {
-          const session = await TaskCompletion.getTodaySession(task.id, task.assigned_to, today);
-          task.is_started_today = !!(session && session.started_at && !session.completed_at);
-          task.is_completed_today = !!(session && session.completed_at);
+        if (task.type === 'recurring' && task.status === 'active') {
+          task.is_scheduled_today = isScheduledForDate(task, today);
+          if (task.assigned_to) {
+            const session = await TaskCompletion.getTodaySession(task.id, task.assigned_to, today);
+            task.is_started_today = !!(session && session.started_at && !session.completed_at);
+            task.is_completed_today = !!(session && session.completed_at);
+          }
         }
       }
 
@@ -66,13 +69,16 @@ class TaskController {
 
       const { rows, total } = await TaskModel.getAll(filters);
 
-      // For recurring tasks, attach today's session status
+      // For recurring tasks, attach today's session status and schedule check
       const today = getToday(req.user.org_timezone || 'UTC');
       for (const task of rows) {
-        if (task.type === 'recurring' && task.status === 'active' && task.assigned_to) {
-          const session = await TaskCompletion.getTodaySession(task.id, task.assigned_to, today);
-          task.is_started_today = !!(session && session.started_at && !session.completed_at);
-          task.is_completed_today = !!(session && session.completed_at);
+        if (task.type === 'recurring' && task.status === 'active') {
+          task.is_scheduled_today = isScheduledForDate(task, today);
+          if (task.assigned_to) {
+            const session = await TaskCompletion.getTodaySession(task.id, task.assigned_to, today);
+            task.is_started_today = !!(session && session.started_at && !session.completed_at);
+            task.is_completed_today = !!(session && session.completed_at);
+          }
         }
       }
 

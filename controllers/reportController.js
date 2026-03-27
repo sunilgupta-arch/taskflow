@@ -2,7 +2,8 @@ const TaskService = require('../services/taskService');
 const RewardModel = require('../models/Reward');
 const db = require('../config/db');
 const { ApiResponse } = require('../utils/response');
-const { getToday, formatTime, getTimezoneOffsetString } = require('../utils/timezone');
+const { getToday, formatTime, getTimezoneOffsetString, isScheduledForDate } = require('../utils/timezone');
+const DashboardService = require('../services/dashboardService');
 
 class ReportController {
   static async completionReport(req, res) {
@@ -319,6 +320,169 @@ class ReportController {
       });
     } catch (err) {
       res.status(500).render('error', { title: 'Error', message: err.message, code: 500, layout: false });
+    }
+  }
+  /**
+   * Task Completion Calendar — monthly grid of done/total per user per day
+   */
+  static async taskCompletionReport(req, res) {
+    try {
+      const tz = req.user.org_timezone || 'UTC';
+      const today = getToday(tz);
+      const month = req.query.month || today.slice(0, 7);
+      const [yearStr, monStr] = month.split('-');
+      const year = parseInt(yearStr);
+      const mon = parseInt(monStr);
+      const lastDay = new Date(year, mon, 0).getDate();
+      const startDate = `${month}-01`;
+      const endDate = `${month}-${String(lastDay).padStart(2, '0')}`;
+
+      // Get all active LOCAL users
+      const [users] = await db.query(
+        `SELECT u.id, u.name, u.weekly_off_day FROM users u
+         JOIN organizations o ON u.organization_id = o.id
+         JOIN roles r ON u.role_id = r.id
+         WHERE u.is_active = 1 AND o.org_type = 'LOCAL' AND r.name IN ('LOCAL_USER', 'LOCAL_MANAGER')
+         ORDER BY u.name`
+      );
+
+      // Get all recurring tasks per user
+      const [recurringTasks] = await db.query(
+        `SELECT id, assigned_to, recurrence_pattern, recurrence_days, recurrence_end_date, type, status
+         FROM tasks
+         WHERE type = 'recurring' AND status = 'active' AND is_deleted = 0
+           AND assigned_to IN (${users.map(() => '?').join(',')})`,
+        users.map(u => u.id)
+      );
+
+      // Get all task completions for the month
+      const [completions] = await db.query(
+        `SELECT tc.task_id, tc.user_id, tc.completion_date
+         FROM task_completions tc
+         JOIN tasks t ON tc.task_id = t.id
+         WHERE tc.completion_date >= ? AND tc.completion_date <= ?
+           AND t.is_deleted = 0`,
+        [startDate, endDate]
+      );
+
+      // Get one-time tasks relevant to the month
+      const [onceTasks] = await db.query(
+        `SELECT id, assigned_to, status, due_date, created_at, completed_at
+         FROM tasks
+         WHERE type = 'once' AND is_deleted = 0 AND status != 'deactivated'
+           AND assigned_to IN (${users.map(() => '?').join(',')})
+           AND (
+             (due_date >= ? AND due_date <= ?)
+             OR (DATE(created_at) >= ? AND DATE(created_at) <= ?)
+             OR (DATE(completed_at) >= ? AND DATE(completed_at) <= ?)
+           )`,
+        [...users.map(u => u.id), startDate, endDate, startDate, endDate, startDate, endDate]
+      );
+
+      // Build completion map: completionSet has "taskId-date"
+      const completionSet = new Set();
+      completions.forEach(c => {
+        const d = c.completion_date instanceof Date ? c.completion_date.toISOString().split('T')[0] : String(c.completion_date).split('T')[0];
+        completionSet.add(`${c.task_id}-${d}`);
+      });
+
+      // Build calendar grid data
+      const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+      const gridData = {};
+
+      users.forEach(u => {
+        gridData[u.id] = {};
+        const userRecurring = recurringTasks.filter(t => t.assigned_to === u.id);
+        const userOnce = onceTasks.filter(t => t.assigned_to === u.id);
+
+        for (let d = 1; d <= lastDay; d++) {
+          const dateStr = `${year}-${String(mon).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+          const dateObj = new Date(year, mon - 1, d);
+          const dayName = dayNames[dateObj.getDay()];
+          const isOff = dayName === u.weekly_off_day;
+          const isFuture = dateStr > today;
+
+          if (isOff || isFuture) {
+            gridData[u.id][d] = { total: 0, done: 0, isOff, isFuture };
+            continue;
+          }
+
+          let total = 0;
+          let done = 0;
+
+          // Count recurring tasks scheduled for this day
+          userRecurring.forEach(t => {
+            if (isScheduledForDate(t, dateStr)) {
+              total++;
+              if (completionSet.has(`${t.id}-${dateStr}`)) done++;
+            }
+          });
+
+          // Count one-time tasks for this day (due on this date or created on this date)
+          userOnce.forEach(t => {
+            const dueDate = t.due_date ? (t.due_date instanceof Date ? t.due_date.toISOString().split('T')[0] : String(t.due_date).split('T')[0]) : null;
+            const createdDate = t.created_at ? new Date(t.created_at).toISOString().split('T')[0] : null;
+            const completedDate = t.completed_at ? new Date(t.completed_at).toISOString().split('T')[0] : null;
+
+            if (dueDate === dateStr || createdDate === dateStr) {
+              total++;
+              if (t.status === 'completed' && completedDate) done++;
+            }
+          });
+
+          gridData[u.id][d] = { total, done, isOff: false, isFuture: false };
+        }
+      });
+
+      const prevMonth = mon === 1 ? `${year - 1}-12` : `${year}-${String(mon - 1).padStart(2, '0')}`;
+      const nextMonth = mon === 12 ? `${year + 1}-01` : `${year}-${String(mon + 1).padStart(2, '0')}`;
+
+      res.render('reports/task-completion', {
+        title: 'Task Completion Report',
+        users,
+        gridData,
+        today,
+        month,
+        year,
+        mon,
+        lastDay,
+        prevMonth,
+        nextMonth
+      });
+    } catch (err) {
+      res.status(500).render('error', { title: 'Error', message: err.message, code: 500, layout: false });
+    }
+  }
+
+  /**
+   * API: Get task details for a specific user on a specific date
+   */
+  static async taskDayDetail(req, res) {
+    try {
+      const { userId, date } = req.query;
+      if (!userId || !date) return ApiResponse.error(res, 'userId and date required', 400);
+
+      const tasks = await DashboardService.getTasksForDate(parseInt(userId), date, date);
+
+      // Attach schedule check for recurring
+      const result = tasks.map(t => ({
+        id: t.id,
+        title: t.title,
+        type: t.type,
+        priority: t.priority,
+        status: t.type === 'recurring' ? (t.is_completed_for_date ? 'completed' : 'pending') : t.status,
+        is_completed: t.type === 'recurring' ? !!t.is_completed_for_date : t.status === 'completed'
+      })).filter(t => {
+        if (t.type === 'recurring') return isScheduledForDate(t, date) || t.is_completed;
+        return true;
+      });
+
+      // Get user name
+      const [[user]] = await db.query('SELECT name FROM users WHERE id = ?', [userId]);
+
+      return ApiResponse.success(res, { tasks: result, userName: user ? user.name : '', date });
+    } catch (err) {
+      return ApiResponse.error(res, err.message, 500);
     }
   }
 }
