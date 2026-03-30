@@ -1,4 +1,5 @@
 const db = require('../config/db');
+const { getUTCNow } = require('../utils/timezone');
 
 class TaskCompletion {
   /**
@@ -6,23 +7,25 @@ class TaskCompletion {
    * Sets completed_at immediately without a start step.
    */
   static async logCompletion(taskId, userId, date, notes = null) {
+    const now = getUTCNow();
     const [result] = await db.query(
       `INSERT INTO task_completions (task_id, user_id, completion_date, notes, completed_at)
-       VALUES (?, ?, ?, ?, NOW())
-       ON DUPLICATE KEY UPDATE notes = COALESCE(VALUES(notes), notes), completed_at = COALESCE(completed_at, NOW())`,
-      [taskId, userId, date, notes]
+       VALUES (?, ?, ?, ?, ?)
+       ON DUPLICATE KEY UPDATE notes = COALESCE(VALUES(notes), notes), completed_at = COALESCE(completed_at, VALUES(completed_at))`,
+      [taskId, userId, date, notes, now]
     );
     return result.insertId || result.affectedRows > 0;
   }
 
   /**
-   * Start a session for today — inserts a record with started_at = NOW().
+   * Start a session for today — inserts a record with started_at.
    */
   static async startSession(taskId, userId, date) {
+    const now = getUTCNow();
     const [result] = await db.query(
       `INSERT INTO task_completions (task_id, user_id, completion_date, started_at)
-       VALUES (?, ?, ?, NOW())`,
-      [taskId, userId, date]
+       VALUES (?, ?, ?, ?)`,
+      [taskId, userId, date, now]
     );
     return result.insertId;
   }
@@ -31,13 +34,14 @@ class TaskCompletion {
    * Complete a started session — sets completed_at and calculates duration.
    */
   static async completeSession(taskId, userId, date) {
+    const now = getUTCNow();
     const [result] = await db.query(
       `UPDATE task_completions
-       SET completed_at = NOW(),
-           duration_minutes = TIMESTAMPDIFF(MINUTE, started_at, NOW())
+       SET completed_at = ?,
+           duration_minutes = TIMESTAMPDIFF(MINUTE, started_at, ?)
        WHERE task_id = ? AND user_id = ? AND completion_date = ?
          AND started_at IS NOT NULL AND completed_at IS NULL`,
-      [taskId, userId, date]
+      [now, now, taskId, userId, date]
     );
     return result.affectedRows > 0;
   }

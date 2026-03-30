@@ -19,6 +19,45 @@ function getToday(timezone = 'UTC') {
   // en-CA returns YYYY-MM-DD
 }
 
+/**
+ * Get current UTC timestamp as a MySQL-compatible string (YYYY-MM-DD HH:MM:SS).
+ * Use this instead of MySQL NOW() to keep JS date and timestamps on the same clock.
+ */
+function getUTCNow() {
+  return new Date().toISOString().slice(0, 19).replace('T', ' ');
+}
+
+/**
+ * Get the effective "working day" date for a user, accounting for night shifts.
+ * If the user's shift crosses midnight and the current time is in the post-midnight
+ * portion of the shift, returns yesterday's date instead of today's.
+ *
+ * @param {string} timezone - IANA timezone (e.g. 'Asia/Kolkata')
+ * @param {string} shiftStart - Shift start time as HH:MM:SS (e.g. '19:30:00')
+ * @param {number} shiftHours - Shift duration in hours (e.g. 9)
+ * @returns {string} YYYY-MM-DD date string
+ */
+function getEffectiveWorkDate(timezone, shiftStart, shiftHours) {
+  if (!shiftStart || !shiftHours) return getToday(timezone);
+
+  const now = new Date();
+  const timeStr = now.toLocaleTimeString('en-GB', { timeZone: timezone, hour12: false });
+  const [currentH, currentM] = timeStr.split(':').map(Number);
+  const currentDecimal = currentH + currentM / 60;
+
+  const [shiftH, shiftM] = shiftStart.split(':').map(Number);
+  const shiftStartDecimal = shiftH + shiftM / 60;
+  const shiftEndDecimal = shiftStartDecimal + parseFloat(shiftHours);
+
+  // Only applies when shift crosses midnight and we're in the post-midnight portion
+  if (shiftEndDecimal > 24 && currentDecimal < (shiftEndDecimal - 24)) {
+    const yesterday = new Date(now.getTime() - 86400000);
+    return yesterday.toLocaleDateString('en-CA', { timeZone: timezone });
+  }
+
+  return now.toLocaleDateString('en-CA', { timeZone: timezone });
+}
+
 function getDayOfWeek(timezone = 'UTC') {
   return new Date().toLocaleDateString('en-US', { timeZone: timezone, weekday: 'long' });
 }
@@ -120,4 +159,4 @@ function getTimezoneOffsetString(timezone) {
   return `${sign}${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 }
 
-module.exports = { getNow, getToday, getDayOfWeek, formatTime, getTimezoneOffsetMinutes, getTimezoneOffsetString, isScheduledForDate };
+module.exports = { getNow, getToday, getUTCNow, getEffectiveWorkDate, getDayOfWeek, formatTime, getTimezoneOffsetMinutes, getTimezoneOffsetString, isScheduledForDate };

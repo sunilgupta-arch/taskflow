@@ -1,5 +1,6 @@
 const DashboardService = require('../services/dashboardService');
 const { ROLES } = require('../config/constants');
+const { getEffectiveWorkDate } = require('../utils/timezone');
 
 class DashboardController {
   static async show(req, res) {
@@ -11,7 +12,8 @@ class DashboardController {
       if (['CLIENT_ADMIN', 'LOCAL_ADMIN', 'CLIENT_MANAGER', 'LOCAL_MANAGER'].includes(role)) {
         data = await DashboardService.getAdminDashboard(req.user.organization_type, tz);
       } else {
-        data = await DashboardService.getUserDashboard(req.user.id, req.query.date || null, tz);
+        const workDate = getEffectiveWorkDate(tz, req.user.shift_start, req.user.shift_hours);
+        data = await DashboardService.getUserDashboard(req.user.id, req.query.date || null, tz, workDate);
       }
 
       res.render('dashboard/index', {

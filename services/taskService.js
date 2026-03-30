@@ -2,7 +2,7 @@ const TaskModel = require('../models/Task');
 const TaskCompletion = require('../models/TaskCompletion');
 const RewardModel = require('../models/Reward');
 const db = require('../config/db');
-const { getToday } = require('../utils/timezone');
+const { getToday, getUTCNow } = require('../utils/timezone');
 
 class TaskService {
   static async createTask(data, creator) {
@@ -107,14 +107,14 @@ class TaskService {
     return TaskModel.findById(taskId);
   }
 
-  static async completeTask(taskId, userId) {
+  static async completeTask(taskId, userId, workDate = null) {
     const task = await TaskModel.findById(taskId);
     if (!task) throw new Error('Task not found');
     if (task.assigned_to !== userId) throw new Error('You can only complete tasks assigned to you');
 
     // Recurring tasks use logCompletion instead
     if (task.type === 'recurring' && task.status === 'active') {
-      return this.logCompletion(taskId, userId);
+      return this.logCompletion(taskId, userId, workDate);
     }
 
     // Adhoc task: original flow
@@ -125,7 +125,7 @@ class TaskService {
       await conn.beginTransaction();
 
       await conn.query(
-        `UPDATE tasks SET status = 'completed', completed_at = NOW() WHERE id = ?`, [taskId]
+        `UPDATE tasks SET status = 'completed', completed_at = ? WHERE id = ?`, [getUTCNow(), taskId]
       );
 
       if (task.reward_amount && parseFloat(task.reward_amount) > 0) {
@@ -233,14 +233,14 @@ class TaskService {
     }
   }
 
-  static async startSession(taskId, userId, timezone = 'UTC') {
+  static async startSession(taskId, userId, timezone = 'UTC', workDate = null) {
     const task = await TaskModel.findById(taskId);
     if (!task) throw new Error('Task not found');
     if (task.assigned_to !== userId) throw new Error('You can only start tasks assigned to you');
     if (task.type !== 'recurring') throw new Error('Only recurring tasks use session tracking');
     if (task.status !== 'active') throw new Error('Task is not active');
 
-    const today = getToday(timezone);
+    const today = workDate || getToday(timezone);
 
     const [[existing]] = await db.query(
       `SELECT id, started_at, completed_at FROM task_completions WHERE task_id = ? AND user_id = ? AND completion_date = ?`,
@@ -253,14 +253,14 @@ class TaskService {
     return task;
   }
 
-  static async completeSession(taskId, userId, timezone = 'UTC') {
+  static async completeSession(taskId, userId, timezone = 'UTC', workDate = null) {
     const task = await TaskModel.findById(taskId);
     if (!task) throw new Error('Task not found');
     if (task.assigned_to !== userId) throw new Error('You can only complete tasks assigned to you');
     if (task.type !== 'recurring') throw new Error('Only recurring tasks use session tracking');
     if (task.status !== 'active') throw new Error('Task is not active');
 
-    const today = getToday(timezone);
+    const today = workDate || getToday(timezone);
 
     const [[session]] = await db.query(
       `SELECT id, started_at, completed_at FROM task_completions WHERE task_id = ? AND user_id = ? AND completion_date = ?`,
@@ -273,10 +273,11 @@ class TaskService {
     try {
       await conn.beginTransaction();
 
+      const now = getUTCNow();
       await conn.query(
-        `UPDATE task_completions SET completed_at = NOW(), duration_minutes = TIMESTAMPDIFF(MINUTE, started_at, NOW())
+        `UPDATE task_completions SET completed_at = ?, duration_minutes = TIMESTAMPDIFF(MINUTE, started_at, ?)
          WHERE task_id = ? AND user_id = ? AND completion_date = ?`,
-        [taskId, userId, today]
+        [now, now, taskId, userId, today]
       );
 
       if (task.reward_amount && parseFloat(task.reward_amount) > 0) {

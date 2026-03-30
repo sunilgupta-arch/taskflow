@@ -5,7 +5,7 @@ const DashboardService = require('../services/dashboardService');
 const { ApiResponse, getPagination, getPaginationMeta } = require('../utils/response');
 const db = require('../config/db');
 const { getIO } = require('../config/socket');
-const { getToday, isScheduledForDate } = require('../utils/timezone');
+const { getToday, getEffectiveWorkDate, isScheduledForDate } = require('../utils/timezone');
 
 class TaskController {
   // GET /tasks
@@ -14,7 +14,8 @@ class TaskController {
       const { page = 1, limit = 20, status, type, search, completed_period, assigned_to } = req.query;
       const role = req.user.role_name;
 
-      const today = getToday(req.user.org_timezone || 'UTC');
+      const tz = req.user.org_timezone || 'UTC';
+      const today = getEffectiveWorkDate(tz, req.user.shift_start, req.user.shift_hours);
       const filters = { status, type, search, completed_period, assigned_to, page, limit, orgType: req.user.organization_type, todayDate: today };
       if (role === 'LOCAL_USER') {
         filters.user = req.user.id;
@@ -60,7 +61,8 @@ class TaskController {
   static async myTasks(req, res) {
     try {
       const { page = 1, limit = 20, status, type, search, schedule = 'today' } = req.query;
-      const today = getToday(req.user.org_timezone || 'UTC');
+      const tz = req.user.org_timezone || 'UTC';
+      const today = getEffectiveWorkDate(tz, req.user.shift_start, req.user.shift_hours);
       const filters = {
         status, type, search, schedule, page, limit,
         orgType: req.user.organization_type,
@@ -279,7 +281,7 @@ class TaskController {
       let recentCompletions = [];
       const isRecurring = task.type === 'recurring' && task.status === 'active';
       if (isRecurring && task.assigned_to) {
-        const today = getToday(req.user.org_timezone || 'UTC');
+        const today = getEffectiveWorkDate(req.user.org_timezone || 'UTC', req.user.shift_start, req.user.shift_hours);
         todaySession = await TaskCompletion.getTodaySession(task.id, task.assigned_to, today);
         isStartedToday = !!(todaySession && todaySession.started_at && !todaySession.completed_at);
         isCompletedToday = !!(todaySession && todaySession.completed_at);
@@ -403,7 +405,8 @@ class TaskController {
   static async startSession(req, res) {
     try {
       const tz = req.user.org_timezone || 'UTC';
-      const task = await TaskService.startSession(req.params.id, req.user.id, tz);
+      const workDate = getEffectiveWorkDate(tz, req.user.shift_start, req.user.shift_hours);
+      const task = await TaskService.startSession(req.params.id, req.user.id, tz, workDate);
       return ApiResponse.success(res, task, 'Task started');
     } catch (err) {
       return ApiResponse.error(res, err.message, 400);
@@ -414,7 +417,8 @@ class TaskController {
   static async completeSession(req, res) {
     try {
       const tz = req.user.org_timezone || 'UTC';
-      const task = await TaskService.completeSession(req.params.id, req.user.id, tz);
+      const workDate = getEffectiveWorkDate(tz, req.user.shift_start, req.user.shift_hours);
+      const task = await TaskService.completeSession(req.params.id, req.user.id, tz, workDate);
 
       const io = getIO();
       io.to('admins').emit('task:completed', {
@@ -431,7 +435,9 @@ class TaskController {
   // POST /tasks/complete/:id
   static async complete(req, res) {
     try {
-      const task = await TaskService.completeTask(req.params.id, req.user.id);
+      const tz = req.user.org_timezone || 'UTC';
+      const workDate = getEffectiveWorkDate(tz, req.user.shift_start, req.user.shift_hours);
+      const task = await TaskService.completeTask(req.params.id, req.user.id, workDate);
 
       // Notify all admins/managers via socket
       const io = getIO();
@@ -485,7 +491,8 @@ class TaskController {
     try {
       const { date } = req.body;
       const tz = req.user.org_timezone || 'UTC';
-      const task = await TaskService.logCompletion(req.params.id, req.user.id, date || null, tz);
+      const workDate = date || getEffectiveWorkDate(tz, req.user.shift_start, req.user.shift_hours);
+      const task = await TaskService.logCompletion(req.params.id, req.user.id, workDate, tz);
 
       const io = getIO();
       io.to('admins').emit('task:completion-logged', {
@@ -506,7 +513,8 @@ class TaskController {
     try {
       const { date } = req.body;
       const tz = req.user.org_timezone || 'UTC';
-      const task = await TaskService.undoCompletion(req.params.id, req.user.id, date || null, tz);
+      const workDate = date || getEffectiveWorkDate(tz, req.user.shift_start, req.user.shift_hours);
+      const task = await TaskService.undoCompletion(req.params.id, req.user.id, workDate, tz);
       return ApiResponse.success(res, task, 'Completion undone');
     } catch (err) {
       return ApiResponse.error(res, err.message, 400);
@@ -518,7 +526,7 @@ class TaskController {
     try {
       const userId = req.user.id;
       const tz = req.user.org_timezone || 'UTC';
-      const today = getToday(tz);
+      const today = getEffectiveWorkDate(tz, req.user.shift_start, req.user.shift_hours);
       const tasks = await DashboardService.getTasksForDate(userId, today, today);
 
       // Filter to only incomplete tasks for today

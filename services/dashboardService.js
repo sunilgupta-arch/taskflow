@@ -23,8 +23,8 @@ class DashboardService {
     };
   }
 
-  static async getUserDashboard(userId, viewDate = null, timezone = 'UTC') {
-    const today = getToday(timezone);
+  static async getUserDashboard(userId, viewDate = null, timezone = 'UTC', workDate = null) {
+    const today = workDate || getToday(timezone);
     const selectedDate = viewDate || today;
     const isToday = selectedDate === today;
     const isFuture = selectedDate > today;
