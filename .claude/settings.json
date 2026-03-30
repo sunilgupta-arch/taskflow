@@ -8,7 +8,8 @@
       "Bash(grep -E \"\\\\.\\(js|sql\\)$\")",
       "Bash(npm install:*)",
       "Bash(node -e \"require\\(''./services/googleDriveService''\\)\")",
-      "Bash(node test_drive.js)"
+      "Bash(node test_drive.js)",
+      "Bash(find /c/Users/sunil-work/Documents/projects/taskflow -name *attendance* -type f)"
     ]
   }
 }

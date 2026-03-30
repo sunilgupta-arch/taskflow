@@ -53,6 +53,7 @@ const authRoutes = require('./routes/auth');
 const taskRoutes = require('./routes/tasks');
 const chatRoutes = require('./routes/chat');
 const driveRoutes = require('./routes/drive');
+const helpRoutes = require('./routes/help');
 const indexRoutes = require('./routes/index');
 
 app.get('/', (req, res) => res.redirect('/dashboard'));
@@ -60,6 +61,7 @@ app.use('/auth', authRoutes);
 app.use('/tasks', taskRoutes);
 app.use('/chat', chatRoutes);
 app.use('/drive', driveRoutes);
+app.use('/help', helpRoutes);
 app.use('/', indexRoutes);
 
 // ============================================================

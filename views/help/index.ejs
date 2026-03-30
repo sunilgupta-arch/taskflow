@@ -1,0 +1,1082 @@
+<style>
+  .help-container {
+    display: flex;
+    gap: 1.25rem;
+    height: calc(100vh - 120px);
+  }
+
+  /* --- Sidebar --- */
+  .help-sidebar {
+    width: 280px;
+    min-width: 280px;
+    background: var(--tf-surface);
+    border: 1px solid var(--tf-border);
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .help-sidebar-header {
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--tf-border);
+  }
+
+  .help-sidebar-header h6 {
+    font-family: var(--tf-font-mono);
+    font-size: 0.7rem;
+    letter-spacing: 1px;
+    margin: 0 0 0.75rem;
+    color: var(--tf-text-muted);
+    text-transform: uppercase;
+  }
+
+  .help-search {
+    position: relative;
+  }
+  .help-search i {
+    position: absolute;
+    left: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--tf-text-muted);
+    font-size: 0.8rem;
+  }
+  .help-search input {
+    width: 100%;
+    background: var(--tf-surface-2);
+    border: 1px solid var(--tf-border);
+    color: var(--tf-text);
+    border-radius: 8px;
+    padding: 0.45rem 0.75rem 0.45rem 2.25rem;
+    font-size: 0.8rem;
+    font-family: var(--tf-font);
+  }
+  .help-search input:focus { outline: none; border-color: var(--tf-accent); }
+
+  .help-nav {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0.5rem 0;
+  }
+
+  .help-nav-section {
+    padding: 0.5rem 1.25rem 0.2rem;
+    font-family: var(--tf-font-mono);
+    font-size: 0.55rem;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--tf-text-muted);
+  }
+
+  .help-nav-item {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.5rem 1.25rem;
+    font-size: 0.8rem;
+    color: var(--tf-nav-link);
+    cursor: pointer;
+    transition: all 0.15s;
+    border-left: 3px solid transparent;
+    text-decoration: none;
+  }
+  .help-nav-item:hover { color: var(--tf-text); background: var(--tf-surface-2); }
+  .help-nav-item.active { color: var(--tf-text); background: var(--tf-surface-2); border-left-color: var(--tf-accent); }
+  .help-nav-item i { font-size: 0.85rem; width: 18px; text-align: center; }
+
+  /* --- Content --- */
+  .help-content {
+    flex: 1;
+    background: var(--tf-surface);
+    border: 1px solid var(--tf-border);
+    border-radius: 12px;
+    overflow-y: auto;
+    min-width: 0;
+  }
+
+  .help-topic {
+    display: none;
+    padding: 2rem 2.5rem;
+  }
+  .help-topic.active { display: block; }
+
+  .help-topic h2 {
+    font-family: var(--tf-font-mono);
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    color: var(--tf-text);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .help-topic h2 i { color: var(--tf-accent); }
+
+  .help-topic .topic-desc {
+    font-size: 0.85rem;
+    color: var(--tf-text-muted);
+    margin-bottom: 1.5rem;
+    line-height: 1.5;
+  }
+
+  .help-topic h3 {
+    font-family: var(--tf-font-mono);
+    font-size: 0.8rem;
+    font-weight: 700;
+    margin: 1.75rem 0 0.75rem;
+    color: var(--tf-accent);
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  .help-topic h4 {
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin: 1.25rem 0 0.5rem;
+    color: var(--tf-text);
+  }
+
+  .help-topic p {
+    font-size: 0.84rem;
+    color: var(--tf-text);
+    line-height: 1.7;
+    margin-bottom: 0.75rem;
+  }
+
+  .help-topic ul, .help-topic ol {
+    padding-left: 1.5rem;
+    margin-bottom: 0.75rem;
+  }
+  .help-topic li {
+    font-size: 0.84rem;
+    color: var(--tf-text);
+    line-height: 1.7;
+    margin-bottom: 0.3rem;
+  }
+
+  .help-step {
+    display: flex;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+    align-items: flex-start;
+  }
+
+  .help-step-num {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: rgba(0,212,255,0.15);
+    color: var(--tf-accent);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--tf-font-mono);
+    font-size: 0.7rem;
+    font-weight: 700;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  .help-step-content {
+    flex: 1;
+  }
+  .help-step-content strong {
+    display: block;
+    font-size: 0.84rem;
+    margin-bottom: 2px;
+  }
+  .help-step-content p {
+    margin: 0;
+    font-size: 0.8rem;
+    color: var(--tf-text-muted);
+    line-height: 1.5;
+  }
+
+  .help-tip {
+    background: rgba(0,212,255,0.06);
+    border: 1px solid rgba(0,212,255,0.15);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    margin: 1rem 0;
+    font-size: 0.8rem;
+    color: var(--tf-text);
+    display: flex;
+    gap: 0.6rem;
+    align-items: flex-start;
+  }
+  .help-tip i { color: var(--tf-accent); font-size: 0.9rem; flex-shrink: 0; margin-top: 2px; }
+
+  .help-warn {
+    background: rgba(245,158,11,0.08);
+    border: 1px solid rgba(245,158,11,0.2);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    margin: 1rem 0;
+    font-size: 0.8rem;
+    color: var(--tf-text);
+    display: flex;
+    gap: 0.6rem;
+    align-items: flex-start;
+  }
+  .help-warn i { color: #f59e0b; font-size: 0.9rem; flex-shrink: 0; margin-top: 2px; }
+
+  .help-role-badge {
+    display: inline-block;
+    font-size: 0.6rem;
+    font-family: var(--tf-font-mono);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    margin-right: 4px;
+  }
+  .help-role-badge.admin { background: rgba(239,68,68,0.15); color: #ef4444; }
+  .help-role-badge.manager { background: rgba(124,58,237,0.15); color: #a78bfa; }
+  .help-role-badge.user { background: rgba(16,185,129,0.15); color: #10b981; }
+  .help-role-badge.all { background: rgba(0,212,255,0.15); color: var(--tf-accent); }
+
+  /* Welcome / landing */
+  .help-welcome {
+    padding: 3rem 2.5rem;
+    text-align: center;
+  }
+  .help-welcome i { font-size: 3rem; color: var(--tf-accent); opacity: 0.3; }
+  .help-welcome h2 { justify-content: center; margin-top: 1rem; }
+  .help-welcome p { color: var(--tf-text-muted); max-width: 500px; margin: 0 auto; }
+
+  .help-quick-links {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+    text-align: left;
+  }
+
+  .help-quick-link {
+    background: var(--tf-surface-2);
+    border: 1px solid var(--tf-border);
+    border-radius: 10px;
+    padding: 1rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .help-quick-link:hover { border-color: var(--tf-accent); transform: translateY(-2px); }
+  .help-quick-link i { font-size: 1.1rem; color: var(--tf-accent); }
+  .help-quick-link .ql-title { font-size: 0.8rem; font-weight: 600; margin-top: 0.5rem; }
+  .help-quick-link .ql-desc { font-size: 0.7rem; color: var(--tf-text-muted); margin-top: 0.2rem; }
+
+  /* Mobile toggle */
+  .help-sidebar-toggle {
+    display: none;
+    background: var(--tf-surface-2);
+    border: 1px solid var(--tf-border);
+    color: var(--tf-text);
+    border-radius: 8px;
+    padding: 0.5rem 1rem;
+    font-size: 0.8rem;
+    cursor: pointer;
+    margin-bottom: 0.75rem;
+    width: 100%;
+    text-align: left;
+  }
+
+  @media (max-width: 768px) {
+    .help-container { flex-direction: column; height: auto; }
+    .help-sidebar { width: 100%; min-width: 100%; max-height: 50vh; }
+    .help-sidebar-toggle { display: block; }
+    .help-content { min-height: 60vh; }
+  }
+</style>
+
+<button class="help-sidebar-toggle" onclick="document.querySelector('.help-sidebar').classList.toggle('show')">
+  <i class="bi bi-list me-2"></i>Browse Topics
+</button>
+
+<div class="help-container">
+  <!-- Sidebar -->
+  <div class="help-sidebar">
+    <div class="help-sidebar-header">
+      <h6>Help Topics</h6>
+      <div class="help-search">
+        <i class="bi bi-search"></i>
+        <input type="text" id="helpSearchInput" placeholder="Search help..." oninput="filterHelpTopics()">
+      </div>
+    </div>
+    <div class="help-nav" id="helpNav">
+      <div class="help-nav-section">Getting Started</div>
+      <div class="help-nav-item active" data-topic="welcome" onclick="showTopic('welcome', this)">
+        <i class="bi bi-house"></i> Welcome
+      </div>
+      <div class="help-nav-item" data-topic="roles" onclick="showTopic('roles', this)">
+        <i class="bi bi-people"></i> Roles & Permissions
+      </div>
+      <div class="help-nav-item" data-topic="dashboard" onclick="showTopic('dashboard', this)">
+        <i class="bi bi-grid-1x2"></i> Dashboard
+      </div>
+
+      <div class="help-nav-section">Tasks</div>
+      <div class="help-nav-item" data-topic="tasks-overview" onclick="showTopic('tasks-overview', this)">
+        <i class="bi bi-check2-square"></i> Task Overview
+      </div>
+      <div class="help-nav-item" data-topic="tasks-create" onclick="showTopic('tasks-create', this)">
+        <i class="bi bi-plus-circle"></i> Creating Tasks
+      </div>
+      <div class="help-nav-item" data-topic="tasks-recurring" onclick="showTopic('tasks-recurring', this)">
+        <i class="bi bi-arrow-repeat"></i> Recurring Tasks
+      </div>
+      <div class="help-nav-item" data-topic="tasks-complete" onclick="showTopic('tasks-complete', this)">
+        <i class="bi bi-check-circle"></i> Completing Tasks
+      </div>
+
+      <div class="help-nav-section">Communication</div>
+      <div class="help-nav-item" data-topic="chat" onclick="showTopic('chat', this)">
+        <i class="bi bi-chat-dots"></i> Chat
+      </div>
+      <div class="help-nav-item" data-topic="chat-attach" onclick="showTopic('chat-attach', this)">
+        <i class="bi bi-paperclip"></i> Chat Attachments
+      </div>
+
+      <div class="help-nav-section">Storage</div>
+      <div class="help-nav-item" data-topic="drive" onclick="showTopic('drive', this)">
+        <i class="bi bi-cloud"></i> Drive
+      </div>
+
+      <div class="help-nav-section">Finance</div>
+      <div class="help-nav-item" data-topic="rewards" onclick="showTopic('rewards', this)">
+        <i class="bi bi-coin"></i> Rewards
+      </div>
+
+      <div class="help-nav-section">Team Management</div>
+      <div class="help-nav-item" data-topic="users" onclick="showTopic('users', this)">
+        <i class="bi bi-person-gear"></i> User Management
+      </div>
+      <div class="help-nav-item" data-topic="leaves" onclick="showTopic('leaves', this)">
+        <i class="bi bi-calendar-x"></i> Leave Management
+      </div>
+      <div class="help-nav-item" data-topic="attendance" onclick="showTopic('attendance', this)">
+        <i class="bi bi-calendar-check"></i> Attendance
+      </div>
+
+      <div class="help-nav-section">Reports & Analytics</div>
+      <div class="help-nav-item" data-topic="reports" onclick="showTopic('reports', this)">
+        <i class="bi bi-bar-chart-line"></i> Reports
+      </div>
+      <div class="help-nav-item" data-topic="progress" onclick="showTopic('progress', this)">
+        <i class="bi bi-graph-up"></i> My Progress
+      </div>
+
+      <div class="help-nav-section">Account & System</div>
+      <div class="help-nav-item" data-topic="account" onclick="showTopic('account', this)">
+        <i class="bi bi-person-circle"></i> Account Settings
+      </div>
+      <div class="help-nav-item" data-topic="shifts" onclick="showTopic('shifts', this)">
+        <i class="bi bi-clock-history"></i> Shifts & Auto-Logout
+      </div>
+      <div class="help-nav-item" data-topic="backups" onclick="showTopic('backups', this)">
+        <i class="bi bi-database-down"></i> Backups
+      </div>
+    </div>
+  </div>
+
+  <!-- Content -->
+  <div class="help-content" id="helpContent">
+
+    <!-- ==================== WELCOME ==================== -->
+    <div class="help-topic active" id="topic-welcome">
+      <div class="help-welcome">
+        <i class="bi bi-question-circle"></i>
+        <h2>Welcome to TaskFlow Help</h2>
+        <p>Find guides, tips, and answers to help you get the most out of TaskFlow. Select a topic from the sidebar or pick a quick link below.</p>
+        <div class="help-quick-links">
+          <div class="help-quick-link" onclick="showTopic('tasks-overview')">
+            <i class="bi bi-check2-square"></i>
+            <div class="ql-title">Tasks</div>
+            <div class="ql-desc">Create, assign, and complete tasks</div>
+          </div>
+          <div class="help-quick-link" onclick="showTopic('chat')">
+            <i class="bi bi-chat-dots"></i>
+            <div class="ql-title">Chat</div>
+            <div class="ql-desc">Direct & group messaging</div>
+          </div>
+          <div class="help-quick-link" onclick="showTopic('drive')">
+            <i class="bi bi-cloud"></i>
+            <div class="ql-title">Drive</div>
+            <div class="ql-desc">Upload and manage files</div>
+          </div>
+          <div class="help-quick-link" onclick="showTopic('rewards')">
+            <i class="bi bi-coin"></i>
+            <div class="ql-title">Rewards</div>
+            <div class="ql-desc">Track earnings and payments</div>
+          </div>
+          <div class="help-quick-link" onclick="showTopic('roles')">
+            <i class="bi bi-people"></i>
+            <div class="ql-title">Roles</div>
+            <div class="ql-desc">Understand permissions</div>
+          </div>
+          <div class="help-quick-link" onclick="showTopic('reports')">
+            <i class="bi bi-bar-chart-line"></i>
+            <div class="ql-title">Reports</div>
+            <div class="ql-desc">Analytics and reporting</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== ROLES ==================== -->
+    <div class="help-topic" id="topic-roles">
+      <h2><i class="bi bi-people"></i> Roles & Permissions</h2>
+      <p class="topic-desc">TaskFlow has two organization types and five user roles. Each role has specific permissions that control what you can see and do.</p>
+
+      <h3>Organization Types</h3>
+      <p><strong>CLIENT</strong> &mdash; The external client organization. They create tasks, track progress, and view reports on the work being done.</p>
+      <p><strong>LOCAL</strong> &mdash; The internal team that executes tasks, earns rewards, and manages day-to-day operations.</p>
+
+      <h3>User Roles</h3>
+
+      <h4><span class="help-role-badge admin">CLIENT_ADMIN</span> Client Administrator</h4>
+      <p>Full control within the Client organization. Can create and assign tasks, set rewards, view all reports, and monitor team performance. Has access to the admin dashboard with complete analytics.</p>
+
+      <h4><span class="help-role-badge manager">CLIENT_MANAGER</span> Client Manager</h4>
+      <p>Can create and assign tasks, set rewards, and view team reports. Similar to Client Admin but cannot manage users or system settings.</p>
+
+      <h4><span class="help-role-badge admin">LOCAL_ADMIN</span> Local Administrator</h4>
+      <p>Full system administration. Can create and manage users, manage tasks, approve/reject leaves, mark rewards as paid, create database backups, and access all reports. This is the most powerful role.</p>
+
+      <h4><span class="help-role-badge manager">LOCAL_MANAGER</span> Local Manager</h4>
+      <p>Can manage the local team: create users (LOCAL_USER only), create/reassign tasks, approve leaves, and view reports. Cannot manage system settings or backups.</p>
+
+      <h4><span class="help-role-badge user">LOCAL_USER</span> Local User</h4>
+      <p>The individual team member. Can view assigned tasks, pick available tasks, complete tasks, create personal adhoc tasks, apply for leaves, and view their own progress. Cannot start new chats but can reply in conversations they are part of.</p>
+
+      <div class="help-tip">
+        <i class="bi bi-lightbulb"></i>
+        <div>Your current role is shown at the bottom of the sidebar under your name. The features visible in your sidebar are based on your role.</div>
+      </div>
+    </div>
+
+    <!-- ==================== DASHBOARD ==================== -->
+    <div class="help-topic" id="topic-dashboard">
+      <h2><i class="bi bi-grid-1x2"></i> Dashboard</h2>
+      <p class="topic-desc">The dashboard is your home screen. It shows a snapshot of today's activity, tailored to your role.</p>
+
+      <h3>Admin & Manager Dashboard</h3>
+      <span class="help-role-badge admin">ADMIN</span> <span class="help-role-badge manager">MANAGER</span>
+      <ul>
+        <li><strong>Task Statistics</strong> &mdash; Total tasks, pending, in progress, and completed counts</li>
+        <li><strong>Reward Summary</strong> &mdash; Total earned, pending amount, and paid amount</li>
+        <li><strong>Attendance Overview</strong> &mdash; Total users, logged in today, on leave, on weekly off</li>
+        <li><strong>Per-User Metrics</strong> &mdash; Task completion rates and reward tracking for each team member</li>
+      </ul>
+
+      <h3>User Dashboard</h3>
+      <span class="help-role-badge user">LOCAL_USER</span>
+      <ul>
+        <li><strong>Today's Tasks</strong> &mdash; Your tasks for the current date (recurring + one-time)</li>
+        <li><strong>Personal Statistics</strong> &mdash; Tasks completed, in progress, and pending</li>
+        <li><strong>Reward Summary</strong> &mdash; Your earnings, pending, and paid amounts</li>
+        <li><strong>Date Navigation</strong> &mdash; Browse tasks for different dates</li>
+      </ul>
+
+      <div class="help-tip">
+        <i class="bi bi-lightbulb"></i>
+        <div>Click on any statistic card on the dashboard to navigate directly to the detailed view.</div>
+      </div>
+    </div>
+
+    <!-- ==================== TASKS OVERVIEW ==================== -->
+    <div class="help-topic" id="topic-tasks-overview">
+      <h2><i class="bi bi-check2-square"></i> Task Overview</h2>
+      <p class="topic-desc">Tasks are the core of TaskFlow. There are two main types: one-time (adhoc) tasks and recurring tasks.</p>
+
+      <h3>Task Types</h3>
+      <h4>One-Time (Adhoc) Tasks</h4>
+      <p>A single task that needs to be done once. It has a due date and moves through statuses: <strong>Pending</strong> &rarr; <strong>In Progress</strong> &rarr; <strong>Completed</strong>.</p>
+
+      <h4>Recurring Tasks</h4>
+      <p>Tasks that repeat on a schedule. Patterns include:</p>
+      <ul>
+        <li><strong>Daily</strong> &mdash; Repeats every working day</li>
+        <li><strong>Weekly</strong> &mdash; Repeats on specific days of the week</li>
+      </ul>
+      <p>Each day's instance is tracked separately. You can start a session, complete it, and even log completions for past dates.</p>
+
+      <h3>Task Statuses</h3>
+      <ul>
+        <li><strong style="color:#f59e0b;">Pending</strong> &mdash; Task is created but not yet started</li>
+        <li><strong style="color:var(--tf-accent);">In Progress</strong> &mdash; Work has begun on the task</li>
+        <li><strong style="color:#10b981;">Completed</strong> &mdash; Task is finished. Reward (if any) is automatically created</li>
+        <li><strong style="color:#9ca3af;">Deactivated</strong> &mdash; Task has been disabled by an admin/manager</li>
+      </ul>
+
+      <h3>Task Priority Levels</h3>
+      <ul>
+        <li><strong style="color:#ef4444;">Urgent</strong> &mdash; Needs immediate attention</li>
+        <li><strong style="color:#f59e0b;">High</strong> &mdash; Important, should be done soon</li>
+        <li><strong style="color:#3b82f6;">Medium</strong> &mdash; Normal priority</li>
+        <li><strong style="color:#6b7280;">Low</strong> &mdash; Can be done when time allows</li>
+      </ul>
+
+      <h3>Filters & Search</h3>
+      <p>On the Tasks page, you can filter by status, type (once/recurring), schedule (today/daily/weekly), assigned user, and search by title. Use these to quickly find the tasks you need.</p>
+    </div>
+
+    <!-- ==================== CREATING TASKS ==================== -->
+    <div class="help-topic" id="topic-tasks-create">
+      <h2><i class="bi bi-plus-circle"></i> Creating Tasks</h2>
+      <p class="topic-desc">Admins, managers, and users (for themselves) can create tasks.</p>
+      <span class="help-role-badge admin">ADMIN</span> <span class="help-role-badge manager">MANAGER</span> <span class="help-role-badge user">LOCAL_USER</span>
+
+      <h3>Step-by-Step</h3>
+      <div class="help-step">
+        <div class="help-step-num">1</div>
+        <div class="help-step-content">
+          <strong>Navigate to Create Task</strong>
+          <p>Click "Create Task" in the sidebar or the + button on the Tasks page.</p>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">2</div>
+        <div class="help-step-content">
+          <strong>Fill in Task Details</strong>
+          <p>Enter the title, description, priority level, and task type (One-time or Recurring).</p>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">3</div>
+        <div class="help-step-content">
+          <strong>Set Schedule (if recurring)</strong>
+          <p>Choose the recurrence pattern (Daily or Weekly). For weekly, select which days. Optionally set a deadline time and end date.</p>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">4</div>
+        <div class="help-step-content">
+          <strong>Assign &amp; Set Reward</strong>
+          <p>Assign the task to one or more users. Set a reward amount if applicable.</p>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">5</div>
+        <div class="help-step-content">
+          <strong>Submit</strong>
+          <p>Click Create. The assigned user(s) will be notified in real-time.</p>
+        </div>
+      </div>
+
+      <div class="help-warn">
+        <i class="bi bi-exclamation-triangle"></i>
+        <div><strong>LOCAL_USER</strong> can only create tasks for themselves (personal adhoc tasks). They cannot assign tasks to others.</div>
+      </div>
+    </div>
+
+    <!-- ==================== RECURRING TASKS ==================== -->
+    <div class="help-topic" id="topic-tasks-recurring">
+      <h2><i class="bi bi-arrow-repeat"></i> Recurring Tasks</h2>
+      <p class="topic-desc">Recurring tasks automatically repeat on a schedule. Each day's instance is tracked independently.</p>
+
+      <h3>How Recurring Tasks Work</h3>
+      <p>When a recurring task is created, it doesn't generate individual task records for each day. Instead, a single task record exists and daily completions are tracked separately in the background.</p>
+
+      <h3>Daily Workflow</h3>
+      <div class="help-step">
+        <div class="help-step-num">1</div>
+        <div class="help-step-content">
+          <strong>Start Session</strong>
+          <p>Click "Start Session" to begin working on today's instance. This records your start time.</p>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">2</div>
+        <div class="help-step-content">
+          <strong>Complete Session</strong>
+          <p>When done, click "Complete Session". This records end time and calculates duration. A reward entry is created if applicable.</p>
+        </div>
+      </div>
+
+      <h3>Additional Actions</h3>
+      <ul>
+        <li><strong>Log Completion</strong> &mdash; Missed a day? You can log a completion for a past date.</li>
+        <li><strong>Undo Completion</strong> &mdash; Made a mistake? Undo today's completion to reset it.</li>
+      </ul>
+
+      <div class="help-tip">
+        <i class="bi bi-lightbulb"></i>
+        <div>Recurring tasks respect your weekly off day. They won't appear on your off day unless specifically configured.</div>
+      </div>
+    </div>
+
+    <!-- ==================== COMPLETING TASKS ==================== -->
+    <div class="help-topic" id="topic-tasks-complete">
+      <h2><i class="bi bi-check-circle"></i> Completing Tasks</h2>
+      <p class="topic-desc">How to mark tasks as complete and what happens next.</p>
+
+      <h3>One-Time Tasks</h3>
+      <ol>
+        <li>Open the task from your task list</li>
+        <li>Click <strong>"Start"</strong> to move it to In Progress</li>
+        <li>Work on the task. You can add comments and upload attachments (up to 5 files)</li>
+        <li>Click <strong>"Complete"</strong> when finished</li>
+      </ol>
+
+      <h3>Recurring Tasks</h3>
+      <ol>
+        <li>Go to the task detail page</li>
+        <li>Click <strong>"Start Session"</strong> to begin today's work</li>
+        <li>Click <strong>"Complete Session"</strong> when done</li>
+      </ol>
+
+      <h3>What Happens on Completion</h3>
+      <ul>
+        <li>Task status updates to <strong>Completed</strong></li>
+        <li>If a reward amount was set, a <strong>reward ledger entry</strong> is automatically created (status: Pending)</li>
+        <li>Admins and managers are <strong>notified in real-time</strong></li>
+        <li>The completion appears in <strong>reports and progress tracking</strong></li>
+      </ul>
+    </div>
+
+    <!-- ==================== CHAT ==================== -->
+    <div class="help-topic" id="topic-chat">
+      <h2><i class="bi bi-chat-dots"></i> Chat</h2>
+      <p class="topic-desc">Real-time messaging for your team. Chat supports direct (1-to-1) and group conversations.</p>
+      <span class="help-role-badge all">ALL USERS</span>
+
+      <h3>Starting a Conversation</h3>
+      <span class="help-role-badge admin">ADMIN</span> <span class="help-role-badge manager">MANAGER</span>
+      <div class="help-step">
+        <div class="help-step-num">1</div>
+        <div class="help-step-content">
+          <strong>Click "New" button</strong>
+          <p>On the Chat page, click the "New" button in the top-right of the conversation list.</p>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">2</div>
+        <div class="help-step-content">
+          <strong>Choose Direct or Group</strong>
+          <p><strong>Direct:</strong> Select one user for a private conversation.<br><strong>Group:</strong> Select multiple users and give the group a name.</p>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">3</div>
+        <div class="help-step-content">
+          <strong>Start Chatting</strong>
+          <p>Type your message and press Enter or click the send button.</p>
+        </div>
+      </div>
+
+      <div class="help-warn">
+        <i class="bi bi-exclamation-triangle"></i>
+        <div><strong>LOCAL_USER</strong> cannot start new conversations. They can only reply in chats that an admin or manager has added them to.</div>
+      </div>
+
+      <h3>Features</h3>
+      <ul>
+        <li><strong>Real-time delivery</strong> &mdash; Messages appear instantly via WebSocket</li>
+        <li><strong>Typing indicators</strong> &mdash; See when someone is typing</li>
+        <li><strong>Unread badges</strong> &mdash; Unread count shown in sidebar and on each conversation</li>
+        <li><strong>Toast + sound alerts</strong> &mdash; Notification chime when a new message arrives</li>
+        <li><strong>Message history</strong> &mdash; Scroll up and load older messages</li>
+        <li><strong>Search</strong> &mdash; Filter conversations by name</li>
+      </ul>
+    </div>
+
+    <!-- ==================== CHAT ATTACHMENTS ==================== -->
+    <div class="help-topic" id="topic-chat-attach">
+      <h2><i class="bi bi-paperclip"></i> Chat Attachments</h2>
+      <p class="topic-desc">Send files in chat by uploading from your computer or picking from your Drive.</p>
+      <span class="help-role-badge all">ALL USERS</span>
+
+      <h3>Sending an Attachment</h3>
+      <div class="help-step">
+        <div class="help-step-num">1</div>
+        <div class="help-step-content">
+          <strong>Click the paperclip icon</strong>
+          <p>Located to the left of the message input field.</p>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">2</div>
+        <div class="help-step-content">
+          <strong>Choose source</strong>
+          <p><strong>Upload File:</strong> Pick a file from your computer.<br><strong>From Drive:</strong> Browse and select a file from your Drive.</p>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">3</div>
+        <div class="help-step-content">
+          <strong>Preview &amp; Send</strong>
+          <p>The file name appears in a preview bar. Optionally type a message, then click send. A progress bar shows the upload status.</p>
+        </div>
+      </div>
+
+      <h3>Receiving Attachments</h3>
+      <ul>
+        <li><strong>Document files</strong> (PDFs, images, docs, sheets) &mdash; Click to open in Google Viewer or browser</li>
+        <li><strong>Other files</strong> (executables, zips, installers) &mdash; Click the <i class="bi bi-cloud-download"></i> button to save it to your Drive's <code>chat_attachments</code> folder</li>
+        <li>Once saved, the button changes to a <strong>green checkmark</strong> and cannot be saved again (no duplicates)</li>
+      </ul>
+
+      <h3>Upload Limits</h3>
+      <ul>
+        <li><span class="help-role-badge user">LOCAL_USER</span> &mdash; 10 MB per file</li>
+        <li><span class="help-role-badge admin">ADMIN</span> <span class="help-role-badge manager">MANAGER</span> &mdash; 100 MB per file</li>
+      </ul>
+
+      <div class="help-tip">
+        <i class="bi bi-lightbulb"></i>
+        <div>All uploaded attachments are automatically stored in your personal <strong>chat_attachments</strong> folder in Google Drive.</div>
+      </div>
+    </div>
+
+    <!-- ==================== DRIVE ==================== -->
+    <div class="help-topic" id="topic-drive">
+      <h2><i class="bi bi-cloud"></i> Drive</h2>
+      <p class="topic-desc">Your personal cloud storage, powered by Google Drive. Each user has their own private folder.</p>
+      <span class="help-role-badge all">ALL USERS</span>
+
+      <h3>First Visit</h3>
+      <p>When you open Drive for the first time, your personal folder is automatically created in the shared Google Drive. You don't need to set anything up.</p>
+
+      <h3>Uploading Files</h3>
+      <div class="help-step">
+        <div class="help-step-num">1</div>
+        <div class="help-step-content">
+          <strong>Click "Upload" or drag &amp; drop</strong>
+          <p>Click the Upload button in the toolbar, or drag files directly onto the page.</p>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">2</div>
+        <div class="help-step-content">
+          <strong>Wait for upload</strong>
+          <p>Progress is shown for each file. Files appear in the grid once uploaded.</p>
+        </div>
+      </div>
+
+      <h3>Managing Files</h3>
+      <ul>
+        <li><strong>Create folders</strong> &mdash; Click "Folder" button in the toolbar</li>
+        <li><strong>Navigate folders</strong> &mdash; Double-click a folder to open it. Use the breadcrumb to go back</li>
+        <li><strong>Rename</strong> &mdash; Click the three-dot menu on any file/folder &rarr; Rename</li>
+        <li><strong>Delete</strong> &mdash; Click the three-dot menu &rarr; Delete (moves to Google Drive trash, recoverable)</li>
+        <li><strong>Download</strong> &mdash; Click the three-dot menu &rarr; Download</li>
+        <li><strong>Open in Google</strong> &mdash; Double-click a file to open it in Google's viewer</li>
+      </ul>
+
+      <h3>Upload Limits</h3>
+      <ul>
+        <li><span class="help-role-badge user">LOCAL_USER</span> &mdash; 10 MB per file</li>
+        <li><span class="help-role-badge admin">ADMIN</span> <span class="help-role-badge manager">MANAGER</span> &mdash; 100 MB per file</li>
+      </ul>
+    </div>
+
+    <!-- ==================== REWARDS ==================== -->
+    <div class="help-topic" id="topic-rewards">
+      <h2><i class="bi bi-coin"></i> Rewards</h2>
+      <p class="topic-desc">When a task has a reward amount set, completing it automatically creates a reward entry in your ledger.</p>
+      <span class="help-role-badge all">ALL USERS</span>
+
+      <h3>How Rewards Work</h3>
+      <div class="help-step">
+        <div class="help-step-num">1</div>
+        <div class="help-step-content">
+          <strong>Task Created with Reward</strong>
+          <p>When a task is created, the creator can set a reward amount (e.g., &#8377;500).</p>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">2</div>
+        <div class="help-step-content">
+          <strong>Task Completed</strong>
+          <p>When you complete the task, a reward ledger entry is automatically created with status <strong>Pending</strong>.</p>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">3</div>
+        <div class="help-step-content">
+          <strong>Admin Marks as Paid</strong>
+          <p>The Local Admin reviews pending rewards and marks them as <strong>Paid</strong> once payment is processed.</p>
+        </div>
+      </div>
+
+      <h3>Rewards Page</h3>
+      <p>Navigate to <strong>Rewards</strong> in the sidebar to see:</p>
+      <ul>
+        <li><strong>Total Earned</strong> &mdash; Sum of all your completed task rewards</li>
+        <li><strong>Pending</strong> &mdash; Amount waiting to be paid</li>
+        <li><strong>Paid</strong> &mdash; Amount already paid out</li>
+        <li><strong>Ledger</strong> &mdash; Detailed list of each reward entry with task, amount, and status</li>
+      </ul>
+
+      <div class="help-tip">
+        <i class="bi bi-lightbulb"></i>
+        <div>Only <span class="help-role-badge admin">LOCAL_ADMIN</span> can mark rewards as paid.</div>
+      </div>
+    </div>
+
+    <!-- ==================== USER MANAGEMENT ==================== -->
+    <div class="help-topic" id="topic-users">
+      <h2><i class="bi bi-person-gear"></i> User Management</h2>
+      <p class="topic-desc">Create and manage team member accounts.</p>
+      <span class="help-role-badge admin">LOCAL_ADMIN</span> <span class="help-role-badge manager">LOCAL_MANAGER</span>
+
+      <h3>Creating a User</h3>
+      <ol>
+        <li>Go to <strong>Users</strong> in the sidebar</li>
+        <li>Click <strong>Add User</strong></li>
+        <li>Fill in: name, email, password, role, weekly off day, shift start time, and shift hours</li>
+        <li>Click Create</li>
+      </ol>
+
+      <div class="help-warn">
+        <i class="bi bi-exclamation-triangle"></i>
+        <div><strong>LOCAL_MANAGER</strong> can only create users with the LOCAL_USER role.</div>
+      </div>
+
+      <h3>Managing Users</h3>
+      <ul>
+        <li><strong>Edit User</strong> &mdash; Update name, email, role, shift settings <span class="help-role-badge admin">LOCAL_ADMIN</span></li>
+        <li><strong>Toggle Active</strong> &mdash; Activate or deactivate a user account <span class="help-role-badge admin">LOCAL_ADMIN</span></li>
+        <li><strong>Reset Password</strong> &mdash; Force a password reset for any user <span class="help-role-badge admin">LOCAL_ADMIN</span></li>
+        <li><strong>View Progress</strong> &mdash; Click on a user to see their task progress and performance</li>
+      </ul>
+    </div>
+
+    <!-- ==================== LEAVE MANAGEMENT ==================== -->
+    <div class="help-topic" id="topic-leaves">
+      <h2><i class="bi bi-calendar-x"></i> Leave Management</h2>
+      <p class="topic-desc">Apply for leave, and admins/managers can approve, reject, or grant leave to team members.</p>
+      <span class="help-role-badge user">LOCAL_USER</span> <span class="help-role-badge manager">LOCAL_MANAGER</span> <span class="help-role-badge admin">LOCAL_ADMIN</span>
+
+      <h3>Applying for Leave</h3>
+      <span class="help-role-badge user">LOCAL_USER</span> <span class="help-role-badge manager">LOCAL_MANAGER</span>
+      <ol>
+        <li>Go to <strong>Leaves</strong> in the sidebar</li>
+        <li>Click <strong>Apply for Leave</strong></li>
+        <li>Select the date range (from &amp; to) and provide a reason</li>
+        <li>Submit. Your request will be <strong>Pending</strong> until approved</li>
+      </ol>
+
+      <h3>Approving / Rejecting Leave</h3>
+      <span class="help-role-badge admin">LOCAL_ADMIN</span> <span class="help-role-badge manager">LOCAL_MANAGER</span>
+      <p>Pending requests appear in the leave list. Click <strong>Approve</strong> or <strong>Reject</strong> and optionally add a remark. The user is notified in real-time.</p>
+
+      <h3>Granting Leave Directly</h3>
+      <span class="help-role-badge admin">LOCAL_ADMIN</span> <span class="help-role-badge manager">LOCAL_MANAGER</span>
+      <p>Admins can grant leave directly to a user, bypassing the application process. This creates a pre-approved leave entry.</p>
+
+      <div class="help-warn">
+        <i class="bi bi-exclamation-triangle"></i>
+        <div>You cannot apply for leave on past dates or create overlapping leave requests.</div>
+      </div>
+    </div>
+
+    <!-- ==================== ATTENDANCE ==================== -->
+    <div class="help-topic" id="topic-attendance">
+      <h2><i class="bi bi-calendar-check"></i> Attendance</h2>
+      <p class="topic-desc">Attendance is tracked automatically when you log in. No manual clock-in required.</p>
+
+      <h3>How It Works</h3>
+      <p>When you log in to TaskFlow, your login time is automatically recorded. This data feeds into the attendance report.</p>
+
+      <h3>My Attendance</h3>
+      <span class="help-role-badge all">ALL LOCAL USERS</span>
+      <p>Go to <strong>My Attendance</strong> in the sidebar to view your personal login history and monthly breakdown.</p>
+
+      <h3>Attendance Report (Team)</h3>
+      <span class="help-role-badge admin">ADMIN</span> <span class="help-role-badge manager">MANAGER</span>
+      <p>The team attendance report shows daily login logs, weekly/monthly statistics, present/absent calendar views, and active user counts.</p>
+    </div>
+
+    <!-- ==================== REPORTS ==================== -->
+    <div class="help-topic" id="topic-reports">
+      <h2><i class="bi bi-bar-chart-line"></i> Reports</h2>
+      <p class="topic-desc">Comprehensive analytics to track team performance, task completion, and more.</p>
+      <span class="help-role-badge admin">ADMIN</span> <span class="help-role-badge manager">MANAGER</span>
+
+      <h3>Available Reports</h3>
+      <ul>
+        <li><strong>All Reports</strong> &mdash; Central hub to access every report</li>
+        <li><strong>Task Completion Report</strong> &mdash; Per-user task completion metrics with counts and percentages</li>
+        <li><strong>Task Day Detail</strong> &mdash; Granular daily task breakdown</li>
+        <li><strong>Overdue Report</strong> &mdash; Tasks that have passed their due date without completion</li>
+        <li><strong>Punctuality Report</strong> &mdash; On-time completion rates</li>
+        <li><strong>Workload Report</strong> &mdash; Task distribution and load analysis across team members</li>
+        <li><strong>Completion Report</strong> &mdash; Overall completion statistics</li>
+        <li><strong>Reward Report</strong> &mdash; Reward earnings and payment status breakdown</li>
+        <li><strong>Attendance Report</strong> &mdash; Team-wide login and presence tracking</li>
+      </ul>
+
+      <div class="help-tip">
+        <i class="bi bi-lightbulb"></i>
+        <div>Most reports support date range filters and user filters. Use these to focus on specific time periods or team members.</div>
+      </div>
+    </div>
+
+    <!-- ==================== PROGRESS ==================== -->
+    <div class="help-topic" id="topic-progress">
+      <h2><i class="bi bi-graph-up"></i> My Progress</h2>
+      <p class="topic-desc">Track your personal performance, task completion, and monthly breakdown.</p>
+      <span class="help-role-badge all">ALL USERS</span>
+
+      <h3>My Progress Page</h3>
+      <p>Shows your personal statistics: tasks completed, in progress, pending, active tasks, and reward summary. You can navigate between dates to see task status for any day.</p>
+
+      <h3>Monthly Report</h3>
+      <p>Access from <strong>My Progress</strong> page. Shows a month-by-month breakdown including:</p>
+      <ul>
+        <li>Adhoc task statistics (total, completed, in progress, pending)</li>
+        <li>Recurring task counts by type (daily, weekly)</li>
+        <li>Daily completion breakdown</li>
+      </ul>
+
+      <h3>Viewing Other Users' Progress</h3>
+      <span class="help-role-badge admin">ADMIN</span> <span class="help-role-badge manager">MANAGER</span>
+      <p>Admins and managers can view any team member's progress by clicking on their name in the Users page.</p>
+    </div>
+
+    <!-- ==================== ACCOUNT ==================== -->
+    <div class="help-topic" id="topic-account">
+      <h2><i class="bi bi-person-circle"></i> Account Settings</h2>
+      <p class="topic-desc">Manage your password and account preferences.</p>
+      <span class="help-role-badge all">ALL USERS</span>
+
+      <h3>Changing Your Password</h3>
+      <ol>
+        <li>Click the <strong>key icon</strong> (<i class="bi bi-key"></i>) at the bottom of the sidebar, next to your name</li>
+        <li>Enter your new password (minimum 6 characters)</li>
+        <li>Confirm the password and click <strong>Reset</strong></li>
+      </ol>
+
+      <h3>Theme Toggle</h3>
+      <p>Click the <strong>sun/moon icon</strong> in the top-right corner of the page to switch between <strong>Dark</strong> and <strong>Light</strong> themes. Your preference is saved automatically.</p>
+
+      <h3>Logging Out</h3>
+      <p>Click the <strong>logout icon</strong> (<i class="bi bi-box-arrow-right"></i>) at the bottom of the sidebar.</p>
+    </div>
+
+    <!-- ==================== SHIFTS ==================== -->
+    <div class="help-topic" id="topic-shifts">
+      <h2><i class="bi bi-clock-history"></i> Shifts & Auto-Logout</h2>
+      <p class="topic-desc">TaskFlow enforces shift-based working hours with automatic session management.</p>
+      <span class="help-role-badge user">LOCAL_USER</span> <span class="help-role-badge manager">LOCAL_MANAGER</span>
+
+      <h3>How Shifts Work</h3>
+      <p>Each user has a configured <strong>shift start time</strong> (e.g., 10:00 AM) and <strong>shift duration</strong> (e.g., 8.5 hours). When your shift is about to end, you'll see a warning.</p>
+
+      <h3>Shift End Warning</h3>
+      <p>5 minutes before your shift ends, a modal appears with a countdown timer. You have two options:</p>
+      <ul>
+        <li><strong>Logout Now</strong> &mdash; End your session immediately</li>
+        <li><strong>Continue (2.5 hrs)</strong> &mdash; Extend your session by 2.5 hours</li>
+      </ul>
+      <p>If you don't respond, you'll be automatically logged out when the countdown reaches zero.</p>
+
+      <h3>Idle Timeout</h3>
+      <p>If you're inactive for 55 minutes, an idle warning modal appears. Click <strong>"I'm Here"</strong> to stay active, or you'll be logged out after 5 minutes.</p>
+
+      <div class="help-tip">
+        <i class="bi bi-lightbulb"></i>
+        <div>Admins are exempt from shift-based auto-logout and idle timeouts.</div>
+      </div>
+
+      <h3>Pending Tasks Reminder</h3>
+      <p>1 hour before your shift ends, if you have incomplete tasks for the day, a reminder modal will pop up listing all pending tasks with links to each one.</p>
+    </div>
+
+    <!-- ==================== BACKUPS ==================== -->
+    <div class="help-topic" id="topic-backups">
+      <h2><i class="bi bi-database-down"></i> Backups</h2>
+      <p class="topic-desc">Create, restore, and manage database backups.</p>
+      <span class="help-role-badge admin">LOCAL_ADMIN</span>
+
+      <h3>Creating a Backup</h3>
+      <p>Go to <strong>Backups</strong> in the sidebar and click <strong>Create Backup</strong>. A .sql file of the entire database is generated and stored on the server.</p>
+
+      <h3>Scheduled Backups</h3>
+      <p>Configure automatic backups in the settings: set the time of day and maximum number of backups to retain.</p>
+
+      <h3>Restoring a Backup</h3>
+      <p>Click <strong>Restore</strong> on any backup in the list to restore the database to that point in time. You can also upload an external .sql file (up to 100MB) and restore from it.</p>
+
+      <div class="help-warn">
+        <i class="bi bi-exclamation-triangle"></i>
+        <div>Restoring a backup <strong>replaces all current data</strong>. Always create a fresh backup before restoring an older one.</div>
+      </div>
+
+      <h3>Managing Backups</h3>
+      <ul>
+        <li><strong>Download</strong> &mdash; Save a backup file to your computer</li>
+        <li><strong>Delete</strong> &mdash; Remove a backup from the server</li>
+      </ul>
+    </div>
+
+  </div>
+</div>
+
+<script>
+function showTopic(topicId, navItem) {
+  // Hide all topics
+  document.querySelectorAll('.help-topic').forEach(function(el) {
+    el.classList.remove('active');
+  });
+
+  // Deactivate all nav items
+  document.querySelectorAll('.help-nav-item').forEach(function(el) {
+    el.classList.remove('active');
+  });
+
+  // Show the selected topic
+  var topic = document.getElementById('topic-' + topicId);
+  if (topic) topic.classList.add('active');
+
+  // Activate nav item
+  if (navItem) {
+    navItem.classList.add('active');
+  } else {
+    var nav = document.querySelector('.help-nav-item[data-topic="' + topicId + '"]');
+    if (nav) nav.classList.add('active');
+  }
+
+  // Scroll content to top
+  document.getElementById('helpContent').scrollTop = 0;
+
+  // Update URL without reload
+  var url = new URL(window.location);
+  url.searchParams.set('topic', topicId);
+  window.history.replaceState({}, '', url);
+}
+
+function filterHelpTopics() {
+  var term = document.getElementById('helpSearchInput').value.toLowerCase();
+
+  // Filter nav items
+  document.querySelectorAll('.help-nav-item').forEach(function(el) {
+    var text = el.textContent.toLowerCase();
+    var topicId = el.dataset.topic;
+    var topicEl = document.getElementById('topic-' + topicId);
+    var topicText = topicEl ? topicEl.textContent.toLowerCase() : '';
+    var match = text.includes(term) || topicText.includes(term);
+    el.style.display = match ? '' : 'none';
+  });
+
+  // Show/hide section labels
+  document.querySelectorAll('.help-nav-section').forEach(function(label) {
+    var next = label.nextElementSibling;
+    var hasVisible = false;
+    while (next && !next.classList.contains('help-nav-section')) {
+      if (next.style.display !== 'none') hasVisible = true;
+      next = next.nextElementSibling;
+    }
+    label.style.display = hasVisible ? '' : 'none';
+  });
+}
+
+// Auto-open topic from URL
+(function() {
+  var activeTopic = '<%= activeTopic || "" %>';
+  if (activeTopic) {
+    showTopic(activeTopic);
+  }
+})();
+</script>
