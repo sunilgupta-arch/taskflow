@@ -8,8 +8,9 @@ const DashboardService = require('../services/dashboardService');
 class ReportController {
   static async completionReport(req, res) {
     try {
+      const todayDate = getToday(req.user.org_timezone || 'UTC');
       const [stats, perUser] = await Promise.all([
-        TaskService.getTaskStats(),
+        TaskService.getTaskStats(null, null, todayDate),
         TaskService.getCompletionPerUser()
       ]);
 

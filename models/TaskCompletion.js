@@ -119,15 +119,17 @@ class TaskCompletion {
   /**
    * Count completions by period for stats.
    */
-  static async countByPeriod(userId = null) {
+  static async countByPeriod(userId = null, todayDate = null) {
     const userFilter = userId ? `AND tc.user_id = ${db.escape(userId)}` : '';
+    const todayExpr = todayDate ? db.escape(todayDate) : 'CURDATE()';
+    const nowExpr = todayDate ? db.escape(todayDate) : 'NOW()';
     const [[stats]] = await db.query(
       `SELECT
         COUNT(*) as total,
-        SUM(CASE WHEN tc.completion_date = CURDATE() THEN 1 ELSE 0 END) as completed_today,
-        SUM(CASE WHEN YEARWEEK(tc.completion_date) = YEARWEEK(NOW()) THEN 1 ELSE 0 END) as completed_this_week,
-        SUM(CASE WHEN MONTH(tc.completion_date) = MONTH(NOW()) AND YEAR(tc.completion_date) = YEAR(NOW()) THEN 1 ELSE 0 END) as completed_this_month,
-        SUM(CASE WHEN YEAR(tc.completion_date) = YEAR(NOW()) THEN 1 ELSE 0 END) as completed_this_year
+        SUM(CASE WHEN tc.completion_date = ${todayExpr} THEN 1 ELSE 0 END) as completed_today,
+        SUM(CASE WHEN YEARWEEK(tc.completion_date) = YEARWEEK(${nowExpr}) THEN 1 ELSE 0 END) as completed_this_week,
+        SUM(CASE WHEN MONTH(tc.completion_date) = MONTH(${nowExpr}) AND YEAR(tc.completion_date) = YEAR(${nowExpr}) THEN 1 ELSE 0 END) as completed_this_month,
+        SUM(CASE WHEN YEAR(tc.completion_date) = YEAR(${nowExpr}) THEN 1 ELSE 0 END) as completed_this_year
        FROM task_completions tc
        JOIN tasks t ON tc.task_id = t.id
        WHERE t.is_deleted = 0 ${userFilter}`

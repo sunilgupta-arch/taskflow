@@ -14,7 +14,8 @@ class TaskController {
       const { page = 1, limit = 20, status, type, search, completed_period, assigned_to } = req.query;
       const role = req.user.role_name;
 
-      const filters = { status, type, search, completed_period, assigned_to, page, limit, orgType: req.user.organization_type };
+      const today = getToday(req.user.org_timezone || 'UTC');
+      const filters = { status, type, search, completed_period, assigned_to, page, limit, orgType: req.user.organization_type, todayDate: today };
       if (role === 'LOCAL_USER') {
         filters.user = req.user.id;
         filters.role = role;
@@ -23,7 +24,6 @@ class TaskController {
       const { rows, total } = await TaskModel.getAll(filters);
 
       // For recurring tasks, attach today's session status and schedule check
-      const today = getToday(req.user.org_timezone || 'UTC');
       for (const task of rows) {
         if (task.type === 'recurring' && task.status === 'active') {
           task.is_scheduled_today = isScheduledForDate(task, today);
@@ -60,17 +60,18 @@ class TaskController {
   static async myTasks(req, res) {
     try {
       const { page = 1, limit = 20, status, type, search, schedule = 'today' } = req.query;
+      const today = getToday(req.user.org_timezone || 'UTC');
       const filters = {
         status, type, search, schedule, page, limit,
         orgType: req.user.organization_type,
         user: req.user.id,
-        role: 'LOCAL_USER' // reuse individual-row query path
+        role: 'LOCAL_USER', // reuse individual-row query path
+        todayDate: today
       };
 
       const { rows, total } = await TaskModel.getAll(filters);
 
       // For recurring tasks, attach today's session status and schedule check
-      const today = getToday(req.user.org_timezone || 'UTC');
       for (const task of rows) {
         if (task.type === 'recurring' && task.status === 'active') {
           task.is_scheduled_today = isScheduledForDate(task, today);

@@ -5,8 +5,9 @@ const { getToday, getDayOfWeek } = require('../utils/timezone');
 
 class DashboardService {
   static async getAdminDashboard(orgType = null, timezone = 'UTC') {
+    const todayDate = getToday(timezone);
     const [taskStats, rewardSummary, attendanceSummary, perUserStats, perUserRewards] = await Promise.all([
-      TaskService.getTaskStats(null, orgType),
+      TaskService.getTaskStats(null, orgType, todayDate),
       RewardModel.getGlobalSummary(),
       this.getAttendanceSummary(timezone),
       TaskService.getCompletionPerUser(orgType),
@@ -30,7 +31,7 @@ class DashboardService {
     const isPast = selectedDate < today;
 
     const [taskStats, rewardSummary, dayTasks] = await Promise.all([
-      TaskService.getTaskStats(userId),
+      TaskService.getTaskStats(userId, null, today),
       RewardModel.getUserSummary(userId),
       this.getTasksForDate(userId, selectedDate, today)
     ]);

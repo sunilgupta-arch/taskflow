@@ -54,9 +54,12 @@ class TaskModel {
     return result.affectedRows > 0;
   }
 
-  static async getAll({ status, type, assigned_to, created_by, search, completed_period, schedule, page = 1, limit = 20, user, role, orgType } = {}) {
+  static async getAll({ status, type, assigned_to, created_by, search, completed_period, schedule, page = 1, limit = 20, user, role, orgType, todayDate } = {}) {
     let where = ['t.is_deleted = 0'];
     let params = [];
+    // Use timezone-aware date passed from controller, fallback to UTC CURDATE()
+    const todaySql = todayDate ? '?' : 'CURDATE()';
+    const todayParam = todayDate || null;
 
     // Visibility filtering: CLIENT users should NOT see LOCAL-created tasks
     if (orgType === 'CLIENT') {
@@ -88,10 +91,10 @@ class TaskModel {
     // Completed period filter for dashboard drill-down
     if (completed_period) {
       switch (completed_period) {
-        case 'today': where.push('DATE(t.completed_at) = CURDATE()'); break;
-        case 'week': where.push('YEARWEEK(t.completed_at) = YEARWEEK(NOW())'); break;
-        case 'month': where.push('MONTH(t.completed_at) = MONTH(NOW()) AND YEAR(t.completed_at) = YEAR(NOW())'); break;
-        case 'year': where.push('YEAR(t.completed_at) = YEAR(NOW())'); break;
+        case 'today': where.push(`DATE(t.completed_at) = ${todaySql}`); if (todayParam) params.push(todayParam); break;
+        case 'week': where.push(`YEARWEEK(t.completed_at) = YEARWEEK(${todaySql})`); if (todayParam) params.push(todayParam); break;
+        case 'month': where.push(`MONTH(t.completed_at) = MONTH(${todaySql}) AND YEAR(t.completed_at) = YEAR(${todaySql})`); if (todayParam) { params.push(todayParam); params.push(todayParam); } break;
+        case 'year': where.push(`YEAR(t.completed_at) = YEAR(${todaySql})`); if (todayParam) params.push(todayParam); break;
       }
     }
 
@@ -106,10 +109,12 @@ class TaskModel {
       where.push(`(
         (t.type = 'recurring' AND t.recurrence_pattern = 'daily' AND t.status = 'active')
         OR (t.type = 'recurring' AND t.recurrence_pattern = 'weekly' AND t.status = 'active'
-            AND FIND_IN_SET(DAYOFWEEK(CURDATE()) - 1, t.recurrence_days) > 0)
-        OR (t.type = 'once' AND t.due_date = CURDATE() AND t.status IN ('pending', 'in_progress'))
+            AND FIND_IN_SET(DAYOFWEEK(${todaySql}) - 1, t.recurrence_days) > 0)
+        OR (t.type = 'once' AND t.due_date = ${todaySql} AND t.status IN ('pending', 'in_progress'))
       )`);
-      where.push(`(SELECT weekly_off_day FROM users WHERE id = t.assigned_to) != DAYNAME(CURDATE())`);
+      if (todayParam) { params.push(todayParam); params.push(todayParam); }
+      where.push(`(SELECT weekly_off_day FROM users WHERE id = t.assigned_to) != DAYNAME(${todaySql})`);
+      if (todayParam) params.push(todayParam);
     }
 
     const whereClause = `WHERE ${where.join(' AND ')}`;
@@ -201,24 +206,46 @@ class TaskModel {
     return rows;
   }
 
-  static async getCompletionStats(period = 'today') {
+  static async getCompletionStats(period = 'today', todayDate = null) {
     let adhocDateFilter, recurringDateFilter;
+    const adhocParams = [];
+    const recurringParams = [];
     switch (period) {
       case 'today':
-        adhocDateFilter = 'DATE(completed_at) = CURDATE()';
-        recurringDateFilter = 'completion_date = CURDATE()';
+        if (todayDate) {
+          adhocDateFilter = 'DATE(completed_at) = ?'; adhocParams.push(todayDate);
+          recurringDateFilter = 'completion_date = ?'; recurringParams.push(todayDate);
+        } else {
+          adhocDateFilter = 'DATE(completed_at) = CURDATE()';
+          recurringDateFilter = 'completion_date = CURDATE()';
+        }
         break;
       case 'week':
-        adhocDateFilter = 'YEARWEEK(completed_at) = YEARWEEK(NOW())';
-        recurringDateFilter = 'YEARWEEK(completion_date) = YEARWEEK(NOW())';
+        if (todayDate) {
+          adhocDateFilter = 'YEARWEEK(completed_at) = YEARWEEK(?)'; adhocParams.push(todayDate);
+          recurringDateFilter = 'YEARWEEK(completion_date) = YEARWEEK(?)'; recurringParams.push(todayDate);
+        } else {
+          adhocDateFilter = 'YEARWEEK(completed_at) = YEARWEEK(NOW())';
+          recurringDateFilter = 'YEARWEEK(completion_date) = YEARWEEK(NOW())';
+        }
         break;
       case 'month':
-        adhocDateFilter = 'MONTH(completed_at) = MONTH(NOW()) AND YEAR(completed_at) = YEAR(NOW())';
-        recurringDateFilter = 'MONTH(completion_date) = MONTH(NOW()) AND YEAR(completion_date) = YEAR(NOW())';
+        if (todayDate) {
+          adhocDateFilter = 'MONTH(completed_at) = MONTH(?) AND YEAR(completed_at) = YEAR(?)'; adhocParams.push(todayDate, todayDate);
+          recurringDateFilter = 'MONTH(completion_date) = MONTH(?) AND YEAR(completion_date) = YEAR(?)'; recurringParams.push(todayDate, todayDate);
+        } else {
+          adhocDateFilter = 'MONTH(completed_at) = MONTH(NOW()) AND YEAR(completed_at) = YEAR(NOW())';
+          recurringDateFilter = 'MONTH(completion_date) = MONTH(NOW()) AND YEAR(completion_date) = YEAR(NOW())';
+        }
         break;
       case 'year':
-        adhocDateFilter = 'YEAR(completed_at) = YEAR(NOW())';
-        recurringDateFilter = 'YEAR(completion_date) = YEAR(NOW())';
+        if (todayDate) {
+          adhocDateFilter = 'YEAR(completed_at) = YEAR(?)'; adhocParams.push(todayDate);
+          recurringDateFilter = 'YEAR(completion_date) = YEAR(?)'; recurringParams.push(todayDate);
+        } else {
+          adhocDateFilter = 'YEAR(completed_at) = YEAR(NOW())';
+          recurringDateFilter = 'YEAR(completion_date) = YEAR(NOW())';
+        }
         break;
       default:
         adhocDateFilter = '1=1';
@@ -227,12 +254,14 @@ class TaskModel {
 
     const [[adhoc]] = await db.query(
       `SELECT COUNT(*) as total FROM tasks
-       WHERE status = 'completed' AND is_deleted = 0 AND type = 'once' AND ${adhocDateFilter}`
+       WHERE status = 'completed' AND is_deleted = 0 AND type = 'once' AND ${adhocDateFilter}`,
+      adhocParams
     );
     const [[recurring]] = await db.query(
       `SELECT COUNT(*) as total FROM task_completions tc
        JOIN tasks t ON tc.task_id = t.id
-       WHERE t.is_deleted = 0 AND ${recurringDateFilter}`
+       WHERE t.is_deleted = 0 AND ${recurringDateFilter}`,
+      recurringParams
     );
     return (parseInt(adhoc.total) || 0) + (parseInt(recurring.total) || 0);
   }

@@ -226,7 +226,11 @@
 
                 <% if (task.assigned_to === user.id && !['deactivated'].includes(task.status)) { %>
                   <% if (task.type === 'recurring' && task.status === 'active') { %>
-                    <% if (task.is_completed_today) { %>
+                    <% if (!task.is_scheduled_today) { %>
+                    <button class="btn-tf" style="font-size:0.65rem;padding:2px 8px;background:rgba(107,114,128,0.1);color:#6b7280;border:1px solid rgba(107,114,128,0.3);cursor:not-allowed;opacity:0.6;" disabled>
+                      <i class="bi bi-play-fill"></i> Start
+                    </button>
+                    <% } else if (task.is_completed_today) { %>
                     <button class="btn-tf" style="font-size:0.65rem;padding:2px 8px;background:rgba(16,185,129,0.1);color:#10b981;border:1px solid rgba(16,185,129,0.3);cursor:not-allowed;opacity:0.6;" disabled>
                       <i class="bi bi-check-circle-fill"></i> Done
                     </button>
@@ -253,7 +257,7 @@
                 <% } %>
 
                 <% if (((['CLIENT_ADMIN', 'CLIENT_MANAGER'].includes(user.role_name)) || (['LOCAL_ADMIN', 'LOCAL_MANAGER'].includes(user.role_name) && task.created_by_org === 'LOCAL') || isOwnerWithin24h) && task.status !== 'deactivated' && task.status !== 'completed') { %>
-                <button class="btn-tf" style="font-size:0.65rem;padding:2px 8px;background:rgba(245,158,11,0.1);color:#f59e0b;border:1px solid rgba(245,158,11,0.3);"
+                <button class="btn-tf" style="font-size:0.65rem;padding:2px 8px;background:rgba(239,68,68,0.1);color:#ef4444;border:1px solid rgba(239,68,68,0.3);"
                   onclick="deactivateTask(<%= task.id %>)">
                   Deactivate
                 </button>

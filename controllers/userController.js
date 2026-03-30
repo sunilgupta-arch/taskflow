@@ -128,8 +128,9 @@ class UserController {
       const tz = req.user.org_timezone || targetUser.org_timezone || 'UTC';
       const selectedDate = req.query.date || getToday(tz);
 
+      const todayDate = getToday(tz);
       const [taskStats, rewardSummary, activeTasks, pendingTasks, recentAdhocCompleted, adhocDayTasks, recurringTasks] = await Promise.all([
-        TaskService.getTaskStats(req.params.id),
+        TaskService.getTaskStats(req.params.id, null, todayDate),
         RewardModel.getUserSummary(req.params.id),
         db.query(
           `SELECT t.id, t.title, t.type, t.due_date, t.created_at, u.name as created_by_name

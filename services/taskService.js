@@ -400,9 +400,12 @@ class TaskService {
     return attachments;
   }
 
-  static async getTaskStats(userId = null, orgType = null) {
+  static async getTaskStats(userId = null, orgType = null, todayDate = null) {
     let userFilter = userId ? `AND (t.assigned_to = ${db.escape(userId)} OR t.created_by = ${db.escape(userId)})` : '';
     let orgFilter = orgType === 'CLIENT' ? "AND t.created_by_org = 'CLIENT'" : '';
+    // Use timezone-aware date if provided, otherwise fallback to UTC CURDATE()/NOW()
+    const todayExpr = todayDate ? db.escape(todayDate) : 'CURDATE()';
+    const nowExpr = todayDate ? db.escape(todayDate) : 'NOW()';
 
     // One-time task stats (status-based)
     const [[onceStats]] = await db.query(
@@ -411,10 +414,10 @@ class TaskService {
         SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending,
         SUM(CASE WHEN status = 'in_progress' THEN 1 ELSE 0 END) as in_progress,
         SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed,
-        SUM(CASE WHEN status = 'completed' AND DATE(completed_at) = CURDATE() THEN 1 ELSE 0 END) as completed_today,
-        SUM(CASE WHEN status = 'completed' AND YEARWEEK(completed_at) = YEARWEEK(NOW()) THEN 1 ELSE 0 END) as completed_this_week,
-        SUM(CASE WHEN status = 'completed' AND MONTH(completed_at) = MONTH(NOW()) AND YEAR(completed_at) = YEAR(NOW()) THEN 1 ELSE 0 END) as completed_this_month,
-        SUM(CASE WHEN status = 'completed' AND YEAR(completed_at) = YEAR(NOW()) THEN 1 ELSE 0 END) as completed_this_year,
+        SUM(CASE WHEN status = 'completed' AND DATE(completed_at) = ${todayExpr} THEN 1 ELSE 0 END) as completed_today,
+        SUM(CASE WHEN status = 'completed' AND YEARWEEK(completed_at) = YEARWEEK(${nowExpr}) THEN 1 ELSE 0 END) as completed_this_week,
+        SUM(CASE WHEN status = 'completed' AND MONTH(completed_at) = MONTH(${nowExpr}) AND YEAR(completed_at) = YEAR(${nowExpr}) THEN 1 ELSE 0 END) as completed_this_month,
+        SUM(CASE WHEN status = 'completed' AND YEAR(completed_at) = YEAR(${nowExpr}) THEN 1 ELSE 0 END) as completed_this_year,
         SUM(CASE WHEN type = 'once' THEN 1 ELSE 0 END) as type_once
        FROM tasks t WHERE is_deleted = 0 AND type = 'once' ${userFilter} ${orgFilter}`
     );
@@ -433,10 +436,10 @@ class TaskService {
     const [[completionStats]] = await db.query(
       `SELECT
         COUNT(*) as completed,
-        SUM(CASE WHEN tc.completion_date = CURDATE() THEN 1 ELSE 0 END) as completed_today,
-        SUM(CASE WHEN YEARWEEK(tc.completion_date) = YEARWEEK(NOW()) THEN 1 ELSE 0 END) as completed_this_week,
-        SUM(CASE WHEN MONTH(tc.completion_date) = MONTH(NOW()) AND YEAR(tc.completion_date) = YEAR(NOW()) THEN 1 ELSE 0 END) as completed_this_month,
-        SUM(CASE WHEN YEAR(tc.completion_date) = YEAR(NOW()) THEN 1 ELSE 0 END) as completed_this_year
+        SUM(CASE WHEN tc.completion_date = ${todayExpr} THEN 1 ELSE 0 END) as completed_today,
+        SUM(CASE WHEN YEARWEEK(tc.completion_date) = YEARWEEK(${nowExpr}) THEN 1 ELSE 0 END) as completed_this_week,
+        SUM(CASE WHEN MONTH(tc.completion_date) = MONTH(${nowExpr}) AND YEAR(tc.completion_date) = YEAR(${nowExpr}) THEN 1 ELSE 0 END) as completed_this_month,
+        SUM(CASE WHEN YEAR(tc.completion_date) = YEAR(${nowExpr}) THEN 1 ELSE 0 END) as completed_this_year
        FROM task_completions tc
        JOIN tasks t ON tc.task_id = t.id
        WHERE t.is_deleted = 0 ${recurringUserFilter} ${orgFilter}`
