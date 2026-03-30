@@ -1,0 +1,1662 @@
+<style>
+  .chat-container {
+    display: flex;
+    height: calc(100vh - 120px);
+    background: var(--tf-surface);
+    border: 1px solid var(--tf-border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  /* --- Left Panel: Conversation List --- */
+  .chat-sidebar {
+    width: 320px;
+    min-width: 320px;
+    border-right: 1px solid var(--tf-border);
+    display: flex;
+    flex-direction: column;
+    background: var(--tf-surface);
+  }
+
+  .chat-sidebar-header {
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--tf-border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+
+  .chat-sidebar-header h6 {
+    font-family: var(--tf-font-mono);
+    font-size: 0.75rem;
+    letter-spacing: 1px;
+    margin: 0;
+    color: var(--tf-text-muted);
+    text-transform: uppercase;
+  }
+
+  .chat-search {
+    padding: 0.75rem 1.25rem;
+    border-bottom: 1px solid var(--tf-border);
+  }
+
+  .chat-search input {
+    background: var(--tf-surface-2);
+    border: 1px solid var(--tf-border);
+    color: var(--tf-text);
+    border-radius: 8px;
+    padding: 0.45rem 0.75rem 0.45rem 2.25rem;
+    font-size: 0.8rem;
+    width: 100%;
+    font-family: var(--tf-font);
+  }
+  .chat-search input:focus { outline: none; border-color: var(--tf-accent); }
+
+  .chat-search-wrap {
+    position: relative;
+  }
+  .chat-search-wrap i {
+    position: absolute;
+    left: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--tf-text-muted);
+    font-size: 0.8rem;
+  }
+
+  .chat-list {
+    flex: 1;
+    overflow-y: auto;
+  }
+
+  .chat-list-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.85rem 1.25rem;
+    cursor: pointer;
+    border-bottom: 1px solid var(--tf-border);
+    transition: background 0.15s;
+    text-decoration: none;
+    color: inherit;
+  }
+  .chat-list-item:hover { background: var(--tf-surface-2); }
+  .chat-list-item.active { background: var(--tf-surface-2); border-left: 3px solid var(--tf-accent); }
+
+  .chat-avatar {
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--tf-font-mono);
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #000;
+    flex-shrink: 0;
+  }
+  .chat-avatar.direct { background: linear-gradient(135deg, var(--tf-accent), var(--tf-accent-2)); }
+  .chat-avatar.group { background: linear-gradient(135deg, var(--tf-accent-2), #ec4899); }
+
+  .chat-list-info { flex: 1; min-width: 0; }
+
+  .chat-list-name {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--tf-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .chat-list-preview {
+    font-size: 0.75rem;
+    color: var(--tf-text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-top: 2px;
+  }
+
+  .chat-list-meta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+
+  .chat-list-time {
+    font-size: 0.6rem;
+    color: var(--tf-text-muted);
+    font-family: var(--tf-font-mono);
+  }
+
+  .chat-unread-badge {
+    background: var(--tf-accent);
+    color: #000;
+    font-size: 0.6rem;
+    font-weight: 700;
+    font-family: var(--tf-font-mono);
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .chat-org-tag {
+    font-size: 0.55rem;
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+  }
+  .chat-org-tag.CLIENT { background: rgba(0,212,255,0.15); color: var(--tf-accent); }
+  .chat-org-tag.LOCAL { background: rgba(124,58,237,0.15); color: #a78bfa; }
+
+  /* --- Right Panel: Messages --- */
+  .chat-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .chat-main-header {
+    padding: 0.85rem 1.25rem;
+    border-bottom: 1px solid var(--tf-border);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    background: var(--tf-surface);
+  }
+
+  .chat-main-header .chat-header-name {
+    font-size: 0.9rem;
+    font-weight: 600;
+  }
+
+  .chat-main-header .chat-header-sub {
+    font-size: 0.7rem;
+    color: var(--tf-text-muted);
+  }
+
+  .chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .chat-empty {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--tf-text-muted);
+    font-size: 0.85rem;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .chat-empty i { font-size: 2.5rem; opacity: 0.3; }
+
+  .msg-bubble {
+    max-width: 70%;
+    padding: 0.6rem 0.9rem;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    line-height: 1.45;
+    position: relative;
+    word-wrap: break-word;
+  }
+
+  .msg-row { display: flex; align-items: flex-end; gap: 0.5rem; }
+  .msg-row.sent { justify-content: flex-end; }
+  .msg-row.received { justify-content: flex-start; }
+
+  .msg-row.sent .msg-bubble {
+    background: linear-gradient(135deg, rgba(0,212,255,0.2), rgba(124,58,237,0.15));
+    border: 1px solid rgba(0,212,255,0.25);
+    color: var(--tf-text);
+    border-bottom-right-radius: 4px;
+  }
+
+  .msg-row.received .msg-bubble {
+    background: var(--tf-surface-2);
+    border: 1px solid var(--tf-border);
+    color: var(--tf-text);
+    border-bottom-left-radius: 4px;
+  }
+
+  .msg-sender {
+    font-size: 0.65rem;
+    font-weight: 700;
+    margin-bottom: 2px;
+    color: var(--tf-accent-2);
+  }
+
+  .msg-time {
+    font-size: 0.55rem;
+    margin-top: 4px;
+    opacity: 0.7;
+    text-align: right;
+    font-family: var(--tf-font-mono);
+  }
+
+  .msg-row.sent .msg-time { color: var(--tf-text-muted); }
+
+  .msg-date-divider {
+    text-align: center;
+    margin: 0.75rem 0;
+    font-size: 0.65rem;
+    color: var(--tf-text-muted);
+    font-family: var(--tf-font-mono);
+    letter-spacing: 0.5px;
+  }
+
+  .msg-date-divider span {
+    background: var(--tf-surface);
+    padding: 0.2rem 0.75rem;
+    border: 1px solid var(--tf-border);
+    border-radius: 20px;
+  }
+
+  .load-more-btn {
+    align-self: center;
+    font-size: 0.7rem;
+    color: var(--tf-accent);
+    cursor: pointer;
+    padding: 0.3rem 0.75rem;
+    border: 1px solid var(--tf-border);
+    border-radius: 20px;
+    background: var(--tf-surface-2);
+    margin-bottom: 0.5rem;
+  }
+  .load-more-btn:hover { border-color: var(--tf-accent); }
+
+  /* --- Chat Input --- */
+  .chat-input-area {
+    padding: 0.85rem 1.25rem;
+    border-top: 1px solid var(--tf-border);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: var(--tf-surface);
+  }
+
+  .chat-input-area input {
+    flex: 1;
+    background: var(--tf-surface-2);
+    border: 1px solid var(--tf-border);
+    color: var(--tf-text);
+    border-radius: 24px;
+    padding: 0.55rem 1rem;
+    font-size: 0.85rem;
+    font-family: var(--tf-font);
+  }
+  .chat-input-area input:focus { outline: none; border-color: var(--tf-accent); }
+
+  .chat-send-btn {
+    width: 38px; height: 38px;
+    border-radius: 50%;
+    background: var(--tf-accent);
+    color: #000;
+    border: none;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+  .chat-send-btn:hover { background: #00b8d9; }
+  .chat-send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* Attachment button */
+  .chat-attach-btn {
+    width: 38px; height: 38px;
+    border-radius: 50%;
+    background: var(--tf-surface-2);
+    color: var(--tf-text-muted);
+    border: 1px solid var(--tf-border);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: all 0.15s;
+    flex-shrink: 0;
+    position: relative;
+  }
+  .chat-attach-btn:hover { color: var(--tf-accent); border-color: var(--tf-accent); }
+
+  /* Attach menu dropdown */
+  .attach-menu {
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 0;
+    background: var(--tf-surface);
+    border: 1px solid var(--tf-border);
+    border-radius: 10px;
+    padding: 0.35rem 0;
+    min-width: 180px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+    z-index: 50;
+    display: none;
+  }
+  .attach-menu.show { display: block; }
+
+  .attach-menu button {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    width: 100%;
+    padding: 0.55rem 1rem;
+    background: none;
+    border: none;
+    color: var(--tf-text);
+    font-size: 0.8rem;
+    cursor: pointer;
+    text-align: left;
+    transition: background 0.15s;
+  }
+  .attach-menu button:hover { background: var(--tf-surface-2); }
+  .attach-menu button i { font-size: 0.9rem; width: 18px; text-align: center; }
+
+  /* Attachment preview bar (shown before sending) */
+  .attach-preview {
+    display: none;
+    padding: 0.5rem 1.25rem;
+    border-top: 1px solid var(--tf-border);
+    background: var(--tf-surface-2);
+    align-items: center;
+    gap: 0.75rem;
+  }
+  .attach-preview.show { display: flex; }
+
+  .attach-preview-icon {
+    width: 36px; height: 36px;
+    border-radius: 8px;
+    background: rgba(0,212,255,0.1);
+    color: var(--tf-accent);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1rem;
+    flex-shrink: 0;
+  }
+
+  .attach-preview-info { flex: 1; min-width: 0; }
+
+  .attach-preview-name {
+    font-size: 0.78rem;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .attach-preview-size {
+    font-size: 0.6rem;
+    color: var(--tf-text-muted);
+    font-family: var(--tf-font-mono);
+  }
+
+  .attach-preview-remove {
+    background: none; border: none;
+    color: var(--tf-text-muted);
+    cursor: pointer;
+    font-size: 0.85rem;
+    padding: 4px;
+    border-radius: 4px;
+  }
+  .attach-preview-remove:hover { color: var(--tf-danger); background: rgba(239,68,68,0.1); }
+
+  /* Upload progress bar */
+  .chat-upload-bar {
+    display: none;
+    padding: 0.5rem 1.25rem;
+    border-top: 1px solid var(--tf-border);
+    background: var(--tf-surface-2);
+    align-items: center;
+    gap: 0.75rem;
+  }
+  .chat-upload-bar.show { display: flex; }
+
+  .chat-upload-bar .upload-spinner {
+    width: 20px; height: 20px;
+    border: 2px solid var(--tf-border);
+    border-top-color: var(--tf-accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    flex-shrink: 0;
+  }
+
+  .chat-upload-bar .upload-info {
+    flex: 1; min-width: 0;
+  }
+
+  .chat-upload-bar .upload-name {
+    font-size: 0.75rem;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .chat-upload-bar .upload-status {
+    font-size: 0.6rem;
+    color: var(--tf-text-muted);
+    font-family: var(--tf-font-mono);
+  }
+
+  .chat-upload-progress-track {
+    height: 4px;
+    background: var(--tf-border);
+    border-radius: 2px;
+    margin-top: 4px;
+    overflow: hidden;
+  }
+
+  .chat-upload-progress-fill {
+    height: 100%;
+    background: var(--tf-accent);
+    border-radius: 2px;
+    width: 0%;
+    transition: width 0.2s ease;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 0.3; }
+    50% { opacity: 0.7; }
+  }
+
+  /* Attachment in message bubble */
+  .msg-attachment {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.5rem 0.65rem;
+    border-radius: 8px;
+    margin-bottom: 4px;
+    text-decoration: none;
+    color: inherit;
+    transition: background 0.15s;
+    cursor: pointer;
+  }
+
+  .msg-row.sent .msg-attachment {
+    background: var(--tf-surface);
+    border: 1px solid var(--tf-border);
+    border-radius: 8px;
+  }
+  .msg-row.received .msg-attachment {
+    background: var(--tf-surface);
+    border: 1px solid var(--tf-border);
+    border-radius: 8px;
+  }
+  .msg-attachment:hover { opacity: 0.9; }
+
+  .msg-attach-icon {
+    width: 32px; height: 32px;
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.85rem;
+    flex-shrink: 0;
+  }
+
+  .msg-row.sent .msg-attach-icon { background: rgba(0,212,255,0.15); color: var(--tf-accent); }
+  .msg-row.received .msg-attach-icon { background: rgba(0,212,255,0.15); color: var(--tf-accent); }
+
+  .msg-attach-name {
+    font-size: 0.75rem;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 180px;
+  }
+
+  .msg-attach-size {
+    font-size: 0.55rem;
+    opacity: 0.7;
+    font-family: var(--tf-font-mono);
+  }
+
+  .msg-attach-dl {
+    font-size: 0.75rem;
+    opacity: 0.6;
+    flex-shrink: 0;
+  }
+
+  /* Drive picker modal */
+  .drive-picker-modal {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.75);
+    z-index: 210;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+  }
+  .drive-picker-modal.show { display: flex; }
+
+  .drive-picker-body {
+    background: var(--tf-surface);
+    border: 1px solid var(--tf-border);
+    border-radius: 12px;
+    width: 100%; max-width: 520px;
+    max-height: 80vh;
+    display: flex; flex-direction: column;
+  }
+
+  .drive-picker-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0.5rem;
+  }
+
+  .drive-picker-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.55rem 0.75rem;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .drive-picker-item:hover { background: var(--tf-surface-2); }
+  .drive-picker-item.selected { background: rgba(0,212,255,0.1); border: 1px solid rgba(0,212,255,0.3); }
+
+  .drive-picker-item .dp-icon {
+    width: 32px; height: 32px;
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.85rem;
+    flex-shrink: 0;
+  }
+  .drive-picker-item .dp-icon.folder { background: rgba(245,158,11,0.15); color: #f59e0b; }
+  .drive-picker-item .dp-icon.file { background: rgba(100,116,139,0.15); color: #94a3b8; }
+
+  .drive-picker-item .dp-name {
+    font-size: 0.8rem;
+    font-weight: 500;
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .drive-picker-item .dp-size {
+    font-size: 0.6rem;
+    color: var(--tf-text-muted);
+    font-family: var(--tf-font-mono);
+    flex-shrink: 0;
+  }
+
+  /* --- New Chat Modal --- */
+  .new-chat-modal {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.75);
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+  }
+  .new-chat-modal.show { display: flex; }
+
+  .new-chat-body {
+    background: var(--tf-surface);
+    border: 1px solid var(--tf-border);
+    border-radius: 12px;
+    width: 100%; max-width: 480px;
+    max-height: 80vh;
+    display: flex; flex-direction: column;
+  }
+
+  .new-chat-body .modal-header {
+    padding: 1.25rem;
+    border-bottom: 1px solid var(--tf-border);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+
+  .new-chat-body .modal-header h6 {
+    font-family: var(--tf-font-mono);
+    font-size: 0.8rem;
+    letter-spacing: 1px;
+    margin: 0;
+  }
+
+  .new-chat-body .modal-content-area {
+    padding: 1.25rem;
+    overflow-y: auto;
+    flex: 1;
+  }
+
+  .user-select-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.15s;
+    margin-bottom: 0.25rem;
+  }
+  .user-select-item:hover { background: var(--tf-surface-2); }
+  .user-select-item.selected { background: rgba(0,212,255,0.1); border: 1px solid rgba(0,212,255,0.3); }
+
+  .user-select-item input[type="checkbox"] { accent-color: var(--tf-accent); }
+
+  .typing-indicator {
+    font-size: 0.7rem;
+    color: var(--tf-text-muted);
+    font-style: italic;
+    padding: 0 0.5rem;
+    height: 18px;
+  }
+
+  /* Mobile: hide sidebar, show toggle */
+  .chat-back-btn {
+    display: none;
+    background: none; border: none;
+    color: var(--tf-text-muted);
+    font-size: 1.1rem;
+    cursor: pointer;
+    padding: 0;
+  }
+
+  @media (max-width: 768px) {
+    .chat-sidebar { width: 100%; min-width: 100%; }
+    .chat-main { display: none; }
+    .chat-container.conv-open .chat-sidebar { display: none; }
+    .chat-container.conv-open .chat-main { display: flex; }
+    .chat-back-btn { display: inline-flex; }
+  }
+</style>
+
+<div class="chat-container" id="chatContainer">
+  <!-- Left: Conversations -->
+  <div class="chat-sidebar">
+    <div class="chat-sidebar-header">
+      <h6>Conversations</h6>
+      <% if (canInitiate) { %>
+      <button class="btn-tf btn-tf-primary" style="padding:0.3rem 0.6rem;font-size:0.7rem;" onclick="openNewChatModal()">
+        <i class="bi bi-plus-lg me-1"></i>New
+      </button>
+      <% } %>
+    </div>
+    <div class="chat-search">
+      <div class="chat-search-wrap">
+        <i class="bi bi-search"></i>
+        <input type="text" id="chatSearchInput" placeholder="Search conversations..." oninput="filterConversations()">
+      </div>
+    </div>
+    <div class="chat-list" id="chatList">
+      <% if (conversations.length === 0) { %>
+        <div class="chat-empty" style="padding:2rem;">
+          <i class="bi bi-chat-dots"></i>
+          <span>No conversations yet</span>
+        </div>
+      <% } else { %>
+        <% conversations.forEach(function(c) { %>
+          <div class="chat-list-item <%= activeConversationId === c.id ? 'active' : '' %>"
+               data-id="<%= c.id %>"
+               data-search="<%= c.type === 'direct' ? (c.other_user ? c.other_user.name : '') : c.group_name %>"
+               onclick="openConversation(<%= c.id %>)">
+            <div class="chat-avatar <%= c.type %>">
+              <% if (c.type === 'direct' && c.other_user) { %>
+                <%= c.other_user.name.charAt(0).toUpperCase() %>
+              <% } else { %>
+                <i class="bi bi-people-fill" style="font-size:0.9rem;"></i>
+              <% } %>
+            </div>
+            <div class="chat-list-info">
+              <div class="d-flex align-items-center gap-1">
+                <span class="chat-list-name">
+                  <%= c.type === 'direct' ? (c.other_user ? c.other_user.name : 'Unknown') : c.group_name %>
+                </span>
+                <% if (c.type === 'direct' && c.other_user) { %>
+                  <span class="chat-org-tag <%= c.other_user.org_type %>"><%= c.other_user.org_type %></span>
+                <% } %>
+              </div>
+              <div class="chat-list-preview">
+                <% if (c.last_message) { %>
+                  <% if (c.type === 'group' && c.last_message_sender) { %><strong><%= c.last_message_sender.split(' ')[0] %>:</strong> <% } %>
+                  <%= c.last_message.length > 40 ? c.last_message.substring(0, 40) + '...' : c.last_message %>
+                <% } else { %>
+                  <em>No messages yet</em>
+                <% } %>
+              </div>
+            </div>
+            <div class="chat-list-meta">
+              <% if (c.last_message_at) { %>
+                <span class="chat-list-time"><%= formatChatTime(c.last_message_at) %></span>
+              <% } %>
+              <% if (c.unread_count > 0) { %>
+                <span class="chat-unread-badge"><%= c.unread_count > 9 ? '9+' : c.unread_count %></span>
+              <% } %>
+            </div>
+          </div>
+        <% }); %>
+      <% } %>
+    </div>
+  </div>
+
+  <!-- Right: Messages -->
+  <div class="chat-main" id="chatMain">
+    <div id="chatHeaderArea">
+      <!-- Filled dynamically -->
+    </div>
+    <div class="chat-messages" id="chatMessages">
+      <div class="chat-empty">
+        <i class="bi bi-chat-square-text"></i>
+        <span>Select a conversation to start chatting</span>
+      </div>
+    </div>
+    <div id="chatInputArea" style="display:none;">
+      <div class="typing-indicator" id="typingIndicator"></div>
+      <div class="attach-preview" id="attachPreview">
+        <div class="attach-preview-icon"><i class="bi bi-file-earmark"></i></div>
+        <div class="attach-preview-info">
+          <div class="attach-preview-name" id="attachPreviewName"></div>
+          <div class="attach-preview-size" id="attachPreviewSize"></div>
+        </div>
+        <button class="attach-preview-remove" onclick="clearAttachment()"><i class="bi bi-x-lg"></i></button>
+      </div>
+      <div class="chat-upload-bar" id="chatUploadBar">
+        <div class="upload-spinner"></div>
+        <div class="upload-info">
+          <div class="upload-name" id="uploadBarName">Uploading...</div>
+          <div class="upload-status" id="uploadBarStatus">0%</div>
+          <div class="chat-upload-progress-track">
+            <div class="chat-upload-progress-fill" id="uploadBarFill"></div>
+          </div>
+        </div>
+      </div>
+      <div class="chat-input-area">
+        <div style="position:relative;">
+          <button class="chat-attach-btn" onclick="toggleAttachMenu(event)" id="attachBtn">
+            <i class="bi bi-paperclip"></i>
+          </button>
+          <div class="attach-menu" id="attachMenu">
+            <button onclick="triggerLocalUpload()"><i class="bi bi-upload"></i> Upload File</button>
+            <button onclick="openDrivePicker()"><i class="bi bi-cloud"></i> From Drive</button>
+          </div>
+          <input type="file" id="attachFileInput" style="display:none;" onchange="handleAttachFile(this)">
+        </div>
+        <input type="text" id="chatInput" placeholder="Type a message..." autocomplete="off"
+               onkeydown="if(event.key==='Enter')sendMessage()">
+        <button class="chat-send-btn" onclick="sendMessage()" id="sendBtn">
+          <i class="bi bi-send-fill"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- New Chat Modal -->
+<div class="new-chat-modal" id="newChatModal">
+  <div class="new-chat-body">
+    <div class="modal-header">
+      <h6><i class="bi bi-plus-circle me-2"></i>NEW CONVERSATION</h6>
+      <button style="background:none;border:none;color:var(--tf-text-muted);font-size:1.2rem;cursor:pointer;" onclick="closeNewChatModal()">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+    <div class="modal-content-area">
+      <div class="mb-3">
+        <label style="font-size:0.7rem;color:var(--tf-text-muted);display:block;margin-bottom:0.4rem;text-transform:uppercase;letter-spacing:0.5px;">Chat Type</label>
+        <div class="d-flex gap-2">
+          <button class="btn-tf btn-tf-primary" id="btnTypeDirect" onclick="setChatType('direct')" style="flex:1;">
+            <i class="bi bi-person me-1"></i>Direct
+          </button>
+          <button class="btn-tf btn-tf-outline" id="btnTypeGroup" onclick="setChatType('group')" style="flex:1;">
+            <i class="bi bi-people me-1"></i>Group
+          </button>
+        </div>
+      </div>
+      <div id="groupNameField" style="display:none;" class="mb-3">
+        <label style="font-size:0.7rem;color:var(--tf-text-muted);display:block;margin-bottom:0.4rem;text-transform:uppercase;letter-spacing:0.5px;">Group Name</label>
+        <input type="text" id="groupNameInput" class="tf-form-control" placeholder="Enter group name...">
+      </div>
+      <div class="mb-3">
+        <label style="font-size:0.7rem;color:var(--tf-text-muted);display:block;margin-bottom:0.4rem;text-transform:uppercase;letter-spacing:0.5px;">Select Users</label>
+        <div class="chat-search-wrap mb-2">
+          <i class="bi bi-search"></i>
+          <input type="text" id="userSearchInput" class="tf-form-control" style="padding-left:2.25rem;" placeholder="Search users..." oninput="filterUsers()">
+        </div>
+        <div id="userSelectList" style="max-height:300px;overflow-y:auto;">
+          <% users.forEach(function(u) { %>
+          <div class="user-select-item" data-uid="<%= u.id %>" data-name="<%= u.name.toLowerCase() %>" data-org="<%= u.org_type %>" onclick="toggleUserSelect(this)">
+            <input type="checkbox" data-uid="<%= u.id %>">
+            <div class="chat-avatar direct" style="width:32px;height:32px;font-size:0.65rem;">
+              <%= u.name.charAt(0).toUpperCase() %>
+            </div>
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:0.8rem;font-weight:600;"><%= u.name %></div>
+              <div style="font-size:0.65rem;color:var(--tf-text-muted);"><%= u.role_name %></div>
+            </div>
+            <span class="chat-org-tag <%= u.org_type %>"><%= u.org_type %></span>
+          </div>
+          <% }); %>
+        </div>
+      </div>
+    </div>
+    <div style="padding:1rem 1.25rem;border-top:1px solid var(--tf-border);display:flex;justify-content:flex-end;gap:0.5rem;">
+      <button class="btn-tf btn-tf-outline" onclick="closeNewChatModal()">Cancel</button>
+      <button class="btn-tf btn-tf-primary" onclick="createConversation()" id="createChatBtn">Start Chat</button>
+    </div>
+  </div>
+</div>
+
+<!-- Drive Picker Modal -->
+<div class="drive-picker-modal" id="drivePickerModal">
+  <div class="drive-picker-body">
+    <div style="padding:1.25rem;border-bottom:1px solid var(--tf-border);display:flex;align-items:center;justify-content:space-between;">
+      <h6 style="font-family:var(--tf-font-mono);font-size:0.8rem;letter-spacing:1px;margin:0;">
+        <i class="bi bi-cloud me-2"></i>PICK FROM DRIVE
+      </h6>
+      <button style="background:none;border:none;color:var(--tf-text-muted);font-size:1.2rem;cursor:pointer;" onclick="closeDrivePicker()">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+    <div style="padding:0.5rem 1.25rem;border-bottom:1px solid var(--tf-border);">
+      <div class="drive-breadcrumb" id="dpBreadcrumb" style="font-size:0.75rem;">
+        <a href="#" onclick="loadDrivePickerFiles();return false;">My Drive</a>
+      </div>
+    </div>
+    <div class="drive-picker-list" id="drivePickerList">
+      <div style="text-align:center;padding:2rem;color:var(--tf-text-muted);font-size:0.8rem;">Loading...</div>
+    </div>
+    <div style="padding:1rem 1.25rem;border-top:1px solid var(--tf-border);display:flex;justify-content:flex-end;gap:0.5rem;">
+      <button class="btn-tf btn-tf-outline" onclick="closeDrivePicker()">Cancel</button>
+      <button class="btn-tf btn-tf-primary" id="dpSelectBtn" onclick="selectDriveFile()" disabled>Select</button>
+    </div>
+  </div>
+</div>
+
+<%
+  function formatChatTime(date) {
+    if (!date) return '';
+    var d = new Date(date);
+    var now = new Date();
+    var diff = now - d;
+    if (diff < 86400000 && d.getDate() === now.getDate()) {
+      return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+    }
+    if (diff < 604800000) {
+      return d.toLocaleDateString('en-US', { weekday: 'short' });
+    }
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
+%>
+
+<script>
+var currentConversationId = <%= activeConversationId || 'null' %>;
+var currentUserId = <%= user.id %>;
+var chatType = 'direct';
+var typingTimeout = null;
+var maxAttachMB = <%= maxAttachMB %>;
+var socket = io({ withCredentials: true });
+
+// Attachment state
+var pendingAttachment = null; // { type: 'local'|'drive', file, driveFileId, name, size, mime }
+
+// ============ Conversation List ============
+
+function filterConversations() {
+  var term = document.getElementById('chatSearchInput').value.toLowerCase();
+  document.querySelectorAll('.chat-list-item').forEach(function(el) {
+    var name = (el.dataset.search || '').toLowerCase();
+    el.style.display = name.includes(term) ? '' : 'none';
+  });
+}
+
+function openConversation(id) {
+  currentConversationId = id;
+
+  // Update active state in list
+  document.querySelectorAll('.chat-list-item').forEach(function(el) {
+    el.classList.toggle('active', parseInt(el.dataset.id) === id);
+  });
+
+  // Mobile: show messages panel
+  document.getElementById('chatContainer').classList.add('conv-open');
+
+  // Remove unread badge
+  var activeItem = document.querySelector('.chat-list-item[data-id="' + id + '"]');
+  if (activeItem) {
+    var badge = activeItem.querySelector('.chat-unread-badge');
+    if (badge) badge.remove();
+  }
+
+  loadMessages(id);
+}
+
+function goBackToList() {
+  document.getElementById('chatContainer').classList.remove('conv-open');
+  currentConversationId = null;
+}
+
+// ============ Messages ============
+
+async function loadMessages(conversationId, beforeId) {
+  try {
+    var url = '/chat/conversations/' + conversationId + '/messages';
+    if (beforeId) url += '?before=' + beforeId;
+
+    var res = await axios.get(url);
+    var data = res.data.data;
+    var messages = data.messages;
+    var conversation = data.conversation;
+
+    // Render header
+    renderHeader(conversation);
+
+    // Show input area
+    document.getElementById('chatInputArea').style.display = 'block';
+
+    // Render messages
+    var container = document.getElementById('chatMessages');
+
+    if (beforeId) {
+      // Prepend older messages
+      var oldScrollHeight = container.scrollHeight;
+      var html = buildMessagesHTML(messages, false);
+      container.insertAdjacentHTML('afterbegin', html);
+      container.scrollTop = container.scrollHeight - oldScrollHeight;
+    } else {
+      var html = '';
+      if (messages.length >= 50) {
+        html += '<div class="load-more-btn" onclick="loadOlderMessages()">Load older messages</div>';
+      }
+      html += buildMessagesHTML(messages, true);
+      container.innerHTML = html;
+      container.scrollTop = container.scrollHeight;
+    }
+
+    // Mark as read
+    axios.post('/chat/conversations/' + conversationId + '/read');
+
+    // Join socket room
+    socket.emit('chat:join', conversationId);
+  } catch (err) {
+    console.error('Failed to load messages:', err);
+  }
+}
+
+function loadOlderMessages() {
+  var firstMsg = document.querySelector('.msg-row[data-mid]');
+  if (firstMsg) {
+    loadMessages(currentConversationId, firstMsg.dataset.mid);
+  }
+}
+
+function renderHeader(conversation) {
+  var name, sub, avatarClass, avatarContent;
+
+  if (conversation.type === 'direct') {
+    var other = conversation.participants.find(function(p) { return p.id !== currentUserId; }) || conversation.participants[0];
+    name = other.name;
+    sub = other.role_name + ' &middot; ' + other.org_type;
+    avatarClass = 'direct';
+    avatarContent = other.name.charAt(0).toUpperCase();
+  } else {
+    name = conversation.name || 'Group';
+    sub = conversation.participants.map(function(p) { return p.name.split(' ')[0]; }).join(', ');
+    avatarClass = 'group';
+    avatarContent = '<i class="bi bi-people-fill" style="font-size:0.9rem;"></i>';
+  }
+
+  document.getElementById('chatHeaderArea').innerHTML =
+    '<div class="chat-main-header">' +
+      '<button class="chat-back-btn" onclick="goBackToList()"><i class="bi bi-arrow-left"></i></button>' +
+      '<div class="chat-avatar ' + avatarClass + '">' + avatarContent + '</div>' +
+      '<div><div class="chat-header-name">' + escapeHtml(name) + '</div>' +
+      '<div class="chat-header-sub">' + sub + '</div></div>' +
+    '</div>';
+}
+
+function isViewableType(mime, name) {
+  if (!mime) return false;
+  // Documents, images, PDFs, text — viewable in browser / Google viewer
+  if (mime.startsWith('image/')) return true;
+  if (mime === 'application/pdf') return true;
+  if (mime.startsWith('text/')) return true;
+  if (mime.includes('word') || mime.includes('document')) return true;
+  if (mime.includes('sheet') || mime.includes('excel') || mime.includes('csv')) return true;
+  if (mime.includes('presentation') || mime.includes('powerpoint')) return true;
+  if (mime.includes('google-apps')) return true;
+  // Common viewable extensions
+  var n = (name || '').toLowerCase();
+  if (/\.(pdf|doc|docx|xls|xlsx|csv|ppt|pptx|txt|jpg|jpeg|png|gif|svg|webp)$/.test(n)) return true;
+  return false;
+}
+
+function buildAttachmentHTML(m) {
+  if (!m.attachment_drive_id) return '';
+  var icon = getAttachIcon(m.attachment_mime);
+  var size = m.attachment_size ? formatBytes(m.attachment_size) : '';
+  var viewable = isViewableType(m.attachment_mime, m.attachment_name);
+  var link = m.attachment_link || '#';
+  var isSender = m.sender_id === currentUserId;
+  var alreadySaved = m.saved_to_drive || isSender;
+
+  var html = '<div class="msg-attachment" style="cursor:default;">';
+  html += '<div class="msg-attach-icon"><i class="bi bi-' + icon + '"></i></div>';
+  html += '<div style="flex:1;min-width:0;">';
+  html += '<div class="msg-attach-name">' + escapeHtml(m.attachment_name) + '</div>';
+  if (size) html += '<div class="msg-attach-size">' + size + '</div>';
+  html += '</div>';
+
+  if (viewable) {
+    // Open in browser / Google viewer
+    html += '<a href="' + link + '" target="_blank" class="msg-attach-dl" title="Open" style="cursor:pointer;text-decoration:none;color:inherit;"><i class="bi bi-box-arrow-up-right"></i></a>';
+  } else if (alreadySaved) {
+    // Already saved — show checkmark, disabled
+    html += '<span class="msg-attach-dl" title="Saved to Drive" style="color:var(--tf-success);font-size:0.85rem;"><i class="bi bi-check-lg"></i></span>';
+  } else {
+    // Save to Drive button
+    var safeName = escapeHtml(m.attachment_name).replace(/'/g, "\\'");
+    html += '<button onclick="event.stopPropagation();saveToDrive(\'' + m.attachment_drive_id + '\',\'' + safeName + '\',' + m.id + ',this)" class="msg-attach-dl" title="Save to your Drive" style="background:none;border:none;cursor:pointer;color:var(--tf-accent);font-size:0.85rem;padding:2px 4px;border-radius:4px;">';
+    html += '<i class="bi bi-cloud-download"></i>';
+    html += '</button>';
+  }
+
+  html += '</div>';
+  return html;
+}
+
+function getAttachIcon(mime) {
+  if (!mime) return 'file-earmark';
+  if (mime.startsWith('image/')) return 'file-image';
+  if (mime === 'application/pdf') return 'file-pdf';
+  if (mime.includes('word') || mime.includes('document')) return 'file-word';
+  if (mime.includes('sheet') || mime.includes('excel')) return 'file-spreadsheet';
+  if (mime.startsWith('video/')) return 'file-play';
+  if (mime.startsWith('audio/')) return 'file-music';
+  if (mime.includes('zip') || mime.includes('rar') || mime.includes('tar')) return 'file-zip';
+  return 'file-earmark';
+}
+
+function formatBytes(bytes) {
+  if (!bytes) return '';
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / 1048576).toFixed(1) + ' MB';
+}
+
+function buildMessagesHTML(messages, isInitial) {
+  var html = '';
+  var lastDate = '';
+
+  messages.forEach(function(m) {
+    var msgDate = new Date(m.created_at).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+    if (msgDate !== lastDate) {
+      html += '<div class="msg-date-divider"><span>' + msgDate + '</span></div>';
+      lastDate = msgDate;
+    }
+
+    var isSent = m.sender_id === currentUserId;
+    var time = new Date(m.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+
+    html += '<div class="msg-row ' + (isSent ? 'sent' : 'received') + '" data-mid="' + m.id + '">';
+    html += '<div class="msg-bubble">';
+
+    if (!isSent && m.sender_name) {
+      html += '<div class="msg-sender">' + escapeHtml(m.sender_name) + '</div>';
+    }
+
+    html += buildAttachmentHTML(m);
+
+    if (m.content) {
+      html += '<div>' + escapeHtml(m.content) + '</div>';
+    }
+
+    html += '<div class="msg-time">' + time + '</div>';
+    html += '</div></div>';
+  });
+
+  return html;
+}
+
+// ============ Send Message ============
+
+function showUploadBar(fileName) {
+  document.getElementById('uploadBarName').textContent = 'Uploading ' + fileName;
+  document.getElementById('uploadBarStatus').textContent = '0%';
+  document.getElementById('uploadBarFill').style.width = '0%';
+  document.getElementById('chatUploadBar').classList.add('show');
+}
+
+function updateUploadProgress(percent) {
+  document.getElementById('uploadBarStatus').textContent = percent + '%';
+  document.getElementById('uploadBarFill').style.width = percent + '%';
+}
+
+function hideUploadBar() {
+  document.getElementById('chatUploadBar').classList.remove('show');
+}
+
+async function sendMessage() {
+  var input = document.getElementById('chatInput');
+  var content = input.value.trim();
+
+  if (!currentConversationId) return;
+  if (!content && !pendingAttachment) return;
+
+  input.value = '';
+  document.getElementById('sendBtn').disabled = true;
+  document.getElementById('attachBtn').disabled = true;
+
+  try {
+    var res;
+    var hasAttachment = !!pendingAttachment;
+
+    if (pendingAttachment && pendingAttachment.type === 'local') {
+      // Show upload progress
+      showUploadBar(pendingAttachment.name);
+      document.getElementById('attachPreview').classList.remove('show');
+
+      var formData = new FormData();
+      formData.append('file', pendingAttachment.file);
+      if (content) formData.append('content', content);
+
+      res = await axios.post('/chat/conversations/' + currentConversationId + '/attach-local', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        onUploadProgress: function(e) {
+          if (e.total) {
+            var pct = Math.round((e.loaded / e.total) * 100);
+            updateUploadProgress(pct);
+          }
+        }
+      });
+    } else if (pendingAttachment && pendingAttachment.type === 'drive') {
+      document.getElementById('attachPreview').classList.remove('show');
+      document.getElementById('uploadBarName').textContent = 'Linking from Drive...';
+      document.getElementById('uploadBarStatus').textContent = pendingAttachment.name;
+      document.getElementById('uploadBarFill').style.transition = 'none';
+      document.getElementById('uploadBarFill').style.width = '100%';
+      document.getElementById('uploadBarFill').style.opacity = '0.4';
+      document.getElementById('uploadBarFill').style.animation = 'pulse 1.2s ease-in-out infinite';
+      document.getElementById('chatUploadBar').classList.add('show');
+
+      res = await axios.post('/chat/conversations/' + currentConversationId + '/attach-drive', {
+        drive_file_id: pendingAttachment.driveFileId,
+        content: content || null
+      });
+
+      document.getElementById('uploadBarFill').style.animation = '';
+      document.getElementById('uploadBarFill').style.opacity = '1';
+      document.getElementById('uploadBarFill').style.transition = '';
+    } else {
+      res = await axios.post('/chat/conversations/' + currentConversationId + '/messages', { content: content });
+    }
+
+    if (hasAttachment) hideUploadBar();
+
+    var msg = res.data.data.message;
+    clearAttachment();
+    appendMessage(msg);
+    updateConversationPreview(currentConversationId, msg);
+  } catch (err) {
+    hideUploadBar();
+    showToast(err.response?.data?.message || 'Failed to send', 'error');
+    input.value = content;
+  } finally {
+    document.getElementById('sendBtn').disabled = false;
+    document.getElementById('attachBtn').disabled = false;
+    input.focus();
+  }
+}
+
+function appendMessage(msg) {
+  var container = document.getElementById('chatMessages');
+  var emptyEl = container.querySelector('.chat-empty');
+  if (emptyEl) emptyEl.remove();
+
+  var isSent = msg.sender_id === currentUserId;
+  var time = new Date(msg.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+
+  // Check if we need a date divider
+  var lastRow = container.querySelector('.msg-row:last-child');
+  var msgDate = new Date(msg.created_at).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+  var needDate = true;
+  if (lastRow) {
+    var lastDividers = container.querySelectorAll('.msg-date-divider');
+    if (lastDividers.length > 0) {
+      var lastDivText = lastDividers[lastDividers.length - 1].textContent.trim();
+      if (lastDivText === msgDate) needDate = false;
+    }
+  }
+
+  var html = '';
+  if (needDate && !lastRow) {
+    html += '<div class="msg-date-divider"><span>' + msgDate + '</span></div>';
+  }
+
+  html += '<div class="msg-row ' + (isSent ? 'sent' : 'received') + '" data-mid="' + msg.id + '">';
+  html += '<div class="msg-bubble">';
+  if (!isSent && msg.sender_name) {
+    html += '<div class="msg-sender">' + escapeHtml(msg.sender_name) + '</div>';
+  }
+  html += buildAttachmentHTML(msg);
+  if (msg.content) {
+    html += '<div>' + escapeHtml(msg.content) + '</div>';
+  }
+  html += '<div class="msg-time">' + time + '</div>';
+  html += '</div></div>';
+
+  container.insertAdjacentHTML('beforeend', html);
+  container.scrollTop = container.scrollHeight;
+}
+
+function updateConversationPreview(convId, msg) {
+  var item = document.querySelector('.chat-list-item[data-id="' + convId + '"]');
+  if (!item) return;
+
+  var preview = item.querySelector('.chat-list-preview');
+  if (preview) {
+    var text = msg.content ? (msg.content.length > 40 ? msg.content.substring(0, 40) + '...' : msg.content) : '';
+    if (msg.attachment_name) text = (text ? text : '') || '<i class="bi bi-paperclip"></i> ' + msg.attachment_name;
+    preview.innerHTML = msg.sender_id === currentUserId ? '<strong>You:</strong> ' + text : text;
+  }
+
+  var timeEl = item.querySelector('.chat-list-time');
+  if (timeEl) {
+    timeEl.textContent = new Date(msg.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+  }
+
+  // Move to top of list
+  var list = document.getElementById('chatList');
+  if (list.firstElementChild !== item) {
+    list.insertBefore(item, list.firstElementChild);
+  }
+}
+
+// ============ Socket.IO Events ============
+
+socket.on('chat:message', function(data) {
+  var msg = data.message;
+  var convId = data.conversation_id;
+
+  // If this conversation is currently open, append and mark read
+  if (convId === currentConversationId) {
+    appendMessage(msg);
+    axios.post('/chat/conversations/' + convId + '/read');
+  } else {
+    // Increment unread badge
+    var item = document.querySelector('.chat-list-item[data-id="' + convId + '"]');
+    if (item) {
+      var badge = item.querySelector('.chat-unread-badge');
+      if (badge) {
+        var count = parseInt(badge.textContent) || 0;
+        badge.textContent = count + 1 > 9 ? '9+' : count + 1;
+      } else {
+        var meta = item.querySelector('.chat-list-meta');
+        if (meta) meta.insertAdjacentHTML('beforeend', '<span class="chat-unread-badge">1</span>');
+      }
+    } else {
+      // New conversation not in list — reload
+      location.reload();
+    }
+  }
+
+  updateConversationPreview(convId, msg);
+  updateGlobalUnreadBadge();
+});
+
+socket.on('chat:typing', function(data) {
+  if (data.conversation_id === currentConversationId && data.user_id !== currentUserId) {
+    var el = document.getElementById('typingIndicator');
+    el.textContent = data.user_name + ' is typing...';
+    clearTimeout(typingTimeout);
+    typingTimeout = setTimeout(function() { el.textContent = ''; }, 3000);
+  }
+});
+
+// Emit typing indicator
+(function() {
+  var input = document.getElementById('chatInput');
+  var lastTypingEmit = 0;
+  if (input) {
+    input.addEventListener('input', function() {
+      if (!currentConversationId) return;
+      var now = Date.now();
+      if (now - lastTypingEmit > 2000) {
+        socket.emit('chat:typing', { conversation_id: currentConversationId });
+        lastTypingEmit = now;
+      }
+    });
+  }
+})();
+
+// ============ New Chat Modal ============
+
+function openNewChatModal() {
+  document.getElementById('newChatModal').classList.add('show');
+  setChatType('direct');
+  document.querySelectorAll('.user-select-item').forEach(function(el) {
+    el.classList.remove('selected');
+    el.querySelector('input[type="checkbox"]').checked = false;
+  });
+  document.getElementById('userSearchInput').value = '';
+  filterUsers();
+}
+
+function closeNewChatModal() {
+  document.getElementById('newChatModal').classList.remove('show');
+}
+
+function setChatType(type) {
+  chatType = type;
+  document.getElementById('btnTypeDirect').className = 'btn-tf ' + (type === 'direct' ? 'btn-tf-primary' : 'btn-tf-outline');
+  document.getElementById('btnTypeGroup').className = 'btn-tf ' + (type === 'group' ? 'btn-tf-primary' : 'btn-tf-outline');
+  document.getElementById('groupNameField').style.display = type === 'group' ? 'block' : 'none';
+}
+
+function filterUsers() {
+  var term = document.getElementById('userSearchInput').value.toLowerCase();
+  document.querySelectorAll('.user-select-item').forEach(function(el) {
+    var name = el.dataset.name;
+    el.style.display = name.includes(term) ? '' : 'none';
+  });
+}
+
+function toggleUserSelect(el) {
+  var checkbox = el.querySelector('input[type="checkbox"]');
+
+  if (chatType === 'direct') {
+    // Only allow one selection
+    document.querySelectorAll('.user-select-item').forEach(function(item) {
+      item.classList.remove('selected');
+      item.querySelector('input[type="checkbox"]').checked = false;
+    });
+  }
+
+  el.classList.toggle('selected');
+  checkbox.checked = el.classList.contains('selected');
+}
+
+async function createConversation() {
+  var selectedItems = document.querySelectorAll('.user-select-item.selected');
+  var ids = [];
+  selectedItems.forEach(function(el) {
+    ids.push(parseInt(el.dataset.uid));
+  });
+
+  if (ids.length === 0) {
+    showToast('Please select at least one user', 'error');
+    return;
+  }
+
+  if (chatType === 'direct' && ids.length > 1) {
+    showToast('Select only one user for direct chat', 'error');
+    return;
+  }
+
+  var payload = {
+    type: chatType,
+    participant_ids: ids
+  };
+
+  if (chatType === 'group') {
+    var groupName = document.getElementById('groupNameInput').value.trim();
+    if (!groupName) {
+      showToast('Please enter a group name', 'error');
+      return;
+    }
+    payload.name = groupName;
+  }
+
+  document.getElementById('createChatBtn').disabled = true;
+
+  try {
+    var res = await axios.post('/chat/conversations', payload);
+    var convId = res.data.data.conversation_id;
+    closeNewChatModal();
+
+    // Navigate to the new conversation
+    window.location.href = '/chat?c=' + convId;
+  } catch (err) {
+    showToast(err.response?.data?.message || 'Failed to create chat', 'error');
+  } finally {
+    document.getElementById('createChatBtn').disabled = false;
+  }
+}
+
+// ============ Global Unread Badge ============
+
+async function updateGlobalUnreadBadge() {
+  try {
+    var res = await axios.get('/chat/unread-count');
+    var count = res.data.data.count;
+    var badge = document.getElementById('chatNavBadge');
+    if (badge) {
+      badge.textContent = count > 9 ? '9+' : count;
+      badge.style.display = count > 0 ? 'inline-flex' : 'none';
+    }
+  } catch (e) {}
+}
+
+// Poll unread count every 30s
+setInterval(updateGlobalUnreadBadge, 30000);
+
+// ============ Utils ============
+
+function escapeHtml(text) {
+  if (!text) return '';
+  var div = document.createElement('div');
+  div.appendChild(document.createTextNode(text));
+  return div.innerHTML;
+}
+
+// ============ Save to Drive ============
+
+async function saveToDrive(driveFileId, fileName, messageId, btnEl) {
+  var origHtml = btnEl.innerHTML;
+  btnEl.innerHTML = '<i class="bi bi-hourglass-split"></i>';
+  btnEl.disabled = true;
+
+  try {
+    var res = await axios.post('/chat/save-to-drive', {
+      drive_file_id: driveFileId,
+      file_name: fileName,
+      message_id: messageId
+    });
+    showToast('Saved "' + fileName + '" to your Drive', 'success');
+    btnEl.innerHTML = '<i class="bi bi-check-lg"></i>';
+    btnEl.style.color = 'var(--tf-success)';
+    btnEl.style.cursor = 'default';
+    btnEl.title = 'Saved to Drive';
+    btnEl.onclick = null;
+  } catch (err) {
+    if (err.response?.status === 409) {
+      // Already saved
+      btnEl.innerHTML = '<i class="bi bi-check-lg"></i>';
+      btnEl.style.color = 'var(--tf-success)';
+      btnEl.style.cursor = 'default';
+      btnEl.title = 'Saved to Drive';
+      btnEl.onclick = null;
+      showToast('Already saved to your Drive', 'info');
+    } else {
+      showToast(err.response?.data?.message || 'Failed to save to Drive', 'error');
+      btnEl.innerHTML = origHtml;
+      btnEl.disabled = false;
+    }
+  }
+}
+
+// ============ Attachment Handling ============
+
+function toggleAttachMenu(e) {
+  e.stopPropagation();
+  var menu = document.getElementById('attachMenu');
+  menu.classList.toggle('show');
+}
+
+// Close attach menu on click outside
+document.addEventListener('click', function(e) {
+  var menu = document.getElementById('attachMenu');
+  if (menu && !e.target.closest('.chat-attach-btn')) {
+    menu.classList.remove('show');
+  }
+});
+
+function triggerLocalUpload() {
+  document.getElementById('attachMenu').classList.remove('show');
+  document.getElementById('attachFileInput').click();
+}
+
+function handleAttachFile(input) {
+  if (!input.files || !input.files[0]) return;
+  var file = input.files[0];
+
+  if (file.size > maxAttachMB * 1024 * 1024) {
+    showToast('File exceeds ' + maxAttachMB + 'MB limit', 'error');
+    input.value = '';
+    return;
+  }
+
+  pendingAttachment = {
+    type: 'local',
+    file: file,
+    name: file.name,
+    size: file.size,
+    mime: file.type
+  };
+
+  showAttachPreview(file.name, file.size);
+  input.value = '';
+}
+
+function showAttachPreview(name, size) {
+  document.getElementById('attachPreviewName').textContent = name;
+  document.getElementById('attachPreviewSize').textContent = formatBytes(size);
+  document.getElementById('attachPreview').classList.add('show');
+}
+
+function clearAttachment() {
+  pendingAttachment = null;
+  document.getElementById('attachPreview').classList.remove('show');
+  document.getElementById('attachPreviewName').textContent = '';
+  document.getElementById('attachPreviewSize').textContent = '';
+}
+
+// ============ Drive Picker ============
+
+var dpRootFolderId = null;
+var dpCurrentFolderId = null;
+var dpSelectedFileId = null;
+var dpSelectedFileName = null;
+var dpSelectedFileSize = null;
+var dpSelectedFileMime = null;
+
+function openDrivePicker() {
+  document.getElementById('attachMenu').classList.remove('show');
+  document.getElementById('drivePickerModal').classList.add('show');
+  dpSelectedFileId = null;
+  document.getElementById('dpSelectBtn').disabled = true;
+  loadDrivePickerFiles();
+}
+
+function closeDrivePicker() {
+  document.getElementById('drivePickerModal').classList.remove('show');
+}
+
+async function loadDrivePickerFiles(folderId) {
+  var list = document.getElementById('drivePickerList');
+  list.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--tf-text-muted);font-size:0.8rem;">Loading...</div>';
+
+  try {
+    var url = '/chat/drive-files';
+    if (folderId) url += '?folder=' + folderId;
+
+    var res = await axios.get(url);
+    var data = res.data.data;
+    var files = data.files;
+    dpRootFolderId = data.rootFolderId;
+    dpCurrentFolderId = data.currentFolderId;
+
+    // Update breadcrumb
+    var bc = document.getElementById('dpBreadcrumb');
+    bc.innerHTML = '<a href="#" onclick="loadDrivePickerFiles();return false;">My Drive</a>';
+    if (folderId && folderId !== dpRootFolderId) {
+      bc.innerHTML += ' <span class="sep" style="color:var(--tf-text-muted);"><i class="bi bi-chevron-right"></i></span> <span style="color:var(--tf-text);">...</span>';
+    }
+
+    if (files.length === 0) {
+      list.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--tf-text-muted);font-size:0.8rem;">This folder is empty</div>';
+      return;
+    }
+
+    var html = '';
+    files.forEach(function(f) {
+      var iconClass = f.isFolder ? 'folder' : 'file';
+      var icon = f.isFolder ? 'folder-fill' : getAttachIcon(f.mimeType);
+      var size = !f.isFolder && f.size ? formatBytes(f.size) : '';
+
+      html += '<div class="drive-picker-item" data-id="' + f.id + '" data-is-folder="' + f.isFolder + '" data-name="' + escapeHtml(f.name) + '" data-size="' + (f.size || 0) + '" data-mime="' + (f.mimeType || '') + '"';
+
+      if (f.isFolder) {
+        html += ' ondblclick="loadDrivePickerFiles(\'' + f.id + '\')"';
+      }
+
+      html += ' onclick="selectDrivePickerItem(this)">';
+      html += '<div class="dp-icon ' + iconClass + '"><i class="bi bi-' + icon + '"></i></div>';
+      html += '<div class="dp-name">' + escapeHtml(f.name) + '</div>';
+      if (size) html += '<div class="dp-size">' + size + '</div>';
+      html += '</div>';
+    });
+
+    list.innerHTML = html;
+  } catch (err) {
+    list.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--tf-danger);font-size:0.8rem;">Failed to load files</div>';
+  }
+}
+
+function selectDrivePickerItem(el) {
+  // Deselect all
+  document.querySelectorAll('.drive-picker-item').forEach(function(item) {
+    item.classList.remove('selected');
+  });
+
+  el.classList.add('selected');
+  var isFolder = el.dataset.isFolder === 'true';
+
+  if (isFolder) {
+    dpSelectedFileId = null;
+    document.getElementById('dpSelectBtn').disabled = true;
+  } else {
+    dpSelectedFileId = el.dataset.id;
+    dpSelectedFileName = el.dataset.name;
+    dpSelectedFileSize = parseInt(el.dataset.size) || 0;
+    dpSelectedFileMime = el.dataset.mime;
+    document.getElementById('dpSelectBtn').disabled = false;
+  }
+}
+
+function selectDriveFile() {
+  if (!dpSelectedFileId) return;
+
+  pendingAttachment = {
+    type: 'drive',
+    driveFileId: dpSelectedFileId,
+    name: dpSelectedFileName,
+    size: dpSelectedFileSize,
+    mime: dpSelectedFileMime
+  };
+
+  showAttachPreview(dpSelectedFileName, dpSelectedFileSize);
+  closeDrivePicker();
+}
+
+// ============ Auto-open conversation ============
+
+(function() {
+  if (currentConversationId) {
+    openConversation(currentConversationId);
+  }
+})();
+</script>

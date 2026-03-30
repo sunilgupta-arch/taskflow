@@ -51,11 +51,15 @@ app.set('layout extractStyles', true);
 // ============================================================
 const authRoutes = require('./routes/auth');
 const taskRoutes = require('./routes/tasks');
+const chatRoutes = require('./routes/chat');
+const driveRoutes = require('./routes/drive');
 const indexRoutes = require('./routes/index');
 
 app.get('/', (req, res) => res.redirect('/dashboard'));
 app.use('/auth', authRoutes);
 app.use('/tasks', taskRoutes);
+app.use('/chat', chatRoutes);
+app.use('/drive', driveRoutes);
 app.use('/', indexRoutes);
 
 // ============================================================
@@ -129,6 +133,22 @@ app.use((err, req, res, next) => {
     if (['CLIENT_ADMIN', 'CLIENT_MANAGER', 'LOCAL_ADMIN', 'LOCAL_MANAGER'].includes(user.role_name)) {
       socket.join('admins');
     }
+
+    // Chat: join a conversation room
+    socket.on('chat:join', (conversationId) => {
+      socket.join(`chat:${conversationId}`);
+    });
+
+    // Chat: typing indicator relay
+    socket.on('chat:typing', (data) => {
+      if (data.conversation_id) {
+        socket.to(`chat:${data.conversation_id}`).emit('chat:typing', {
+          conversation_id: data.conversation_id,
+          user_id: user.id,
+          user_name: user.name
+        });
+      }
+    });
   });
 
   server.listen(PORT, () => {

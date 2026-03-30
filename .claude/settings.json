@@ -4,7 +4,11 @@
       "Bash(node -e \":*)",
       "Bash(mv \"2026-03-10-priority-and-timezone.sql\" \"001_priority_and_timezone_2026-03-10.sql\")",
       "Bash(mv \"2026-03-11-flexible-recurrence.sql\" \"002_flexible_recurrence_2026-03-11.sql\")",
-      "Bash(mv \"2026-03-25-backup-settings.sql\" \"003_backup_settings_2026-03-25.sql\")"
+      "Bash(mv \"2026-03-25-backup-settings.sql\" \"003_backup_settings_2026-03-25.sql\")",
+      "Bash(grep -E \"\\\\.\\(js|sql\\)$\")",
+      "Bash(npm install:*)",
+      "Bash(node -e \"require\\(''./services/googleDriveService''\\)\")",
+      "Bash(node test_drive.js)"
     ]
   }
 }

@@ -357,24 +357,105 @@
       bottom: 1.5rem;
       right: 1.5rem;
       z-index: 9999;
+      max-height: 85vh;
+      overflow-y: auto;
+      overflow-x: hidden;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      scrollbar-width: none;
     }
+    #toast-container::-webkit-scrollbar { display: none; }
 
     .tf-toast {
       background: var(--tf-surface);
       border: 1px solid var(--tf-border);
-      border-radius: 8px;
-      padding: 1rem 1.25rem;
-      min-width: 280px;
-      animation: slideIn 0.3s ease;
+      border-radius: 12px;
+      padding: 0;
+      min-width: 320px;
+      max-width: 400px;
+      animation: toastSlideIn 0.35s cubic-bezier(0.21, 1.02, 0.73, 1);
       display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      margin-top: 0.5rem;
+      flex-direction: column;
+      overflow: hidden;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.25), 0 2px 8px rgba(0,0,0,0.1);
+      position: relative;
     }
 
-    @keyframes slideIn {
-      from { transform: translateX(100px); opacity: 0; }
-      to { transform: translateX(0); opacity: 1; }
+    .tf-toast-inner {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+      padding: 0.9rem 1rem;
+    }
+
+    .tf-toast-icon {
+      width: 32px; height: 32px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.95rem;
+      flex-shrink: 0;
+    }
+
+    .tf-toast-icon.success { background: rgba(16,185,129,0.15); color: #10b981; }
+    .tf-toast-icon.error { background: rgba(239,68,68,0.15); color: #ef4444; }
+    .tf-toast-icon.info { background: rgba(0,212,255,0.15); color: #00d4ff; }
+
+    .tf-toast-body { flex: 1; min-width: 0; }
+
+    .tf-toast-title {
+      font-family: var(--tf-font-mono);
+      font-size: 0.65rem;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      margin-bottom: 2px;
+    }
+    .tf-toast-title.success { color: #10b981; }
+    .tf-toast-title.error { color: #ef4444; }
+    .tf-toast-title.info { color: #00d4ff; }
+
+    .tf-toast-msg {
+      font-size: 0.82rem;
+      color: var(--tf-text);
+      line-height: 1.4;
+      word-break: break-word;
+    }
+
+    .tf-toast-close {
+      position: absolute;
+      top: 0.6rem; right: 0.6rem;
+      background: none;
+      border: none;
+      color: var(--tf-text-muted);
+      cursor: pointer;
+      font-size: 0.85rem;
+      padding: 2px;
+      line-height: 1;
+      border-radius: 4px;
+      transition: all 0.15s;
+    }
+    .tf-toast-close:hover { color: var(--tf-text); background: var(--tf-surface-2); }
+
+    .tf-toast-progress {
+      height: 3px;
+      width: 100%;
+      background: var(--tf-border);
+    }
+
+    .tf-toast-progress-bar {
+      height: 100%;
+      border-radius: 0 0 12px 12px;
+      transition: width linear;
+    }
+    .tf-toast-progress-bar.success { background: #10b981; }
+    .tf-toast-progress-bar.error { background: #ef4444; }
+    .tf-toast-progress-bar.info { background: #00d4ff; }
+
+    @keyframes toastSlideIn {
+      from { transform: translateX(120px) scale(0.95); opacity: 0; }
+      to { transform: translateX(0) scale(1); opacity: 1; }
     }
 
     /* Progress */
@@ -520,6 +601,19 @@
     <% } %>
     <% } %>
 
+    <div class="nav-section-label mt-2">Communication</div>
+    <div class="nav-item">
+      <a href="/chat" class="<%= typeof title !== 'undefined' && title === 'Chat' ? 'active' : '' %>" style="position:relative;">
+        <i class="bi bi-chat-dots"></i> Chat
+        <span id="chatNavBadge" style="display:none;position:absolute;right:1rem;top:50%;transform:translateY(-50%);background:var(--tf-accent);color:#000;font-size:0.55rem;font-weight:700;font-family:var(--tf-font-mono);width:18px;height:18px;border-radius:50%;align-items:center;justify-content:center;">0</span>
+      </a>
+    </div>
+    <div class="nav-item">
+      <a href="/drive" class="<%= typeof title !== 'undefined' && title === 'My Drive' ? 'active' : '' %>">
+        <i class="bi bi-cloud"></i> Drive
+      </a>
+    </div>
+
     <div class="nav-section-label mt-2">Finance</div>
     <div class="nav-item">
       <a href="/rewards">
@@ -625,19 +719,71 @@
 
 <script>
 // Toast utility
-function showToast(message, type = 'success') {
-  const icons = { success: 'bi-check-circle-fill', error: 'bi-x-circle-fill', info: 'bi-info-circle-fill' };
-  const colors = { success: '#10b981', error: '#ef4444', info: '#00d4ff' };
-  
+function showToast(message, type = 'success', duration) {
+  const icons = { success: 'bi-check-circle-fill', error: 'bi-x-circle-fill', info: 'bi-chat-dots-fill' };
+  const titles = { success: 'Success', error: 'Error', info: 'New Message' };
+
+  var ms = duration || (type === 'info' ? 60000 : 4000);
+
   const toast = $(`
     <div class="tf-toast">
-      <i class="bi ${icons[type]}" style="color:${colors[type]};font-size:1.1rem;"></i>
-      <span style="font-size:0.875rem;">${message}</span>
+      <div class="tf-toast-inner">
+        <div class="tf-toast-icon ${type}">
+          <i class="bi ${icons[type]}"></i>
+        </div>
+        <div class="tf-toast-body">
+          <div class="tf-toast-title ${type}">${titles[type]}</div>
+          <div class="tf-toast-msg">${message}</div>
+        </div>
+      </div>
+      <button class="tf-toast-close" onclick="$(this).closest('.tf-toast').fadeOut(200,function(){$(this).remove()})">
+        <i class="bi bi-x-lg"></i>
+      </button>
+      <div class="tf-toast-progress">
+        <div class="tf-toast-progress-bar ${type}" style="width:100%;"></div>
+      </div>
     </div>
   `);
-  
+
   $('#toast-container').append(toast);
-  setTimeout(() => toast.fadeOut(300, () => toast.remove()), 4000);
+
+  // Animate progress bar countdown
+  var bar = toast.find('.tf-toast-progress-bar');
+  requestAnimationFrame(function() {
+    bar.css('transition-duration', ms + 'ms');
+    bar.css('width', '0%');
+  });
+
+  // Pause countdown on hover
+  var timer;
+  var remaining = ms;
+  var startTime = Date.now();
+
+  function startTimer() {
+    startTime = Date.now();
+    timer = setTimeout(function() {
+      toast.fadeOut(300, function() { toast.remove(); });
+    }, remaining);
+  }
+
+  toast.on('mouseenter', function() {
+    clearTimeout(timer);
+    remaining -= (Date.now() - startTime);
+    bar.css('transition-duration', '0ms');
+    bar.css('width', bar[0].getBoundingClientRect().width + 'px');
+  });
+
+  toast.on('mouseleave', function() {
+    bar.css('transition-duration', remaining + 'ms');
+    bar.css('width', '0%');
+    startTimer();
+  });
+
+  startTimer();
+
+  // Scroll to newest
+  var container = document.getElementById('toast-container');
+  container.scrollTop = container.scrollHeight;
 }
 
 // Mobile sidebar toggle
@@ -975,6 +1121,64 @@ axios.interceptors.response.use(
   });
   socket.on('leave:rejected', function(data) {
     showToast(data.message, 'error');
+  });
+
+  // Chat: update sidebar unread badge on new message
+  socket.on('chat:message', function(data) {
+    var badge = document.getElementById('chatNavBadge');
+    if (badge) {
+      var current = parseInt(badge.textContent) || 0;
+      badge.textContent = current + 1 > 9 ? '9+' : current + 1;
+      badge.style.display = 'inline-flex';
+    }
+  });
+
+  // Load initial unread count
+  axios.get('/chat/unread-count').then(function(res) {
+    var count = res.data.data.count;
+    var badge = document.getElementById('chatNavBadge');
+    if (badge && count > 0) {
+      badge.textContent = count > 9 ? '9+' : count;
+      badge.style.display = 'inline-flex';
+    }
+  }).catch(function() {});
+})();
+
+// Chat alert: toast + sound for incoming messages (global, works on every page)
+(function() {
+  if (typeof io === 'undefined') return;
+
+  var chatAlertSocket = io({ withCredentials: true });
+
+  chatAlertSocket.on('chat:message', function(data) {
+    var msg = data.message;
+    if (!msg) return;
+
+    // Show toast
+    var sender = msg.sender_name || 'Someone';
+    var preview = msg.content || '';
+    if (preview.length > 50) preview = preview.substring(0, 50) + '...';
+    showToast(sender + ': ' + preview, 'info', 60000);
+
+    // Play two-tone chime
+    try {
+      var ctx = new (window.AudioContext || window.webkitAudioContext)();
+      var o1 = ctx.createOscillator();
+      var g1 = ctx.createGain();
+      o1.connect(g1); g1.connect(ctx.destination);
+      o1.frequency.value = 880; o1.type = 'sine';
+      g1.gain.setValueAtTime(0.2, ctx.currentTime);
+      g1.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+      o1.start(ctx.currentTime); o1.stop(ctx.currentTime + 0.3);
+
+      var o2 = ctx.createOscillator();
+      var g2 = ctx.createGain();
+      o2.connect(g2); g2.connect(ctx.destination);
+      o2.frequency.value = 1100; o2.type = 'sine';
+      g2.gain.setValueAtTime(0.2, ctx.currentTime + 0.15);
+      g2.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.45);
+      o2.start(ctx.currentTime + 0.15); o2.stop(ctx.currentTime + 0.45);
+    } catch (e) {}
   });
 })();
 </script>

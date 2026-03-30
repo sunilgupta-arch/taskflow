@@ -1,0 +1,683 @@
+<style>
+  .drive-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 1rem 1.25rem;
+    background: var(--tf-surface);
+    border: 1px solid var(--tf-border);
+    border-radius: 12px;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .drive-breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.8rem;
+    flex-wrap: wrap;
+  }
+
+  .drive-breadcrumb a {
+    color: var(--tf-accent);
+    text-decoration: none;
+    font-weight: 500;
+  }
+  .drive-breadcrumb a:hover { text-decoration: underline; }
+
+  .drive-breadcrumb .sep {
+    color: var(--tf-text-muted);
+    font-size: 0.7rem;
+  }
+
+  .drive-breadcrumb .current {
+    color: var(--tf-text);
+    font-weight: 600;
+  }
+
+  .drive-actions {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+  }
+
+  .drive-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 0.75rem;
+  }
+
+  .drive-item {
+    background: var(--tf-surface);
+    border: 1px solid var(--tf-border);
+    border-radius: 12px;
+    padding: 1.25rem 1rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.6rem;
+  }
+  .drive-item:hover {
+    border-color: var(--tf-accent);
+    background: var(--tf-surface-2);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  }
+
+  .drive-item-icon {
+    width: 48px; height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    font-size: 1.5rem;
+  }
+
+  .drive-item-icon.folder {
+    background: rgba(245,158,11,0.15);
+    color: #f59e0b;
+  }
+
+  .drive-item-icon.image {
+    background: rgba(236,72,153,0.15);
+    color: #ec4899;
+  }
+
+  .drive-item-icon.pdf {
+    background: rgba(239,68,68,0.15);
+    color: #ef4444;
+  }
+
+  .drive-item-icon.doc {
+    background: rgba(59,130,246,0.15);
+    color: #3b82f6;
+  }
+
+  .drive-item-icon.sheet {
+    background: rgba(16,185,129,0.15);
+    color: #10b981;
+  }
+
+  .drive-item-icon.video {
+    background: rgba(124,58,237,0.15);
+    color: #a78bfa;
+  }
+
+  .drive-item-icon.audio {
+    background: rgba(6,182,212,0.15);
+    color: #06b6d4;
+  }
+
+  .drive-item-icon.archive {
+    background: rgba(107,114,128,0.15);
+    color: #9ca3af;
+  }
+
+  .drive-item-icon.file {
+    background: rgba(100,116,139,0.15);
+    color: #94a3b8;
+  }
+
+  .drive-item-name {
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: var(--tf-text);
+    word-break: break-word;
+    line-height: 1.3;
+    max-height: 2.6em;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+
+  .drive-item-size {
+    font-size: 0.6rem;
+    color: var(--tf-text-muted);
+    font-family: var(--tf-font-mono);
+  }
+
+  .drive-item-menu {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    background: none;
+    border: none;
+    color: var(--tf-text-muted);
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+  .drive-item:hover .drive-item-menu { opacity: 1; }
+  .drive-item-menu:hover { background: var(--tf-surface); color: var(--tf-text); }
+
+  /* Context menu dropdown */
+  .drive-ctx-menu {
+    position: fixed;
+    background: var(--tf-surface);
+    border: 1px solid var(--tf-border);
+    border-radius: 8px;
+    padding: 0.35rem 0;
+    min-width: 160px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+    z-index: 150;
+    display: none;
+  }
+
+  .drive-ctx-menu.show { display: block; }
+
+  .drive-ctx-menu button {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    width: 100%;
+    padding: 0.5rem 1rem;
+    background: none;
+    border: none;
+    color: var(--tf-text);
+    font-size: 0.8rem;
+    cursor: pointer;
+    text-align: left;
+    transition: background 0.15s;
+  }
+  .drive-ctx-menu button:hover { background: var(--tf-surface-2); }
+  .drive-ctx-menu button.danger { color: var(--tf-danger); }
+  .drive-ctx-menu button i { width: 16px; text-align: center; font-size: 0.85rem; }
+
+  .drive-ctx-divider {
+    height: 1px;
+    background: var(--tf-border);
+    margin: 0.25rem 0;
+  }
+
+  /* Empty state */
+  .drive-empty {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: var(--tf-text-muted);
+  }
+  .drive-empty i { font-size: 3rem; opacity: 0.3; margin-bottom: 0.75rem; }
+  .drive-empty p { font-size: 0.85rem; }
+
+  /* Upload drop zone */
+  .drive-dropzone {
+    border: 2px dashed var(--tf-border);
+    border-radius: 12px;
+    padding: 2.5rem;
+    text-align: center;
+    transition: all 0.2s;
+    margin-bottom: 1rem;
+    display: none;
+  }
+  .drive-dropzone.active {
+    display: block;
+    border-color: var(--tf-accent);
+    background: rgba(0,212,255,0.05);
+  }
+  .drive-dropzone.dragover {
+    border-color: var(--tf-accent);
+    background: rgba(0,212,255,0.1);
+    transform: scale(1.01);
+  }
+
+  /* Upload progress */
+  .drive-upload-progress {
+    background: var(--tf-surface);
+    border: 1px solid var(--tf-border);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    margin-bottom: 0.75rem;
+    display: none;
+  }
+  .drive-upload-progress.show { display: block; }
+
+  .drive-upload-file {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.5rem;
+  }
+  .drive-upload-file:last-child { margin-bottom: 0; }
+
+  .drive-upload-file .name {
+    font-size: 0.78rem;
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .drive-upload-file .status {
+    font-size: 0.65rem;
+    font-family: var(--tf-font-mono);
+    color: var(--tf-text-muted);
+    flex-shrink: 0;
+  }
+  .drive-upload-file .status.done { color: var(--tf-success); }
+
+  /* Modal */
+  .drive-modal {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.75);
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+  }
+  .drive-modal.show { display: flex; }
+
+  .drive-modal-box {
+    background: var(--tf-surface);
+    border: 1px solid var(--tf-border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    width: 100%;
+    max-width: 420px;
+  }
+
+  .drive-storage-info {
+    font-size: 0.7rem;
+    color: var(--tf-text-muted);
+    font-family: var(--tf-font-mono);
+  }
+
+  @media (max-width: 768px) {
+    .drive-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+    .drive-toolbar { flex-direction: column; align-items: flex-start; }
+  }
+</style>
+
+<!-- Toolbar -->
+<div class="drive-toolbar">
+  <div class="drive-breadcrumb">
+    <a href="/drive"><i class="bi bi-folder2-open me-1"></i>My Drive</a>
+    <% breadcrumb.forEach(function(b, i) { %>
+      <span class="sep"><i class="bi bi-chevron-right"></i></span>
+      <% if (i === breadcrumb.length - 1) { %>
+        <span class="current"><%= b.name %></span>
+      <% } else { %>
+        <a href="/drive?folder=<%= b.id %>"><%= b.name %></a>
+      <% } %>
+    <% }); %>
+  </div>
+  <div class="drive-actions">
+    <span class="drive-storage-info">Max: <%= maxSizeMB %>MB per file</span>
+    <button class="btn-tf btn-tf-outline" onclick="toggleDropzone()" title="Upload files">
+      <i class="bi bi-cloud-upload me-1"></i>Upload
+    </button>
+    <button class="btn-tf btn-tf-outline" onclick="openNewFolderModal()" title="New folder">
+      <i class="bi bi-folder-plus me-1"></i>Folder
+    </button>
+  </div>
+</div>
+
+<!-- Drop zone -->
+<div class="drive-dropzone" id="dropzone">
+  <i class="bi bi-cloud-arrow-up" style="font-size:2rem;color:var(--tf-accent);"></i>
+  <p style="font-size:0.85rem;color:var(--tf-text-muted);margin:0.5rem 0 0;">
+    Drag & drop files here or <label for="fileInput" style="color:var(--tf-accent);cursor:pointer;text-decoration:underline;">browse</label>
+  </p>
+  <p style="font-size:0.65rem;color:var(--tf-text-muted);margin:0.25rem 0 0;">Max <%= maxSizeMB %>MB per file</p>
+  <input type="file" id="fileInput" multiple style="display:none;" onchange="handleFileSelect(this.files)">
+</div>
+
+<!-- Upload progress -->
+<div class="drive-upload-progress" id="uploadProgress"></div>
+
+<!-- Files grid -->
+<div class="drive-grid" id="driveGrid">
+  <% if (files.length === 0) { %>
+    <div class="drive-empty" style="grid-column: 1 / -1;">
+      <i class="bi bi-folder2-open d-block"></i>
+      <p>This folder is empty</p>
+      <p style="font-size:0.75rem;">Upload files or create a folder to get started</p>
+    </div>
+  <% } %>
+
+  <% files.forEach(function(f) { %>
+    <div class="drive-item" data-id="<%= f.id %>" data-name="<%= f.name %>" data-is-folder="<%= f.isFolder %>"
+         data-mime="<%= f.mimeType %>" data-web-link="<%= f.webViewLink || '' %>"
+         <% if (f.isFolder) { %>ondblclick="navigateFolder('<%= f.id %>')"<% } else { %>ondblclick="openFile('<%= f.id %>', '<%= f.webViewLink || '' %>')"<% } %>>
+      <button class="drive-item-menu" onclick="event.stopPropagation();showContextMenu(event, '<%= f.id %>', '<%= f.name.replace(/'/g, "\\'") %>', <%= f.isFolder %>, '<%= f.webViewLink || '' %>')">
+        <i class="bi bi-three-dots-vertical"></i>
+      </button>
+      <div class="drive-item-icon <%= getFileIconClass(f) %>">
+        <i class="bi bi-<%= getFileIcon(f) %>"></i>
+      </div>
+      <div class="drive-item-name" title="<%= f.name %>"><%= f.name %></div>
+      <% if (!f.isFolder && f.size) { %>
+        <div class="drive-item-size"><%= formatFileSize(f.size) %></div>
+      <% } %>
+    </div>
+  <% }); %>
+</div>
+
+<!-- Context Menu -->
+<div class="drive-ctx-menu" id="contextMenu">
+  <button onclick="ctxOpen()"><i class="bi bi-box-arrow-up-right"></i> Open</button>
+  <button onclick="ctxDownload()"><i class="bi bi-download"></i> Download</button>
+  <div class="drive-ctx-divider"></div>
+  <button onclick="ctxRename()"><i class="bi bi-pencil"></i> Rename</button>
+  <div class="drive-ctx-divider"></div>
+  <button class="danger" onclick="ctxDelete()"><i class="bi bi-trash3"></i> Delete</button>
+</div>
+
+<!-- New Folder Modal -->
+<div class="drive-modal" id="newFolderModal">
+  <div class="drive-modal-box">
+    <h6 style="font-family:var(--tf-font-mono);margin-bottom:1.25rem;font-size:0.8rem;letter-spacing:1px;">
+      <i class="bi bi-folder-plus me-2"></i>NEW FOLDER
+    </h6>
+    <div class="mb-3">
+      <input type="text" id="newFolderName" class="tf-form-control" placeholder="Folder name..." onkeydown="if(event.key==='Enter')createFolder()">
+    </div>
+    <div class="d-flex gap-2 justify-content-end">
+      <button class="btn-tf btn-tf-outline" onclick="closeNewFolderModal()">Cancel</button>
+      <button class="btn-tf btn-tf-primary" onclick="createFolder()">Create</button>
+    </div>
+  </div>
+</div>
+
+<!-- Rename Modal -->
+<div class="drive-modal" id="renameModal">
+  <div class="drive-modal-box">
+    <h6 style="font-family:var(--tf-font-mono);margin-bottom:1.25rem;font-size:0.8rem;letter-spacing:1px;">
+      <i class="bi bi-pencil me-2"></i>RENAME
+    </h6>
+    <div class="mb-3">
+      <input type="text" id="renameInput" class="tf-form-control" onkeydown="if(event.key==='Enter')submitRename()">
+    </div>
+    <div class="d-flex gap-2 justify-content-end">
+      <button class="btn-tf btn-tf-outline" onclick="closeRenameModal()">Cancel</button>
+      <button class="btn-tf btn-tf-primary" onclick="submitRename()">Rename</button>
+    </div>
+  </div>
+</div>
+
+<%
+  function getFileIcon(f) {
+    if (f.isFolder) return 'folder-fill';
+    var m = f.mimeType || '';
+    var n = (f.name || '').toLowerCase();
+    if (m.startsWith('image/')) return 'file-image';
+    if (m === 'application/pdf' || n.endsWith('.pdf')) return 'file-pdf';
+    if (m.includes('word') || m.includes('document') || n.endsWith('.doc') || n.endsWith('.docx')) return 'file-word';
+    if (m.includes('sheet') || m.includes('excel') || n.endsWith('.xls') || n.endsWith('.xlsx') || n.endsWith('.csv')) return 'file-spreadsheet';
+    if (m.includes('presentation') || m.includes('powerpoint') || n.endsWith('.ppt') || n.endsWith('.pptx')) return 'file-slides';
+    if (m.startsWith('video/')) return 'file-play';
+    if (m.startsWith('audio/')) return 'file-music';
+    if (m.includes('zip') || m.includes('rar') || m.includes('tar') || m.includes('7z')) return 'file-zip';
+    if (m.includes('text') || n.endsWith('.txt') || n.endsWith('.json') || n.endsWith('.xml')) return 'file-text';
+    return 'file-earmark';
+  }
+
+  function getFileIconClass(f) {
+    if (f.isFolder) return 'folder';
+    var m = f.mimeType || '';
+    var n = (f.name || '').toLowerCase();
+    if (m.startsWith('image/')) return 'image';
+    if (m === 'application/pdf' || n.endsWith('.pdf')) return 'pdf';
+    if (m.includes('word') || m.includes('document') || n.endsWith('.doc') || n.endsWith('.docx')) return 'doc';
+    if (m.includes('sheet') || m.includes('excel') || n.endsWith('.xls') || n.endsWith('.xlsx') || n.endsWith('.csv')) return 'sheet';
+    if (m.includes('presentation') || m.includes('powerpoint')) return 'doc';
+    if (m.startsWith('video/')) return 'video';
+    if (m.startsWith('audio/')) return 'audio';
+    if (m.includes('zip') || m.includes('rar') || m.includes('tar')) return 'archive';
+    return 'file';
+  }
+
+  function formatFileSize(bytes) {
+    if (!bytes) return '';
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / 1048576).toFixed(1) + ' MB';
+  }
+%>
+
+<script>
+var currentFolderId = '<%= currentFolderId %>';
+var rootFolderId = '<%= rootFolderId %>';
+var maxSizeMB = <%= maxSizeMB %>;
+
+// Context menu state
+var ctxFileId = null;
+var ctxFileName = null;
+var ctxIsFolder = false;
+var ctxWebLink = null;
+
+// ============ Navigation ============
+
+function navigateFolder(folderId) {
+  window.location.href = '/drive?folder=' + folderId;
+}
+
+function openFile(fileId, webLink) {
+  if (webLink) {
+    window.open(webLink, '_blank');
+  } else {
+    window.location.href = '/drive/download/' + fileId;
+  }
+}
+
+// ============ Context Menu ============
+
+function showContextMenu(e, fileId, fileName, isFolder, webLink) {
+  e.preventDefault();
+  ctxFileId = fileId;
+  ctxFileName = fileName;
+  ctxIsFolder = isFolder;
+  ctxWebLink = webLink;
+
+  var menu = document.getElementById('contextMenu');
+  menu.style.left = e.clientX + 'px';
+  menu.style.top = e.clientY + 'px';
+
+  // Adjust if off screen
+  var rect = menu.getBoundingClientRect();
+  if (e.clientX + 170 > window.innerWidth) menu.style.left = (e.clientX - 170) + 'px';
+  if (e.clientY + 200 > window.innerHeight) menu.style.top = (e.clientY - 180) + 'px';
+
+  menu.classList.add('show');
+}
+
+document.addEventListener('click', function() {
+  document.getElementById('contextMenu').classList.remove('show');
+});
+
+function ctxOpen() {
+  if (ctxIsFolder) {
+    navigateFolder(ctxFileId);
+  } else {
+    openFile(ctxFileId, ctxWebLink);
+  }
+}
+
+function ctxDownload() {
+  if (ctxIsFolder) {
+    showToast('Folders cannot be downloaded directly', 'error');
+    return;
+  }
+  window.location.href = '/drive/download/' + ctxFileId;
+}
+
+function ctxRename() {
+  document.getElementById('renameInput').value = ctxFileName;
+  document.getElementById('renameModal').classList.add('show');
+  setTimeout(function() { document.getElementById('renameInput').focus(); }, 100);
+}
+
+function ctxDelete() {
+  if (!confirm('Delete "' + ctxFileName + '"? This will move it to trash.')) return;
+
+  axios.delete('/drive/' + ctxFileId).then(function(res) {
+    showToast(res.data.message, 'success');
+    // Remove from grid
+    var el = document.querySelector('.drive-item[data-id="' + ctxFileId + '"]');
+    if (el) el.remove();
+    // Show empty state if no items left
+    if (document.querySelectorAll('.drive-item').length === 0) {
+      document.getElementById('driveGrid').innerHTML = '<div class="drive-empty" style="grid-column:1/-1;"><i class="bi bi-folder2-open d-block"></i><p>This folder is empty</p></div>';
+    }
+  }).catch(function(err) {
+    showToast(err.response?.data?.message || 'Failed to delete', 'error');
+  });
+}
+
+// ============ Rename ============
+
+function closeRenameModal() { document.getElementById('renameModal').classList.remove('show'); }
+
+function submitRename() {
+  var name = document.getElementById('renameInput').value.trim();
+  if (!name) { showToast('Name is required', 'error'); return; }
+
+  axios.put('/drive/rename/' + ctxFileId, { name: name }).then(function(res) {
+    showToast('Renamed successfully', 'success');
+    closeRenameModal();
+    // Update in grid
+    var el = document.querySelector('.drive-item[data-id="' + ctxFileId + '"]');
+    if (el) {
+      el.querySelector('.drive-item-name').textContent = name;
+      el.dataset.name = name;
+    }
+  }).catch(function(err) {
+    showToast(err.response?.data?.message || 'Failed to rename', 'error');
+  });
+}
+
+// ============ New Folder ============
+
+function openNewFolderModal() {
+  document.getElementById('newFolderName').value = '';
+  document.getElementById('newFolderModal').classList.add('show');
+  setTimeout(function() { document.getElementById('newFolderName').focus(); }, 100);
+}
+
+function closeNewFolderModal() { document.getElementById('newFolderModal').classList.remove('show'); }
+
+function createFolder() {
+  var name = document.getElementById('newFolderName').value.trim();
+  if (!name) { showToast('Folder name is required', 'error'); return; }
+
+  axios.post('/drive/folder', { name: name, parent_id: currentFolderId }).then(function(res) {
+    showToast('Folder created', 'success');
+    closeNewFolderModal();
+    location.reload();
+  }).catch(function(err) {
+    showToast(err.response?.data?.message || 'Failed to create folder', 'error');
+  });
+}
+
+// ============ File Upload ============
+
+function toggleDropzone() {
+  var dz = document.getElementById('dropzone');
+  dz.classList.toggle('active');
+}
+
+function handleFileSelect(files) {
+  if (!files || files.length === 0) return;
+
+  var maxBytes = maxSizeMB * 1024 * 1024;
+  for (var i = 0; i < files.length; i++) {
+    if (files[i].size > maxBytes) {
+      showToast('File "' + files[i].name + '" exceeds ' + maxSizeMB + 'MB limit', 'error');
+      return;
+    }
+  }
+
+  uploadFiles(files);
+}
+
+async function uploadFiles(files) {
+  var progressDiv = document.getElementById('uploadProgress');
+  progressDiv.classList.add('show');
+  progressDiv.innerHTML = '';
+
+  // Show file list
+  for (var i = 0; i < files.length; i++) {
+    progressDiv.innerHTML +=
+      '<div class="drive-upload-file" id="upload-' + i + '">' +
+        '<i class="bi bi-file-earmark" style="color:var(--tf-text-muted);"></i>' +
+        '<span class="name">' + files[i].name + '</span>' +
+        '<span class="status" id="upload-status-' + i + '">Uploading...</span>' +
+      '</div>';
+  }
+
+  var formData = new FormData();
+  formData.append('folder_id', currentFolderId);
+  for (var j = 0; j < files.length; j++) {
+    formData.append('files', files[j]);
+  }
+
+  try {
+    var res = await axios.post('/drive/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+
+    // Mark all as done
+    for (var k = 0; k < files.length; k++) {
+      var statusEl = document.getElementById('upload-status-' + k);
+      if (statusEl) { statusEl.textContent = 'Done'; statusEl.classList.add('done'); }
+    }
+
+    showToast(res.data.message, 'success');
+
+    // Hide dropzone
+    document.getElementById('dropzone').classList.remove('active');
+    document.getElementById('fileInput').value = '';
+
+    // Reload after short delay
+    setTimeout(function() { location.reload(); }, 800);
+  } catch (err) {
+    showToast(err.response?.data?.message || 'Upload failed', 'error');
+    for (var m = 0; m < files.length; m++) {
+      var s = document.getElementById('upload-status-' + m);
+      if (s && s.textContent === 'Uploading...') { s.textContent = 'Failed'; s.style.color = 'var(--tf-danger)'; }
+    }
+  }
+}
+
+// Drag & drop
+(function() {
+  var body = document.body;
+  var dz = document.getElementById('dropzone');
+  var dragCounter = 0;
+
+  body.addEventListener('dragenter', function(e) {
+    e.preventDefault();
+    dragCounter++;
+    dz.classList.add('active');
+  });
+
+  body.addEventListener('dragleave', function(e) {
+    e.preventDefault();
+    dragCounter--;
+    if (dragCounter <= 0) { dragCounter = 0; dz.classList.remove('dragover'); }
+  });
+
+  body.addEventListener('dragover', function(e) {
+    e.preventDefault();
+    dz.classList.add('dragover');
+  });
+
+  body.addEventListener('drop', function(e) {
+    e.preventDefault();
+    dragCounter = 0;
+    dz.classList.remove('dragover');
+    if (e.dataTransfer.files.length > 0) {
+      handleFileSelect(e.dataTransfer.files);
+    }
+  });
+})();
+</script>
