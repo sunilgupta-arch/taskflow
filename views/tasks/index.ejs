@@ -31,6 +31,9 @@
       <option value="weekly" <%= filters.schedule === 'weekly' ? 'selected' : '' %>>Weekly Tasks</option>
     </select>
     <% } %>
+    <% if (['CLIENT_ADMIN', 'CLIENT_MANAGER', 'LOCAL_ADMIN', 'LOCAL_MANAGER'].includes(user.role_name)) { %>
+    <input type="date" name="for_date" value="<%= filters.for_date || '' %>" class="tf-form-control" style="max-width:160px;" title="Filter by date">
+    <% } %>
     <button type="submit" class="btn-tf btn-tf-outline">Filter</button>
   </form>
   
@@ -39,6 +42,11 @@
   </a>
 </div>
 
+<%
+const _fd = filters.for_date || null;
+const _isPast   = _fd && _fd < todayDate;
+const _isFuture = _fd && _fd > todayDate;
+%>
 <!-- Task Table -->
 <div class="tf-card">
   <div class="card-header d-flex justify-content-between align-items-center">
@@ -161,11 +169,11 @@
                 </span>
                 <% } else if (task.is_completed_today) { %>
                 <span class="badge" style="font-size:0.65rem;border-radius:4px;padding:3px 8px;background:rgba(16,185,129,0.15);color:#10b981;">
-                  <i class="bi bi-check-circle-fill"></i> Done Today
+                  <i class="bi bi-check-circle-fill"></i> <%= _isPast ? 'Done' : 'Done Today' %>
                 </span>
                 <% } else { %>
                 <span class="badge" style="font-size:0.65rem;border-radius:4px;padding:3px 8px;background:rgba(245,158,11,0.15);color:#f59e0b;">
-                  <i class="bi bi-circle"></i> Pending Today
+                  <i class="bi bi-circle"></i> <%= _isPast ? 'Not Done' : (_isFuture ? 'Pending' : 'Pending Today') %>
                 </span>
                 <% } %>
               <% } else { %>

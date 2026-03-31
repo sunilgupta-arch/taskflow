@@ -152,6 +152,8 @@ function showTaskDetail(userId, date) {
       return;
     }
 
+    var today = new Date().toISOString().split('T')[0];
+    var isPast = date < today;
     var done = 0;
     var html = '';
     data.tasks.forEach(function(t) {
@@ -161,6 +163,8 @@ function showTaskDetail(userId, date) {
       var statusBg, statusClr, statusText;
       if (t.is_completed) {
         statusBg = 'rgba(16,185,129,0.15)'; statusClr = '#10b981'; statusText = 'Done';
+      } else if (isPast) {
+        statusBg = 'rgba(239,68,68,0.1)'; statusClr = '#ef4444'; statusText = 'Not Done';
       } else {
         statusBg = 'rgba(245,158,11,0.15)'; statusClr = '#f59e0b'; statusText = 'Pending';
       }

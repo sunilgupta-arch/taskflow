@@ -124,6 +124,9 @@ app.use((err, req, res, next) => {
     }
   });
 
+  // Track active calls in memory: userId -> { conversation_id, peer_id }
+  const activeCalls = new Map();
+
   // Socket.IO connection handler
   io.on('connection', (socket) => {
     const user = socket.user;
@@ -149,6 +152,59 @@ app.use((err, req, res, next) => {
           user_id: user.id,
           user_name: user.name
         });
+      }
+    });
+
+    // ── Voice Calls (WebRTC signaling) ──────────────────────────────────────
+
+    // Caller sends offer to recipient
+    socket.on('call:offer', (data) => {
+      // { to_user_id, conversation_id, offer }
+      if (activeCalls.has(data.to_user_id)) {
+        socket.emit('call:busy', { conversation_id: data.conversation_id });
+        return;
+      }
+      activeCalls.set(user.id, { conversation_id: data.conversation_id, peer_id: data.to_user_id });
+      io.to(`user:${data.to_user_id}`).emit('call:incoming', {
+        conversation_id: data.conversation_id,
+        from_user_id: user.id,
+        from_user_name: user.name,
+        offer: data.offer
+      });
+    });
+
+    // Recipient accepts and sends answer
+    socket.on('call:answer', (data) => {
+      // { to_user_id, conversation_id, answer }
+      activeCalls.set(user.id, { conversation_id: data.conversation_id, peer_id: data.to_user_id });
+      io.to(`user:${data.to_user_id}`).emit('call:answered', { answer: data.answer });
+    });
+
+    // ICE candidate exchange
+    socket.on('call:ice-candidate', (data) => {
+      // { to_user_id, candidate }
+      io.to(`user:${data.to_user_id}`).emit('call:ice-candidate', { candidate: data.candidate });
+    });
+
+    // Recipient rejects the call
+    socket.on('call:reject', (data) => {
+      // { to_user_id, conversation_id }
+      io.to(`user:${data.to_user_id}`).emit('call:rejected', { conversation_id: data.conversation_id });
+    });
+
+    // Either party ends the call
+    socket.on('call:end', (data) => {
+      // { to_user_id }
+      activeCalls.delete(user.id);
+      io.to(`user:${data.to_user_id}`).emit('call:ended');
+    });
+
+    // Clean up if user disconnects mid-call
+    socket.on('disconnect', () => {
+      if (activeCalls.has(user.id)) {
+        const call = activeCalls.get(user.id);
+        activeCalls.delete(user.id);
+        io.to(`user:${call.peer_id}`).emit('call:ended');
       }
     });
   });

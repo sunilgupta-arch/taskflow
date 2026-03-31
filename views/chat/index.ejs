@@ -215,8 +215,8 @@
   .msg-row.received { justify-content: flex-start; }
 
   .msg-row.sent .msg-bubble {
-    background: linear-gradient(135deg, rgba(0,212,255,0.2), rgba(124,58,237,0.15));
-    border: 1px solid rgba(0,212,255,0.25);
+    background: rgba(180,190,200,0.18);
+    border: 1px solid rgba(180,190,200,0.25);
     color: var(--tf-text);
     border-bottom-right-radius: 4px;
   }
@@ -241,7 +241,27 @@
     opacity: 0.7;
     text-align: right;
     font-family: var(--tf-font-mono);
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 2px;
   }
+
+  @keyframes callPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(16,185,129,0.5); }
+    50% { box-shadow: 0 0 0 16px rgba(16,185,129,0); }
+  }
+
+  .msg-tick {
+    font-size: 0.8rem;
+    font-weight: 700;
+    opacity: 1;
+    display: inline-flex;
+    align-items: center;
+  }
+  .msg-tick i { font-weight: 900; -webkit-text-stroke: 0.3px currentColor; }
+  .msg-tick.sent { color: rgba(180,195,210,0.7); }
+  .msg-tick.read { color: #00d4ff; }
 
   .msg-row.sent .msg-time { color: var(--tf-text-muted); }
 
@@ -495,6 +515,31 @@
     border-radius: 8px;
   }
   .msg-attachment:hover { opacity: 0.9; }
+
+  /* Attachment context menu */
+  #attachCtxMenu {
+    display: none;
+    position: fixed;
+    z-index: 9999;
+    background: var(--tf-surface);
+    border: 1px solid var(--tf-border);
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+    min-width: 160px;
+    padding: 0.3rem 0;
+    font-size: 0.85rem;
+  }
+  #attachCtxMenu.show { display: block; }
+  .attach-ctx-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    color: var(--tf-text);
+    transition: background 0.15s;
+  }
+  .attach-ctx-item:hover { background: var(--tf-hover, rgba(99,102,241,0.08)); }
 
   .msg-attach-icon {
     width: 32px; height: 32px;
@@ -795,7 +840,90 @@
   </div>
 </div>
 
+<!-- Attachment Right-Click Context Menu -->
+<div id="attachCtxMenu">
+  <div class="attach-ctx-item" id="attachCtxOpen"><i class="bi bi-box-arrow-up-right"></i> Open</div>
+  <div class="attach-ctx-item" id="attachCtxSave"><i class="bi bi-download"></i> Save As</div>
+</div>
+
 <!-- New Chat Modal -->
+<!-- Hidden audio element for remote peer -->
+<audio id="remoteAudio" autoplay playsinline style="display:none;"></audio>
+
+<!-- Outgoing / Calling overlay -->
+<div id="callOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:400;align-items:center;justify-content:center;flex-direction:column;gap:1.5rem;">
+  <div style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,#10b981,#059669);display:flex;align-items:center;justify-content:center;font-size:1.8rem;animation:callPulse 1.4s ease-in-out infinite;">
+    <i class="bi bi-telephone-fill" style="color:#fff;"></i>
+  </div>
+  <div style="text-align:center;">
+    <div id="callOverlayLabel" style="font-size:0.75rem;color:rgba(255,255,255,0.5);letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;">Calling...</div>
+    <div id="callOverlayName" style="font-size:1.4rem;font-weight:700;color:#fff;"></div>
+  </div>
+  <button onclick="endCall(true)" style="margin-top:0.5rem;width:60px;height:60px;border-radius:50%;background:#ef4444;border:none;color:#fff;font-size:1.4rem;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(239,68,68,0.5);">
+    <i class="bi bi-telephone-x-fill"></i>
+  </button>
+</div>
+
+<!-- Incoming call overlay -->
+<div id="incomingCallOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:400;align-items:center;justify-content:center;flex-direction:column;gap:1.5rem;">
+  <div style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,#10b981,#059669);display:flex;align-items:center;justify-content:center;font-size:1.8rem;animation:callPulse 1.4s ease-in-out infinite;">
+    <i class="bi bi-telephone-inbound-fill" style="color:#fff;"></i>
+  </div>
+  <div style="text-align:center;">
+    <div style="font-size:0.75rem;color:rgba(255,255,255,0.5);letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;">Incoming Call</div>
+    <div id="incomingCallerName" style="font-size:1.4rem;font-weight:700;color:#fff;"></div>
+  </div>
+  <div style="display:flex;gap:2rem;margin-top:0.5rem;">
+    <div style="display:flex;flex-direction:column;align-items:center;gap:8px;">
+      <button onclick="rejectCall()" style="width:60px;height:60px;border-radius:50%;background:#ef4444;border:none;color:#fff;font-size:1.4rem;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(239,68,68,0.5);">
+        <i class="bi bi-telephone-x-fill"></i>
+      </button>
+      <span style="font-size:0.65rem;color:rgba(255,255,255,0.5);">Decline</span>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:8px;">
+      <button onclick="acceptCall()" style="width:60px;height:60px;border-radius:50%;background:#10b981;border:none;color:#fff;font-size:1.4rem;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(16,185,129,0.5);">
+        <i class="bi bi-telephone-fill"></i>
+      </button>
+      <span style="font-size:0.65rem;color:rgba(255,255,255,0.5);">Accept</span>
+    </div>
+  </div>
+</div>
+
+<!-- Active call floating panel -->
+<div id="activeCallPanel" style="display:none;position:fixed;bottom:1.5rem;right:1.5rem;z-index:350;background:var(--tf-surface);border:1px solid rgba(16,185,129,0.4);border-radius:16px;padding:1rem 1.25rem;min-width:220px;box-shadow:0 8px 32px rgba(0,0,0,0.4);align-items:center;gap:1rem;">
+  <div style="width:36px;height:36px;border-radius:50%;background:rgba(16,185,129,0.15);display:flex;align-items:center;justify-content:center;color:#10b981;font-size:1rem;flex-shrink:0;">
+    <i class="bi bi-telephone-fill"></i>
+  </div>
+  <div style="flex:1;min-width:0;">
+    <div id="activeCallName" style="font-size:0.8rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div>
+    <div id="callTimer" style="font-size:0.7rem;color:#10b981;font-family:var(--tf-font-mono);">00:00</div>
+  </div>
+  <button id="muteBtn" onclick="toggleMute()" title="Mute" style="width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.15);border:none;color:#fff;font-size:0.9rem;cursor:pointer;display:flex;align-items:center;justify-content:center;">
+    <i class="bi bi-mic-fill"></i>
+  </button>
+  <button onclick="endCall(true)" title="End call" style="width:36px;height:36px;border-radius:50%;background:#ef4444;border:none;color:#fff;font-size:0.9rem;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(239,68,68,0.4);">
+    <i class="bi bi-telephone-x-fill"></i>
+  </button>
+</div>
+
+<!-- Clear Chat Confirmation Modal -->
+<div id="clearChatModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:300;align-items:center;justify-content:center;padding:1rem;">
+  <div style="background:var(--tf-surface);border:1px solid var(--tf-border);border-radius:14px;width:100%;max-width:360px;padding:1.5rem;">
+    <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.75rem;">
+      <span style="width:36px;height:36px;border-radius:50%;background:rgba(239,68,68,0.12);display:flex;align-items:center;justify-content:center;color:#ef4444;font-size:1rem;flex-shrink:0;"><i class="bi bi-trash3"></i></span>
+      <div>
+        <div style="font-weight:700;font-size:0.9rem;">Clear Chat</div>
+        <div style="font-size:0.75rem;color:var(--tf-text-muted);">Only cleared for you, not the other person.</div>
+      </div>
+    </div>
+    <p style="font-size:0.8rem;color:var(--tf-text-muted);margin-bottom:1.25rem;">All messages in this conversation will be hidden from your view. This cannot be undone.</p>
+    <div style="display:flex;gap:0.5rem;justify-content:flex-end;">
+      <button onclick="document.getElementById('clearChatModal').style.display='none'" class="btn-tf btn-tf-outline" style="font-size:0.8rem;padding:6px 16px;">Cancel</button>
+      <button onclick="executeClearChat()" style="background:#ef4444;color:#fff;border:none;border-radius:8px;padding:6px 16px;font-size:0.8rem;font-weight:600;cursor:pointer;">Clear Chat</button>
+    </div>
+  </div>
+</div>
+
 <div class="new-chat-modal" id="newChatModal">
   <div class="new-chat-body">
     <div class="modal-header">
@@ -993,6 +1121,9 @@ function loadOlderMessages() {
   }
 }
 
+var currentCallPeerId = null;
+var currentCallPeerName = null;
+
 function renderHeader(conversation) {
   var name, sub, avatarClass, avatarContent;
 
@@ -1002,7 +1133,11 @@ function renderHeader(conversation) {
     sub = other.role_name + ' &middot; ' + other.org_type;
     avatarClass = 'direct';
     avatarContent = other.name.charAt(0).toUpperCase();
+    currentCallPeerId = other.id;
+    currentCallPeerName = other.name;
   } else {
+    currentCallPeerId = null;
+    currentCallPeerName = null;
     name = conversation.name || 'Group';
     sub = conversation.participants.map(function(p) { return p.name.split(' ')[0]; }).join(', ');
     avatarClass = 'group';
@@ -1013,8 +1148,10 @@ function renderHeader(conversation) {
     '<div class="chat-main-header">' +
       '<button class="chat-back-btn" onclick="goBackToList()"><i class="bi bi-arrow-left"></i></button>' +
       '<div class="chat-avatar ' + avatarClass + '">' + avatarContent + '</div>' +
-      '<div><div class="chat-header-name">' + escapeHtml(name) + '</div>' +
+      '<div style="flex:1;min-width:0;"><div class="chat-header-name">' + escapeHtml(name) + '</div>' +
       '<div class="chat-header-sub">' + sub + '</div></div>' +
+      (conversation.type === 'direct' ? '<button onclick="startCall()" title="Voice call" style="background:none;border:none;color:var(--tf-text-muted);cursor:pointer;padding:4px 8px;border-radius:6px;font-size:0.95rem;display:flex;align-items:center;transition:color 0.15s;" onmouseover="this.style.color=\'#10b981\'" onmouseout="this.style.color=\'var(--tf-text-muted)\'"><i class="bi bi-telephone-fill"></i></button>' : '') +
+      '<button onclick="confirmClearChat()" title="Clear chat" style="background:none;border:none;color:var(--tf-text-muted);cursor:pointer;padding:4px 8px;border-radius:6px;font-size:0.8rem;display:flex;align-items:center;gap:4px;transition:color 0.15s;" onmouseover="this.style.color=\'#ef4444\'" onmouseout="this.style.color=\'var(--tf-text-muted)\'"><i class="bi bi-trash3"></i></button>' +
     '</div>';
 }
 
@@ -1043,7 +1180,7 @@ function buildAttachmentHTML(m) {
   var isSender = m.sender_id === currentUserId;
   var alreadySaved = m.saved_to_drive || isSender;
 
-  var html = '<div class="msg-attachment" style="cursor:default;">';
+  var html = '<div class="msg-attachment" style="cursor:default;" data-msg-id="' + m.id + '" data-mime="' + (m.attachment_mime || '') + '" oncontextmenu="openAttachMenu(event,this)">';
   html += '<div class="msg-attach-icon"><i class="bi bi-' + icon + '"></i></div>';
   html += '<div style="flex:1;min-width:0;">';
   html += '<div class="msg-attach-name">' + escapeHtml(m.attachment_name) + '</div>';
@@ -1051,8 +1188,8 @@ function buildAttachmentHTML(m) {
   html += '</div>';
 
   if (viewable) {
-    // Open in browser / Google viewer
-    html += '<a href="' + link + '" target="_blank" class="msg-attach-dl" title="Open" style="cursor:pointer;text-decoration:none;color:inherit;"><i class="bi bi-box-arrow-up-right"></i></a>';
+    // Open via server proxy (works for all participants)
+    html += '<a href="/chat/attachment/' + m.id + '?action=view" target="_blank" class="msg-attach-dl" title="Open" style="cursor:pointer;text-decoration:none;color:inherit;"><i class="bi bi-box-arrow-up-right"></i></a>';
   } else if (alreadySaved) {
     // Already saved — show checkmark, disabled
     html += '<span class="msg-attach-dl" title="Saved to Drive" style="color:var(--tf-success);font-size:0.85rem;"><i class="bi bi-check-lg"></i></span>';
@@ -1114,7 +1251,10 @@ function buildMessagesHTML(messages, isInitial) {
       html += '<div>' + escapeHtml(m.content) + '</div>';
     }
 
-    html += '<div class="msg-time">' + time + '</div>';
+    var tickHtml = isSent
+      ? '<span class="msg-tick ' + (m.is_read ? 'read' : 'sent') + '" data-tick="' + m.id + '"><i class="bi bi-check2-all"></i></span>'
+      : '';
+    html += '<div class="msg-time"><span>' + time + '</span>' + tickHtml + '</div>';
     html += '</div></div>';
   });
 
@@ -1245,7 +1385,10 @@ function appendMessage(msg) {
   if (msg.content) {
     html += '<div>' + escapeHtml(msg.content) + '</div>';
   }
-  html += '<div class="msg-time">' + time + '</div>';
+  var appendTickHtml = isSent
+    ? '<span class="msg-tick ' + (msg.is_read ? 'read' : 'sent') + '" data-tick="' + msg.id + '"><i class="bi bi-check2-all"></i></span>'
+    : '';
+  html += '<div class="msg-time"><span>' + time + '</span>' + appendTickHtml + '</div>';
   html += '</div></div>';
 
   container.insertAdjacentHTML('beforeend', html);
@@ -1316,6 +1459,38 @@ socket.on('chat:typing', function(data) {
   }
 });
 
+// Update sent message ticks to blue when recipient reads
+socket.on('chat:read', function(data) {
+  if (data.conversation_id !== currentConversationId) return;
+  document.querySelectorAll('.msg-tick.sent').forEach(function(tick) {
+    if (parseInt(tick.dataset.tick) <= data.last_read_message_id) {
+      tick.classList.remove('sent');
+      tick.classList.add('read');
+    }
+  });
+});
+
+// ============ Clear Chat ============
+
+function confirmClearChat() {
+  if (!currentConversationId) return;
+  var modal = document.getElementById('clearChatModal');
+  modal.style.display = 'flex';
+}
+
+async function executeClearChat() {
+  document.getElementById('clearChatModal').style.display = 'none';
+  try {
+    await axios.post('/chat/conversations/' + currentConversationId + '/clear');
+    // Clear the message container
+    var container = document.getElementById('chatMessages');
+    container.innerHTML = '<div class="chat-empty"><i class="bi bi-chat-dots"></i><span>No messages yet</span></div>';
+    showToast('Chat cleared', 'success');
+  } catch (err) {
+    showToast('Failed to clear chat', 'error');
+  }
+}
+
 // Emit typing indicator
 (function() {
   var input = document.getElementById('chatInput');
@@ -1348,6 +1523,58 @@ function openNewChatModal() {
 function closeNewChatModal() {
   document.getElementById('newChatModal').classList.remove('show');
 }
+
+// Attachment right-click context menu
+var _ctxMsgId = null;
+
+function openAttachMenu(e, el) {
+  e.preventDefault();
+  e.stopPropagation();
+  _ctxMsgId = el.dataset.msgId;
+
+  // Show/hide Open based on viewable type
+  var mime = el.dataset.mime || '';
+  var nameEl = el.querySelector('.msg-attach-name');
+  var name = nameEl ? nameEl.textContent : '';
+  var canView = isViewableType(mime, name);
+  document.getElementById('attachCtxOpen').style.display = canView ? 'flex' : 'none';
+
+  var menu = document.getElementById('attachCtxMenu');
+  menu.classList.add('show');
+  // Position near cursor, keep within viewport
+  var x = e.clientX, y = e.clientY;
+  if (x + 170 > window.innerWidth) x = window.innerWidth - 175;
+  if (y + 90 > window.innerHeight) y = window.innerHeight - 95;
+  menu.style.left = x + 'px';
+  menu.style.top = y + 'px';
+}
+
+function closeAttachMenu() {
+  document.getElementById('attachCtxMenu').classList.remove('show');
+  _ctxMsgId = null;
+}
+
+document.getElementById('attachCtxOpen').addEventListener('click', function() {
+  if (!_ctxMsgId) return;
+  window.open('/chat/attachment/' + _ctxMsgId + '?action=view', '_blank');
+  closeAttachMenu();
+});
+
+document.getElementById('attachCtxSave').addEventListener('click', function() {
+  if (!_ctxMsgId) return;
+  var a = document.createElement('a');
+  a.href = '/chat/attachment/' + _ctxMsgId + '?action=download';
+  a.download = '';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  closeAttachMenu();
+});
+
+document.addEventListener('click', function(e) {
+  if (!document.getElementById('attachCtxMenu').contains(e.target)) closeAttachMenu();
+});
+document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeAttachMenu(); });
 
 function setChatType(type) {
   chatType = type;
@@ -1659,4 +1886,247 @@ function selectDriveFile() {
     openConversation(currentConversationId);
   }
 })();
+
+// ============ Voice Calls (WebRTC) ============
+
+var peerConnection = null;
+var localStream = null;
+var callTimerInterval = null;
+var callSeconds = 0;
+var callState = 'idle'; // idle | calling | incoming | active
+var pendingOffer = null;
+var pendingFromUserId = null;
+
+var ICE_SERVERS = {
+  iceServers: [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun1.l.google.com:19302' }
+  ]
+};
+
+function startCall() {
+  if (!currentCallPeerId) return;
+  if (callState !== 'idle') { showToast('Already in a call', 'error'); return; }
+
+  callState = 'calling';
+  showCallingOverlay(currentCallPeerName);
+
+  navigator.mediaDevices.getUserMedia({ audio: true, video: false })
+    .then(function(stream) {
+      localStream = stream;
+      peerConnection = new RTCPeerConnection(ICE_SERVERS);
+      stream.getTracks().forEach(function(t) { peerConnection.addTrack(t, stream); });
+
+      peerConnection.ontrack = function(e) { attachRemoteAudio(e.streams[0]); };
+      peerConnection.onicecandidate = function(e) {
+        if (e.candidate) {
+          socket.emit('call:ice-candidate', { to_user_id: currentCallPeerId, candidate: e.candidate });
+        }
+      };
+      peerConnection.oniceconnectionstatechange = function() {
+        if (peerConnection && (peerConnection.iceConnectionState === 'disconnected' || peerConnection.iceConnectionState === 'failed')) {
+          endCall(false);
+        }
+      };
+
+      return peerConnection.createOffer();
+    })
+    .then(function(offer) {
+      return peerConnection.setLocalDescription(offer).then(function() { return offer; });
+    })
+    .then(function(offer) {
+      socket.emit('call:offer', { to_user_id: currentCallPeerId, conversation_id: currentConversationId, offer: offer });
+    })
+    .catch(function(err) {
+      callState = 'idle';
+      hideCallingOverlay();
+      showToast(err.name === 'NotAllowedError' ? 'Microphone access denied' : 'Could not start call', 'error');
+      cleanupCall();
+    });
+}
+
+function endCall(notifyPeer) {
+  if (notifyPeer !== false && currentCallPeerId) {
+    socket.emit('call:end', { to_user_id: currentCallPeerId });
+  }
+  cleanupCall();
+  hideCallingOverlay();
+  hideActiveCallPanel();
+  callState = 'idle';
+}
+
+function cleanupCall() {
+  if (localStream) { localStream.getTracks().forEach(function(t) { t.stop(); }); localStream = null; }
+  if (peerConnection) { peerConnection.close(); peerConnection = null; }
+  stopCallTimer();
+  document.getElementById('remoteAudio').srcObject = null;
+}
+
+function attachRemoteAudio(stream) {
+  var audio = document.getElementById('remoteAudio');
+  audio.srcObject = stream;
+  audio.play().catch(function() {});
+}
+
+// ── Overlays ──
+
+function showCallingOverlay(name) {
+  document.getElementById('callOverlayLabel').textContent = 'Calling...';
+  document.getElementById('callOverlayName').textContent = name;
+  document.getElementById('callOverlay').style.display = 'flex';
+}
+
+function hideCallingOverlay() {
+  document.getElementById('callOverlay').style.display = 'none';
+}
+
+function showIncomingOverlay(name) {
+  document.getElementById('incomingCallerName').textContent = name;
+  document.getElementById('incomingCallOverlay').style.display = 'flex';
+}
+
+function hideIncomingOverlay() {
+  document.getElementById('incomingCallOverlay').style.display = 'none';
+}
+
+function showActiveCallPanel(name) {
+  document.getElementById('activeCallName').textContent = name;
+  document.getElementById('activeCallPanel').style.display = 'flex';
+  callSeconds = 0;
+  callTimerInterval = setInterval(function() {
+    callSeconds++;
+    var m = Math.floor(callSeconds / 60);
+    var s = callSeconds % 60;
+    document.getElementById('callTimer').textContent = (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
+  }, 1000);
+}
+
+function hideActiveCallPanel() {
+  document.getElementById('activeCallPanel').style.display = 'none';
+}
+
+function stopCallTimer() {
+  if (callTimerInterval) { clearInterval(callTimerInterval); callTimerInterval = null; }
+}
+
+function toggleMute() {
+  if (!localStream) return;
+  var track = localStream.getAudioTracks()[0];
+  if (!track) return;
+  track.enabled = !track.enabled;
+  var btn = document.getElementById('muteBtn');
+  if (track.enabled) {
+    btn.innerHTML = '<i class="bi bi-mic-fill"></i>';
+    btn.title = 'Mute';
+    btn.style.background = 'rgba(255,255,255,0.15)';
+  } else {
+    btn.innerHTML = '<i class="bi bi-mic-mute-fill"></i>';
+    btn.title = 'Unmute';
+    btn.style.background = 'rgba(239,68,68,0.4)';
+  }
+}
+
+// ── Incoming call handlers ──
+
+function acceptCall() {
+  hideIncomingOverlay();
+  if (!pendingOffer || !pendingFromUserId) return;
+  callState = 'active';
+
+  navigator.mediaDevices.getUserMedia({ audio: true, video: false })
+    .then(function(stream) {
+      localStream = stream;
+      peerConnection = new RTCPeerConnection(ICE_SERVERS);
+      stream.getTracks().forEach(function(t) { peerConnection.addTrack(t, stream); });
+
+      peerConnection.ontrack = function(e) { attachRemoteAudio(e.streams[0]); };
+      peerConnection.onicecandidate = function(e) {
+        if (e.candidate) {
+          socket.emit('call:ice-candidate', { to_user_id: pendingFromUserId, candidate: e.candidate });
+        }
+      };
+      peerConnection.oniceconnectionstatechange = function() {
+        if (peerConnection && (peerConnection.iceConnectionState === 'disconnected' || peerConnection.iceConnectionState === 'failed')) {
+          endCall(false);
+        }
+      };
+
+      return peerConnection.setRemoteDescription(new RTCSessionDescription(pendingOffer));
+    })
+    .then(function() { return peerConnection.createAnswer(); })
+    .then(function(answer) {
+      return peerConnection.setLocalDescription(answer).then(function() { return answer; });
+    })
+    .then(function(answer) {
+      socket.emit('call:answer', { to_user_id: pendingFromUserId, conversation_id: currentConversationId, answer: answer });
+      currentCallPeerId = pendingFromUserId;
+      showActiveCallPanel(document.getElementById('incomingCallerName').textContent);
+      pendingOffer = null;
+      pendingFromUserId = null;
+    })
+    .catch(function(err) {
+      callState = 'idle';
+      showToast(err.name === 'NotAllowedError' ? 'Microphone access denied' : 'Could not start call', 'error');
+      cleanupCall();
+    });
+}
+
+function rejectCall() {
+  hideIncomingOverlay();
+  if (pendingFromUserId) {
+    socket.emit('call:reject', { to_user_id: pendingFromUserId, conversation_id: currentConversationId });
+  }
+  pendingOffer = null;
+  pendingFromUserId = null;
+  callState = 'idle';
+}
+
+// ── Socket events ──
+
+socket.on('call:incoming', function(data) {
+  if (callState !== 'idle') {
+    socket.emit('call:reject', { to_user_id: data.from_user_id, conversation_id: data.conversation_id });
+    return;
+  }
+  callState = 'incoming';
+  pendingOffer = data.offer;
+  pendingFromUserId = data.from_user_id;
+  showIncomingOverlay(data.from_user_name);
+});
+
+socket.on('call:answered', function(data) {
+  if (!peerConnection) return;
+  peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer))
+    .then(function() {
+      callState = 'active';
+      hideCallingOverlay();
+      showActiveCallPanel(currentCallPeerName);
+    })
+    .catch(function() { endCall(true); });
+});
+
+socket.on('call:ice-candidate', function(data) {
+  if (peerConnection && data.candidate) {
+    peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate)).catch(function() {});
+  }
+});
+
+socket.on('call:rejected', function() {
+  callState = 'idle';
+  hideCallingOverlay();
+  showToast('Call was declined', 'error');
+  cleanupCall();
+});
+
+socket.on('call:ended', function() {
+  endCall(false);
+  showToast('Call ended', 'success');
+});
+
+socket.on('call:busy', function() {
+  callState = 'idle';
+  hideCallingOverlay();
+  showToast('User is busy on another call', 'error');
+  cleanupCall();
+});
 </script>

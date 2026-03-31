@@ -1161,11 +1161,14 @@ axios.interceptors.response.use(
     var msg = data.message;
     if (!msg) return;
 
+    // Don't show toast if user is already on the chat page
+    if (window.location.pathname.startsWith('/chat')) return;
+
     // Show toast
     var sender = msg.sender_name || 'Someone';
     var preview = msg.content || '';
     if (preview.length > 50) preview = preview.substring(0, 50) + '...';
-    showToast(sender + ': ' + preview, 'info', 60000);
+    showToast(sender + ': ' + preview, 'info', 3000);
 
     // Play two-tone chime
     try {

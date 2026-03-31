@@ -4,8 +4,6 @@ const db = require('../config/db');
 const { ApiResponse } = require('../utils/response');
 const { getIO } = require('../config/socket');
 
-// Roles that can initiate new chats
-const CAN_INITIATE = ['LOCAL_ADMIN', 'LOCAL_MANAGER', 'CLIENT_ADMIN', 'CLIENT_MANAGER'];
 
 // Max attachment size by role
 const MAX_ATTACH_SIZE = {
@@ -31,9 +29,7 @@ class ChatController {
   static async index(req, res) {
     try {
       const conversations = await ChatModel.getConversationsForUser(req.user.id);
-      const users = CAN_INITIATE.includes(req.user.role_name)
-        ? await ChatModel.getChatableUsers(req.user.id)
-        : [];
+      const users = await ChatModel.getChatableUsers(req.user.id);
 
       // Get user's drive files for the "pick from drive" modal
       let driveFiles = [];
@@ -49,7 +45,7 @@ class ChatController {
         conversations,
         users,
         driveFiles,
-        canInitiate: CAN_INITIATE.includes(req.user.role_name),
+        canInitiate: true,
         activeConversationId: req.query.c ? parseInt(req.query.c) : null,
         maxAttachMB: Math.round((MAX_ATTACH_SIZE[req.user.role_name] || 10 * 1024 * 1024) / (1024 * 1024))
       });
@@ -74,10 +70,6 @@ class ChatController {
   static async createConversation(req, res) {
     try {
       const { type, name, participant_ids } = req.body;
-
-      if (!CAN_INITIATE.includes(req.user.role_name)) {
-        return ApiResponse.error(res, 'You cannot start new conversations', 403);
-      }
 
       if (!participant_ids || !participant_ids.length) {
         return ApiResponse.error(res, 'Please select at least one user', 400);
@@ -131,7 +123,7 @@ class ChatController {
       }
 
       const before_id = req.query.before ? parseInt(req.query.before) : null;
-      const messages = await ChatModel.getMessages(conversationId, { limit: 50, before_id });
+      const messages = await ChatModel.getMessages(conversationId, { limit: 50, before_id, currentUserId: req.user.id });
       const conversation = await ChatModel.getConversationById(conversationId);
 
       // Get which attachments this user has already saved
@@ -344,11 +336,42 @@ class ChatController {
         return ApiResponse.error(res, 'Access denied', 403);
       }
 
-      await ChatModel.markAsRead(conversationId, req.user.id);
+      const lastReadId = await ChatModel.markAsRead(conversationId, req.user.id);
+
+      // Notify other participants so their sent-message ticks turn blue
+      if (lastReadId) {
+        const io = getIO();
+        const participantIds = await ChatModel.getParticipantIds(conversationId);
+        participantIds.forEach(uid => {
+          if (uid !== req.user.id) {
+            io.to(`user:${uid}`).emit('chat:read', {
+              conversation_id: conversationId,
+              reader_id: req.user.id,
+              last_read_message_id: lastReadId
+            });
+          }
+        });
+      }
+
       return ApiResponse.success(res, {}, 'Marked as read');
     } catch (err) {
       console.error('Mark as read error:', err);
       return ApiResponse.error(res, 'Failed to mark as read');
+    }
+  }
+
+  // POST /chat/conversations/:id/clear — API: clear chat for current user only
+  static async clearChat(req, res) {
+    try {
+      const conversationId = parseInt(req.params.id);
+      const isParticipant = await ChatModel.isParticipant(conversationId, req.user.id);
+      if (!isParticipant) return ApiResponse.error(res, 'Access denied', 403);
+
+      await ChatModel.clearChatForUser(conversationId, req.user.id);
+      return ApiResponse.success(res, {}, 'Chat cleared');
+    } catch (err) {
+      console.error('Clear chat error:', err);
+      return ApiResponse.error(res, 'Failed to clear chat');
     }
   }
 
@@ -361,6 +384,40 @@ class ChatController {
       return ApiResponse.success(res, { count: 0 });
     }
   }
+
+  // GET /chat/attachment/:messageId?action=view|download
+  static async serveAttachment(req, res) {
+    try {
+      const messageId = parseInt(req.params.messageId);
+      const action = req.query.action === 'download' ? 'download' : 'view';
+
+      const [rows] = await db.query(
+        `SELECT m.attachment_drive_id, m.attachment_name, m.attachment_mime, m.conversation_id
+         FROM chat_messages m WHERE m.id = ? AND m.attachment_drive_id IS NOT NULL`,
+        [messageId]
+      );
+      if (!rows.length) return ApiResponse.error(res, 'Attachment not found', 404);
+
+      const msg = rows[0];
+      const isParticipant = await ChatModel.isParticipant(msg.conversation_id, req.user.id);
+      if (!isParticipant) return ApiResponse.error(res, 'Access denied', 403);
+
+      const { stream, name, mimeType } = await GoogleDriveService.downloadFile(msg.attachment_drive_id);
+      const filename = encodeURIComponent(msg.attachment_name || name);
+
+      if (action === 'view') {
+        res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
+      } else {
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      }
+      res.setHeader('Content-Type', msg.attachment_mime || mimeType);
+      stream.pipe(res);
+    } catch (err) {
+      console.error('Serve attachment error:', err);
+      return ApiResponse.error(res, 'Failed to serve attachment');
+    }
+  }
+
 }
 
 module.exports = ChatController;

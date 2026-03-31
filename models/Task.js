@@ -54,7 +54,7 @@ class TaskModel {
     return result.affectedRows > 0;
   }
 
-  static async getAll({ status, type, assigned_to, created_by, search, completed_period, schedule, page = 1, limit = 20, user, role, orgType, todayDate } = {}) {
+  static async getAll({ status, type, assigned_to, created_by, search, completed_period, schedule, for_date, page = 1, limit = 20, user, role, orgType, todayDate } = {}) {
     let where = ['t.is_deleted = 0'];
     let params = [];
     // Use timezone-aware date passed from controller, fallback to UTC CURDATE()
@@ -115,6 +115,25 @@ class TaskModel {
       if (todayParam) { params.push(todayParam); params.push(todayParam); }
       where.push(`(SELECT weekly_off_day FROM users WHERE id = t.assigned_to) != DAYNAME(${todaySql})`);
       if (todayParam) params.push(todayParam);
+    }
+
+    // Date filter: show tasks scheduled for a specific date (any day, past/today/future)
+    if (for_date) {
+      where.push(`(
+        (t.type = 'recurring' AND t.recurrence_pattern = 'daily' AND t.status = 'active'
+          AND (t.recurrence_end_date IS NULL OR t.recurrence_end_date >= ?))
+        OR (t.type = 'recurring' AND t.recurrence_pattern = 'weekly' AND t.status = 'active'
+            AND FIND_IN_SET(DAYOFWEEK(?) - 1, t.recurrence_days) > 0
+            AND (t.recurrence_end_date IS NULL OR t.recurrence_end_date >= ?))
+        OR (t.type = 'recurring' AND t.recurrence_pattern = 'monthly' AND t.status = 'active'
+            AND FIND_IN_SET(DAY(?), t.recurrence_days) > 0
+            AND (t.recurrence_end_date IS NULL OR t.recurrence_end_date >= ?))
+        OR (t.type = 'once' AND t.due_date = ?)
+      )`);
+      params.push(for_date, for_date, for_date, for_date, for_date, for_date);
+      // Exclude employees on weekly off on that day
+      where.push(`(t.assigned_to IS NULL OR (SELECT weekly_off_day FROM users WHERE id = t.assigned_to) != DAYNAME(?))`);
+      params.push(for_date);
     }
 
     const whereClause = `WHERE ${where.join(' AND ')}`;

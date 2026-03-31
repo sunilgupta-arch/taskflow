@@ -156,11 +156,11 @@ class UserController {
           `SELECT t.id, t.title, t.type, t.status, t.due_date, t.created_at, t.completed_at, u.name as created_by_name
            FROM tasks t LEFT JOIN users u ON t.created_by = u.id
            WHERE t.assigned_to = ? AND t.type = 'once' AND t.is_deleted = 0
-             AND (DATE(t.created_at) = ? OR DATE(t.completed_at) = ? OR (t.status IN ('in_progress','pending') AND DATE(t.due_date) = ?))
+             AND (DATE(t.created_at) = ? OR DATE(t.completed_at) = ? OR DATE(t.due_date) = ?)
            ORDER BY t.status DESC, t.created_at DESC`,
           [req.params.id, selectedDate, selectedDate, selectedDate]
         ),
-        // All active recurring tasks with completion status for selected date
+        // Active recurring tasks scheduled for the selected date (respects daily/weekly/monthly pattern)
         db.query(
           `SELECT t.id, t.title, t.type, t.created_at, t.status, t.due_date,
                   u.name as created_by_name,
@@ -170,8 +170,14 @@ class UserController {
            LEFT JOIN users u ON t.created_by = u.id
            LEFT JOIN task_completions tc ON tc.task_id = t.id AND tc.user_id = t.assigned_to AND tc.completion_date = ?
            WHERE t.assigned_to = ? AND t.type = 'recurring' AND t.status = 'active' AND t.is_deleted = 0
+             AND (
+               t.recurrence_pattern = 'daily'
+               OR (t.recurrence_pattern = 'weekly' AND FIND_IN_SET(DAYOFWEEK(?) - 1, t.recurrence_days) > 0)
+               OR (t.recurrence_pattern = 'monthly' AND FIND_IN_SET(DAY(?), t.recurrence_days) > 0)
+             )
+             AND (t.recurrence_end_date IS NULL OR t.recurrence_end_date >= ?)
            ORDER BY t.type, t.title`,
-          [selectedDate, req.params.id]
+          [selectedDate, req.params.id, selectedDate, selectedDate, selectedDate]
         )
       ]);
 

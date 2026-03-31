@@ -22,7 +22,7 @@ router.get('/my-monthly-report', authenticate, UserController.myMonthlyReport);
 router.get('/users', authenticate, requireRoles('LOCAL_ADMIN', 'LOCAL_MANAGER'), UserController.index);
 router.post('/users', authenticate, requireRoles('LOCAL_ADMIN', 'LOCAL_MANAGER'), UserController.create);
 router.put('/users/:id', authenticate, requireRoles('LOCAL_ADMIN'), UserController.update);
-router.get('/users/:id/progress', authenticate, requireRoles('LOCAL_ADMIN', 'LOCAL_MANAGER', 'CLIENT_ADMIN', 'CLIENT_MANAGER'), UserController.showProgress);
+router.get('/users/:id/progress', authenticate, requireRoles('LOCAL_ADMIN', 'LOCAL_MANAGER', 'CLIENT_ADMIN', 'CLIENT_MANAGER'), (req, res) => UserController.showProgress(req, res, false));
 router.get('/users/:id/monthly-report', authenticate, requireRoles('LOCAL_ADMIN', 'LOCAL_MANAGER', 'CLIENT_ADMIN', 'CLIENT_MANAGER'), UserController.monthlyReport);
 router.post('/users/:id/reset-password', authenticate, requireRoles('LOCAL_ADMIN'), UserController.resetPassword);
 router.patch('/users/:id/toggle', authenticate, requireRoles('LOCAL_ADMIN'), UserController.toggleActive);

@@ -25,6 +25,8 @@ router.post('/conversations/:id/attach-drive', ChatController.attachDrive);
 router.post('/save-to-drive', ChatController.saveToDrive);
 router.get('/drive-files', ChatController.listDriveFiles);
 router.post('/conversations/:id/read', ChatController.markAsRead);
+router.post('/conversations/:id/clear', ChatController.clearChat);
 router.get('/unread-count', ChatController.unreadCount);
+router.get('/attachment/:messageId', ChatController.serveAttachment);
 
 module.exports = router;

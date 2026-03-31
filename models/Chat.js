@@ -131,7 +131,17 @@ class ChatModel {
   }
 
   // Get messages for a conversation (paginated, newest last)
-  static async getMessages(conversationId, { limit = 50, before_id = null } = {}) {
+  static async getMessages(conversationId, { limit = 50, before_id = null, currentUserId = null } = {}) {
+    // Get this user's cleared_before_id so we can hide messages they cleared
+    let clearedBeforeId = 0;
+    if (currentUserId) {
+      const [[cp]] = await db.query(
+        'SELECT cleared_before_id FROM chat_participants WHERE conversation_id = ? AND user_id = ?',
+        [conversationId, currentUserId]
+      );
+      clearedBeforeId = (cp && cp.cleared_before_id) ? parseInt(cp.cleared_before_id) : 0;
+    }
+
     let query, params;
 
     if (before_id) {
@@ -140,22 +150,46 @@ class ChatModel {
                JOIN users u ON u.id = m.sender_id
                JOIN roles r ON r.id = u.role_id
                JOIN organizations o ON o.id = u.organization_id
-               WHERE m.conversation_id = ? AND m.id < ?
+               WHERE m.conversation_id = ? AND m.id < ? AND m.id > ?
                ORDER BY m.id DESC LIMIT ?`;
-      params = [conversationId, before_id, parseInt(limit)];
+      params = [conversationId, before_id, clearedBeforeId, parseInt(limit)];
     } else {
       query = `SELECT m.*, u.name AS sender_name, u.avatar AS sender_avatar, r.name AS sender_role, o.org_type AS sender_org_type
                FROM chat_messages m
                JOIN users u ON u.id = m.sender_id
                JOIN roles r ON r.id = u.role_id
                JOIN organizations o ON o.id = u.organization_id
-               WHERE m.conversation_id = ?
+               WHERE m.conversation_id = ? AND m.id > ?
                ORDER BY m.id DESC LIMIT ?`;
-      params = [conversationId, parseInt(limit)];
+      params = [conversationId, clearedBeforeId, parseInt(limit)];
     }
 
     const [rows] = await db.query(query, params);
-    return rows.reverse(); // Return in chronological order
+    const messages = rows.reverse(); // Return in chronological order
+
+    // Compute per-message read status for sent messages
+    if (currentUserId && messages.length > 0) {
+      const [participants] = await db.query(
+        'SELECT user_id FROM chat_participants WHERE conversation_id = ? AND user_id != ?',
+        [conversationId, currentUserId]
+      );
+      const [readStatus] = await db.query(
+        'SELECT user_id, COALESCE(last_read_message_id, 0) AS last_read FROM chat_read_status WHERE conversation_id = ?',
+        [conversationId]
+      );
+      const readMap = {};
+      readStatus.forEach(r => { readMap[r.user_id] = parseInt(r.last_read) || 0; });
+
+      messages.forEach(msg => {
+        if (msg.sender_id === currentUserId && participants.length > 0) {
+          msg.is_read = participants.every(p => (readMap[p.user_id] || 0) >= msg.id);
+        } else {
+          msg.is_read = false;
+        }
+      });
+    }
+
+    return messages;
   }
 
   // Send a message (with optional attachment)
@@ -193,7 +227,7 @@ class ChatModel {
     return rows[0];
   }
 
-  // Mark messages as read
+  // Mark messages as read — returns the last_read_message_id set
   static async markAsRead(conversationId, userId) {
     // Get latest message id in conversation
     const [[latest]] = await db.query(
@@ -201,7 +235,7 @@ class ChatModel {
       [conversationId]
     );
 
-    if (!latest || !latest.max_id) return;
+    if (!latest || !latest.max_id) return null;
 
     await db.query(
       `INSERT INTO chat_read_status (conversation_id, user_id, last_read_message_id)
@@ -209,6 +243,8 @@ class ChatModel {
        ON DUPLICATE KEY UPDATE last_read_message_id = VALUES(last_read_message_id), updated_at = NOW()`,
       [conversationId, userId, latest.max_id]
     );
+
+    return latest.max_id;
   }
 
   // Get all users available for chat (for the "new chat" user picker)
@@ -253,6 +289,20 @@ class ChatModel {
       [conversationId]
     );
     return rows.map(r => r.user_id);
+  }
+
+  // Clear chat history for a specific user (hides all current messages for that user only)
+  static async clearChatForUser(conversationId, userId) {
+    const [[latest]] = await db.query(
+      'SELECT MAX(id) AS max_id FROM chat_messages WHERE conversation_id = ?',
+      [conversationId]
+    );
+    const clearUpTo = (latest && latest.max_id) ? latest.max_id : 0;
+
+    await db.query(
+      'UPDATE chat_participants SET cleared_before_id = ? WHERE conversation_id = ? AND user_id = ?',
+      [clearUpTo, conversationId, userId]
+    );
   }
 }
 

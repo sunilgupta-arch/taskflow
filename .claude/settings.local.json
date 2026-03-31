@@ -14,7 +14,10 @@
       "Bash(node -e \"require\\(''./controllers/rewardController''\\); require\\(''./controllers/taskController''\\); require\\(''./services/taskService''\\); console.log\\(''All OK''\\)\")",
       "Bash(ls -la /c/Users/sunil-work/Documents/projects/taskflow/*.js)",
       "Bash(npm install socket.io)",
-      "Bash(node -e \"require\\(''./models/TaskCompletion''\\); require\\(''./services/taskService''\\); require\\(''./controllers/taskController''\\); require\\(''./routes/tasks''\\); console.log\\(''OK''\\)\")"
+      "Bash(node -e \"require\\(''./models/TaskCompletion''\\); require\\(''./services/taskService''\\); require\\(''./controllers/taskController''\\); require\\(''./routes/tasks''\\); console.log\\(''OK''\\)\")",
+      "Bash(npm run:*)",
+      "Bash(node -e \"require\\(''./models/Task''\\); require\\(''./controllers/taskController''\\); console.log\\(''OK''\\)\")",
+      "Bash(find /c/Users/cfc/OneDrive/Documents/GitHub/taskflow -type f \\\\\\(-name *socket* -o -name *io* \\\\\\))"
     ]
   }
 }

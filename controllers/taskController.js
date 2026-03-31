@@ -11,12 +11,12 @@ class TaskController {
   // GET /tasks
   static async index(req, res) {
     try {
-      const { page = 1, limit = 20, status, type, search, completed_period, assigned_to } = req.query;
+      const { page = 1, limit = 20, status, type, search, completed_period, assigned_to, for_date } = req.query;
       const role = req.user.role_name;
 
       const tz = req.user.org_timezone || 'UTC';
       const today = getEffectiveWorkDate(tz, req.user.shift_start, req.user.shift_hours);
-      const filters = { status, type, search, completed_period, assigned_to, page, limit, orgType: req.user.organization_type, todayDate: today };
+      const filters = { status, type, search, completed_period, assigned_to, for_date, page, limit, orgType: req.user.organization_type, todayDate: today };
       if (role === 'LOCAL_USER') {
         filters.user = req.user.id;
         filters.role = role;
@@ -24,12 +24,15 @@ class TaskController {
 
       const { rows, total } = await TaskModel.getAll(filters);
 
-      // For recurring tasks, attach today's session status and schedule check
+      // When filtering by a specific date, check completion for that date; otherwise use today
+      const checkDate = for_date || today;
+
+      // For recurring tasks, attach session status and schedule check for the relevant date
       for (const task of rows) {
         if (task.type === 'recurring' && task.status === 'active') {
-          task.is_scheduled_today = isScheduledForDate(task, today);
+          task.is_scheduled_today = isScheduledForDate(task, checkDate);
           if (task.assigned_to) {
-            const session = await TaskCompletion.getTodaySession(task.id, task.assigned_to, today);
+            const session = await TaskCompletion.getTodaySession(task.id, task.assigned_to, checkDate);
             task.is_started_today = !!(session && session.started_at && !session.completed_at);
             task.is_completed_today = !!(session && session.completed_at);
           }
@@ -49,8 +52,9 @@ class TaskController {
         tasks: rows,
         pagination: getPaginationMeta(total, page, limit),
         ourUsers,
-        filters: { status, type, search, completed_period, assigned_to },
-        role
+        filters: { status, type, search, completed_period, assigned_to, for_date },
+        role,
+        todayDate: today
       });
     } catch (err) {
       res.status(500).render('error', { title: 'Error', message: err.message, code: 500, layout: false });
