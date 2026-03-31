@@ -60,7 +60,7 @@
             <div style="font-size:0.875rem;margin-top:2px;"><%= task.deadline_time || 'None' %></div>
             <% } else { %>
             <div style="font-size:0.65rem;color:var(--tf-text-muted);text-transform:uppercase;letter-spacing:0.5px;">Due Date</div>
-            <div style="font-size:0.875rem;margin-top:2px;"><%= task.due_date ? new Date(task.due_date).toLocaleDateString() : 'None' %></div>
+            <div style="font-size:0.875rem;margin-top:2px;"><%= task.due_date ? new Date(new Date(task.due_date).toISOString().split('T')[0] + 'T12:00:00').toLocaleDateString() : 'None' %></div>
             <% } %>
           </div>
           <div class="col-6 col-md-3">
@@ -74,7 +74,7 @@
         <div class="row g-3 mt-1">
           <div class="col-6 col-md-3">
             <div style="font-size:0.65rem;color:var(--tf-text-muted);text-transform:uppercase;letter-spacing:0.5px;">Ends On</div>
-            <div style="font-size:0.875rem;margin-top:2px;"><%= new Date(task.recurrence_end_date).toLocaleDateString() %></div>
+            <div style="font-size:0.875rem;margin-top:2px;"><%= new Date(new Date(task.recurrence_end_date).toISOString().split('T')[0] + 'T12:00:00').toLocaleDateString() %></div>
           </div>
         </div>
         <% } %>

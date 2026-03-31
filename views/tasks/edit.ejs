@@ -35,7 +35,7 @@
             </div>
             <div class="col-md-3">
               <label style="font-size:0.75rem;color:var(--tf-text-muted);display:block;margin-bottom:0.4rem;text-transform:uppercase;letter-spacing:0.5px;">DUE DATE</label>
-              <input type="date" name="due_date" class="tf-form-control" value="<%= task.due_date ? new Date(task.due_date).toISOString().split('T')[0] : '' %>">
+              <input type="date" name="due_date" class="tf-form-control" value="<%= task.due_date ? new Date(new Date(task.due_date).toISOString().split('T')[0] + 'T12:00:00').toISOString().split('T')[0] : '' %>">
             </div>
             <div class="col-md-3">
               <label style="font-size:0.75rem;color:var(--tf-text-muted);display:block;margin-bottom:0.4rem;text-transform:uppercase;letter-spacing:0.5px;">REWARD (PTS)</label>
@@ -60,7 +60,7 @@
               </div>
               <div class="col-md-4">
                 <label style="font-size:0.75rem;color:var(--tf-text-muted);display:block;margin-bottom:0.4rem;text-transform:uppercase;letter-spacing:0.5px;">END DATE (OPTIONAL)</label>
-                <input type="date" name="recurrence_end_date" class="tf-form-control" value="<%= task.recurrence_end_date ? new Date(task.recurrence_end_date).toISOString().split('T')[0] : '' %>">
+                <input type="date" name="recurrence_end_date" class="tf-form-control" value="<%= task.recurrence_end_date ? new Date(new Date(task.recurrence_end_date).toISOString().split('T')[0] + 'T12:00:00').toISOString().split('T')[0] : '' %>">
               </div>
             </div>
 
