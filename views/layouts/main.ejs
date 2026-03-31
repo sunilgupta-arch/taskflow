@@ -1161,7 +1161,7 @@ axios.interceptors.response.use(
     var msg = data.message;
     if (!msg) return;
 
-    // Don't show toast if user is already on the chat page
+    // Skip toast and sound if user is already on the chat page
     if (window.location.pathname.startsWith('/chat')) return;
 
     // Show toast

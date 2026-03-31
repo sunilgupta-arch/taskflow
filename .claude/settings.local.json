@@ -17,7 +17,10 @@
       "Bash(node -e \"require\\(''./models/TaskCompletion''\\); require\\(''./services/taskService''\\); require\\(''./controllers/taskController''\\); require\\(''./routes/tasks''\\); console.log\\(''OK''\\)\")",
       "Bash(npm run:*)",
       "Bash(node -e \"require\\(''./models/Task''\\); require\\(''./controllers/taskController''\\); console.log\\(''OK''\\)\")",
-      "Bash(find /c/Users/cfc/OneDrive/Documents/GitHub/taskflow -type f \\\\\\(-name *socket* -o -name *io* \\\\\\))"
+      "Bash(find /c/Users/cfc/OneDrive/Documents/GitHub/taskflow -type f \\\\\\(-name *socket* -o -name *io* \\\\\\))",
+      "Bash(git add:*)",
+      "Bash(git rebase:*)",
+      "Bash(GIT_EDITOR=true git rebase --continue)"
     ]
   }
 }
