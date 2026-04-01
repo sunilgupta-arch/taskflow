@@ -109,13 +109,41 @@
           <% if (role !== 'LOCAL_USER') { %>
           <div class="mb-4">
             <label style="font-size:0.75rem;color:var(--tf-text-muted);display:block;margin-bottom:0.4rem;text-transform:uppercase;letter-spacing:0.5px;">ASSIGN TO (OPTIONAL)</label>
-            <select name="assigned_to" class="tf-select" multiple size="4" style="min-height:80px;">
+            <select name="assigned_to" id="assignToSelect" class="tf-select" multiple size="4" style="min-height:80px;">
               <% ourUsers.forEach(u => { %>
               <option value="<%= u.id %>" <%= String(u.id) === String(assignTo) ? 'selected' : '' %>><%= u.name %></option>
               <% }) %>
             </select>
             <div style="font-size:0.7rem;color:var(--tf-text-muted);margin-top:4px;">
               Hold Ctrl/Cmd to select multiple. Leave empty for unassigned (team can pick)
+            </div>
+          </div>
+
+          <!-- Fallback Assignees (mutually exclusive with multi-assign) -->
+          <div id="fallbackSection" class="mb-4">
+            <div style="font-size:0.7rem;color:var(--tf-text-muted);margin-bottom:0.5rem;padding:6px 10px;background:rgba(0,212,255,0.05);border-radius:6px;border:1px solid rgba(0,212,255,0.15);">
+              <i class="bi bi-info-circle me-1" style="color:var(--tf-accent);"></i>
+              Fallback assignees take over if the primary is on leave. <strong>Not available with multi-assign.</strong>
+            </div>
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label style="font-size:0.75rem;color:var(--tf-text-muted);display:block;margin-bottom:0.4rem;text-transform:uppercase;letter-spacing:0.5px;">SECONDARY (BACKUP 1)</label>
+                <select name="secondary_assignee" id="secondaryAssignee" class="tf-select">
+                  <option value="">— None —</option>
+                  <% ourUsers.forEach(u => { %>
+                  <option value="<%= u.id %>"><%= u.name %></option>
+                  <% }) %>
+                </select>
+              </div>
+              <div class="col-md-6">
+                <label style="font-size:0.75rem;color:var(--tf-text-muted);display:block;margin-bottom:0.4rem;text-transform:uppercase;letter-spacing:0.5px;">TERTIARY (BACKUP 2)</label>
+                <select name="tertiary_assignee" id="tertiaryAssignee" class="tf-select">
+                  <option value="">— None —</option>
+                  <% ourUsers.forEach(u => { %>
+                  <option value="<%= u.id %>"><%= u.name %></option>
+                  <% }) %>
+                </select>
+              </div>
             </div>
           </div>
           <% } else { %>
@@ -211,6 +239,53 @@ document.querySelectorAll('.day-check-label, .date-check-label').forEach(label =
 typeSelect.addEventListener('change', handleTypeChange);
 recurrencePattern.addEventListener('change', () => { handlePatternChange(); updateRecurrenceDays(); });
 handleTypeChange();
+
+// Mutual exclusion: multi-assign vs fallback assignees
+var assignToSelect = document.getElementById('assignToSelect');
+var fallbackSection = document.getElementById('fallbackSection');
+var secondaryAssignee = document.getElementById('secondaryAssignee');
+var tertiaryAssignee = document.getElementById('tertiaryAssignee');
+
+if (assignToSelect && fallbackSection) {
+  function updateFallbackState() {
+    var selectedCount = assignToSelect.selectedOptions.length;
+    var hasFallback = (secondaryAssignee && secondaryAssignee.value) || (tertiaryAssignee && tertiaryAssignee.value);
+    if (selectedCount > 1) {
+      // Multi-assign active: disable fallback
+      fallbackSection.style.opacity = '0.4';
+      fallbackSection.style.pointerEvents = 'none';
+      secondaryAssignee.value = '';
+      tertiaryAssignee.value = '';
+    } else {
+      fallbackSection.style.opacity = '1';
+      fallbackSection.style.pointerEvents = 'auto';
+    }
+    // If fallback selected, limit multi-select to 1
+    if (hasFallback && selectedCount > 1) {
+      // Keep only the first selection
+      Array.from(assignToSelect.options).forEach((opt, i) => { if (i > 0 || !opt.selected) opt.selected = false; });
+    }
+  }
+
+  function updateMultiAssignState() {
+    var hasFallback = (secondaryAssignee && secondaryAssignee.value) || (tertiaryAssignee && tertiaryAssignee.value);
+    if (hasFallback) {
+      // Disable multi-select (allow only single)
+      assignToSelect.size = 4;
+      // Deselect all but the first selected
+      var foundFirst = false;
+      Array.from(assignToSelect.options).forEach(opt => {
+        if (opt.selected && !foundFirst) { foundFirst = true; }
+        else if (opt.selected) { opt.selected = false; }
+      });
+    }
+  }
+
+  assignToSelect.addEventListener('change', updateFallbackState);
+  if (secondaryAssignee) secondaryAssignee.addEventListener('change', function() { updateMultiAssignState(); updateFallbackState(); });
+  if (tertiaryAssignee) tertiaryAssignee.addEventListener('change', function() { updateMultiAssignState(); updateFallbackState(); });
+  updateFallbackState();
+}
 
 document.getElementById('createTaskForm').addEventListener('submit', async (e) => {
   e.preventDefault();

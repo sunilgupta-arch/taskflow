@@ -607,10 +607,15 @@ class TaskController {
         const [recurringTasks] = await db.query(
           `SELECT t.id, t.title, t.type, t.recurrence_pattern, t.recurrence_days,
                   t.recurrence_end_date, t.reward_amount, t.priority, t.status,
-                  t.assigned_to, t.group_id, t.deadline_time,
-                  u.name as assigned_to_name, u.shift_start
+                  t.assigned_to, t.secondary_assignee, t.tertiary_assignee,
+                  t.group_id, t.deadline_time,
+                  u.name as assigned_to_name, u.shift_start,
+                  u2.name as secondary_name, u2.shift_start as secondary_shift,
+                  u3.name as tertiary_name, u3.shift_start as tertiary_shift
            FROM tasks t
            LEFT JOIN users u ON t.assigned_to = u.id
+           LEFT JOIN users u2 ON t.secondary_assignee = u2.id
+           LEFT JOIN users u3 ON t.tertiary_assignee = u3.id
            WHERE t.is_deleted = 0 AND t.type = 'recurring' AND t.status = 'active'
            ORDER BY t.title, u.name`
         );
@@ -618,10 +623,15 @@ class TaskController {
         // Get one-time tasks for the selected date
         const [onceTasks] = await db.query(
           `SELECT t.id, t.title, t.type, t.reward_amount, t.priority, t.status,
-                  t.assigned_to, t.group_id, t.due_date, t.completed_at,
-                  u.name as assigned_to_name, u.shift_start
+                  t.assigned_to, t.secondary_assignee, t.tertiary_assignee,
+                  t.group_id, t.due_date, t.completed_at,
+                  u.name as assigned_to_name, u.shift_start,
+                  u2.name as secondary_name, u2.shift_start as secondary_shift,
+                  u3.name as tertiary_name, u3.shift_start as tertiary_shift
            FROM tasks t
            LEFT JOIN users u ON t.assigned_to = u.id
+           LEFT JOIN users u2 ON t.secondary_assignee = u2.id
+           LEFT JOIN users u3 ON t.tertiary_assignee = u3.id
            WHERE t.is_deleted = 0 AND t.type = 'once'
              AND (t.due_date = ? OR DATE(t.completed_at) = ? OR (DATE(t.created_at) = ? AND t.due_date IS NULL))
            ORDER BY t.title, u.name`,
@@ -631,10 +641,57 @@ class TaskController {
         // Filter recurring tasks scheduled for selectedDate
         const scheduledRecurring = recurringTasks.filter(t => isScheduledForDate(t, selectedDate));
 
-        // Exclude users on weekly off
+        // Build unavailable user set: weekly off + approved leaves
         const dayName = new Date(selectedDate + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long' });
         const offUserIds = new Set(localUsers.filter(u => u.weekly_off_day === dayName).map(u => u.id));
-        const filteredRecurring = scheduledRecurring.filter(t => !offUserIds.has(t.assigned_to));
+
+        // Fetch approved leaves overlapping selectedDate
+        const [leaves] = await db.query(
+          `SELECT user_id FROM leave_requests
+           WHERE status = 'approved' AND from_date <= ? AND to_date >= ?`,
+          [selectedDate, selectedDate]
+        );
+        const onLeaveUserIds = new Set(leaves.map(l => l.user_id));
+
+        // Combined unavailable set (weekly off OR on approved leave)
+        const unavailableUserIds = new Set([...offUserIds, ...onLeaveUserIds]);
+
+        // Build user name/shift lookup
+        const userLookup = {};
+        localUsers.forEach(u => { userLookup[u.id] = { name: u.name, shift_start: u.shift_start }; });
+
+        // Resolve effective assignee for a task based on fallback chain
+        const resolveEffectiveAssignee = (t) => {
+          const primary = { id: t.assigned_to, name: t.assigned_to_name, shift: t.shift_start };
+          const secondary = t.secondary_assignee ? { id: t.secondary_assignee, name: t.secondary_name, shift: t.secondary_shift } : null;
+          const tertiary = t.tertiary_assignee ? { id: t.tertiary_assignee, name: t.tertiary_name, shift: t.tertiary_shift } : null;
+
+          // If primary is available, use primary
+          if (primary.id && !unavailableUserIds.has(primary.id)) {
+            return { ...primary, role: 'primary', original_assignee: primary.name };
+          }
+          // Primary unavailable — try secondary
+          if (secondary && secondary.id && !unavailableUserIds.has(secondary.id)) {
+            return { ...secondary, role: 'secondary', original_assignee: primary.name };
+          }
+          // Secondary also unavailable — try tertiary
+          if (tertiary && tertiary.id && !unavailableUserIds.has(tertiary.id)) {
+            return { ...tertiary, role: 'tertiary', original_assignee: primary.name };
+          }
+          // All unavailable — return primary anyway (task will show as unattended)
+          // But only if task has no fallback chain, keep original behavior (filter out)
+          if (!secondary && !tertiary) {
+            return null; // no fallback, will be filtered out like before
+          }
+          // Has fallback chain but all unavailable — show as unattended
+          return { id: primary.id, name: primary.name, shift: primary.shift, role: 'all_unavailable', original_assignee: primary.name };
+        };
+
+        // Filter recurring tasks: keep if primary available OR has fallback chain
+        const filteredRecurring = scheduledRecurring.filter(t => {
+          if (t.secondary_assignee || t.tertiary_assignee) return true; // has fallback, always include
+          return !unavailableUserIds.has(t.assigned_to); // original behavior for non-fallback tasks
+        });
 
         // Get completions for the date AND previous day (to handle night shift crossovers)
         const prevDate = new Date(new Date(selectedDate + 'T12:00:00').getTime() - 86400000).toISOString().split('T')[0];
@@ -668,7 +725,28 @@ class TaskController {
               employees: [], doneCount: 0, totalCount: 0
             };
           }
-          const comp = completionMap[`${t.id}-${t.assigned_to}`];
+
+          // Resolve effective assignee (fallback chain)
+          const hasFallback = t.secondary_assignee || t.tertiary_assignee;
+          let effectiveUserId = t.assigned_to;
+          let effectiveUserName = t.assigned_to_name;
+          let effectiveShift = t.shift_start;
+          let fallbackRole = 'primary';
+          let originalAssignee = null;
+
+          if (hasFallback && !t.group_id) {
+            const resolved = resolveEffectiveAssignee(t);
+            if (!resolved) return; // should not happen for fallback tasks
+            effectiveUserId = resolved.id;
+            effectiveUserName = resolved.name;
+            effectiveShift = resolved.shift;
+            fallbackRole = resolved.role;
+            if (resolved.role !== 'primary') {
+              originalAssignee = resolved.original_assignee;
+            }
+          }
+
+          const comp = completionMap[`${t.id}-${effectiveUserId}`];
           const isCompleted = isRecurring
             ? !!(comp && comp.completed_at)
             : t.status === 'completed';
@@ -677,12 +755,17 @@ class TaskController {
             : t.status === 'in_progress';
 
           taskGroups[groupKey].employees.push({
-            task_id: t.id, user_id: t.assigned_to, user_name: t.assigned_to_name,
-            shift_start: t.shift_start,
-            status: isCompleted ? 'done' : isStarted ? 'in_progress' : 'pending',
+            task_id: t.id, user_id: effectiveUserId, user_name: effectiveUserName,
+            shift_start: effectiveShift,
+            status: isCompleted ? 'done' : isStarted ? 'in_progress' : (fallbackRole === 'all_unavailable' ? 'unattended' : 'pending'),
             started_at: comp ? comp.started_at : null,
             completed_at: isRecurring ? (comp ? comp.completed_at : null) : (isCompleted ? t.completed_at : null),
-            duration_minutes: comp ? comp.duration_minutes : null
+            duration_minutes: comp ? comp.duration_minutes : null,
+            fallback_role: fallbackRole,
+            original_assignee: originalAssignee,
+            secondary_name: t.secondary_name || null,
+            tertiary_name: t.tertiary_name || null,
+            primary_name: t.assigned_to_name || null
           });
           taskGroups[groupKey].totalCount++;
           if (isCompleted) taskGroups[groupKey].doneCount++;
@@ -691,10 +774,10 @@ class TaskController {
         filteredRecurring.forEach(t => addToGroup(t, true));
         onceTasks.forEach(t => addToGroup(t, false));
 
-        // Build employee summary
+        // Build employee summary — count tasks against effective doer only
         const empSummary = {};
-        localUsers.filter(u => !offUserIds.has(u.id)).forEach(u => {
-          empSummary[u.id] = { name: u.name, shift_start: u.shift_start, assigned: 0, done: 0, in_progress: 0, pending: 0 };
+        localUsers.filter(u => !unavailableUserIds.has(u.id)).forEach(u => {
+          empSummary[u.id] = { user_id: u.id, name: u.name, shift_start: u.shift_start, assigned: 0, done: 0, in_progress: 0, pending: 0 };
         });
         Object.values(taskGroups).forEach(g => {
           g.employees.forEach(e => {

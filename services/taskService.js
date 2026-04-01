@@ -50,9 +50,18 @@ class TaskService {
 
     // For admins/managers: same multi-assign logic
     const assignees = Array.isArray(data.assigned_to) ? data.assigned_to : [];
+    const hasSecondary = data.secondary_assignee && data.secondary_assignee !== '';
+    const hasTertiary = data.tertiary_assignee && data.tertiary_assignee !== '';
 
-    // Multiple assignees: create one task row per person, linked by group_id
+    // Fallback assignees and multi-assign are mutually exclusive
+    if (assignees.length > 1 && (hasSecondary || hasTertiary)) {
+      throw new Error('Cannot use both multi-assign and fallback assignees. Choose one.');
+    }
+
+    // Multiple assignees: create one task row per person, linked by group_id (no fallback)
     if (assignees.length > 1) {
+      baseData.secondary_assignee = null;
+      baseData.tertiary_assignee = null;
       const firstTaskId = await TaskModel.create({ ...baseData, assigned_to: assignees[0] });
       // Use first task's ID as the group_id for all rows
       await TaskModel.update(firstTaskId, { group_id: firstTaskId });
@@ -62,8 +71,10 @@ class TaskService {
       return TaskModel.findById(firstTaskId);
     }
 
-    // Single or no assignee: no group needed
+    // Single or no assignee: allow fallback assignees
     if (assignees.length === 1) baseData.assigned_to = assignees[0];
+    if (hasSecondary) baseData.secondary_assignee = data.secondary_assignee;
+    if (hasTertiary) baseData.tertiary_assignee = data.tertiary_assignee;
     const taskId = await TaskModel.create(baseData);
     return TaskModel.findById(taskId);
   }

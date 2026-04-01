@@ -3,12 +3,16 @@ const db = require('../config/db');
 class TaskModel {
   static async findById(id) {
     const [rows] = await db.query(
-      `SELECT t.*, 
+      `SELECT t.*,
               u1.name as assigned_to_name, u1.email as assigned_to_email,
-              u2.name as created_by_name, u2.email as created_by_email
+              u2.name as created_by_name, u2.email as created_by_email,
+              u3.name as secondary_assignee_name,
+              u4.name as tertiary_assignee_name
        FROM tasks t
        LEFT JOIN users u1 ON t.assigned_to = u1.id
        LEFT JOIN users u2 ON t.created_by = u2.id
+       LEFT JOIN users u3 ON t.secondary_assignee = u3.id
+       LEFT JOIN users u4 ON t.tertiary_assignee = u4.id
        WHERE t.id = ? AND t.is_deleted = 0`, [id]
     );
     return rows[0] || null;
@@ -16,11 +20,11 @@ class TaskModel {
 
   static async create(data) {
     const [result] = await db.query(
-      `INSERT INTO tasks (title, description, type, recurrence_pattern, recurrence_days, deadline_time, recurrence_end_date, assigned_to, created_by, created_by_org, group_id, due_date, reward_amount, status, priority)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO tasks (title, description, type, recurrence_pattern, recurrence_days, deadline_time, recurrence_end_date, assigned_to, secondary_assignee, tertiary_assignee, created_by, created_by_org, group_id, due_date, reward_amount, status, priority)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [data.title, data.description, data.type, data.recurrence_pattern || null, data.recurrence_days || null,
        data.deadline_time || null, data.recurrence_end_date || null,
-       data.assigned_to || null, data.created_by,
+       data.assigned_to || null, data.secondary_assignee || null, data.tertiary_assignee || null, data.created_by,
        data.created_by_org || 'CLIENT', data.group_id || null, data.due_date || null, data.reward_amount || null, data.status || 'pending', data.priority || 'medium']
     );
     return result.insertId;
@@ -30,7 +34,7 @@ class TaskModel {
     const fields = [];
     const values = [];
 
-    const allowed = ['title', 'description', 'type', 'recurrence_pattern', 'recurrence_days', 'deadline_time', 'recurrence_end_date', 'assigned_to', 'group_id', 'due_date', 'reward_amount', 'status', 'completed_at', 'created_by_org', 'is_deleted', 'priority'];
+    const allowed = ['title', 'description', 'type', 'recurrence_pattern', 'recurrence_days', 'deadline_time', 'recurrence_end_date', 'assigned_to', 'secondary_assignee', 'tertiary_assignee', 'group_id', 'due_date', 'reward_amount', 'status', 'completed_at', 'created_by_org', 'is_deleted', 'priority'];
     allowed.forEach(f => {
       if (data[f] !== undefined) {
         fields.push(`${f} = ?`);

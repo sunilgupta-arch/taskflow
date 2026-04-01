@@ -111,6 +111,20 @@
             </div>
           </div>
 
+          <% if (task.secondary_assignee_name || task.tertiary_assignee_name) { %>
+          <div class="mb-3">
+            <label style="font-size:0.75rem;color:var(--tf-text-muted);display:block;margin-bottom:0.4rem;text-transform:uppercase;letter-spacing:0.5px;">FALLBACK ASSIGNEES</label>
+            <div style="font-size:0.85rem;padding:8px 12px;background:var(--tf-surface-2);border-radius:6px;color:var(--tf-text);display:flex;gap:1rem;flex-wrap:wrap;">
+              <% if (task.secondary_assignee_name) { %>
+              <span><i class="bi bi-2-circle" style="color:#f59e0b;margin-right:4px;"></i>Secondary: <strong><%= task.secondary_assignee_name %></strong></span>
+              <% } %>
+              <% if (task.tertiary_assignee_name) { %>
+              <span><i class="bi bi-3-circle" style="color:#ef4444;margin-right:4px;"></i>Tertiary: <strong><%= task.tertiary_assignee_name %></strong></span>
+              <% } %>
+            </div>
+          </div>
+          <% } %>
+
           <% if (['LOCAL_ADMIN', 'LOCAL_MANAGER'].includes(role)) { %>
           <div class="mb-4">
             <label class="d-flex align-items-center gap-2" style="cursor:pointer;">

@@ -1,3 +1,11 @@
+<script>
+(function() {
+  var topbar = document.getElementById('topbar');
+  if (topbar) {
+    document.documentElement.style.setProperty('--topbar-h', topbar.offsetHeight + 'px');
+  }
+})();
+</script>
 <!-- Tab Navigation -->
 <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
   <div class="d-flex align-items-center gap-3">
@@ -17,55 +25,95 @@
       </a>
     </div>
   </div>
-  <% if (tab === 'today') { %>
-  <form method="GET" action="/tasks/board" class="d-flex gap-2 align-items-center">
-    <input type="hidden" name="tab" value="today">
-    <input type="date" name="date" value="<%= selectedDate %>" class="tf-form-control" style="max-width:160px;" onchange="this.form.submit()">
-  </form>
-  <% } %>
+  <div class="d-flex gap-2 align-items-center">
+    <% if (tab === 'today') { %>
+    <form method="GET" action="/tasks/board" class="d-flex gap-2 align-items-center" style="margin:0;">
+      <input type="hidden" name="tab" value="today">
+      <input type="date" name="date" value="<%= selectedDate %>" class="tf-form-control" style="max-width:160px;" onchange="this.form.submit()">
+    </form>
+    <% } %>
+    <% if (['CLIENT_ADMIN','CLIENT_MANAGER','LOCAL_ADMIN','LOCAL_MANAGER'].includes(user.role_name)) { %>
+    <a href="/tasks/create" class="btn-tf btn-tf-primary text-decoration-none" style="font-size:0.75rem;padding:6px 14px;white-space:nowrap;">
+      <i class="bi bi-plus-lg me-1"></i>New Task
+    </a>
+    <% } %>
+  </div>
 </div>
 
 <% if (tab === 'today') { %>
+<%
+  var _today = new Date(); _today.setHours(12,0,0,0);
+  var _sel = new Date(selectedDate + 'T12:00:00');
+  var _isPast = _sel < _today;
+  var _notDoneLabel = _isPast ? 'Not Done' : 'Not Started';
+  var _notDoneBg = _isPast ? 'rgba(239,68,68,0.15)' : 'rgba(245,158,11,0.15)';
+  var _notDoneColor = _isPast ? '#ef4444' : '#f59e0b';
+%>
 <!-- ═══════════════════════════════════════════════
      TODAY TAB
      ═══════════════════════════════════════════════ -->
 
-<!-- Summary Cards -->
+<!-- Summary Cards (clickable filters) -->
+<style>
+  .board-filter-card {
+    padding:1rem 1.25rem;text-align:center;min-width:100px;cursor:pointer;
+    transition:all 0.2s;border:2px solid transparent;
+  }
+  .board-filter-card:hover { transform:translateY(-2px); }
+  .board-filter-card.active { border-color:var(--tf-accent);box-shadow:0 2px 8px rgba(0,0,0,0.1); }
+</style>
 <div class="d-flex gap-3 mb-4 flex-wrap">
-  <div class="tf-card flex-fill" style="padding:1rem 1.25rem;text-align:center;min-width:100px;">
-    <div style="font-family:var(--tf-font-mono);font-size:1.5rem;font-weight:700;color:var(--tf-accent);"><%= summary.tasks %></div>
-    <div style="font-size:0.65rem;color:var(--tf-text-muted);text-transform:uppercase;letter-spacing:1px;">Tasks</div>
+  <div class="tf-card flex-fill board-filter-card active" onclick="filterBoard('all')" data-filter="all">
+    <div style="font-family:var(--tf-font-mono);font-size:1.5rem;font-weight:700;color:var(--tf-accent);"><%= summary.assignments %></div>
+    <div style="font-size:0.65rem;color:var(--tf-text-muted);text-transform:uppercase;letter-spacing:1px;">Total</div>
   </div>
-  <div class="tf-card flex-fill" style="padding:1rem 1.25rem;text-align:center;min-width:100px;">
+  <div class="tf-card flex-fill board-filter-card" onclick="filterBoard('done')" data-filter="done">
     <div style="font-family:var(--tf-font-mono);font-size:1.5rem;font-weight:700;color:#10b981;"><%= summary.done %></div>
     <div style="font-size:0.65rem;color:var(--tf-text-muted);text-transform:uppercase;letter-spacing:1px;">Completed</div>
   </div>
-  <div class="tf-card flex-fill" style="padding:1rem 1.25rem;text-align:center;min-width:100px;">
+  <div class="tf-card flex-fill board-filter-card" onclick="filterBoard('in_progress')" data-filter="in_progress">
     <div style="font-family:var(--tf-font-mono);font-size:1.5rem;font-weight:700;color:#3b82f6;"><%= summary.inProgress %></div>
     <div style="font-size:0.65rem;color:var(--tf-text-muted);text-transform:uppercase;letter-spacing:1px;">In Progress</div>
   </div>
-  <div class="tf-card flex-fill" style="padding:1rem 1.25rem;text-align:center;min-width:100px;">
-    <div style="font-family:var(--tf-font-mono);font-size:1.5rem;font-weight:700;color:#f59e0b;"><%= summary.pending %></div>
-    <div style="font-size:0.65rem;color:var(--tf-text-muted);text-transform:uppercase;letter-spacing:1px;">Pending</div>
+  <div class="tf-card flex-fill board-filter-card" onclick="filterBoard('pending')" data-filter="pending">
+    <div style="font-family:var(--tf-font-mono);font-size:1.5rem;font-weight:700;color:<%= _notDoneColor %>;"><%= summary.pending %></div>
+    <div style="font-size:0.65rem;color:var(--tf-text-muted);text-transform:uppercase;letter-spacing:1px;"><%= _notDoneLabel %></div>
   </div>
 </div>
 
 <!-- Task Board Table -->
-<div class="tf-card">
-  <div class="card-header d-flex justify-content-between align-items-center">
+<style>
+  .board-sticky-th {
+    position: sticky;
+    top: var(--topbar-h, 46px);
+    z-index: 10;
+    background: var(--tf-surface);
+  }
+  .board-sticky-th::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 2px;
+    background: #cbd5e1;
+  }
+</style>
+<div class="tf-card" style="overflow:visible;border-radius:12px;">
+  <div class="card-header d-flex justify-content-between align-items-center" style="border-radius:12px 12px 0 0;">
     <span><i class="bi bi-list-task me-2"></i>TASKS FOR <%= new Date(selectedDate + 'T12:00:00').toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric', year:'numeric' }) %> (<%= summary.tasks %> tasks &middot; <%= summary.assignments %> assignments)</span>
   </div>
-  <div style="overflow-x:auto;">
+  <div>
     <table class="tf-table">
       <thead>
         <tr>
-          <th style="width:22%;">Task</th>
-          <th>Employee</th>
-          <th>Status</th>
-          <th>Started</th>
-          <th>Completed</th>
-          <th>Duration</th>
-          <th>Reward</th>
+          <th class="board-sticky-th" style="width:22%;">Task</th>
+          <th class="board-sticky-th">Employee</th>
+          <th class="board-sticky-th">Status</th>
+          <th class="board-sticky-th">Started</th>
+          <th class="board-sticky-th">Completed</th>
+          <th class="board-sticky-th">Duration</th>
+          <th class="board-sticky-th">Reward</th>
         </tr>
       </thead>
       <tbody>
@@ -78,8 +126,9 @@
           %>
           <% taskGroups.forEach(function(group, gi) { %>
             <% var color = _colors[gi % 2]; var bg = _bgColors[gi % 2]; %>
+            <% var _groupStatuses = group.employees.map(function(e){ return e.status; }).join(','); %>
             <% group.employees.forEach(function(emp, ei) { %>
-            <tr style="background:<%= bg %>;<%= ei === group.employees.length - 1 ? 'border-bottom:2px solid var(--tf-border);' : '' %>">
+            <tr class="board-task-row" data-group-statuses="<%= _groupStatuses %>" data-emp-status="<%= emp.status %>" style="background:<%= bg %>;<%= ei === group.employees.length - 1 ? 'border-bottom:2px solid var(--tf-border);' : '' %>">
               <% if (ei === 0) { %>
               <td rowspan="<%= group.employees.length %>" style="border-left:3px solid <%= color %>;font-weight:600;vertical-align:top;padding-top:1rem;">
                 <div style="font-size:0.9rem;"><%= group.title %></div>
@@ -101,14 +150,38 @@
                 <% } %>
               </td>
               <% } %>
-              <td style="font-size:0.8rem;font-weight:500;"><%= emp.user_name || 'Unassigned' %></td>
+              <td style="font-size:0.8rem;font-weight:500;">
+                <div style="display:flex;align-items:center;gap:4px;">
+                  <%= emp.user_name || 'Unassigned' %>
+                  <% if (emp.fallback_role === 'secondary') { %>
+                  <span style="font-size:0.55rem;padding:1px 5px;border-radius:3px;background:rgba(245,158,11,0.15);color:#f59e0b;" title="Primary (<%= emp.original_assignee %>) is unavailable">Backup 1</span>
+                  <% } else if (emp.fallback_role === 'tertiary') { %>
+                  <span style="font-size:0.55rem;padding:1px 5px;border-radius:3px;background:rgba(239,68,68,0.15);color:#ef4444;" title="Primary & Secondary unavailable">Backup 2</span>
+                  <% } %>
+                </div>
+                <% if (emp.original_assignee) { %>
+                <div style="font-size:0.6rem;color:var(--tf-text-muted);margin-top:1px;"><i class="bi bi-arrow-left-right"></i> for <%= emp.original_assignee %></div>
+                <% } %>
+                <% if (emp.secondary_name || emp.tertiary_name) { %>
+                <div style="margin-top:4px;font-size:0.65rem;color:var(--tf-text-muted);line-height:1.5;">
+                  <% if (emp.secondary_name) { %>
+                  <div><span style="color:#f59e0b;"><i class="bi bi-2-circle-fill"></i></span> <%= emp.secondary_name %><% if (emp.fallback_role === 'secondary') { %> <span style="color:#f59e0b;">&#x2190; active</span><% } %></div>
+                  <% } %>
+                  <% if (emp.tertiary_name) { %>
+                  <div><span style="color:#ef4444;"><i class="bi bi-3-circle-fill"></i></span> <%= emp.tertiary_name %><% if (emp.fallback_role === 'tertiary') { %> <span style="color:#ef4444;">&#x2190; active</span><% } %></div>
+                  <% } %>
+                </div>
+                <% } %>
+              </td>
               <td>
                 <% if (emp.status === 'done') { %>
                 <span class="badge" style="font-size:0.65rem;border-radius:4px;padding:3px 8px;background:rgba(16,185,129,0.15);color:#10b981;"><i class="bi bi-check-circle-fill"></i> Done</span>
                 <% } else if (emp.status === 'in_progress') { %>
                 <span class="badge" style="font-size:0.65rem;border-radius:4px;padding:3px 8px;background:rgba(59,130,246,0.15);color:#3b82f6;"><i class="bi bi-play-circle-fill"></i> In Progress</span>
+                <% } else if (emp.status === 'unattended') { %>
+                <span class="badge" style="font-size:0.65rem;border-radius:4px;padding:3px 8px;background:rgba(239,68,68,0.15);color:#ef4444;"><i class="bi bi-exclamation-triangle-fill"></i> Unattended</span>
                 <% } else { %>
-                <span class="badge" style="font-size:0.65rem;border-radius:4px;padding:3px 8px;background:rgba(245,158,11,0.15);color:#f59e0b;"><i class="bi bi-circle"></i> Pending</span>
+                <span class="badge" style="font-size:0.65rem;border-radius:4px;padding:3px 8px;background:<%= _notDoneBg %>;color:<%= _notDoneColor %>;"><i class="bi bi-circle"></i> <%= _notDoneLabel %></span>
                 <% } %>
               </td>
               <td style="font-size:0.75rem;color:var(--tf-text-muted);">
@@ -146,20 +219,24 @@
 </div>
 
 <!-- Employee Summary -->
-<div class="tf-card">
+<div class="tf-card" style="margin-top:1.5rem;">
   <div class="card-header">
     <i class="bi bi-people me-2"></i>EMPLOYEE SUMMARY
   </div>
   <div style="overflow-x:auto;">
     <table class="tf-table">
       <thead>
-        <tr><th>Employee</th><th>Shift</th><th>Assigned</th><th>Done</th><th>In Progress</th><th>Pending</th><th>Completion</th></tr>
+        <tr><th>Employee</th><th>Shift</th><th>Assigned</th><th>Done</th><th>In Progress</th><th><%= _notDoneLabel %></th><th>Completion</th></tr>
       </thead>
       <tbody>
         <% empSummary.forEach(function(e) { %>
         <% var pct = e.assigned > 0 ? Math.round(e.done / e.assigned * 100) : 0; %>
         <tr>
-          <td style="font-weight:500;"><%= e.name %></td>
+          <td style="font-weight:500;">
+            <a href="javascript:void(0)" onclick="openEmpTasksModal(<%= e.user_id %>, '<%= e.name.replace(/'/g, "\\'") %>')" style="color:var(--tf-accent);text-decoration:none;cursor:pointer;border-bottom:1px dashed var(--tf-accent);">
+              <%= e.name %>
+            </a>
+          </td>
           <td style="font-size:0.75rem;color:var(--tf-text-muted);">
             <% if (e.shift_start) { %>
             <%= new Date('2000-01-01T' + e.shift_start).toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit', hour12:true }) %>
@@ -168,7 +245,7 @@
           <td style="font-family:var(--tf-font-mono);"><%= e.assigned %></td>
           <td style="font-family:var(--tf-font-mono);color:#10b981;"><%= e.done %></td>
           <td style="font-family:var(--tf-font-mono);color:#3b82f6;"><%= e.in_progress %></td>
-          <td style="font-family:var(--tf-font-mono);color:#f59e0b;"><%= e.pending %></td>
+          <td style="font-family:var(--tf-font-mono);color:<%= _notDoneColor %>;"><%= e.pending %></td>
           <td>
             <div style="width:80px;height:6px;background:rgba(255,255,255,0.08);border-radius:3px;">
               <div style="width:<%= pct %>%;height:100%;background:<%= pct === 100 ? '#10b981' : '#f59e0b' %>;border-radius:3px;"></div>
@@ -181,6 +258,125 @@
     </table>
   </div>
 </div>
+
+<!-- Employee Tasks Modal -->
+<div id="empTasksModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:5000;align-items:center;justify-content:center;">
+  <div style="background:var(--tf-surface);border:1px solid var(--tf-border);border-radius:12px;padding:1.5rem;width:95%;max-width:850px;max-height:80vh;display:flex;flex-direction:column;">
+    <div class="d-flex justify-content-between align-items-center" style="margin-bottom:1rem;">
+      <h6 style="font-family:var(--tf-font-mono);margin:0;" id="empTasksModalTitle">Employee Tasks</h6>
+      <button onclick="document.getElementById('empTasksModal').style.display='none'" style="background:none;border:none;color:var(--tf-text-muted);font-size:1.2rem;cursor:pointer;">&times;</button>
+    </div>
+    <div style="overflow-y:auto;flex:1;" id="empTasksModalBody"></div>
+  </div>
+</div>
+
+<script>
+function filterBoard(status) {
+  // Update active card
+  document.querySelectorAll('.board-filter-card').forEach(function(c) {
+    c.classList.toggle('active', c.getAttribute('data-filter') === status);
+  });
+
+  // Show/hide rows
+  document.querySelectorAll('.board-task-row').forEach(function(row) {
+    if (status === 'all') {
+      row.style.display = '';
+    } else {
+      var groupStatuses = row.getAttribute('data-group-statuses');
+      // Show row if any employee in its group matches the filter
+      row.style.display = groupStatuses.indexOf(status) !== -1 ? '' : 'none';
+    }
+  });
+
+  // Also show/hide the "no tasks" row if needed
+  var visibleRows = document.querySelectorAll('.board-task-row[style*="display"]:not([style*="none"])');
+  if (visibleRows.length === 0 && status !== 'all') {
+    var noRows = document.querySelectorAll('.board-task-row');
+    if (noRows.length > 0) {
+      // All hidden, but we have rows — don't show empty message since rows exist
+    }
+  }
+}
+
+var _boardTaskGroups = <%- JSON.stringify(taskGroups.map(function(g) {
+  return {
+    title: g.title, type: g.type, pattern: g.pattern,
+    reward_amount: g.reward_amount, priority: g.priority,
+    employees: g.employees.map(function(e) {
+      return { user_id: e.user_id, user_name: e.user_name, status: e.status,
+               started_at: e.started_at, completed_at: e.completed_at, duration_minutes: e.duration_minutes,
+               fallback_role: e.fallback_role || 'primary', original_assignee: e.original_assignee || null };
+    })
+  };
+})) %>;
+
+function openEmpTasksModal(userId, empName) {
+  document.getElementById('empTasksModalTitle').textContent = empName + ' — Tasks for Today';
+  var tasks = [];
+  _boardTaskGroups.forEach(function(g) {
+    g.employees.forEach(function(e) {
+      if (e.user_id === userId) {
+        tasks.push({
+          title: g.title, type: g.type, pattern: g.pattern,
+          reward: g.reward_amount, priority: g.priority,
+          status: e.status, started_at: e.started_at,
+          completed_at: e.completed_at, duration_minutes: e.duration_minutes,
+          fallback_role: e.fallback_role, original_assignee: e.original_assignee
+        });
+      }
+    });
+  });
+
+  var html = '';
+  if (tasks.length === 0) {
+    html = '<p style="color:var(--tf-text-muted);text-align:center;padding:2rem;">No tasks assigned</p>';
+  } else {
+    html = '<table class="tf-table" style="font-size:0.8rem;"><thead><tr>';
+    html += '<th>Task</th><th>Type</th><th>Priority</th><th>Status</th><th>Duration</th><th>Reward</th><th>Note</th>';
+    html += '</tr></thead><tbody>';
+    tasks.forEach(function(t) {
+      var typeBadge = t.type === 'recurring'
+        ? '<span style="display:inline-block;font-size:0.6rem;padding:2px 6px;border-radius:3px;background:rgba(0,212,255,0.1);color:var(--tf-accent);"><i class="bi bi-arrow-repeat"></i> ' + (t.pattern ? t.pattern.charAt(0).toUpperCase() + t.pattern.slice(1) : 'Recurring') + '</span>'
+        : '<span style="display:inline-block;font-size:0.6rem;padding:2px 6px;border-radius:3px;background:rgba(245,158,11,0.1);color:#f59e0b;"><i class="bi bi-1-circle"></i> Once</span>';
+
+      var statusBadge = '';
+      if (t.status === 'done') statusBadge = '<span style="font-size:0.65rem;border-radius:4px;padding:3px 8px;background:rgba(16,185,129,0.15);color:#10b981;"><i class="bi bi-check-circle-fill"></i> Done</span>';
+      else if (t.status === 'in_progress') statusBadge = '<span style="font-size:0.65rem;border-radius:4px;padding:3px 8px;background:rgba(59,130,246,0.15);color:#3b82f6;"><i class="bi bi-play-circle-fill"></i> In Progress</span>';
+      else if (t.status === 'unattended') statusBadge = '<span style="font-size:0.65rem;border-radius:4px;padding:3px 8px;background:rgba(239,68,68,0.15);color:#ef4444;"><i class="bi bi-exclamation-triangle-fill"></i> Unattended</span>';
+      else statusBadge = '<span style="font-size:0.65rem;border-radius:4px;padding:3px 8px;background:<%= _notDoneBg %>;color:<%= _notDoneColor %>;"><i class="bi bi-circle"></i> <%= _notDoneLabel %></span>';
+
+      var priBadge = '<span class="badge badge-' + (t.priority || 'medium') + '" style="font-size:0.6rem;padding:2px 6px;border-radius:3px;">' + (t.priority || 'medium').toUpperCase() + '</span>';
+
+      var dur = '—';
+      if (t.duration_minutes) {
+        dur = t.duration_minutes >= 60 ? Math.floor(t.duration_minutes/60) + 'h ' + (t.duration_minutes%60) + 'm' : t.duration_minutes + 'm';
+      } else if (t.started_at && t.completed_at) {
+        var m = Math.round((new Date(t.completed_at) - new Date(t.started_at)) / 60000);
+        dur = m >= 60 ? Math.floor(m/60) + 'h ' + (m%60) + 'm' : m + 'm';
+      }
+
+      var reward = t.reward ? parseFloat(t.reward).toFixed(0) + ' pts' : '—';
+
+      html += '<tr>';
+      html += '<td style="font-weight:500;">' + t.title + '</td>';
+      html += '<td>' + typeBadge + '</td>';
+      html += '<td>' + priBadge + '</td>';
+      html += '<td>' + statusBadge + '</td>';
+      html += '<td style="font-family:var(--tf-font-mono);color:#3b82f6;">' + dur + '</td>';
+      html += '<td style="font-family:var(--tf-font-mono);color:#f59e0b;">' + reward + '</td>';
+      var note = '—';
+      if (t.fallback_role === 'secondary') note = '<span style="color:#f59e0b;font-size:0.65rem;">Backup for ' + (t.original_assignee || '?') + '</span>';
+      else if (t.fallback_role === 'tertiary') note = '<span style="color:#ef4444;font-size:0.65rem;">Backup 2 for ' + (t.original_assignee || '?') + '</span>';
+      html += '<td>' + note + '</td>';
+      html += '</tr>';
+    });
+    html += '</tbody></table>';
+  }
+
+  document.getElementById('empTasksModalBody').innerHTML = html;
+  document.getElementById('empTasksModal').style.display = 'flex';
+}
+</script>
 
 <% } else { %>
 <!-- ═══════════════════════════════════════════════
