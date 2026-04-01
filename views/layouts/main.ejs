@@ -1446,5 +1446,250 @@ async function submitChangePassword() {
 
 <%- script %>
 
+<!-- ═══════════════════════════════════════════════════════════
+     GLOBAL VOICE CALL SYSTEM  (works on every page)
+     ═══════════════════════════════════════════════════════════ -->
+<audio id="_callAudio" autoplay playsinline style="display:none;"></audio>
+
+<!-- Outgoing / Calling overlay -->
+<div id="_callOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:9000;align-items:center;justify-content:center;flex-direction:column;gap:1.5rem;">
+  <div style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,#10b981,#059669);display:flex;align-items:center;justify-content:center;font-size:1.8rem;animation:_callPulse 1.4s ease-in-out infinite;">
+    <i class="bi bi-telephone-fill" style="color:#fff;"></i>
+  </div>
+  <div style="text-align:center;">
+    <div style="font-size:0.75rem;color:rgba(255,255,255,0.5);letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;">Calling...</div>
+    <div id="_callOverlayName" style="font-size:1.4rem;font-weight:700;color:#fff;"></div>
+  </div>
+  <button onclick="endCall(true)" style="margin-top:0.5rem;width:60px;height:60px;border-radius:50%;background:#ef4444;border:none;color:#fff;font-size:1.4rem;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(239,68,68,0.5);">
+    <i class="bi bi-telephone-x-fill"></i>
+  </button>
+</div>
+
+<!-- Incoming call overlay -->
+<div id="_incomingOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:9000;align-items:center;justify-content:center;flex-direction:column;gap:1.5rem;">
+  <div style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,#10b981,#059669);display:flex;align-items:center;justify-content:center;font-size:1.8rem;animation:_callPulse 1.4s ease-in-out infinite;">
+    <i class="bi bi-telephone-inbound-fill" style="color:#fff;"></i>
+  </div>
+  <div style="text-align:center;">
+    <div style="font-size:0.75rem;color:rgba(255,255,255,0.5);letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;">Incoming Call</div>
+    <div id="_incomingName" style="font-size:1.4rem;font-weight:700;color:#fff;"></div>
+  </div>
+  <div style="display:flex;gap:2rem;margin-top:0.5rem;">
+    <div style="display:flex;flex-direction:column;align-items:center;gap:8px;">
+      <button onclick="rejectCall()" style="width:60px;height:60px;border-radius:50%;background:#ef4444;border:none;color:#fff;font-size:1.4rem;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(239,68,68,0.5);"><i class="bi bi-telephone-x-fill"></i></button>
+      <span style="font-size:0.65rem;color:rgba(255,255,255,0.5);">Decline</span>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:8px;">
+      <button onclick="acceptCall()" style="width:60px;height:60px;border-radius:50%;background:#10b981;border:none;color:#fff;font-size:1.4rem;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(16,185,129,0.5);"><i class="bi bi-telephone-fill"></i></button>
+      <span style="font-size:0.65rem;color:rgba(255,255,255,0.5);">Accept</span>
+    </div>
+  </div>
+</div>
+
+<!-- Active call floating panel -->
+<div id="_activePanel" style="display:none;position:fixed;bottom:1.5rem;right:1.5rem;z-index:8900;background:var(--tf-surface);border:1px solid rgba(16,185,129,0.4);border-radius:16px;padding:1rem 1.25rem;min-width:220px;box-shadow:0 8px 32px rgba(0,0,0,0.4);align-items:center;gap:1rem;">
+  <div style="width:36px;height:36px;border-radius:50%;background:rgba(16,185,129,0.15);display:flex;align-items:center;justify-content:center;color:#10b981;font-size:1rem;flex-shrink:0;">
+    <i class="bi bi-telephone-fill"></i>
+  </div>
+  <div style="flex:1;min-width:0;">
+    <div id="_activeName" style="font-size:0.8rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div>
+    <div id="_callTimerEl" style="font-size:0.7rem;color:#10b981;font-family:monospace;">00:00</div>
+  </div>
+  <button id="_muteBtn" onclick="toggleMute()" title="Mute" style="width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.15);border:none;color:#fff;font-size:0.9rem;cursor:pointer;display:flex;align-items:center;justify-content:center;"><i class="bi bi-mic-fill"></i></button>
+  <button onclick="endCall(true)" title="End call" style="width:36px;height:36px;border-radius:50%;background:#ef4444;border:none;color:#fff;font-size:0.9rem;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(239,68,68,0.4);"><i class="bi bi-telephone-x-fill"></i></button>
+</div>
+
+<style>
+@keyframes _callPulse {
+  0%,100% { box-shadow:0 0 0 0 rgba(16,185,129,0.5); }
+  50%      { box-shadow:0 0 0 16px rgba(16,185,129,0); }
+}
+</style>
+
+<script>
+// ── Global Voice Call (WebRTC, works on every page) ──────────────────────────
+var callSocket = io({ withCredentials: true });
+
+var _callState = 'idle';   // idle | calling | incoming | active
+var _pc        = null;
+var _localStream = null;
+var _pendingOffer   = null;
+var _pendingFromId  = null;
+var _callPeerId   = null;
+var _callPeerName = null;
+var _callConvId   = null;
+var _callTimerIv  = null;
+var _callSecs     = 0;
+
+var _ICE = { iceServers: [
+  { urls: 'stun:stun.l.google.com:19302' },
+  { urls: 'stun:stun1.l.google.com:19302' }
+]};
+
+// Called from chat page button: startCall(peerId, peerName, convId)
+window.startCall = function(peerId, peerName, convId) {
+  if (_callState !== 'idle') { showToast('Already in a call', 'error'); return; }
+  _callPeerId = peerId; _callPeerName = peerName; _callConvId = convId;
+  _callState = 'calling';
+  document.getElementById('_callOverlayName').textContent = peerName;
+  document.getElementById('_callOverlay').style.display = 'flex';
+
+  navigator.mediaDevices.getUserMedia({ audio: true, video: false })
+    .then(function(stream) {
+      _localStream = stream;
+      _pc = new RTCPeerConnection(_ICE);
+      stream.getTracks().forEach(function(t) { _pc.addTrack(t, stream); });
+      _pc.ontrack = function(e) { _attachAudio(e.streams[0]); };
+      _pc.onicecandidate = function(e) {
+        if (e.candidate) callSocket.emit('call:ice-candidate', { to_user_id: _callPeerId, candidate: e.candidate });
+      };
+      _pc.oniceconnectionstatechange = function() {
+        if (_pc && (_pc.iceConnectionState === 'disconnected' || _pc.iceConnectionState === 'failed')) window.endCall(false);
+      };
+      return _pc.createOffer();
+    })
+    .then(function(offer) { return _pc.setLocalDescription(offer).then(function() { return offer; }); })
+    .then(function(offer) {
+      callSocket.emit('call:offer', { to_user_id: _callPeerId, conversation_id: _callConvId, offer: offer });
+    })
+    .catch(function(err) {
+      _callState = 'idle';
+      document.getElementById('_callOverlay').style.display = 'none';
+      showToast(err.name === 'NotAllowedError' ? 'Microphone access denied' : 'Could not start call', 'error');
+      _callCleanup();
+    });
+};
+
+window.endCall = function(notifyPeer) {
+  if (notifyPeer !== false && _callPeerId) callSocket.emit('call:end', { to_user_id: _callPeerId });
+  _callCleanup();
+  document.getElementById('_callOverlay').style.display = 'none';
+  document.getElementById('_activePanel').style.display = 'none';
+  _callState = 'idle';
+};
+
+window.acceptCall = function() {
+  document.getElementById('_incomingOverlay').style.display = 'none';
+  if (!_pendingOffer || !_pendingFromId) return;
+  _callState = 'active';
+
+  navigator.mediaDevices.getUserMedia({ audio: true, video: false })
+    .then(function(stream) {
+      _localStream = stream;
+      _pc = new RTCPeerConnection(_ICE);
+      stream.getTracks().forEach(function(t) { _pc.addTrack(t, stream); });
+      _pc.ontrack = function(e) { _attachAudio(e.streams[0]); };
+      _pc.onicecandidate = function(e) {
+        if (e.candidate) callSocket.emit('call:ice-candidate', { to_user_id: _pendingFromId, candidate: e.candidate });
+      };
+      _pc.oniceconnectionstatechange = function() {
+        if (_pc && (_pc.iceConnectionState === 'disconnected' || _pc.iceConnectionState === 'failed')) window.endCall(false);
+      };
+      return _pc.setRemoteDescription(new RTCSessionDescription(_pendingOffer));
+    })
+    .then(function() { return _pc.createAnswer(); })
+    .then(function(answer) { return _pc.setLocalDescription(answer).then(function() { return answer; }); })
+    .then(function(answer) {
+      callSocket.emit('call:answer', { to_user_id: _pendingFromId, conversation_id: _callConvId, answer: answer });
+      _callPeerId = _pendingFromId;
+      _callPeerName = document.getElementById('_incomingName').textContent;
+      _pendingOffer = null; _pendingFromId = null;
+      _showActivePanel(_callPeerName);
+    })
+    .catch(function(err) {
+      _callState = 'idle';
+      showToast(err.name === 'NotAllowedError' ? 'Microphone access denied' : 'Could not answer call', 'error');
+      _callCleanup();
+    });
+};
+
+window.rejectCall = function() {
+  document.getElementById('_incomingOverlay').style.display = 'none';
+  if (_pendingFromId) callSocket.emit('call:reject', { to_user_id: _pendingFromId, conversation_id: _callConvId });
+  _pendingOffer = null; _pendingFromId = null;
+  _callState = 'idle';
+};
+
+window.toggleMute = function() {
+  if (!_localStream) return;
+  var t = _localStream.getAudioTracks()[0]; if (!t) return;
+  t.enabled = !t.enabled;
+  var btn = document.getElementById('_muteBtn');
+  btn.innerHTML = t.enabled ? '<i class="bi bi-mic-fill"></i>' : '<i class="bi bi-mic-mute-fill"></i>';
+  btn.style.background = t.enabled ? 'rgba(255,255,255,0.15)' : 'rgba(239,68,68,0.4)';
+};
+
+function _attachAudio(stream) {
+  var a = document.getElementById('_callAudio');
+  a.srcObject = stream; a.play().catch(function() {});
+}
+
+function _showActivePanel(name) {
+  document.getElementById('_activeName').textContent = name;
+  document.getElementById('_activePanel').style.display = 'flex';
+  _callSecs = 0;
+  _callTimerIv = setInterval(function() {
+    _callSecs++;
+    var m = Math.floor(_callSecs / 60), s = _callSecs % 60;
+    document.getElementById('_callTimerEl').textContent = (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
+  }, 1000);
+}
+
+function _callCleanup() {
+  if (_localStream) { _localStream.getTracks().forEach(function(t) { t.stop(); }); _localStream = null; }
+  if (_pc) { _pc.close(); _pc = null; }
+  if (_callTimerIv) { clearInterval(_callTimerIv); _callTimerIv = null; }
+  var a = document.getElementById('_callAudio'); if (a) a.srcObject = null;
+}
+
+// Socket events
+callSocket.on('call:incoming', function(data) {
+  if (_callState !== 'idle') {
+    callSocket.emit('call:reject', { to_user_id: data.from_user_id, conversation_id: data.conversation_id });
+    return;
+  }
+  _callState = 'incoming';
+  _callConvId = data.conversation_id;
+  _pendingOffer = data.offer;
+  _pendingFromId = data.from_user_id;
+  document.getElementById('_incomingName').textContent = data.from_user_name;
+  document.getElementById('_incomingOverlay').style.display = 'flex';
+});
+
+callSocket.on('call:answered', function(data) {
+  if (!_pc) return;
+  _pc.setRemoteDescription(new RTCSessionDescription(data.answer))
+    .then(function() {
+      _callState = 'active';
+      document.getElementById('_callOverlay').style.display = 'none';
+      _showActivePanel(_callPeerName);
+    })
+    .catch(function() { window.endCall(true); });
+});
+
+callSocket.on('call:ice-candidate', function(data) {
+  if (_pc && data.candidate) _pc.addIceCandidate(new RTCIceCandidate(data.candidate)).catch(function() {});
+});
+
+callSocket.on('call:rejected', function() {
+  _callState = 'idle';
+  document.getElementById('_callOverlay').style.display = 'none';
+  showToast('Call was declined', 'error');
+  _callCleanup();
+});
+
+callSocket.on('call:ended', function() {
+  window.endCall(false);
+  if (_callState !== 'idle') showToast('Call ended', 'success');
+});
+
+callSocket.on('call:busy', function() {
+  _callState = 'idle';
+  document.getElementById('_callOverlay').style.display = 'none';
+  showToast('User is busy on another call', 'error');
+  _callCleanup();
+});
+</script>
+
 </body>
 </html>
