@@ -6,6 +6,7 @@ const { ApiResponse, getPagination, getPaginationMeta } = require('../utils/resp
 const db = require('../config/db');
 const { getIO } = require('../config/socket');
 const { getToday, getEffectiveWorkDate, isScheduledForDate } = require('../utils/timezone');
+const XLSX = require('xlsx');
 
 class TaskController {
   // GET /tasks
@@ -24,17 +25,29 @@ class TaskController {
 
       const { rows, total } = await TaskModel.getAll(filters);
 
-      // When filtering by a specific date, check completion for that date; otherwise use today
-      const checkDate = for_date || today;
+      // Build a map of each user's effective work date (accounts for night shifts)
+      const [allLocalUsers] = await db.query(
+        `SELECT id, shift_start, shift_hours FROM users WHERE is_active = 1`
+      );
+      const userShiftMap = {};
+      allLocalUsers.forEach(u => { userShiftMap[u.id] = u; });
+
+      // When filtering by a specific date, use that date; otherwise compute per-employee effective date
+      const adminCheckDate = for_date || today;
 
       // For recurring tasks, attach session status and schedule check for the relevant date
       for (const task of rows) {
         if (task.type === 'recurring' && task.status === 'active') {
-          task.is_scheduled_today = isScheduledForDate(task, checkDate);
+          task.is_scheduled_today = isScheduledForDate(task, adminCheckDate);
           if (task.assigned_to) {
-            const session = await TaskCompletion.getTodaySession(task.id, task.assigned_to, checkDate);
+            // Use the employee's effective work date, not the admin's
+            const empShift = userShiftMap[task.assigned_to];
+            const empCheckDate = for_date || getEffectiveWorkDate(tz, empShift ? empShift.shift_start : null, empShift ? empShift.shift_hours : null);
+            const session = await TaskCompletion.getTodaySession(task.id, task.assigned_to, empCheckDate);
             task.is_started_today = !!(session && session.started_at && !session.completed_at);
             task.is_completed_today = !!(session && session.completed_at);
+            task.session_started_at = session ? session.started_at : null;
+            task.session_completed_at = session ? session.completed_at : null;
           }
         }
       }
@@ -54,7 +67,8 @@ class TaskController {
         ourUsers,
         filters: { status, type, search, completed_period, assigned_to, for_date },
         role,
-        todayDate: today
+        todayDate: today,
+        orgTimezone: tz
       });
     } catch (err) {
       res.status(500).render('error', { title: 'Error', message: err.message, code: 500, layout: false });
@@ -285,7 +299,11 @@ class TaskController {
       let recentCompletions = [];
       const isRecurring = task.type === 'recurring' && task.status === 'active';
       if (isRecurring && task.assigned_to) {
-        const today = getEffectiveWorkDate(req.user.org_timezone || 'UTC', req.user.shift_start, req.user.shift_hours);
+        // Use the assigned employee's shift info, not the viewing user's
+        const [[empUser]] = await db.query(`SELECT shift_start, shift_hours FROM users WHERE id = ?`, [task.assigned_to]);
+        const empShiftStart = (req.user.id === task.assigned_to) ? req.user.shift_start : (empUser ? empUser.shift_start : null);
+        const empShiftHours = (req.user.id === task.assigned_to) ? req.user.shift_hours : (empUser ? empUser.shift_hours : null);
+        const today = getEffectiveWorkDate(req.user.org_timezone || 'UTC', empShiftStart, empShiftHours);
         todaySession = await TaskCompletion.getTodaySession(task.id, task.assigned_to, today);
         isStartedToday = !!(todaySession && todaySession.started_at && !todaySession.completed_at);
         isCompletedToday = !!(todaySession && todaySession.completed_at);
@@ -565,6 +583,453 @@ class TaskController {
       return ApiResponse.success(res, {}, 'Task deleted');
     } catch (err) {
       return ApiResponse.error(res, err.message, 400);
+    }
+  }
+
+  // GET /tasks/board — Task Board (Today + All Tasks)
+  static async board(req, res) {
+    try {
+      const tz = req.user.org_timezone || 'UTC';
+      const selectedDate = req.query.date || getToday(tz);
+      const tab = req.query.tab || 'today';
+
+      // Get all LOCAL users
+      const [localUsers] = await db.query(
+        `SELECT u.id, u.name, u.shift_start, u.weekly_off_day
+         FROM users u JOIN roles r ON u.role_id = r.id JOIN organizations o ON u.organization_id = o.id
+         WHERE u.is_active = 1 AND o.org_type = 'LOCAL' AND r.name IN ('LOCAL_USER', 'LOCAL_MANAGER')
+         ORDER BY u.name`
+      );
+
+      if (tab === 'today') {
+        // ── TODAY TAB ──
+        // Get all active recurring tasks (individual rows, not grouped)
+        const [recurringTasks] = await db.query(
+          `SELECT t.id, t.title, t.type, t.recurrence_pattern, t.recurrence_days,
+                  t.recurrence_end_date, t.reward_amount, t.priority, t.status,
+                  t.assigned_to, t.group_id, t.deadline_time,
+                  u.name as assigned_to_name, u.shift_start
+           FROM tasks t
+           LEFT JOIN users u ON t.assigned_to = u.id
+           WHERE t.is_deleted = 0 AND t.type = 'recurring' AND t.status = 'active'
+           ORDER BY t.title, u.name`
+        );
+
+        // Get one-time tasks for the selected date
+        const [onceTasks] = await db.query(
+          `SELECT t.id, t.title, t.type, t.reward_amount, t.priority, t.status,
+                  t.assigned_to, t.group_id, t.due_date, t.completed_at,
+                  u.name as assigned_to_name, u.shift_start
+           FROM tasks t
+           LEFT JOIN users u ON t.assigned_to = u.id
+           WHERE t.is_deleted = 0 AND t.type = 'once'
+             AND (t.due_date = ? OR DATE(t.completed_at) = ? OR (DATE(t.created_at) = ? AND t.due_date IS NULL))
+           ORDER BY t.title, u.name`,
+          [selectedDate, selectedDate, selectedDate]
+        );
+
+        // Filter recurring tasks scheduled for selectedDate
+        const scheduledRecurring = recurringTasks.filter(t => isScheduledForDate(t, selectedDate));
+
+        // Exclude users on weekly off
+        const dayName = new Date(selectedDate + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long' });
+        const offUserIds = new Set(localUsers.filter(u => u.weekly_off_day === dayName).map(u => u.id));
+        const filteredRecurring = scheduledRecurring.filter(t => !offUserIds.has(t.assigned_to));
+
+        // Get completions for the date AND previous day (to handle night shift crossovers)
+        const prevDate = new Date(new Date(selectedDate + 'T12:00:00').getTime() - 86400000).toISOString().split('T')[0];
+        const [completions] = await db.query(
+          `SELECT tc.task_id, tc.user_id, tc.completion_date, tc.started_at, tc.completed_at, tc.duration_minutes
+           FROM task_completions tc
+           WHERE tc.completion_date IN (?, ?)`,
+          [selectedDate, prevDate]
+        );
+        // Build completion map using each employee's effective work date
+        const completionMap = {};
+        const userShiftMap = {};
+        localUsers.forEach(u => { userShiftMap[u.id] = u; });
+        completions.forEach(c => {
+          const cDateStr = c.completion_date instanceof Date ? c.completion_date.toISOString().split('T')[0] : String(c.completion_date).split('T')[0];
+          // Only include if the completion_date matches the selectedDate
+          if (cDateStr === selectedDate) {
+            completionMap[`${c.task_id}-${c.user_id}`] = c;
+          }
+        });
+
+        // Group tasks by title (group_id or title for ungrouped)
+        const taskGroups = {};
+        const addToGroup = (t, isRecurring) => {
+          const groupKey = t.group_id ? `g-${t.group_id}` : `t-${t.id}`;
+          if (!taskGroups[groupKey]) {
+            taskGroups[groupKey] = {
+              title: t.title, type: t.type, pattern: t.recurrence_pattern,
+              recurrence_days: t.recurrence_days, priority: t.priority,
+              reward_amount: t.reward_amount, deadline_time: t.deadline_time,
+              employees: [], doneCount: 0, totalCount: 0
+            };
+          }
+          const comp = completionMap[`${t.id}-${t.assigned_to}`];
+          const isCompleted = isRecurring
+            ? !!(comp && comp.completed_at)
+            : t.status === 'completed';
+          const isStarted = isRecurring
+            ? !!(comp && comp.started_at && !comp.completed_at)
+            : t.status === 'in_progress';
+
+          taskGroups[groupKey].employees.push({
+            task_id: t.id, user_id: t.assigned_to, user_name: t.assigned_to_name,
+            shift_start: t.shift_start,
+            status: isCompleted ? 'done' : isStarted ? 'in_progress' : 'pending',
+            started_at: comp ? comp.started_at : null,
+            completed_at: isRecurring ? (comp ? comp.completed_at : null) : (isCompleted ? t.completed_at : null),
+            duration_minutes: comp ? comp.duration_minutes : null
+          });
+          taskGroups[groupKey].totalCount++;
+          if (isCompleted) taskGroups[groupKey].doneCount++;
+        };
+
+        filteredRecurring.forEach(t => addToGroup(t, true));
+        onceTasks.forEach(t => addToGroup(t, false));
+
+        // Build employee summary
+        const empSummary = {};
+        localUsers.filter(u => !offUserIds.has(u.id)).forEach(u => {
+          empSummary[u.id] = { name: u.name, shift_start: u.shift_start, assigned: 0, done: 0, in_progress: 0, pending: 0 };
+        });
+        Object.values(taskGroups).forEach(g => {
+          g.employees.forEach(e => {
+            if (empSummary[e.user_id]) {
+              empSummary[e.user_id].assigned++;
+              if (e.status === 'done') empSummary[e.user_id].done++;
+              else if (e.status === 'in_progress') empSummary[e.user_id].in_progress++;
+              else empSummary[e.user_id].pending++;
+            }
+          });
+        });
+
+        // Summary counts
+        const totalAssignments = Object.values(taskGroups).reduce((s, g) => s + g.totalCount, 0);
+        const totalDone = Object.values(taskGroups).reduce((s, g) => s + g.doneCount, 0);
+        const totalInProgress = Object.values(taskGroups).reduce((s, g) => s + g.employees.filter(e => e.status === 'in_progress').length, 0);
+        const totalPending = totalAssignments - totalDone - totalInProgress;
+
+        return res.render('tasks/board', {
+          title: 'Task Board',
+          tab, selectedDate, orgTimezone: tz,
+          taskGroups: Object.values(taskGroups),
+          empSummary: Object.values(empSummary).sort((a, b) => a.name.localeCompare(b.name)),
+          summary: { tasks: Object.keys(taskGroups).length, assignments: totalAssignments, done: totalDone, inProgress: totalInProgress, pending: totalPending },
+          localUsers
+        });
+      }
+
+      // ── ALL TASKS TAB ──
+      const [allTasks] = await db.query(
+        `SELECT t.id, t.title, t.type, t.recurrence_pattern, t.recurrence_days,
+                t.recurrence_end_date, t.reward_amount, t.priority, t.status,
+                t.assigned_to, t.group_id, t.due_date, t.deadline_time, t.created_at,
+                u.name as assigned_to_name
+         FROM tasks t
+         LEFT JOIN users u ON t.assigned_to = u.id
+         WHERE t.is_deleted = 0 AND t.status NOT IN ('deactivated')
+         ORDER BY t.title, u.name`
+      );
+
+      // Group by group_id or individual task
+      const masterList = {};
+      allTasks.forEach(t => {
+        const groupKey = t.group_id ? `g-${t.group_id}` : `t-${t.id}`;
+        if (!masterList[groupKey]) {
+          masterList[groupKey] = {
+            id: t.group_id || t.id, title: t.title, type: t.type,
+            pattern: t.recurrence_pattern, recurrence_days: t.recurrence_days,
+            priority: t.priority, reward_amount: t.reward_amount, status: t.status,
+            deadline_time: t.deadline_time, due_date: t.due_date,
+            recurrence_end_date: t.recurrence_end_date,
+            employees: [], task_ids: []
+          };
+        }
+        if (t.assigned_to) {
+          masterList[groupKey].employees.push({ id: t.assigned_to, name: t.assigned_to_name });
+        }
+        masterList[groupKey].task_ids.push(t.id);
+      });
+
+      return res.render('tasks/board', {
+        title: 'Task Board',
+        tab, selectedDate, orgTimezone: tz,
+        masterList: Object.values(masterList),
+        localUsers
+      });
+
+    } catch (err) {
+      res.status(500).render('error', { title: 'Error', message: err.message, code: 500, layout: false });
+    }
+  }
+
+  // GET /tasks/board/export — Export tasks as Excel
+  static async boardExport(req, res) {
+    try {
+      const [tasks] = await db.query(
+        `SELECT t.id, t.title, t.type, t.recurrence_pattern, t.recurrence_days,
+                t.deadline_time, t.recurrence_end_date, t.reward_amount, t.priority,
+                t.status, t.group_id, t.assigned_to, u.name as assigned_to_name
+         FROM tasks t LEFT JOIN users u ON t.assigned_to = u.id
+         WHERE t.is_deleted = 0 AND t.status NOT IN ('deactivated')
+         ORDER BY COALESCE(t.group_id, t.id), t.title`
+      );
+
+      // Group tasks by group_id for multi-assigned
+      const grouped = {};
+      tasks.forEach(t => {
+        const key = t.group_id ? `g-${t.group_id}` : `t-${t.id}`;
+        if (!grouped[key]) {
+          grouped[key] = {
+            id: t.group_id || t.id, title: t.title, type: t.type,
+            pattern: t.recurrence_pattern || '', days: t.recurrence_days || '',
+            deadline: t.deadline_time || '', end_date: t.recurrence_end_date || '',
+            reward: t.reward_amount || '', priority: t.priority,
+            status: t.status, employees: []
+          };
+        }
+        if (t.assigned_to_name) grouped[key].employees.push(t.assigned_to_name);
+      });
+
+      const rows = Object.values(grouped).map(g => ({
+        'Task ID': g.id,
+        'Task Name': g.title,
+        'Type': g.type,
+        'Pattern': g.pattern,
+        'Days': g.days,
+        'Deadline Time': g.deadline,
+        'End Date': g.end_date ? new Date(g.end_date).toISOString().split('T')[0] : '',
+        'Priority': g.priority,
+        'Reward': g.reward,
+        'Status': g.status,
+        'Assigned To': g.employees.join(', ')
+      }));
+
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.json_to_sheet(rows);
+      XLSX.utils.book_append_sheet(wb, ws, 'Tasks');
+      const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', 'attachment; filename=taskflow-tasks.xlsx');
+      return res.send(buf);
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  }
+
+  // POST /tasks/board/import — Step 1: Preview parsed Excel data
+  static async boardImport(req, res) {
+    try {
+      if (!req.file) return res.redirect('/tasks/board?tab=all&msg=' + encodeURIComponent('No file uploaded'));
+
+      const wb = XLSX.read(req.file.buffer || require('fs').readFileSync(req.file.path));
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws);
+
+      if (!rows.length) return res.redirect('/tasks/board?tab=all&msg=' + encodeURIComponent('Empty spreadsheet'));
+
+      // Get user name → id map
+      const [users] = await db.query(
+        `SELECT u.id, u.name FROM users u JOIN organizations o ON u.organization_id = o.id
+         WHERE u.is_active = 1 AND o.org_type = 'LOCAL'`
+      );
+      const userMap = {};
+      users.forEach(u => { userMap[u.name.trim().toLowerCase()] = u.id; });
+
+      // Parse rows and flag issues
+      const preview = [];
+      for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        const title = (row['Task Name'] || '').trim();
+        if (!title) continue;
+
+        const taskId = row['Task ID'] ? parseInt(row['Task ID']) : null;
+        const type = (row['Type'] || 'recurring').toLowerCase();
+        const pattern = (row['Pattern'] || 'daily').toLowerCase();
+        const days = row['Days'] ? String(row['Days']).trim() : '';
+        const deadline = row['Deadline Time'] ? String(row['Deadline Time']).trim() : '';
+        const endDate = row['End Date'] ? String(row['End Date']).trim() : '';
+        const priority = (row['Priority'] || 'medium').toLowerCase();
+        const reward = row['Reward'] ? parseFloat(row['Reward']) : '';
+        const assignedStr = (row['Assigned To'] || '').trim();
+
+        const employeeNames = assignedStr ? assignedStr.split(',').map(n => n.trim()) : [];
+        const matched = [];
+        const unmatched = [];
+        employeeNames.forEach(n => {
+          if (userMap[n.toLowerCase()]) matched.push({ name: n, id: userMap[n.toLowerCase()] });
+          else unmatched.push(n);
+        });
+
+        preview.push({
+          rowNum: i + 2, taskId, title, type, pattern, days, deadline, endDate, priority, reward,
+          action: taskId ? 'update' : 'create',
+          matched, unmatched, assignedStr
+        });
+      }
+
+      return res.render('tasks/import-preview', {
+        title: 'Import Preview',
+        preview,
+        localUsers: users,
+        previewJson: JSON.stringify(preview)
+      });
+    } catch (err) {
+      res.status(500).render('error', { title: 'Error', message: err.message, code: 500, layout: false });
+    }
+  }
+
+  // POST /tasks/board/import/confirm — Step 2: Actually insert/update
+  static async boardImportConfirm(req, res) {
+    try {
+      const { rows: rowsJson } = req.body;
+      const rows = JSON.parse(rowsJson);
+
+      if (!rows || !rows.length) return res.redirect('/tasks/board?tab=all&msg=' + encodeURIComponent('No data to import'));
+
+      let created = 0, updated = 0, skipped = 0;
+
+      for (const row of rows) {
+        const title = (row.title || '').trim();
+        if (!title) { skipped++; continue; }
+
+        const taskId = row.taskId ? parseInt(row.taskId) : null;
+        const type = (row.type || 'recurring').toLowerCase();
+        const pattern = (row.pattern || 'daily').toLowerCase();
+        const days = row.days || null;
+        const deadline = row.deadline || null;
+        const endDate = row.endDate || null;
+        const priority = (row.priority || 'medium').toLowerCase();
+        const reward = row.reward ? parseFloat(row.reward) : null;
+        const employeeIds = (row.employeeIds || []).map(id => parseInt(id)).filter(Boolean);
+
+        // Update existing task
+        if (taskId) {
+          const existing = await TaskModel.findById(taskId);
+          if (!existing) { skipped++; continue; }
+
+          await TaskModel.update(taskId, { title, priority, reward_amount: reward });
+          if (existing.group_id) {
+            await db.query(
+              `UPDATE tasks SET title = ?, priority = ?, reward_amount = ? WHERE group_id = ? AND is_deleted = 0`,
+              [title, priority, reward, existing.group_id]
+            );
+          }
+          updated++;
+          continue;
+        }
+
+        // Create new task
+        const baseData = {
+          title, type,
+          recurrence_pattern: type === 'recurring' ? pattern : null,
+          recurrence_days: type === 'recurring' ? days : null,
+          deadline_time: deadline,
+          recurrence_end_date: endDate,
+          priority,
+          reward_amount: reward,
+          created_by: req.user.id,
+          created_by_org: req.user.organization_type,
+          status: type === 'recurring' ? 'active' : 'pending'
+        };
+
+        if (employeeIds.length > 1) {
+          const firstId = await TaskModel.create({ ...baseData, assigned_to: employeeIds[0] });
+          await TaskModel.update(firstId, { group_id: firstId });
+          for (let j = 1; j < employeeIds.length; j++) {
+            await TaskModel.create({ ...baseData, assigned_to: employeeIds[j], group_id: firstId });
+          }
+        } else {
+          baseData.assigned_to = employeeIds[0] || null;
+          await TaskModel.create(baseData);
+        }
+        created++;
+      }
+
+      const msg = encodeURIComponent(`Import complete: ${created} created, ${updated} updated, ${skipped} skipped`);
+      res.redirect(`/tasks/board?tab=all&msg=${msg}`);
+    } catch (err) {
+      res.status(500).render('error', { title: 'Error', message: err.message, code: 500, layout: false });
+    }
+  }
+
+  // POST /tasks/board/merge — Merge selected tasks into one group
+  static async boardMerge(req, res) {
+    try {
+      const { task_ids, keep_title } = req.body;
+      if (!task_ids || !Array.isArray(task_ids) || task_ids.length < 2) {
+        return res.status(400).json({ error: 'Select at least 2 tasks to merge' });
+      }
+
+      const ids = task_ids.map(id => parseInt(id)).filter(Boolean);
+
+      // Get all task rows (including grouped ones) for selected IDs
+      const [tasks] = await db.query(
+        `SELECT * FROM tasks WHERE (id IN (?) OR group_id IN (?)) AND is_deleted = 0`,
+        [ids, ids]
+      );
+      if (tasks.length < 2) return res.status(400).json({ error: 'Not enough tasks to merge' });
+
+      // Use the first task as the master
+      const masterTitle = keep_title || tasks[0].title;
+      const masterId = Math.min(...tasks.map(t => t.group_id || t.id));
+
+      // Collect all unique assignees
+      const assigneeSet = new Set();
+      tasks.forEach(t => { if (t.assigned_to) assigneeSet.add(t.assigned_to); });
+
+      // Use the first task's properties as template
+      const template = tasks.find(t => t.id === masterId) || tasks[0];
+
+      const conn = await db.getConnection();
+      try {
+        await conn.beginTransaction();
+
+        // Soft-delete all tasks in the merge set
+        await conn.query(`UPDATE tasks SET is_deleted = 1 WHERE id IN (?)`, [tasks.map(t => t.id)]);
+
+        // Create fresh grouped tasks with all unique assignees
+        const assignees = Array.from(assigneeSet);
+        if (assignees.length > 0) {
+          const firstId = (await conn.query(
+            `INSERT INTO tasks (title, description, type, recurrence_pattern, recurrence_days, deadline_time, recurrence_end_date,
+              assigned_to, created_by, created_by_org, reward_amount, priority, status, is_deleted)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`,
+            [masterTitle, template.description, template.type, template.recurrence_pattern, template.recurrence_days,
+             template.deadline_time, template.recurrence_end_date, assignees[0], template.created_by,
+             template.created_by_org, template.reward_amount, template.priority,
+             template.type === 'recurring' ? 'active' : 'pending']
+          ))[0].insertId;
+
+          await conn.query(`UPDATE tasks SET group_id = ? WHERE id = ?`, [firstId, firstId]);
+          for (let i = 1; i < assignees.length; i++) {
+            await conn.query(
+              `INSERT INTO tasks (title, description, type, recurrence_pattern, recurrence_days, deadline_time, recurrence_end_date,
+                assigned_to, created_by, created_by_org, group_id, reward_amount, priority, status, is_deleted)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`,
+              [masterTitle, template.description, template.type, template.recurrence_pattern, template.recurrence_days,
+               template.deadline_time, template.recurrence_end_date, assignees[i], template.created_by,
+               template.created_by_org, firstId, template.reward_amount, template.priority,
+               template.type === 'recurring' ? 'active' : 'pending']
+            );
+          }
+        }
+
+        await conn.commit();
+        return res.json({ success: true, message: `Merged ${tasks.length} tasks into "${masterTitle}" with ${assignees.length} assignee(s)` });
+      } catch (err) {
+        await conn.rollback();
+        throw err;
+      } finally {
+        conn.release();
+      }
+    } catch (err) {
+      res.status(500).json({ error: err.message });
     }
   }
 }

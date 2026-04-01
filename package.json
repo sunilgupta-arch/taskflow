@@ -27,7 +27,8 @@
     "mysql2": "^3.6.5",
     "node-cron": "^3.0.3",
     "socket.io": "^4.8.3",
-    "winston": "^3.11.0"
+    "winston": "^3.11.0",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "nodemon": "^3.0.2"

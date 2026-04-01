@@ -2,7 +2,16 @@ const TaskModel = require('../models/Task');
 const TaskCompletion = require('../models/TaskCompletion');
 const RewardModel = require('../models/Reward');
 const db = require('../config/db');
-const { getToday, getUTCNow } = require('../utils/timezone');
+const { getToday, getUTCNow, getEffectiveWorkDate } = require('../utils/timezone');
+
+/**
+ * Get the effective work date for a specific user, using their shift info from DB.
+ */
+async function getUserWorkDate(userId, timezone) {
+  const [[user]] = await db.query(`SELECT shift_start, shift_hours FROM users WHERE id = ?`, [userId]);
+  if (!user) return getToday(timezone);
+  return getEffectiveWorkDate(timezone, user.shift_start, user.shift_hours);
+}
 
 class TaskService {
   static async createTask(data, creator) {
@@ -157,7 +166,8 @@ class TaskService {
     if (task.type !== 'recurring') throw new Error('Only recurring tasks can be logged');
     if (task.status !== 'active') throw new Error('Task is not active');
 
-    const completionDate = date || getToday(timezone);
+    // Use employee's effective work date if no explicit date provided
+    const completionDate = date || await getUserWorkDate(userId, timezone);
 
     const conn = await db.getConnection();
     try {
@@ -202,7 +212,8 @@ class TaskService {
     if (!task) throw new Error('Task not found');
     if (task.assigned_to !== userId) throw new Error('You can only undo completion for tasks assigned to you');
 
-    const completionDate = date || getToday(timezone);
+    // Use employee's effective work date if no explicit date provided
+    const completionDate = date || await getUserWorkDate(userId, timezone);
 
     const conn = await db.getConnection();
     try {
@@ -240,7 +251,8 @@ class TaskService {
     if (task.type !== 'recurring') throw new Error('Only recurring tasks use session tracking');
     if (task.status !== 'active') throw new Error('Task is not active');
 
-    const today = workDate || getToday(timezone);
+    // Always compute from the employee's own shift info for accuracy
+    const today = await getUserWorkDate(userId, timezone);
 
     const [[existing]] = await db.query(
       `SELECT id, started_at, completed_at FROM task_completions WHERE task_id = ? AND user_id = ? AND completion_date = ?`,
@@ -260,7 +272,8 @@ class TaskService {
     if (task.type !== 'recurring') throw new Error('Only recurring tasks use session tracking');
     if (task.status !== 'active') throw new Error('Task is not active');
 
-    const today = workDate || getToday(timezone);
+    // Always compute from the employee's own shift info for accuracy
+    const today = await getUserWorkDate(userId, timezone);
 
     const [[session]] = await db.query(
       `SELECT id, started_at, completed_at FROM task_completions WHERE task_id = ? AND user_id = ? AND completion_date = ?`,

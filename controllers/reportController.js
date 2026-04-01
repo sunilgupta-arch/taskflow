@@ -115,7 +115,7 @@ class ReportController {
            GROUP BY u.id ORDER BY days_present DESC`
         ),
         db.query(
-          `SELECT u.id, u.name, u.weekly_off_day FROM users u
+          `SELECT u.id, u.name, u.weekly_off_day, u.shift_start FROM users u
            JOIN organizations o ON u.organization_id = o.id
            JOIN roles r ON u.role_id = r.id
            WHERE u.is_active = 1 AND o.org_type = 'LOCAL' AND r.name IN ('LOCAL_USER', 'LOCAL_MANAGER')
@@ -181,7 +181,18 @@ class ReportController {
               }
             }
             if (!onLeave) {
-              calendarData[u.id][d] = attendanceSet.has(`${u.id}-${dateStr}`) ? 'present' : 'absent';
+              if (attendanceSet.has(`${u.id}-${dateStr}`)) {
+                calendarData[u.id][d] = 'present';
+              } else if (dateStr === today && u.shift_start) {
+                // Don't mark absent if shift hasn't started yet
+                const nowInTz = new Date(new Date().toLocaleString('en-US', { timeZone: tz }));
+                const nowMins = nowInTz.getHours() * 60 + nowInTz.getMinutes();
+                const [sh, sm] = u.shift_start.split(':').map(Number);
+                const shiftMins = sh * 60 + sm;
+                calendarData[u.id][d] = nowMins >= shiftMins ? 'absent' : 'future';
+              } else {
+                calendarData[u.id][d] = 'absent';
+              }
             }
           }
         }

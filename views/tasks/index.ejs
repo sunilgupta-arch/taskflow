@@ -1,6 +1,6 @@
 <!-- Filters & Actions Bar -->
 <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
-  <form method="GET" action="<%= typeof isMyTasks !== 'undefined' && isMyTasks ? '/tasks/my' : '/tasks' %>" class="d-flex gap-2 flex-wrap flex-grow-1">
+  <form id="taskFilterForm" method="GET" action="<%= typeof isMyTasks !== 'undefined' && isMyTasks ? '/tasks/my' : '/tasks' %>" class="d-flex gap-2 flex-wrap flex-grow-1">
     <input type="text" name="search" value="<%= filters.search || '' %>" placeholder="Search tasks..." class="tf-form-control" style="max-width:220px;">
     <select name="status" class="tf-select" style="max-width:140px;">
       <option value="">All Status</option>
@@ -16,7 +16,7 @@
       <option value="once" <%= filters.type === 'once' ? 'selected' : '' %>>One Time</option>
     </select>
     <% if (['CLIENT_ADMIN', 'CLIENT_MANAGER', 'LOCAL_ADMIN', 'LOCAL_MANAGER'].includes(user.role_name)) { %>
-    <select name="assigned_to" class="tf-select" style="max-width:160px;">
+    <select name="assigned_to" class="tf-select" style="max-width:160px;" onchange="document.getElementById('taskFilterForm').submit()">
       <option value="">All Employees</option>
       <% ourUsers.forEach(function(u) { %>
       <option value="<%= u.id %>" <%= filters.assigned_to == u.id ? 'selected' : '' %>><%= u.name %></option>
@@ -171,6 +171,22 @@ const _isFuture = _fd && _fd > todayDate;
                 <span class="badge" style="font-size:0.65rem;border-radius:4px;padding:3px 8px;background:rgba(16,185,129,0.15);color:#10b981;">
                   <i class="bi bi-check-circle-fill"></i> <%= _isPast ? 'Done' : 'Done Today' %>
                 </span>
+                <% var _tz = typeof orgTimezone !== 'undefined' ? orgTimezone : 'UTC'; var _tfmt = { hour:'2-digit', minute:'2-digit', hour12:true, timeZone: _tz }; %>
+                <% if (task.session_started_at || task.session_completed_at) { %>
+                <div style="font-size:0.6rem;color:var(--tf-text-muted);margin-top:2px;">
+                  <% if (task.session_started_at) { %><i class="bi bi-play-fill" style="color:#10b981;"></i> <%= new Date(task.session_started_at).toLocaleTimeString('en-IN', _tfmt) %><% } %>
+                  <% if (task.session_completed_at) { %> <i class="bi bi-stop-fill" style="color:#ef4444;"></i> <%= new Date(task.session_completed_at).toLocaleTimeString('en-IN', _tfmt) %><% } %>
+                </div>
+                <% } %>
+                <% } else if (task.is_started_today) { %>
+                <span class="badge" style="font-size:0.65rem;border-radius:4px;padding:3px 8px;background:rgba(59,130,246,0.15);color:#3b82f6;">
+                  <i class="bi bi-play-circle-fill"></i> In Progress
+                </span>
+                <% if (task.session_started_at) { %>
+                <div style="font-size:0.6rem;color:var(--tf-text-muted);margin-top:2px;">
+                  <i class="bi bi-play-fill" style="color:#10b981;"></i> <%= new Date(task.session_started_at).toLocaleTimeString('en-IN', _tfmt) %>
+                </div>
+                <% } %>
                 <% } else { %>
                 <span class="badge" style="font-size:0.65rem;border-radius:4px;padding:3px 8px;background:rgba(245,158,11,0.15);color:#f59e0b;">
                   <i class="bi bi-circle"></i> <%= _isPast ? 'Not Done' : (_isFuture ? 'Pending' : 'Pending Today') %>
@@ -221,7 +237,7 @@ const _isFuture = _fd && _fd > todayDate;
                 <%
                   var isOwnerWithin24h = user.role_name === 'LOCAL_USER' && task.created_by === user.id && ((Date.now() - new Date(task.created_at).getTime()) / 3600000) <= 24;
                 %>
-                <% if ((['CLIENT_ADMIN', 'CLIENT_MANAGER', 'LOCAL_ADMIN', 'LOCAL_MANAGER'].includes(user.role_name) || isOwnerWithin24h) && !['completed','deactivated'].includes(task.status)) { %>
+                <% if (['CLIENT_ADMIN', 'CLIENT_MANAGER', 'LOCAL_ADMIN', 'LOCAL_MANAGER'].includes(user.role_name) || (isOwnerWithin24h && !['completed','deactivated'].includes(task.status))) { %>
                 <a href="/tasks/<%= task.id %>/edit" class="btn-tf text-decoration-none" style="font-size:0.65rem;padding:2px 8px;background:transparent;color:#a78bfa;border:1px solid rgba(124,58,237,0.3);">
                   Edit
                 </a>

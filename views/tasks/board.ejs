@@ -1,0 +1,401 @@
+<!-- Tab Navigation -->
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+  <div class="d-flex align-items-center gap-3">
+    <h5 style="font-family:var(--tf-font-mono);font-weight:700;margin:0;">
+      <i class="bi bi-kanban me-2" style="color:var(--tf-accent);"></i>Task Board
+    </h5>
+    <div class="d-flex" style="border:1px solid var(--tf-border);border-radius:8px;overflow:hidden;">
+      <a href="/tasks/board?tab=today&date=<%= selectedDate %>"
+         style="padding:6px 16px;font-size:0.75rem;font-family:var(--tf-font-mono);font-weight:700;text-decoration:none;letter-spacing:0.5px;
+                <%= tab === 'today' ? 'background:var(--tf-accent);color:#000;' : 'background:transparent;color:var(--tf-text-muted);' %>">
+        TODAY
+      </a>
+      <a href="/tasks/board?tab=all"
+         style="padding:6px 16px;font-size:0.75rem;font-family:var(--tf-font-mono);font-weight:700;text-decoration:none;letter-spacing:0.5px;
+                <%= tab === 'all' ? 'background:var(--tf-accent);color:#000;' : 'background:transparent;color:var(--tf-text-muted);' %>">
+        ALL TASKS
+      </a>
+    </div>
+  </div>
+  <% if (tab === 'today') { %>
+  <form method="GET" action="/tasks/board" class="d-flex gap-2 align-items-center">
+    <input type="hidden" name="tab" value="today">
+    <input type="date" name="date" value="<%= selectedDate %>" class="tf-form-control" style="max-width:160px;" onchange="this.form.submit()">
+  </form>
+  <% } %>
+</div>
+
+<% if (tab === 'today') { %>
+<!-- ═══════════════════════════════════════════════
+     TODAY TAB
+     ═══════════════════════════════════════════════ -->
+
+<!-- Summary Cards -->
+<div class="d-flex gap-3 mb-4 flex-wrap">
+  <div class="tf-card flex-fill" style="padding:1rem 1.25rem;text-align:center;min-width:100px;">
+    <div style="font-family:var(--tf-font-mono);font-size:1.5rem;font-weight:700;color:var(--tf-accent);"><%= summary.tasks %></div>
+    <div style="font-size:0.65rem;color:var(--tf-text-muted);text-transform:uppercase;letter-spacing:1px;">Tasks</div>
+  </div>
+  <div class="tf-card flex-fill" style="padding:1rem 1.25rem;text-align:center;min-width:100px;">
+    <div style="font-family:var(--tf-font-mono);font-size:1.5rem;font-weight:700;color:#10b981;"><%= summary.done %></div>
+    <div style="font-size:0.65rem;color:var(--tf-text-muted);text-transform:uppercase;letter-spacing:1px;">Completed</div>
+  </div>
+  <div class="tf-card flex-fill" style="padding:1rem 1.25rem;text-align:center;min-width:100px;">
+    <div style="font-family:var(--tf-font-mono);font-size:1.5rem;font-weight:700;color:#3b82f6;"><%= summary.inProgress %></div>
+    <div style="font-size:0.65rem;color:var(--tf-text-muted);text-transform:uppercase;letter-spacing:1px;">In Progress</div>
+  </div>
+  <div class="tf-card flex-fill" style="padding:1rem 1.25rem;text-align:center;min-width:100px;">
+    <div style="font-family:var(--tf-font-mono);font-size:1.5rem;font-weight:700;color:#f59e0b;"><%= summary.pending %></div>
+    <div style="font-size:0.65rem;color:var(--tf-text-muted);text-transform:uppercase;letter-spacing:1px;">Pending</div>
+  </div>
+</div>
+
+<!-- Task Board Table -->
+<div class="tf-card">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span><i class="bi bi-list-task me-2"></i>TASKS FOR <%= new Date(selectedDate + 'T12:00:00').toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric', year:'numeric' }) %> (<%= summary.tasks %> tasks &middot; <%= summary.assignments %> assignments)</span>
+  </div>
+  <div style="overflow-x:auto;">
+    <table class="tf-table">
+      <thead>
+        <tr>
+          <th style="width:22%;">Task</th>
+          <th>Employee</th>
+          <th>Status</th>
+          <th>Started</th>
+          <th>Completed</th>
+          <th>Duration</th>
+          <th>Reward</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (taskGroups.length > 0) { %>
+          <%
+            var _tz = orgTimezone || 'UTC';
+            var _tfmt = { hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:true, timeZone: _tz };
+            var _colors = ['var(--tf-accent)', 'var(--tf-accent-2)'];
+            var _bgColors = ['rgba(0,212,255,0.03)', 'rgba(124,58,237,0.03)'];
+          %>
+          <% taskGroups.forEach(function(group, gi) { %>
+            <% var color = _colors[gi % 2]; var bg = _bgColors[gi % 2]; %>
+            <% group.employees.forEach(function(emp, ei) { %>
+            <tr style="background:<%= bg %>;<%= ei === group.employees.length - 1 ? 'border-bottom:2px solid var(--tf-border);' : '' %>">
+              <% if (ei === 0) { %>
+              <td rowspan="<%= group.employees.length %>" style="border-left:3px solid <%= color %>;font-weight:600;vertical-align:top;padding-top:1rem;">
+                <div style="font-size:0.9rem;"><%= group.title %></div>
+                <div style="font-size:0.65rem;color:var(--tf-text-muted);margin-top:2px;">
+                  <% if (group.type === 'recurring') { %>
+                  <i class="bi bi-arrow-repeat"></i> <%= group.pattern ? group.pattern.charAt(0).toUpperCase() + group.pattern.slice(1) : 'Recurring' %>
+                  <% } else { %>
+                  <i class="bi bi-1-circle"></i> One Time
+                  <% } %>
+                  &middot; <%= group.employees.length %> employee<%= group.employees.length > 1 ? 's' : '' %>
+                </div>
+                <% if (group.employees.length > 1) { %>
+                <div style="margin-top:8px;">
+                  <span style="font-size:0.6rem;font-family:var(--tf-font-mono);color:<%= group.doneCount === group.totalCount ? '#10b981' : '#f59e0b' %>;"><%= group.doneCount %>/<%= group.totalCount %> done</span>
+                  <div style="width:80px;height:4px;background:rgba(255,255,255,0.08);border-radius:2px;margin-top:3px;">
+                    <div style="width:<%= group.totalCount > 0 ? Math.round(group.doneCount/group.totalCount*100) : 0 %>%;height:100%;background:#10b981;border-radius:2px;"></div>
+                  </div>
+                </div>
+                <% } %>
+              </td>
+              <% } %>
+              <td style="font-size:0.8rem;font-weight:500;"><%= emp.user_name || 'Unassigned' %></td>
+              <td>
+                <% if (emp.status === 'done') { %>
+                <span class="badge" style="font-size:0.65rem;border-radius:4px;padding:3px 8px;background:rgba(16,185,129,0.15);color:#10b981;"><i class="bi bi-check-circle-fill"></i> Done</span>
+                <% } else if (emp.status === 'in_progress') { %>
+                <span class="badge" style="font-size:0.65rem;border-radius:4px;padding:3px 8px;background:rgba(59,130,246,0.15);color:#3b82f6;"><i class="bi bi-play-circle-fill"></i> In Progress</span>
+                <% } else { %>
+                <span class="badge" style="font-size:0.65rem;border-radius:4px;padding:3px 8px;background:rgba(245,158,11,0.15);color:#f59e0b;"><i class="bi bi-circle"></i> Pending</span>
+                <% } %>
+              </td>
+              <td style="font-size:0.75rem;color:var(--tf-text-muted);">
+                <% if (emp.started_at) { %>
+                <i class="bi bi-play-fill" style="color:#10b981;"></i> <%= new Date(emp.started_at).toLocaleTimeString('en-IN', _tfmt) %>
+                <% } else { %>—<% } %>
+              </td>
+              <td style="font-size:0.75rem;color:var(--tf-text-muted);">
+                <% if (emp.completed_at) { %>
+                <i class="bi bi-stop-fill" style="color:#ef4444;"></i> <%= new Date(emp.completed_at).toLocaleTimeString('en-IN', _tfmt) %>
+                <% } else { %>—<% } %>
+              </td>
+              <td style="font-size:0.75rem;color:#3b82f6;">
+                <% if (emp.duration_minutes) { %>
+                <i class="bi bi-clock"></i> <%= emp.duration_minutes >= 60 ? Math.floor(emp.duration_minutes/60) + 'h ' + (emp.duration_minutes%60) + 'm' : emp.duration_minutes + 'm' %>
+                <% } else if (emp.started_at && emp.completed_at) { %>
+                <% var _dur = Math.round((new Date(emp.completed_at) - new Date(emp.started_at)) / 60000); %>
+                <i class="bi bi-clock"></i> <%= _dur >= 60 ? Math.floor(_dur/60) + 'h ' + (_dur%60) + 'm' : _dur + 'm' %>
+                <% } else { %>
+                <span style="color:var(--tf-text-muted);">—</span>
+                <% } %>
+              </td>
+              <td style="font-family:var(--tf-font-mono);color:#f59e0b;font-size:0.8rem;">
+                <%= group.reward_amount ? parseFloat(group.reward_amount).toFixed(0) + ' pts' : '—' %>
+              </td>
+            </tr>
+            <% }) %>
+          <% }) %>
+        <% } else { %>
+        <tr><td colspan="7" style="text-align:center;color:var(--tf-text-muted);padding:2rem;">No tasks scheduled for this date</td></tr>
+        <% } %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Employee Summary -->
+<div class="tf-card">
+  <div class="card-header">
+    <i class="bi bi-people me-2"></i>EMPLOYEE SUMMARY
+  </div>
+  <div style="overflow-x:auto;">
+    <table class="tf-table">
+      <thead>
+        <tr><th>Employee</th><th>Shift</th><th>Assigned</th><th>Done</th><th>In Progress</th><th>Pending</th><th>Completion</th></tr>
+      </thead>
+      <tbody>
+        <% empSummary.forEach(function(e) { %>
+        <% var pct = e.assigned > 0 ? Math.round(e.done / e.assigned * 100) : 0; %>
+        <tr>
+          <td style="font-weight:500;"><%= e.name %></td>
+          <td style="font-size:0.75rem;color:var(--tf-text-muted);">
+            <% if (e.shift_start) { %>
+            <%= new Date('2000-01-01T' + e.shift_start).toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit', hour12:true }) %>
+            <% } else { %>—<% } %>
+          </td>
+          <td style="font-family:var(--tf-font-mono);"><%= e.assigned %></td>
+          <td style="font-family:var(--tf-font-mono);color:#10b981;"><%= e.done %></td>
+          <td style="font-family:var(--tf-font-mono);color:#3b82f6;"><%= e.in_progress %></td>
+          <td style="font-family:var(--tf-font-mono);color:#f59e0b;"><%= e.pending %></td>
+          <td>
+            <div style="width:80px;height:6px;background:rgba(255,255,255,0.08);border-radius:3px;">
+              <div style="width:<%= pct %>%;height:100%;background:<%= pct === 100 ? '#10b981' : '#f59e0b' %>;border-radius:3px;"></div>
+            </div>
+            <span style="font-size:0.65rem;color:<%= pct === 100 ? '#10b981' : '#f59e0b' %>;font-family:var(--tf-font-mono);"><%= pct %>%</span>
+          </td>
+        </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<% } else { %>
+<!-- ═══════════════════════════════════════════════
+     ALL TASKS TAB
+     ═══════════════════════════════════════════════ -->
+
+<!-- Action Bar -->
+<div class="d-flex gap-2 mb-3 flex-wrap">
+  <a href="/tasks/board/export" class="btn-tf btn-tf-outline text-decoration-none">
+    <i class="bi bi-download me-1"></i> Export Excel
+  </a>
+  <button class="btn-tf btn-tf-outline" onclick="document.getElementById('importFile').click()">
+    <i class="bi bi-upload me-1"></i> Import Excel
+  </button>
+  <form id="importForm" method="POST" action="/tasks/board/import" enctype="multipart/form-data" style="display:none;">
+    <input type="file" id="importFile" name="file" accept=".xlsx,.xls,.csv" onchange="document.getElementById('importForm').submit()">
+  </form>
+  <button class="btn-tf btn-tf-outline" id="mergeBtn" onclick="submitMerge()" style="display:none;">
+    <i class="bi bi-union me-1"></i> Merge Selected
+  </button>
+</div>
+
+<!-- Flash message from import -->
+<% var _msg = typeof require !== 'undefined' ? '' : ''; %>
+<script>
+(function() {
+  var params = new URLSearchParams(window.location.search);
+  var msg = params.get('msg');
+  if (msg) {
+    var div = document.createElement('div');
+    div.style.cssText = 'background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.3);border-radius:8px;padding:0.75rem 1rem;margin-bottom:1rem;font-size:0.8rem;color:#10b981;';
+    div.innerHTML = '<i class="bi bi-check-circle me-1"></i> ' + decodeURIComponent(msg);
+    var target = document.querySelector('.tf-card');
+    if (target) target.parentNode.insertBefore(div, target);
+    // Clean URL
+    window.history.replaceState({}, '', window.location.pathname + '?tab=all');
+  }
+})();
+</script>
+
+<!-- Master Task List -->
+<div class="tf-card">
+  <div class="card-header">
+    <i class="bi bi-list-ul me-2"></i>ALL TASKS (<%= masterList.length %>)
+  </div>
+  <div style="overflow-x:auto;">
+    <table class="tf-table">
+      <thead>
+        <tr>
+          <th style="width:30px;"><input type="checkbox" id="selectAll" onchange="toggleSelectAll(this)"></th>
+          <th>Task</th>
+          <th>Pattern</th>
+          <th>Priority</th>
+          <th>Assigned Employees</th>
+          <th>Status</th>
+          <th>Reward</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (masterList.length > 0) { %>
+          <% masterList.forEach(function(task) { %>
+          <tr>
+            <td><input type="checkbox" class="merge-check" value="<%= task.id %>" onchange="updateMergeBtn()"></td>
+            <td style="font-weight:500;"><%= task.title %></td>
+            <td style="font-size:0.8rem;color:var(--tf-text-muted);">
+              <% if (task.type === 'recurring') { %>
+                <span class="badge" style="font-size:0.6rem;padding:2px 6px;border-radius:3px;background:rgba(0,212,255,0.1);color:var(--tf-accent);">
+                  <%= task.pattern ? task.pattern.charAt(0).toUpperCase() + task.pattern.slice(1) : 'Recurring' %>
+                </span>
+                <% if (task.recurrence_days) { %>
+                <div style="font-size:0.6rem;color:var(--tf-text-muted);margin-top:2px;">Days: <%= task.recurrence_days %></div>
+                <% } %>
+              <% } else { %>
+                <span class="badge" style="font-size:0.6rem;padding:2px 6px;border-radius:3px;background:rgba(245,158,11,0.1);color:#f59e0b;">One Time</span>
+              <% } %>
+            </td>
+            <td>
+              <span class="badge badge-<%= task.priority %>" style="font-size:0.6rem;padding:2px 6px;border-radius:3px;"><%= task.priority.toUpperCase() %></span>
+            </td>
+            <td style="font-size:0.8rem;">
+              <% if (task.employees.length > 0) { %>
+                <% task.employees.forEach(function(e, i) { %>
+                  <span style="display:inline-block;background:rgba(255,255,255,0.06);border-radius:4px;padding:1px 6px;font-size:0.7rem;margin:1px;"><%= e.name %></span>
+                <% }) %>
+              <% } else { %>
+                <span style="color:var(--tf-text-muted);font-size:0.75rem;">Unassigned</span>
+              <% } %>
+            </td>
+            <td>
+              <span class="badge badge-<%= task.status %>" style="font-size:0.6rem;padding:2px 6px;border-radius:3px;"><%= task.status %></span>
+            </td>
+            <td style="font-family:var(--tf-font-mono);color:#f59e0b;font-size:0.8rem;">
+              <%= task.reward_amount ? parseFloat(task.reward_amount).toFixed(0) + ' pts' : '—' %>
+            </td>
+            <td>
+              <div class="d-flex gap-1">
+                <a href="/tasks/<%= task.task_ids[0] %>/edit" class="btn-tf text-decoration-none" style="font-size:0.65rem;padding:2px 8px;background:transparent;color:#a78bfa;border:1px solid rgba(124,58,237,0.3);">
+                  Edit
+                </a>
+                <button class="btn-tf" style="font-size:0.65rem;padding:2px 8px;background:transparent;color:#00d4ff;border:1px solid rgba(0,212,255,0.3);"
+                  onclick="openBoardAssign(<%= task.id %>, '<%= task.employees.map(e => e.id).join(',') %>')">
+                  Assign
+                </button>
+              </div>
+            </td>
+          </tr>
+          <% }) %>
+        <% } else { %>
+        <tr><td colspan="8" style="text-align:center;color:var(--tf-text-muted);padding:2rem;">No tasks found</td></tr>
+        <% } %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Assign Modal -->
+<div id="boardAssignModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:5000;align-items:center;justify-content:center;">
+  <div style="background:var(--tf-surface);border:1px solid var(--tf-border);border-radius:12px;padding:1.5rem;width:90%;max-width:400px;">
+    <h6 style="font-family:var(--tf-font-mono);margin-bottom:1rem;">Assign Employees</h6>
+    <div>
+      <input type="hidden" id="boardAssignTaskId">
+      <div style="max-height:300px;overflow-y:auto;margin-bottom:1rem;">
+        <% localUsers.forEach(function(u) { %>
+        <label style="display:block;padding:6px 8px;cursor:pointer;font-size:0.85rem;border-radius:6px;" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='transparent'">
+          <input type="checkbox" value="<%= u.id %>" class="board-assign-cb" style="margin-right:8px;">
+          <%= u.name %>
+        </label>
+        <% }) %>
+      </div>
+      <div class="d-flex gap-2 justify-content-end">
+        <button type="button" class="btn-tf btn-tf-outline" onclick="document.getElementById('boardAssignModal').style.display='none'">Cancel</button>
+        <button type="button" class="btn-tf btn-tf-primary" onclick="saveBoardAssign()">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Merge Modal -->
+<div id="mergeModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:5000;align-items:center;justify-content:center;">
+  <div style="background:var(--tf-surface);border:1px solid var(--tf-border);border-radius:12px;padding:1.5rem;width:90%;max-width:400px;">
+    <h6 style="font-family:var(--tf-font-mono);margin-bottom:1rem;">Merge Tasks</h6>
+    <p style="font-size:0.8rem;color:var(--tf-text-muted);margin-bottom:1rem;">Selected tasks will be merged into one. All assignees will be kept. Choose the final task name:</p>
+    <input type="text" id="mergeTitleInput" class="tf-form-control" style="margin-bottom:1rem;" placeholder="Task name...">
+    <div class="d-flex gap-2 justify-content-end">
+      <button type="button" class="btn-tf btn-tf-outline" onclick="document.getElementById('mergeModal').style.display='none'">Cancel</button>
+      <button type="button" class="btn-tf btn-tf-primary" onclick="doMerge()">Merge</button>
+    </div>
+  </div>
+</div>
+
+<script>
+function toggleSelectAll(el) {
+  document.querySelectorAll('.merge-check').forEach(function(cb) { cb.checked = el.checked; });
+  updateMergeBtn();
+}
+
+function updateMergeBtn() {
+  var checked = document.querySelectorAll('.merge-check:checked');
+  document.getElementById('mergeBtn').style.display = checked.length >= 2 ? 'inline-flex' : 'none';
+}
+
+function submitMerge() {
+  var checked = document.querySelectorAll('.merge-check:checked');
+  if (checked.length < 2) return;
+  // Pre-fill with first selected task's name
+  var firstRow = checked[0].closest('tr');
+  document.getElementById('mergeTitleInput').value = firstRow.querySelector('td:nth-child(2)').textContent.trim();
+  document.getElementById('mergeModal').style.display = 'flex';
+}
+
+function doMerge() {
+  var checked = document.querySelectorAll('.merge-check:checked');
+  var ids = Array.from(checked).map(function(cb) { return cb.value; });
+  var title = document.getElementById('mergeTitleInput').value.trim();
+  if (!title) { alert('Please enter a task name'); return; }
+
+  fetch('/tasks/board/merge', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ task_ids: ids, keep_title: title })
+  }).then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.success) { window.location.reload(); }
+      else { alert(data.error || 'Merge failed'); }
+    })
+    .catch(function(err) { alert('Error: ' + err.message); });
+}
+
+function openBoardAssign(taskId, currentIds) {
+  document.getElementById('boardAssignTaskId').value = taskId;
+  var ids = currentIds ? currentIds.split(',') : [];
+  document.querySelectorAll('.board-assign-cb').forEach(function(cb) {
+    cb.checked = ids.includes(cb.value);
+  });
+  document.getElementById('boardAssignModal').style.display = 'flex';
+}
+
+function saveBoardAssign() {
+  var taskId = document.getElementById('boardAssignTaskId').value;
+  var userIds = [];
+  document.querySelectorAll('.board-assign-cb:checked').forEach(function(cb) { userIds.push(cb.value); });
+  if (!userIds.length) { alert('Select at least one employee'); return; }
+
+  fetch('/tasks/assign', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ task_id: taskId, assigned_to: userIds })
+  }).then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.success) { window.location.reload(); }
+      else { alert(data.message || 'Failed to assign'); }
+    })
+    .catch(function(err) { alert('Error: ' + err.message); });
+}
+</script>
+
+<% } %>

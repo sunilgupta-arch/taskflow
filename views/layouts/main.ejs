@@ -576,6 +576,14 @@
     </div>
 
     <% if (['LOCAL_ADMIN', 'CLIENT_ADMIN', 'LOCAL_MANAGER', 'CLIENT_MANAGER'].includes(user.role_name)) { %>
+    <div class="nav-item">
+      <a href="/tasks/board" class="<%= typeof title !== 'undefined' && title === 'Task Board' ? 'active' : '' %>">
+        <i class="bi bi-kanban"></i> Task Board
+      </a>
+    </div>
+    <% } %>
+
+    <% if (['LOCAL_ADMIN', 'CLIENT_ADMIN', 'LOCAL_MANAGER', 'CLIENT_MANAGER'].includes(user.role_name)) { %>
     <div class="nav-section-label mt-2">Reports</div>
     <div class="nav-item">
       <a href="/reports" class="<%= typeof title !== 'undefined' && title === 'Reports' ? 'active' : '' %>">

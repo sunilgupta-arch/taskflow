@@ -165,7 +165,9 @@ class UserController {
           `SELECT t.id, t.title, t.type, t.created_at, t.status, t.due_date,
                   u.name as created_by_name,
                   tc.id IS NOT NULL as is_completed,
-                  tc.created_at as completed_at
+                  tc.completed_at as completed_at,
+                  tc.started_at as started_at,
+                  tc.duration_minutes as duration_minutes
            FROM tasks t
            LEFT JOIN users u ON t.created_by = u.id
            LEFT JOIN task_completions tc ON tc.task_id = t.id AND tc.user_id = t.assigned_to AND tc.completion_date = ?
@@ -218,7 +220,8 @@ class UserController {
         dayTasks: isWeekOff ? [] : dayTasks,
         selectedDate,
         isSelf,
-        isWeekOff
+        isWeekOff,
+        orgTimezone: tz
       });
     } catch (err) {
       res.status(500).render('error', { title: 'Error', message: err.message, code: 500, layout: false });

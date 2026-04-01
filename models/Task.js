@@ -113,7 +113,7 @@ class TaskModel {
         OR (t.type = 'once' AND t.due_date = ${todaySql} AND t.status IN ('pending', 'in_progress'))
       )`);
       if (todayParam) { params.push(todayParam); params.push(todayParam); }
-      where.push(`(SELECT weekly_off_day FROM users WHERE id = t.assigned_to) != DAYNAME(${todaySql})`);
+      where.push(`COALESCE((SELECT weekly_off_day FROM users WHERE id = t.assigned_to), '') != DAYNAME(${todaySql})`);
       if (todayParam) params.push(todayParam);
     }
 
@@ -129,10 +129,12 @@ class TaskModel {
             AND FIND_IN_SET(DAY(?), t.recurrence_days) > 0
             AND (t.recurrence_end_date IS NULL OR t.recurrence_end_date >= ?))
         OR (t.type = 'once' AND t.due_date = ?)
+        OR (t.type = 'once' AND DATE(t.completed_at) = ?)
+        OR (t.type = 'once' AND DATE(t.created_at) = ? AND t.due_date IS NULL AND t.status IN ('pending', 'in_progress'))
       )`);
-      params.push(for_date, for_date, for_date, for_date, for_date, for_date);
+      params.push(for_date, for_date, for_date, for_date, for_date, for_date, for_date, for_date);
       // Exclude employees on weekly off on that day
-      where.push(`(t.assigned_to IS NULL OR (SELECT weekly_off_day FROM users WHERE id = t.assigned_to) != DAYNAME(?))`);
+      where.push(`(t.assigned_to IS NULL OR COALESCE((SELECT weekly_off_day FROM users WHERE id = t.assigned_to), '') != DAYNAME(?))`);
       params.push(for_date);
     }
 

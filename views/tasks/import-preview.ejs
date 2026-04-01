@@ -1,0 +1,135 @@
+<!-- Import Preview -->
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h5 style="font-family:var(--tf-font-mono);font-weight:700;margin:0;">
+    <i class="bi bi-upload me-2" style="color:var(--tf-accent);"></i>Import Preview
+  </h5>
+  <a href="/tasks/board?tab=all" class="btn-tf btn-tf-outline text-decoration-none">
+    <i class="bi bi-arrow-left me-1"></i> Cancel
+  </a>
+</div>
+
+<% var hasIssues = preview.some(function(r) { return r.unmatched.length > 0; }); %>
+<% if (hasIssues) { %>
+<div style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);border-radius:8px;padding:0.75rem 1rem;margin-bottom:1rem;font-size:0.8rem;color:#f59e0b;">
+  <i class="bi bi-exclamation-triangle me-1"></i> Some employee names couldn't be matched. Use the dropdowns below to fix them, or leave as "Skip" to ignore.
+</div>
+<% } %>
+
+<div class="tf-card">
+  <div class="card-header">
+    <i class="bi bi-table me-2"></i>PREVIEW (<%= preview.length %> rows)
+  </div>
+  <div style="overflow-x:auto;">
+    <table class="tf-table">
+      <thead>
+        <tr>
+          <th style="width:30px;">Row</th>
+          <th>Action</th>
+          <th>Task Name</th>
+          <th>Type</th>
+          <th>Priority</th>
+          <th>Reward</th>
+          <th>Assigned Employees</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% preview.forEach(function(row, idx) { %>
+        <tr>
+          <td style="font-family:var(--tf-font-mono);font-size:0.75rem;color:var(--tf-text-muted);"><%= row.rowNum %></td>
+          <td>
+            <% if (row.action === 'update') { %>
+            <span class="badge" style="font-size:0.6rem;padding:2px 6px;border-radius:3px;background:rgba(59,130,246,0.15);color:#3b82f6;">UPDATE #<%= row.taskId %></span>
+            <% } else { %>
+            <span class="badge" style="font-size:0.6rem;padding:2px 6px;border-radius:3px;background:rgba(16,185,129,0.15);color:#10b981;">NEW</span>
+            <% } %>
+          </td>
+          <td style="font-weight:500;font-size:0.85rem;"><%= row.title %></td>
+          <td style="font-size:0.8rem;color:var(--tf-text-muted);">
+            <%= row.type %><% if (row.pattern && row.type === 'recurring') { %> / <%= row.pattern %><% } %>
+          </td>
+          <td>
+            <span class="badge badge-<%= row.priority %>" style="font-size:0.6rem;padding:2px 6px;border-radius:3px;"><%= row.priority %></span>
+          </td>
+          <td style="font-family:var(--tf-font-mono);color:#f59e0b;font-size:0.8rem;">
+            <%= row.reward ? row.reward + ' pts' : '—' %>
+          </td>
+          <td>
+            <% row.matched.forEach(function(m) { %>
+              <span style="display:inline-block;background:rgba(16,185,129,0.12);color:#10b981;border-radius:4px;padding:1px 8px;font-size:0.7rem;margin:2px;">
+                <i class="bi bi-check-circle-fill"></i> <%= m.name %>
+              </span>
+            <% }) %>
+            <% row.unmatched.forEach(function(name, ui) { %>
+              <div style="display:inline-flex;align-items:center;gap:4px;margin:2px;">
+                <span style="background:rgba(239,68,68,0.12);color:#ef4444;border-radius:4px;padding:1px 8px;font-size:0.7rem;text-decoration:line-through;">
+                  <i class="bi bi-x-circle-fill"></i> <%= name %>
+                </span>
+                <select class="tf-select fix-select" data-row="<%= idx %>" data-ui="<%= ui %>"
+                  style="font-size:0.7rem;padding:2px 6px;max-width:150px;border:1px solid rgba(245,158,11,0.4);border-radius:4px;">
+                  <option value="">Skip</option>
+                  <% localUsers.forEach(function(u) { %>
+                  <option value="<%= u.id %>" data-name="<%= u.name %>"><%= u.name %></option>
+                  <% }) %>
+                </select>
+              </div>
+            <% }) %>
+            <% if (!row.matched.length && !row.unmatched.length) { %>
+              <span style="color:var(--tf-text-muted);font-size:0.75rem;">Unassigned</span>
+            <% } %>
+          </td>
+        </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Confirm Form -->
+<form id="confirmForm" method="POST" action="/tasks/board/import/confirm" style="margin-top:1rem;">
+  <input type="hidden" name="rows" id="rowsInput">
+  <div class="d-flex gap-2 justify-content-end">
+    <a href="/tasks/board?tab=all" class="btn-tf btn-tf-outline text-decoration-none">Cancel</a>
+    <button type="submit" class="btn-tf btn-tf-primary" onclick="return prepareSubmit()">
+      <i class="bi bi-check-circle me-1"></i> Confirm Import
+    </button>
+  </div>
+</form>
+
+<script>
+var _preview = <%- previewJson %>;
+
+function prepareSubmit() {
+  // Build final rows with corrected employee IDs
+  var finalRows = _preview.map(function(row, idx) {
+    // Start with matched employee IDs
+    var empIds = row.matched.map(function(m) { return m.id; });
+
+    // Add fixed unmatched names
+    row.unmatched.forEach(function(name, ui) {
+      var select = document.querySelector('.fix-select[data-row="' + idx + '"][data-ui="' + ui + '"]');
+      if (select && select.value) {
+        empIds.push(parseInt(select.value));
+      }
+    });
+
+    // Deduplicate
+    empIds = empIds.filter(function(id, i, arr) { return arr.indexOf(id) === i; });
+
+    return {
+      taskId: row.taskId,
+      title: row.title,
+      type: row.type,
+      pattern: row.pattern,
+      days: row.days,
+      deadline: row.deadline,
+      endDate: row.endDate,
+      priority: row.priority,
+      reward: row.reward,
+      employeeIds: empIds
+    };
+  });
+
+  document.getElementById('rowsInput').value = JSON.stringify(finalRows);
+  return true;
+}
+</script>

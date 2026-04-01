@@ -11,6 +11,13 @@ router.use(authenticate);
 router.get('/', TaskController.index);
 router.get('/my', TaskController.myTasks);
 router.get('/pending-today', TaskController.pendingToday);
+
+// Task Board
+router.get('/board', requireRoles('CLIENT_ADMIN', 'CLIENT_MANAGER', 'LOCAL_ADMIN', 'LOCAL_MANAGER'), TaskController.board);
+router.get('/board/export', requireRoles('CLIENT_ADMIN', 'CLIENT_MANAGER', 'LOCAL_ADMIN', 'LOCAL_MANAGER'), TaskController.boardExport);
+router.post('/board/import', requireRoles('LOCAL_ADMIN', 'LOCAL_MANAGER'), upload.single('file'), TaskController.boardImport);
+router.post('/board/import/confirm', requireRoles('LOCAL_ADMIN', 'LOCAL_MANAGER'), auditLog('IMPORT', 'task'), TaskController.boardImportConfirm);
+router.post('/board/merge', requireRoles('LOCAL_ADMIN', 'LOCAL_MANAGER'), auditLog('MERGE', 'task'), TaskController.boardMerge);
 router.get('/create', requireRoles('CLIENT_ADMIN', 'CLIENT_MANAGER', 'LOCAL_ADMIN', 'LOCAL_MANAGER', 'LOCAL_USER'), TaskController.showCreate);
 router.post('/create', requireRoles('CLIENT_ADMIN', 'CLIENT_MANAGER', 'LOCAL_ADMIN', 'LOCAL_MANAGER', 'LOCAL_USER'), auditLog('CREATE', 'task'), TaskController.create);
 router.post('/assign', requireRoles('CLIENT_ADMIN', 'CLIENT_MANAGER', 'LOCAL_ADMIN', 'LOCAL_MANAGER'), auditLog('ASSIGN', 'task'), TaskController.assign);
