@@ -3,6 +3,70 @@ const TaskCompletion = require('../models/TaskCompletion');
 const RewardModel = require('../models/Reward');
 const db = require('../config/db');
 const { getToday, getUTCNow, getEffectiveWorkDate } = require('../utils/timezone');
+const ChatModel = require('../models/Chat');
+
+// Helper: send system notification (non-blocking)
+async function notifyUser(userId, message) {
+  try { await ChatModel.sendSystemMessage(userId, message); } catch (e) {}
+}
+
+// Helper: get user name by ID
+async function getUserName(userId) {
+  const [[u]] = await db.query('SELECT name FROM users WHERE id = ?', [userId]);
+  return u ? u.name : 'Someone';
+}
+
+// Helper: check if user completed ALL tasks today and notify streak
+async function checkStreakAndNotify(userId, timezone) {
+  try {
+    const today = getToday(timezone);
+
+    // Count total vs done for today
+    const [[rTotal]] = await db.query(
+      'SELECT COUNT(*) as cnt FROM tasks WHERE is_deleted = 0 AND assigned_to = ? AND type = "recurring" AND status = "active"',
+      [userId]
+    );
+    const [[rDone]] = await db.query(
+      'SELECT COUNT(*) as cnt FROM task_completions tc JOIN tasks t ON tc.task_id = t.id WHERE t.assigned_to = ? AND tc.user_id = ? AND tc.completion_date = ? AND tc.completed_at IS NOT NULL',
+      [userId, userId, today]
+    );
+    const [[oTotal]] = await db.query(
+      'SELECT COUNT(*) as cnt FROM tasks WHERE is_deleted = 0 AND assigned_to = ? AND type = "once" AND (due_date = ? OR (due_date IS NULL AND DATE(created_at) = ?)) AND status IN ("pending","in_progress","completed")',
+      [userId, today, today]
+    );
+    const [[oDone]] = await db.query(
+      'SELECT COUNT(*) as cnt FROM tasks WHERE is_deleted = 0 AND assigned_to = ? AND type = "once" AND status = "completed" AND DATE(completed_at) = ?',
+      [userId, today]
+    );
+
+    const total = (rTotal.cnt || 0) + (oTotal.cnt || 0);
+    const done = (rDone.cnt || 0) + (oDone.cnt || 0);
+
+    if (total > 0 && done >= total) {
+      // All tasks done today! Check consecutive days streak
+      let streak = 1;
+      for (let i = 1; i <= 30; i++) {
+        const prevDate = new Date(new Date(today + 'T12:00:00').getTime() - i * 86400000).toISOString().split('T')[0];
+        const [[prevDone]] = await db.query(
+          'SELECT COUNT(*) as cnt FROM task_completions WHERE user_id = ? AND completion_date = ? AND completed_at IS NOT NULL',
+          [userId, prevDate]
+        );
+        if (prevDone.cnt > 0) streak++;
+        else break;
+      }
+
+      if (streak >= 3) {
+        await ChatModel.sendSystemMessage(userId,
+          `🔥 ${streak}-day streak! You've completed all your tasks on time for ${streak} consecutive days. Keep it going!`
+        );
+      } else {
+        await ChatModel.sendSystemMessage(userId,
+          `🎉 All tasks done for today! Great job — you've completed all ${total} tasks.`
+        );
+      }
+    }
+  } catch (e) { /* non-critical */ }
+}
 
 /**
  * Get the effective work date for a specific user, using their shift info from DB.
@@ -63,10 +127,14 @@ class TaskService {
       baseData.secondary_assignee = null;
       baseData.tertiary_assignee = null;
       const firstTaskId = await TaskModel.create({ ...baseData, assigned_to: assignees[0] });
-      // Use first task's ID as the group_id for all rows
       await TaskModel.update(firstTaskId, { group_id: firstTaskId });
       for (let i = 1; i < assignees.length; i++) {
         await TaskModel.create({ ...baseData, assigned_to: assignees[i], group_id: firstTaskId });
+      }
+      // Notify all assignees
+      const creatorName = await getUserName(creator.id);
+      for (const uid of assignees) {
+        notifyUser(parseInt(uid), `📋 New task assigned to you: "${data.title}"\nAssigned by: ${creatorName}\nType: ${data.type === 'recurring' ? 'Recurring (' + (data.recurrence_pattern || 'daily') + ')' : 'One-time'}${data.reward_amount ? '\nReward: ' + data.reward_amount + ' pts' : ''}`);
       }
       return TaskModel.findById(firstTaskId);
     }
@@ -76,6 +144,12 @@ class TaskService {
     if (hasSecondary) baseData.secondary_assignee = data.secondary_assignee;
     if (hasTertiary) baseData.tertiary_assignee = data.tertiary_assignee;
     const taskId = await TaskModel.create(baseData);
+
+    // Notify assignee
+    if (assignees.length === 1) {
+      const creatorName = await getUserName(creator.id);
+      notifyUser(parseInt(assignees[0]), `📋 New task assigned to you: "${data.title}"\nAssigned by: ${creatorName}\nType: ${data.type === 'recurring' ? 'Recurring (' + (data.recurrence_pattern || 'daily') + ')' : 'One-time'}${data.reward_amount ? '\nReward: ' + data.reward_amount + ' pts' : ''}`);
+    }
     return TaskModel.findById(taskId);
   }
 
@@ -98,7 +172,10 @@ class TaskService {
       if (!users.length) throw new Error('Can only reassign to LOCAL team members');
     }
 
-    return TaskModel.update(taskId, { assigned_to: assigneeId, status: 'in_progress' });
+    await TaskModel.update(taskId, { assigned_to: assigneeId, status: 'in_progress' });
+    // Notify new assignee
+    notifyUser(assigneeId, `📋 Task reassigned to you: "${task.title}"\nThis task was reassigned to you by your manager.`);
+    return true;
   }
 
   static async pickTask(taskId, user) {
@@ -158,6 +235,7 @@ class TaskService {
       }
 
       await conn.commit();
+      checkStreakAndNotify(userId, 'UTC');
       return TaskModel.findById(taskId);
     } catch (err) {
       await conn.rollback();
@@ -206,6 +284,7 @@ class TaskService {
       }
 
       await conn.commit();
+      checkStreakAndNotify(userId, timezone);
       return task;
     } catch (err) {
       await conn.rollback();
@@ -312,6 +391,7 @@ class TaskService {
       }
 
       await conn.commit();
+      checkStreakAndNotify(userId, timezone);
       return task;
     } catch (err) {
       await conn.rollback();
@@ -376,13 +456,24 @@ class TaskService {
     if (!task) throw new Error('Task not found');
 
     if (task.group_id) {
-      // Deactivate all tasks in the group
+      // Get all assignees before deactivating
+      const [groupTasks] = await db.query(
+        'SELECT assigned_to FROM tasks WHERE group_id = ? AND is_deleted = 0 AND assigned_to IS NOT NULL',
+        [task.group_id]
+      );
       await db.query(
         `UPDATE tasks SET status = 'deactivated' WHERE group_id = ? AND is_deleted = 0`,
         [task.group_id]
       );
+      // Notify all assignees
+      groupTasks.forEach(t => {
+        notifyUser(t.assigned_to, `🚫 Task deactivated: "${task.title}"\nThis recurring task has been deactivated and will no longer appear in your task list.`);
+      });
     } else {
       await TaskModel.update(taskId, { status: 'deactivated' });
+      if (task.assigned_to) {
+        notifyUser(task.assigned_to, `🚫 Task deactivated: "${task.title}"\nThis task has been deactivated and will no longer appear in your task list.`);
+      }
     }
   }
 

@@ -2,6 +2,7 @@ const jwt = require('jsonwebtoken');
 const UserModel = require('../models/User');
 const db = require('../config/db');
 const { getToday } = require('../utils/timezone');
+const ChatModel = require('../models/Chat');
 
 class AuthService {
   static generateToken(user) {
@@ -33,25 +34,49 @@ class AuthService {
   static async recordAttendance(userId, timezone = 'UTC') {
     const today = getToday(timezone);
 
-    // Check if already logged today (in user's timezone)
-    const [existing] = await db.query(
-      `SELECT id FROM attendance_logs WHERE user_id = ? AND date = ?`, [userId, today]
+    // Check if any session exists for today (to detect first login)
+    const [allSessions] = await db.query(
+      `SELECT id, logout_time FROM attendance_logs WHERE user_id = ? AND date = ?`, [userId, today]
     );
 
-    if (!existing.length) {
+    const hasOpenSession = allSessions.some(s => !s.logout_time);
+    const isFirstLogin = allSessions.length === 0;
+
+    if (!hasOpenSession) {
+      // Create new session row (allows multiple sessions per day)
       await db.query(
         `INSERT INTO attendance_logs (user_id, login_time, date) VALUES (?, NOW(), ?)`,
         [userId, today]
       );
     }
+
+    // Send welcome greeting on first login of the day
+    if (isFirstLogin) {
+      try {
+        const [[userInfo]] = await db.query('SELECT name FROM users WHERE id = ?', [userId]);
+        const firstName = userInfo ? userInfo.name.split(' ')[0] : 'there';
+        const dayName = new Date().toLocaleDateString('en-US', { weekday: 'long' });
+        const greetings = [
+          `Good day, ${firstName}! Happy ${dayName} — let's make it productive!`,
+          `Welcome back, ${firstName}! Wishing you a great ${dayName}.`,
+          `Hi ${firstName}! Ready to crush it this ${dayName}?`,
+          `Hello ${firstName}! ${dayName} is here — let's get things done!`,
+          `Hey ${firstName}! Great to see you. Have a wonderful ${dayName}!`
+        ];
+        const msg = greetings[Math.floor(Math.random() * greetings.length)];
+        await ChatModel.sendSystemMessage(userId, msg);
+      } catch (e) {
+        // Non-critical — don't block login if greeting fails
+      }
+    }
   }
 
-  static async recordLogout(userId, timezone = 'UTC') {
+  static async recordLogout(userId, timezone = 'UTC', reason = null) {
     const today = getToday(timezone);
     await db.query(
-      `UPDATE attendance_logs SET logout_time = NOW()
+      `UPDATE attendance_logs SET logout_time = NOW(), logout_reason = ?
        WHERE user_id = ? AND date = ? AND logout_time IS NULL`,
-      [userId, today]
+      [reason, userId, today]
     );
   }
 }

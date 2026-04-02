@@ -291,6 +291,67 @@ class ChatModel {
     return rows.map(r => r.user_id);
   }
 
+  // Get the system user ID
+  static async getSystemUserId() {
+    const [[row]] = await db.query("SELECT id FROM users WHERE email = 'system@taskflow.local' LIMIT 1");
+    return row ? row.id : null;
+  }
+
+  // Find or create a system conversation for a user
+  static async getSystemConversation(userId) {
+    const systemUserId = await this.getSystemUserId();
+    if (!systemUserId) throw new Error('System user not found');
+
+    // Check if system conversation already exists for this user
+    const [rows] = await db.query(
+      `SELECT c.id FROM chat_conversations c
+       JOIN chat_participants p1 ON p1.conversation_id = c.id AND p1.user_id = ?
+       JOIN chat_participants p2 ON p2.conversation_id = c.id AND p2.user_id = ?
+       WHERE c.type = 'system'
+       LIMIT 1`,
+      [userId, systemUserId]
+    );
+
+    if (rows[0]) return rows[0].id;
+
+    // Create new system conversation
+    const conn = await db.getConnection();
+    try {
+      await conn.beginTransaction();
+      const [result] = await conn.query(
+        "INSERT INTO chat_conversations (type, name, created_by) VALUES ('system', 'System Notifications', ?)",
+        [systemUserId]
+      );
+      const convId = result.insertId;
+      await conn.query('INSERT INTO chat_participants (conversation_id, user_id) VALUES (?, ?), (?, ?)',
+        [convId, systemUserId, convId, userId]);
+      await conn.commit();
+      return convId;
+    } catch (err) {
+      await conn.rollback();
+      throw err;
+    } finally {
+      conn.release();
+    }
+  }
+
+  // Send a system message to a user
+  static async sendSystemMessage(userId, content) {
+    const systemUserId = await this.getSystemUserId();
+    if (!systemUserId) throw new Error('System user not found');
+
+    const conversationId = await this.getSystemConversation(userId);
+
+    const [result] = await db.query(
+      `INSERT INTO chat_messages (conversation_id, sender_id, content) VALUES (?, ?, ?)`,
+      [conversationId, systemUserId, content]
+    );
+
+    await db.query('UPDATE chat_conversations SET updated_at = NOW() WHERE id = ?', [conversationId]);
+
+    return { conversationId, messageId: result.insertId };
+  }
+
   // Clear chat history for a specific user (hides all current messages for that user only)
   static async clearChatForUser(conversationId, userId) {
     const [[latest]] = await db.query(

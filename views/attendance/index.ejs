@@ -207,14 +207,19 @@
             var presentCount = 0;
             for (var d = 1; d <= lastDay; d++) {
               var st = calendarData[u.id][d];
-              if (st === 'present') presentCount++;
+              if (['present', 'half_day', 'official_duty', 'work_from_home'].includes(st)) presentCount++;
               var todayParts2 = today.split('-');
               var isToday = d === parseInt(todayParts2[2]) && mon === parseInt(todayParts2[1]) && year === parseInt(todayParts2[0]);
               var dateStr2 = year + '-' + String(mon).padStart(2,'0') + '-' + String(d).padStart(2,'0');
               var loginKey = u.id + '-' + dateStr2;
               var loginTime = (typeof loginTimeMap !== 'undefined' && loginTimeMap[loginKey]) ? loginTimeMap[loginKey] : '';
+              var overrideKey2 = u.id + '-' + dateStr2;
+              var hasOverride = typeof overrideMap !== 'undefined' && overrideMap[overrideKey2];
               var bg = '', clr = '', icon = '', tipText = '';
               if (st === 'present') { bg = 'rgba(16,185,129,0.2)'; clr = '#10b981'; icon = 'P'; tipText = loginTime ? 'Login: ' + loginTime : 'Present'; }
+              else if (st === 'half_day') { bg = 'rgba(245,158,11,0.2)'; clr = '#f59e0b'; icon = 'H'; tipText = 'Half Day' + (hasOverride ? ' — ' + overrideMap[overrideKey2].remark : ''); }
+              else if (st === 'official_duty') { bg = 'rgba(99,102,241,0.2)'; clr = '#6366f1'; icon = 'OD'; tipText = 'Official Duty' + (hasOverride ? ' — ' + overrideMap[overrideKey2].remark : ''); }
+              else if (st === 'work_from_home') { bg = 'rgba(16,185,129,0.15)'; clr = '#059669'; icon = 'WH'; tipText = 'Work from Home' + (hasOverride ? ' — ' + overrideMap[overrideKey2].remark : ''); }
               else if (st === 'absent') { bg = 'rgba(239,68,68,0.15)'; clr = '#ef4444'; icon = 'A'; tipText = 'Absent'; }
               else if (st === 'approved_leave') { bg = 'rgba(0,212,255,0.15)'; clr = '#00d4ff'; icon = 'L'; tipText = 'Approved Leave'; }
               else if (st === 'pending_leave') { bg = 'rgba(245,158,11,0.15)'; clr = '#f59e0b'; icon = '?'; tipText = 'Pending Leave'; }
@@ -223,8 +228,13 @@
           %>
           <td style="padding:3px 1px;text-align:center;border-bottom:1px solid var(--tf-border);<%= isToday ? 'background:rgba(0,212,255,0.05);' : '' %>">
             <% if (icon) { %>
-            <div style="width:22px;height:22px;border-radius:4px;background:<%= bg %>;color:<%= clr %>;display:inline-flex;align-items:center;justify-content:center;font-size:0.6rem;font-weight:600;font-family:var(--tf-font-mono);cursor:default;"
-              title="<%= tipText %>"><%= icon %></div>
+            <div style="width:22px;height:22px;border-radius:4px;background:<%= bg %>;color:<%= clr %>;display:inline-flex;align-items:center;justify-content:center;font-size:0.6rem;font-weight:600;font-family:var(--tf-font-mono);<%= isAdmin && dateStr2 <= today ? 'cursor:pointer;' : 'cursor:default;' %><%= hasOverride ? 'box-shadow:0 0 0 1.5px ' + clr + ';' : '' %>"
+              title="<%= tipText %>"
+              <% if (isAdmin && dateStr2 <= today) { %>onclick="openOverrideModal(<%= u.id %>, '<%= u.name.replace(/'/g, "\\'") %>', '<%= dateStr2 %>', '<%= st %>')"<% } %>><%= icon %></div>
+            <% } else if (isAdmin && dateStr2 <= today && st === 'future') { %>
+            <div style="width:22px;height:22px;border-radius:4px;display:inline-flex;align-items:center;justify-content:center;font-size:0.6rem;cursor:pointer;color:var(--tf-text-muted);border:1px dashed var(--tf-border);"
+              title="Click to set status"
+              onclick="openOverrideModal(<%= u.id %>, '<%= u.name.replace(/'/g, "\\'") %>', '<%= dateStr2 %>', '<%= st %>')">+</div>
             <% } %>
           </td>
           <% } %>
@@ -240,7 +250,9 @@
     <span style="font-size:0.65rem;color:var(--tf-text-muted);"><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:rgba(16,185,129,0.2);vertical-align:middle;margin-right:3px;"></span> Present</span>
     <span style="font-size:0.65rem;color:var(--tf-text-muted);"><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:rgba(239,68,68,0.15);vertical-align:middle;margin-right:3px;"></span> Absent</span>
     <span style="font-size:0.65rem;color:var(--tf-text-muted);"><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:rgba(0,212,255,0.15);vertical-align:middle;margin-right:3px;"></span> Leave</span>
-    <span style="font-size:0.65rem;color:var(--tf-text-muted);"><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:rgba(245,158,11,0.15);vertical-align:middle;margin-right:3px;"></span> Pending Leave</span>
+    <span style="font-size:0.65rem;color:var(--tf-text-muted);"><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:rgba(245,158,11,0.2);vertical-align:middle;margin-right:3px;"></span> Half Day</span>
+    <span style="font-size:0.65rem;color:var(--tf-text-muted);"><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:rgba(99,102,241,0.2);vertical-align:middle;margin-right:3px;"></span> Official Duty</span>
+    <span style="font-size:0.65rem;color:var(--tf-text-muted);"><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:rgba(16,185,129,0.15);vertical-align:middle;margin-right:3px;border:1px solid #059669;"></span> WFH</span>
     <span style="font-size:0.65rem;color:var(--tf-text-muted);"><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:rgba(100,116,139,0.1);vertical-align:middle;margin-right:3px;"></span> Week Off</span>
   </div>
 </div>
@@ -248,55 +260,111 @@
 <div class="row g-3 mb-4">
   <div class="col-md-6">
     <div class="tf-card">
-      <div class="card-header"><i class="bi bi-calendar-check me-2"></i>TODAY'S ATTENDANCE — <%= new Date(today + 'T00:00:00Z').toLocaleDateString('en-US', {timeZone:'UTC', weekday:'long', month:'long', day:'numeric'}) %></div>
+      <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <span><i class="bi bi-calendar-check me-2"></i><%= selectedDate === today ? "TODAY'S" : '' %> ATTENDANCE — <%= new Date(selectedDate + 'T12:00:00').toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric' }) %></span>
+        <form method="GET" action="/attendance" class="d-flex gap-2 align-items-center" style="margin:0;">
+          <input type="hidden" name="month" value="<%= month %>">
+          <input type="date" name="date" value="<%= selectedDate %>" max="<%= today %>" class="tf-form-control" style="max-width:160px;font-size:0.75rem;" onchange="this.form.submit()">
+        </form>
+      </div>
       <div style="overflow-x:auto;">
         <table class="tf-table">
-          <thead><tr><th>User</th><th>Shift</th><th>Login</th><th>Logout</th><th>Duration</th></tr></thead>
+          <thead><tr><th>User</th><th>Shift</th><th>Session</th><th>Login</th><th>Logout</th><th>Duration</th><th>Reason</th></tr></thead>
           <tbody>
             <% if (dailyLogs.length > 0) { %>
-              <% dailyLogs.forEach(function(l) {
-                var ss = l.shift_start ? l.shift_start.substring(0, 5) : '10:00';
-                var sh = parseFloat(l.shift_hours || 8.5);
-                var sH = parseInt(ss.split(':')[0]), sM = parseInt(ss.split(':')[1]);
-                var eMin = sH * 60 + sM + sh * 60;
-                var eH = Math.floor(eMin / 60) % 24, eM = Math.round(eMin % 60);
-                var endStr = String(eH).padStart(2, '0') + ':' + String(eM).padStart(2, '0');
-                var lateMin = 0;
-                if (l.loginFormatted) {
-                  var loginHM = l.loginFormatted.split(' ')[0];
-                  var loginAmPm = l.loginFormatted.split(' ')[1];
-                  var lH = parseInt(loginHM.split(':')[0]), lM = parseInt(loginHM.split(':')[1]);
-                  if (loginAmPm === 'PM' && lH !== 12) lH += 12;
-                  if (loginAmPm === 'AM' && lH === 12) lH = 0;
-                  var loginMins = lH * 60 + lM;
-                  var shiftMins = sH * 60 + sM;
-                  lateMin = Math.max(0, loginMins - shiftMins);
-                }
+              <%
+                // Group logs by user to number sessions and calc gaps
+                var _userSessions = {};
+                dailyLogs.forEach(function(l) {
+                  if (!_userSessions[l.user_id]) _userSessions[l.user_id] = [];
+                  _userSessions[l.user_id].push(l);
+                });
               %>
-              <tr>
-                <td>
+              <% Object.values(_userSessions).forEach(function(sessions) {
+                // Pre-calculate how many gap rows will actually render
+                var _gapRowCount = 0;
+                for (var _gi = 1; _gi < sessions.length; _gi++) {
+                  if (sessions[_gi - 1].logout_time && sessions[_gi].login_time) {
+                    var _gm = Math.round((new Date(sessions[_gi].login_time) - new Date(sessions[_gi - 1].logout_time)) / 60000);
+                    if (_gm > 0) _gapRowCount++;
+                  }
+                }
+                var _totalRowspan = sessions.length + _gapRowCount;
+
+                sessions.forEach(function(l, si) {
+                  var ss = l.shift_start ? l.shift_start.substring(0, 5) : '10:00';
+                  var sh = parseFloat(l.shift_hours || 8.5);
+                  var sH = parseInt(ss.split(':')[0]), sM = parseInt(ss.split(':')[1]);
+                  var eMin = sH * 60 + sM + sh * 60;
+                  var eH = Math.floor(eMin / 60) % 24, eM = Math.round(eMin % 60);
+                  var endStr = String(eH).padStart(2, '0') + ':' + String(eM).padStart(2, '0');
+                  var lateMin = 0;
+                  if (si === 0 && l.loginFormatted && !l.is_manual) {
+                    var loginHM = l.loginFormatted.split(' ')[0];
+                    var loginAmPm = l.loginFormatted.split(' ')[1];
+                    var lH = parseInt(loginHM.split(':')[0]), lM = parseInt(loginHM.split(':')[1]);
+                    if (loginAmPm === 'PM' && lH !== 12) lH += 12;
+                    if (loginAmPm === 'AM' && lH === 12) lH = 0;
+                    var loginMins = lH * 60 + lM;
+                    var shiftMins = sH * 60 + sM;
+                    lateMin = Math.max(0, loginMins - shiftMins);
+                  }
+                  // Calculate gap from previous session's logout
+                  var gapMin = 0;
+                  if (si > 0 && sessions[si - 1].logout_time && l.login_time) {
+                    gapMin = Math.round((new Date(l.login_time) - new Date(sessions[si - 1].logout_time)) / 60000);
+                  }
+              %>
+              <% if (si > 0 && gapMin > 0) { %>
+              <tr style="background:rgba(245,158,11,0.05);">
+                <td colspan="5" style="text-align:center;font-size:0.7rem;color:#f59e0b;padding:4px 8px;font-style:italic;">
+                  <i class="bi bi-clock-history me-1"></i>Logged out for <%= gapMin >= 60 ? Math.floor(gapMin/60) + 'h ' + (gapMin%60) + 'm' : gapMin + 'm' %>
+                  <% if (sessions[si - 1].logout_reason) { %>
+                   — <%= sessions[si - 1].logout_reason %>
+                  <% } %>
+                </td>
+              </tr>
+              <% } %>
+              <tr<%= si === sessions.length - 1 ? ' style="border-bottom:2px solid var(--tf-border);"' : '' %>>
+                <% if (si === 0) { %>
+                <td rowspan="<%= _totalRowspan %>">
                   <div style="font-size:0.8rem;font-weight:500;"><%= l.user_name %></div>
                   <div style="font-size:0.65rem;color:var(--tf-text-muted);"><%= l.email %></div>
+                  <% if (sessions.length > 1) { %>
+                  <div style="font-size:0.6rem;color:#f59e0b;margin-top:2px;"><i class="bi bi-arrow-repeat"></i> <%= sessions.length %> sessions</div>
+                  <% } %>
                 </td>
-                <td style="font-family:var(--tf-font-mono);font-size:0.7rem;color:var(--tf-text-muted);white-space:nowrap;">
+                <td rowspan="<%= _totalRowspan %>" style="font-family:var(--tf-font-mono);font-size:0.7rem;color:var(--tf-text-muted);white-space:nowrap;">
                   <%= ss %> - <%= endStr %>
                 </td>
+                <% } %>
+                <td style="font-size:0.7rem;color:var(--tf-text-muted);font-family:var(--tf-font-mono);">#<%= si + 1 %></td>
                 <td style="font-family:var(--tf-font-mono);font-size:0.75rem;">
                   <span style="color:#10b981;"><%= l.loginFormatted || '—' %></span>
-                  <% if (lateMin > 5) { %>
+                  <% if (l.is_manual) { %>
+                  <div style="font-size:0.55rem;color:#6366f1;margin-top:2px;"><i class="bi bi-pencil-square me-1"></i>Marked by admin</div>
+                  <% } else if (si === 0 && lateMin > 5) { %>
                   <div style="font-size:0.6rem;color:#ef4444;">+<%= lateMin %> min late</div>
+                  <% if (l.late_login_reason) { %>
+                  <div style="font-size:0.55rem;color:var(--tf-text-muted);" title="<%= l.late_login_reason %>"><i class="bi bi-chat-left-text"></i> <%= l.late_login_reason.length > 25 ? l.late_login_reason.substring(0,25) + '...' : l.late_login_reason %></div>
+                  <% } %>
                   <% } %>
                 </td>
                 <td style="font-family:var(--tf-font-mono);font-size:0.75rem;color:var(--tf-text-muted);">
-                  <%= l.logoutFormatted || 'Active' %>
+                  <%- l.logoutFormatted || '<span style="color:#10b981;">Active</span>' %>
                 </td>
                 <td style="font-size:0.75rem;color:var(--tf-text-muted);">
                   <%= l.duration ? l.duration.substring(0,5) + 'h' : '—' %>
                 </td>
+                <td style="font-size:0.7rem;color:var(--tf-text-muted);">
+                  <% if (l.logout_reason) { %>
+                  <span title="<%= l.logout_reason %>" style="color:#f59e0b;"><i class="bi bi-chat-left-text"></i> <%= l.logout_reason.length > 20 ? l.logout_reason.substring(0,20) + '...' : l.logout_reason %></span>
+                  <% } else { %>—<% } %>
+                </td>
               </tr>
-              <% }) %>
+              <% }); }); %>
             <% } else { %>
-            <tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--tf-text-muted);">No logins today</td></tr>
+            <tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--tf-text-muted);">No logins today</td></tr>
             <% } %>
           </tbody>
         </table>
@@ -329,4 +397,103 @@
     </div>
   </div>
 </div>
+
+<% if (isAdmin) { %>
+<!-- Attendance Override Modal -->
+<div id="overrideModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:5000;align-items:center;justify-content:center;padding:1rem;">
+  <div style="background:var(--tf-surface);border:1px solid var(--tf-border);border-radius:12px;padding:1.5rem;width:100%;max-width:420px;">
+    <h6 style="font-family:var(--tf-font-mono);margin-bottom:0.25rem;">Update Attendance</h6>
+    <p id="overrideSubtext" style="font-size:0.75rem;color:var(--tf-text-muted);margin-bottom:1rem;"></p>
+    <input type="hidden" id="overrideUserId">
+    <input type="hidden" id="overrideDate">
+
+    <div style="margin-bottom:1rem;">
+      <label style="font-size:0.7rem;color:var(--tf-text-muted);display:block;margin-bottom:0.4rem;text-transform:uppercase;letter-spacing:0.5px;">STATUS *</label>
+      <select id="overrideStatus" class="tf-select" style="font-size:0.85rem;">
+        <option value="present">Present</option>
+        <option value="leave">Leave</option>
+        <option value="half_day">Half Day</option>
+        <option value="official_duty">Official Duty</option>
+        <option value="work_from_home">Work from Home</option>
+      </select>
+    </div>
+
+    <div style="margin-bottom:1rem;">
+      <label style="font-size:0.7rem;color:var(--tf-text-muted);display:block;margin-bottom:0.4rem;text-transform:uppercase;letter-spacing:0.5px;">REMARK (OPTIONAL)</label>
+      <textarea id="overrideRemark" class="tf-form-control" rows="2" placeholder="Reason for override..." style="font-size:0.8rem;resize:vertical;"></textarea>
+    </div>
+
+    <div id="overrideError" style="display:none;font-size:0.75rem;color:#ef4444;margin-bottom:0.75rem;"></div>
+
+    <div class="d-flex gap-2 justify-content-between">
+      <button id="overrideRemoveBtn" class="btn-tf" style="font-size:0.7rem;padding:4px 10px;background:transparent;color:#ef4444;border:1px solid rgba(239,68,68,0.3);display:none;" onclick="removeOverride()">
+        <i class="bi bi-trash3 me-1"></i>Remove Override
+      </button>
+      <div class="d-flex gap-2 ms-auto">
+        <button class="btn-tf btn-tf-outline" onclick="document.getElementById('overrideModal').style.display='none'">Cancel</button>
+        <button class="btn-tf btn-tf-primary" onclick="submitOverride()"><i class="bi bi-check-lg me-1"></i>Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function openOverrideModal(userId, userName, date, currentStatus) {
+  document.getElementById('overrideUserId').value = userId;
+  document.getElementById('overrideDate').value = date;
+  document.getElementById('overrideSubtext').textContent = userName + ' — ' + new Date(date + 'T12:00:00').toLocaleDateString('en-US', { weekday:'long', month:'short', day:'numeric', year:'numeric' }) + ' (Current: ' + currentStatus + ')';
+  document.getElementById('overrideRemark').value = '';
+  document.getElementById('overrideError').style.display = 'none';
+
+  // Pre-select current status if it's an overridable type
+  var sel = document.getElementById('overrideStatus');
+  var validOpts = ['present', 'leave', 'half_day', 'official_duty', 'work_from_home'];
+  sel.value = validOpts.includes(currentStatus) ? currentStatus : 'present';
+
+  // Show remove button if there's an existing override
+  var overrideMap = <%- JSON.stringify(overrideMap) %>;
+  var key = userId + '-' + date;
+  document.getElementById('overrideRemoveBtn').style.display = overrideMap[key] ? 'inline-flex' : 'none';
+
+  document.getElementById('overrideModal').style.display = 'flex';
+}
+
+function submitOverride() {
+  var userId = document.getElementById('overrideUserId').value;
+  var date = document.getElementById('overrideDate').value;
+  var status = document.getElementById('overrideStatus').value;
+  var remark = document.getElementById('overrideRemark').value.trim();
+
+  fetch('/attendance/override', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ user_id: userId, date: date, status: status, remark: remark })
+  }).then(function(r) { return r.json(); }).then(function(data) {
+    if (data.success) {
+      window.location.reload();
+    } else {
+      document.getElementById('overrideError').textContent = data.message || 'Failed';
+      document.getElementById('overrideError').style.display = 'block';
+    }
+  }).catch(function() {
+    document.getElementById('overrideError').textContent = 'Request failed';
+    document.getElementById('overrideError').style.display = 'block';
+  });
+}
+
+function removeOverride() {
+  var userId = document.getElementById('overrideUserId').value;
+  var date = document.getElementById('overrideDate').value;
+
+  fetch('/attendance/override', {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ user_id: userId, date: date })
+  }).then(function(r) { return r.json(); }).then(function(data) {
+    if (data.success) window.location.reload();
+  }).catch(function() {});
+}
+</script>
+<% } %>
+
 <% } %>

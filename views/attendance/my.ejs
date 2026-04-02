@@ -1,39 +1,61 @@
 <!-- Today's Status Card -->
+<%
+  var sH = parseInt(shift.start.split(':')[0]), sM = parseInt(shift.start.split(':')[1]);
+  var eMin = sH * 60 + sM + shift.hours * 60;
+  var eH = Math.floor(eMin / 60) % 24, eM = Math.round(eMin % 60);
+  var endStr = String(eH).padStart(2, '0') + ':' + String(eM).padStart(2, '0');
+%>
 <div class="tf-card mb-4">
-  <div class="card-header"><i class="bi bi-person-check me-2"></i>TODAY — <%= new Date(today + 'T00:00:00Z').toLocaleDateString('en-US', {timeZone:'UTC', weekday:'long', month:'long', day:'numeric'}) %></div>
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span><i class="bi bi-person-check me-2"></i>TODAY — <%= new Date(today + 'T00:00:00Z').toLocaleDateString('en-US', {timeZone:'UTC', weekday:'long', month:'long', day:'numeric'}) %></span>
+    <span style="font-family:var(--tf-font-mono);font-size:0.7rem;color:var(--tf-text-muted);">Shift: <%= shift.start %> - <%= endStr %></span>
+  </div>
   <div style="padding:1.25rem;">
-    <div class="row g-3 align-items-center">
-      <div class="col-sm-6 col-md-3">
-        <div style="font-size:0.7rem;color:var(--tf-text-muted);margin-bottom:2px;">Shift</div>
-        <div style="font-family:var(--tf-font-mono);font-size:0.95rem;">
-          <%
-            var sH = parseInt(shift.start.split(':')[0]), sM = parseInt(shift.start.split(':')[1]);
-            var eMin = sH * 60 + sM + shift.hours * 60;
-            var eH = Math.floor(eMin / 60) % 24, eM = Math.round(eMin % 60);
-            var endStr = String(eH).padStart(2, '0') + ':' + String(eM).padStart(2, '0');
-          %>
-          <%= shift.start %> - <%= endStr %>
+    <% if (todaySessions && todaySessions.length > 0) { %>
+      <% todaySessions.forEach(function(s, si) { %>
+        <% if (si > 0 && todaySessions[si-1].logout_time && s.login_time) {
+          var gapMs = new Date(s.login_time) - new Date(todaySessions[si-1].logout_time);
+          var gapMin = Math.round(gapMs / 60000);
+        %>
+        <div style="text-align:center;padding:6px 0;font-size:0.7rem;color:#f59e0b;font-style:italic;">
+          <i class="bi bi-clock-history me-1"></i>Logged out for <%= gapMin >= 60 ? Math.floor(gapMin/60) + 'h ' + (gapMin%60) + 'm' : gapMin + 'm' %>
+          <% if (todaySessions[si-1].logout_reason) { %>
+           — <span style="color:var(--tf-text-muted);"><%= todaySessions[si-1].logout_reason %></span>
+          <% } %>
         </div>
-      </div>
-      <div class="col-sm-6 col-md-3">
-        <div style="font-size:0.7rem;color:var(--tf-text-muted);margin-bottom:2px;">Login</div>
-        <div style="font-family:var(--tf-font-mono);font-size:0.95rem;color:#10b981;">
-          <%= todayLog ? todayLog.loginFormatted || '—' : '—' %>
+        <% } %>
+        <div class="row g-3 align-items-center" style="<%= si > 0 ? 'padding-top:0.5rem;border-top:1px dashed var(--tf-border);margin-top:0.5rem;' : '' %>">
+          <div class="col-sm-6 col-md-1">
+            <div style="font-size:0.7rem;color:var(--tf-text-muted);margin-bottom:2px;">Session</div>
+            <div style="font-family:var(--tf-font-mono);font-size:0.85rem;color:var(--tf-accent);">#<%= si + 1 %></div>
+          </div>
+          <div class="col-sm-6 col-md-2">
+            <div style="font-size:0.7rem;color:var(--tf-text-muted);margin-bottom:2px;">Login</div>
+            <div style="font-family:var(--tf-font-mono);font-size:0.9rem;color:#10b981;"><%= s.loginFormatted || '—' %></div>
+            <% if (si === 0 && s.late_login_reason) { %>
+            <div style="font-size:0.6rem;color:#ef4444;margin-top:2px;"><i class="bi bi-clock me-1"></i>Late: <%= s.late_login_reason %></div>
+            <% } %>
+          </div>
+          <div class="col-sm-6 col-md-2">
+            <div style="font-size:0.7rem;color:var(--tf-text-muted);margin-bottom:2px;">Logout</div>
+            <div style="font-family:var(--tf-font-mono);font-size:0.9rem;color:var(--tf-text-muted);">
+              <%- s.logoutFormatted || '<span style="color:#10b981;">Active</span>' %>
+            </div>
+            <% if (s.logout_reason) { %>
+            <div style="font-size:0.6rem;color:#f59e0b;margin-top:2px;"><i class="bi bi-chat-left-text me-1"></i><%= s.logout_reason %></div>
+            <% } %>
+          </div>
+          <div class="col-sm-6 col-md-2">
+            <div style="font-size:0.7rem;color:var(--tf-text-muted);margin-bottom:2px;">Duration</div>
+            <div style="font-family:var(--tf-font-mono);font-size:0.9rem;"><%= s.duration ? s.duration.substring(0,5) + 'h' : '—' %></div>
+          </div>
         </div>
+      <% }); %>
+    <% } else { %>
+      <div style="text-align:center;color:var(--tf-text-muted);padding:1rem;font-size:0.85rem;">
+        <i class="bi bi-dash-circle me-1"></i>No login recorded today
       </div>
-      <div class="col-sm-6 col-md-3">
-        <div style="font-size:0.7rem;color:var(--tf-text-muted);margin-bottom:2px;">Logout</div>
-        <div style="font-family:var(--tf-font-mono);font-size:0.95rem;color:var(--tf-text-muted);">
-          <%= todayLog && todayLog.logoutFormatted ? todayLog.logoutFormatted : (todayLog ? 'Active' : '—') %>
-        </div>
-      </div>
-      <div class="col-sm-6 col-md-3">
-        <div style="font-size:0.7rem;color:var(--tf-text-muted);margin-bottom:2px;">Duration</div>
-        <div style="font-family:var(--tf-font-mono);font-size:0.95rem;">
-          <%= todayLog && todayLog.duration ? todayLog.duration.substring(0,5) + 'h' : '—' %>
-        </div>
-      </div>
-    </div>
+    <% } %>
   </div>
 </div>
 
@@ -82,6 +104,12 @@
           </div>
           <% if (cd.log.duration) { %>
           <div style="font-family:var(--tf-font-mono);font-size:0.6rem;color:#10b981;"><%= cd.log.duration.substring(0,5) %>h</div>
+          <% } %>
+          <% if (cd.sessions && cd.sessions.length > 1) { %>
+          <div style="font-size:0.55rem;color:#f59e0b;margin-top:1px;"><i class="bi bi-arrow-repeat"></i> <%= cd.sessions.length %> sessions</div>
+          <% } %>
+          <% if (cd.log.late_login_reason) { %>
+          <div style="font-size:0.55rem;color:#ef4444;margin-top:1px;"><i class="bi bi-clock"></i> Late</div>
           <% } %>
           <% } %>
         </div>

@@ -167,6 +167,12 @@ class ChatController {
         return ApiResponse.error(res, 'Access denied', 403);
       }
 
+      // Block replies on system conversations
+      const conversation = await ChatModel.getConversationById(conversationId);
+      if (conversation && conversation.type === 'system') {
+        return ApiResponse.error(res, 'Cannot reply to system notifications', 403);
+      }
+
       const message = await ChatModel.sendMessage({
         conversation_id: conversationId,
         sender_id: req.user.id,

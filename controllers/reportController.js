@@ -92,10 +92,12 @@ class ReportController {
       const endDate = `${month}-${String(lastDay).padStart(2, '0')}`;
 
       const tzOffset = getTimezoneOffsetString(tz);
+      const selectedDate = req.query.date || today;
 
       const [dailyLogs, weeklyStats, activeUsers, attendanceDays, leaveData] = await Promise.all([
         db.query(
           `SELECT al.*, u.name as user_name, u.email, u.shift_start, u.shift_hours,
+                  al.logout_reason, al.late_login_reason,
                   DATE_FORMAT(CONVERT_TZ(al.login_time, '+00:00', ?), '%h:%i %p') as loginFormatted,
                   DATE_FORMAT(CONVERT_TZ(al.logout_time, '+00:00', ?), '%h:%i %p') as logoutFormatted,
                   TIMEDIFF(COALESCE(al.logout_time, NOW()), al.login_time) as duration
@@ -103,7 +105,7 @@ class ReportController {
            JOIN users u ON al.user_id = u.id
            JOIN roles r ON u.role_id = r.id
            WHERE al.date = ? AND r.name IN ('LOCAL_USER', 'LOCAL_MANAGER')
-           ORDER BY al.login_time`, [tzOffset, tzOffset, today]
+           ORDER BY u.name, al.login_time`, [tzOffset, tzOffset, selectedDate]
         ),
         db.query(
           `SELECT u.id, u.name, COUNT(al.id) as days_present
@@ -122,7 +124,9 @@ class ReportController {
            ORDER BY u.name`
         ),
         db.query(
-          `SELECT user_id, date, DATE_FORMAT(CONVERT_TZ(login_time, '+00:00', ?), '%h:%i %p') as login_formatted FROM attendance_logs
+          `SELECT user_id, date, DATE_FORMAT(CONVERT_TZ(login_time, '+00:00', ?), '%h:%i %p') as login_formatted,
+                  is_manual, manual_status, manual_remark
+           FROM attendance_logs
            WHERE date >= ? AND date <= ?`,
           [tzOffset, startDate, endDate]
         ),
@@ -136,11 +140,15 @@ class ReportController {
       // Build calendar data
       const attendanceSet = new Set();
       const loginTimeMap = new Map();
+      const overrideMap = new Map(); // Track manual overrides
       attendanceDays[0].forEach(row => {
         const d = row.date instanceof Date ? row.date.toISOString().split('T')[0] : String(row.date).split('T')[0];
         attendanceSet.add(`${row.user_id}-${d}`);
         if (row.login_formatted) {
           loginTimeMap.set(`${row.user_id}-${d}`, row.login_formatted);
+        }
+        if (row.is_manual && row.manual_status) {
+          overrideMap.set(`${row.user_id}-${d}`, { status: row.manual_status, remark: row.manual_remark });
         }
       });
 
@@ -181,7 +189,12 @@ class ReportController {
               }
             }
             if (!onLeave) {
-              if (attendanceSet.has(`${u.id}-${dateStr}`)) {
+              // Check for manual override first
+              const overrideKey = `${u.id}-${dateStr}`;
+              const override = overrideMap.get(overrideKey);
+              if (override) {
+                calendarData[u.id][d] = override.status === 'leave' ? 'approved_leave' : override.status;
+              } else if (attendanceSet.has(`${u.id}-${dateStr}`)) {
                 calendarData[u.id][d] = 'present';
               } else if (dateStr === today && u.shift_start) {
                 // Don't mark absent if shift hasn't started yet
@@ -207,9 +220,12 @@ class ReportController {
         dailyLogs: dailyLogs[0],
         weeklyStats: weeklyStats[0],
         today,
+        selectedDate,
         calendarUsers: activeUsers[0],
         calendarData,
         loginTimeMap: Object.fromEntries(loginTimeMap),
+        overrideMap: Object.fromEntries(overrideMap),
+        isAdmin: req.user.role_name === 'LOCAL_ADMIN',
         month,
         year,
         mon,
@@ -245,21 +261,23 @@ class ReportController {
           `SELECT shift_start, shift_hours, weekly_off_day FROM users WHERE id = ?`, [userId]
         ),
         db.query(
-          `SELECT date,
+          `SELECT date, logout_reason, late_login_reason,
                   DATE_FORMAT(CONVERT_TZ(login_time, '+00:00', ?), '%h:%i %p') as loginFormatted,
                   DATE_FORMAT(CONVERT_TZ(logout_time, '+00:00', ?), '%h:%i %p') as logoutFormatted,
                   TIMEDIFF(COALESCE(logout_time, NOW()), login_time) as duration
            FROM attendance_logs
            WHERE user_id = ? AND date >= ? AND date <= ?
-           ORDER BY date DESC`,
+           ORDER BY date DESC, login_time ASC`,
           [tzOffset, tzOffset, userId, startDate, endDate]
         ),
         db.query(
           `SELECT DATE_FORMAT(CONVERT_TZ(login_time, '+00:00', ?), '%h:%i %p') as loginFormatted,
                   DATE_FORMAT(CONVERT_TZ(logout_time, '+00:00', ?), '%h:%i %p') as logoutFormatted,
-                  TIMEDIFF(COALESCE(logout_time, NOW()), login_time) as duration
+                  TIMEDIFF(COALESCE(logout_time, NOW()), login_time) as duration,
+                  login_time, logout_time, logout_reason, late_login_reason
            FROM attendance_logs
-           WHERE user_id = ? AND date = ?`,
+           WHERE user_id = ? AND date = ?
+           ORDER BY login_time ASC`,
           [tzOffset, tzOffset, userId, today]
         )
       ]);
@@ -268,16 +286,22 @@ class ReportController {
       const ss = shift.shift_start ? shift.shift_start.substring(0, 5) : '10:00';
       const sh = parseFloat(shift.shift_hours || 8.5);
 
-      // Count stats for the month
-      const totalPresent = monthlyLogs.length;
+      // Count stats for the month — unique dates only
+      const uniqueDates = new Set();
+      monthlyLogs.forEach(row => {
+        const d = row.date instanceof Date ? row.date.toISOString().split('T')[0] : String(row.date).split('T')[0];
+        uniqueDates.add(d);
+      });
+      const totalPresent = uniqueDates.size;
       const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
-      // Build calendar data
+      // Build calendar data — group sessions per date
       const calendarData = {};
       const logMap = {};
       monthlyLogs.forEach(row => {
         const d = row.date instanceof Date ? row.date.toISOString().split('T')[0] : String(row.date).split('T')[0];
-        logMap[d] = row;
+        if (!logMap[d]) logMap[d] = [];
+        logMap[d].push(row);
       });
 
       // Fetch leave data
@@ -301,7 +325,8 @@ class ReportController {
         const dateObj = new Date(year, mon - 1, d);
         const dayName = dayNames[dateObj.getDay()];
         const isOff = dayName === shift.weekly_off_day;
-        const log = logMap[dateStr];
+        const sessions = logMap[dateStr] || [];
+        const log = sessions[0] || null;
         let status = 'absent';
         if (dateStr > today) status = 'future';
         else if (isOff) status = 'off';
@@ -309,7 +334,7 @@ class ReportController {
         else if (leaveSet.has(dateStr + '-approved')) status = 'leave';
         else if (leaveSet.has(dateStr + '-pending')) status = 'pending_leave';
 
-        calendarData[d] = { status, dayName, log, isOff };
+        calendarData[d] = { status, dayName, log, sessions, isOff };
       }
 
       const prevMonth = mon === 1 ? `${year - 1}-12` : `${year}-${String(mon - 1).padStart(2, '0')}`;
@@ -319,6 +344,7 @@ class ReportController {
         title: 'My Attendance',
         today,
         todayLog: todayLog[0] || null,
+        todaySessions: todayLog,
         shift: { start: ss, hours: sh, offDay: shift.weekly_off_day },
         calendarData,
         totalPresent,
@@ -821,6 +847,133 @@ class ReportController {
       });
     } catch (err) {
       res.status(500).render('error', { title: 'Error', message: err.message, code: 500, layout: false });
+    }
+  }
+  // POST /attendance/override — Admin manually set attendance for a user on a date
+  static async attendanceOverride(req, res) {
+    try {
+      const { user_id, date, status, remark } = req.body;
+
+      if (!user_id || !date || !status) {
+        return ApiResponse.error(res, 'User, date, and status are required', 400);
+      }
+
+      const validStatuses = ['present', 'leave', 'half_day', 'official_duty', 'work_from_home'];
+      if (!validStatuses.includes(status)) {
+        return ApiResponse.error(res, 'Invalid status', 400);
+      }
+
+      // Get user's shift info to calculate proper login/logout times
+      const [[userInfo]] = await db.query(
+        'SELECT shift_start, shift_hours FROM users WHERE id = ?', [user_id]
+      );
+      const shiftStart = userInfo?.shift_start || '10:00:00';
+      const shiftHours = parseFloat(userInfo?.shift_hours || 8);
+      const [sH, sM] = shiftStart.split(':').map(Number);
+
+      // Calculate login_time and logout_time based on status
+      let loginTime = null;
+      let logoutTime = null;
+      let autoRemark = remark || null;
+
+      if (status === 'present' || status === 'work_from_home' || status === 'official_duty') {
+        // Full day: login = shift start, logout = shift end
+        loginTime = `${date} ${shiftStart}`;
+        const endMin = sH * 60 + (sM || 0) + Math.round(shiftHours * 60);
+        const eH = Math.floor(endMin / 60) % 24;
+        const eM = endMin % 60;
+        logoutTime = `${date} ${String(eH).padStart(2, '0')}:${String(eM).padStart(2, '0')}:00`;
+        if (!remark) autoRemark = 'Marked by admin';
+      } else if (status === 'half_day') {
+        // Half day: login = shift start + half shift, logout = shift end
+        const halfMin = Math.round(shiftHours * 30); // half in minutes
+        const halfStartMin = sH * 60 + (sM || 0) + halfMin;
+        const hsH = Math.floor(halfStartMin / 60) % 24;
+        const hsM = halfStartMin % 60;
+        loginTime = `${date} ${String(hsH).padStart(2, '0')}:${String(hsM).padStart(2, '0')}:00`;
+        const endMin = sH * 60 + (sM || 0) + Math.round(shiftHours * 60);
+        const eH = Math.floor(endMin / 60) % 24;
+        const eM = endMin % 60;
+        logoutTime = `${date} ${String(eH).padStart(2, '0')}:${String(eM).padStart(2, '0')}:00`;
+        if (!remark) autoRemark = 'Half day — Marked by admin';
+      }
+      // leave: no login/logout time
+
+      // Check if there's already an attendance record for this user+date
+      const [existing] = await db.query(
+        'SELECT id FROM attendance_logs WHERE user_id = ? AND date = ? LIMIT 1',
+        [user_id, date]
+      );
+
+      if (existing.length > 0) {
+        // Update existing — mark as manual override
+        if (status === 'leave') {
+          await db.query(
+            `UPDATE attendance_logs SET is_manual = 1, manual_status = ?, manual_remark = ?, updated_by = ?,
+                    login_time = NULL, logout_time = NULL
+             WHERE user_id = ? AND date = ? ORDER BY login_time ASC LIMIT 1`,
+            [status, autoRemark || 'Leave — Marked by admin', req.user.id, user_id, date]
+          );
+        } else {
+          await db.query(
+            `UPDATE attendance_logs SET is_manual = 1, manual_status = ?, manual_remark = ?, updated_by = ?,
+                    login_time = COALESCE(login_time, ?), logout_time = COALESCE(logout_time, ?)
+             WHERE user_id = ? AND date = ? ORDER BY login_time ASC LIMIT 1`,
+            [status, autoRemark, req.user.id, loginTime, logoutTime, user_id, date]
+          );
+        }
+      } else {
+        // Insert new manual entry
+        await db.query(
+          `INSERT INTO attendance_logs (user_id, date, login_time, logout_time, late_login_reason, is_manual, manual_status, manual_remark, updated_by)
+           VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?)`,
+          [user_id, date, loginTime, logoutTime, 'Marked by admin', status, autoRemark, req.user.id]
+        );
+      }
+
+      return ApiResponse.success(res, {}, 'Attendance updated');
+    } catch (err) {
+      console.error('Attendance override error:', err);
+      return ApiResponse.error(res, 'Failed to update attendance');
+    }
+  }
+
+  // DELETE /attendance/override — Remove manual override (revert to system data)
+  static async removeOverride(req, res) {
+    try {
+      const { user_id, date } = req.body;
+
+      if (!user_id || !date) {
+        return ApiResponse.error(res, 'User and date are required', 400);
+      }
+
+      // Check if the record is a purely manual entry (no real login) — delete it
+      const [rows] = await db.query(
+        'SELECT id, is_manual, logout_time FROM attendance_logs WHERE user_id = ? AND date = ? AND is_manual = 1',
+        [user_id, date]
+      );
+
+      if (!rows.length) {
+        return ApiResponse.error(res, 'No manual override found', 404);
+      }
+
+      // If it was a real login that got overridden, just clear the manual fields
+      await db.query(
+        `UPDATE attendance_logs SET is_manual = 0, manual_status = NULL, manual_remark = NULL, updated_by = NULL
+         WHERE user_id = ? AND date = ? AND is_manual = 1`,
+        [user_id, date]
+      );
+
+      // If it was a purely manual entry (no real login/logout data), delete it
+      await db.query(
+        `DELETE FROM attendance_logs WHERE user_id = ? AND date = ? AND is_manual = 0 AND login_time IS NULL`,
+        [user_id, date]
+      );
+
+      return ApiResponse.success(res, {}, 'Override removed');
+    } catch (err) {
+      console.error('Remove override error:', err);
+      return ApiResponse.error(res, 'Failed to remove override');
     }
   }
 }

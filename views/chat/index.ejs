@@ -294,22 +294,28 @@
     padding: 0.85rem 1.25rem;
     border-top: 1px solid var(--tf-border);
     display: flex;
-    align-items: center;
+    align-items: flex-end;
     gap: 0.5rem;
     background: var(--tf-surface);
   }
 
-  .chat-input-area input {
+  .chat-input-area textarea {
     flex: 1;
     background: var(--tf-surface-2);
     border: 1px solid var(--tf-border);
     color: var(--tf-text);
-    border-radius: 24px;
+    border-radius: 18px;
     padding: 0.55rem 1rem;
     font-size: 0.85rem;
     font-family: var(--tf-font);
+    resize: none;
+    overflow-y: auto;
+    min-height: 38px;
+    max-height: 120px;
+    line-height: 1.4;
+    rows: 1;
   }
-  .chat-input-area input:focus { outline: none; border-color: var(--tf-accent); }
+  .chat-input-area textarea:focus { outline: none; border-color: var(--tf-accent); }
 
   .chat-send-btn {
     width: 38px; height: 38px;
@@ -742,10 +748,12 @@
         <% conversations.forEach(function(c) { %>
           <div class="chat-list-item <%= activeConversationId === c.id ? 'active' : '' %>"
                data-id="<%= c.id %>"
-               data-search="<%= c.type === 'direct' ? (c.other_user ? c.other_user.name : '') : c.group_name %>"
+               data-search="<%= c.type === 'system' ? 'System' : (c.type === 'direct' ? (c.other_user ? c.other_user.name : '') : c.group_name) %>"
                onclick="openConversation(<%= c.id %>)">
-            <div class="chat-avatar <%= c.type %>">
-              <% if (c.type === 'direct' && c.other_user) { %>
+            <div class="chat-avatar <%= c.type %>" <%= c.type === 'system' ? 'style="background:rgba(99,102,241,0.15);color:#6366f1;"' : '' %>>
+              <% if (c.type === 'system') { %>
+                <i class="bi bi-robot" style="font-size:0.9rem;"></i>
+              <% } else if (c.type === 'direct' && c.other_user) { %>
                 <%= c.other_user.name.charAt(0).toUpperCase() %>
               <% } else { %>
                 <i class="bi bi-people-fill" style="font-size:0.9rem;"></i>
@@ -754,9 +762,11 @@
             <div class="chat-list-info">
               <div class="d-flex align-items-center gap-1">
                 <span class="chat-list-name">
-                  <%= c.type === 'direct' ? (c.other_user ? c.other_user.name : 'Unknown') : c.group_name %>
+                  <%= c.type === 'system' ? 'System' : (c.type === 'direct' ? (c.other_user ? c.other_user.name : 'Unknown') : c.group_name) %>
                 </span>
-                <% if (c.type === 'direct' && c.other_user) { %>
+                <% if (c.type === 'system') { %>
+                  <span class="chat-org-tag" style="background:rgba(99,102,241,0.15);color:#6366f1;">BOT</span>
+                <% } else if (c.type === 'direct' && c.other_user) { %>
                   <span class="chat-org-tag <%= c.other_user.org_type %>"><%= c.other_user.org_type %></span>
                 <% } %>
               </div>
@@ -825,8 +835,9 @@
           </div>
           <input type="file" id="attachFileInput" style="display:none;" onchange="handleAttachFile(this)">
         </div>
-        <input type="text" id="chatInput" placeholder="Type a message..." autocomplete="off"
-               onkeydown="if(event.key==='Enter')sendMessage()">
+        <textarea id="chatInput" placeholder="Type a message..." autocomplete="off" rows="1"
+               onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage();}"
+               oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px';"></textarea>
         <button class="chat-send-btn" onclick="sendMessage()" id="sendBtn">
           <i class="bi bi-send-fill"></i>
         </button>
@@ -1018,8 +1029,7 @@ async function loadMessages(conversationId, beforeId) {
     // Render header
     renderHeader(conversation);
 
-    // Show input area
-    document.getElementById('chatInputArea').style.display = 'block';
+    // Input area visibility is handled by renderHeader based on conversation type
 
     // Render messages
     var container = document.getElementById('chatMessages');
@@ -1063,7 +1073,14 @@ var currentCallPeerName = null;
 function renderHeader(conversation) {
   var name, sub, avatarClass, avatarContent;
 
-  if (conversation.type === 'direct') {
+  if (conversation.type === 'system') {
+    currentCallPeerId = null;
+    currentCallPeerName = null;
+    name = 'System Notifications';
+    sub = 'Automated task reminders';
+    avatarClass = 'system';
+    avatarContent = '<i class="bi bi-robot" style="font-size:0.9rem;"></i>';
+  } else if (conversation.type === 'direct') {
     var other = conversation.participants.find(function(p) { return p.id !== currentUserId; }) || conversation.participants[0];
     name = other.name;
     sub = other.role_name + ' &middot; ' + other.org_type;
@@ -1080,15 +1097,41 @@ function renderHeader(conversation) {
     avatarContent = '<i class="bi bi-people-fill" style="font-size:0.9rem;"></i>';
   }
 
+  var actions = '';
+  if (conversation.type !== 'system') {
+    if (conversation.type === 'direct') {
+      actions += '<button onclick="startCall(currentCallPeerId, currentCallPeerName, currentConversationId)" title="Voice call" style="background:none;border:none;color:var(--tf-text-muted);cursor:pointer;padding:4px 8px;border-radius:6px;font-size:0.95rem;display:flex;align-items:center;transition:color 0.15s;" onmouseover="this.style.color=\'#10b981\'" onmouseout="this.style.color=\'var(--tf-text-muted)\'"><i class="bi bi-telephone-fill"></i></button>';
+    }
+    actions += '<button onclick="confirmClearChat()" title="Clear chat" style="background:none;border:none;color:var(--tf-text-muted);cursor:pointer;padding:4px 8px;border-radius:6px;font-size:0.8rem;display:flex;align-items:center;gap:4px;transition:color 0.15s;" onmouseover="this.style.color=\'#ef4444\'" onmouseout="this.style.color=\'var(--tf-text-muted)\'"><i class="bi bi-trash3"></i></button>';
+  }
+
   document.getElementById('chatHeaderArea').innerHTML =
     '<div class="chat-main-header">' +
       '<button class="chat-back-btn" onclick="goBackToList()"><i class="bi bi-arrow-left"></i></button>' +
-      '<div class="chat-avatar ' + avatarClass + '">' + avatarContent + '</div>' +
+      '<div class="chat-avatar ' + avatarClass + '" ' + (conversation.type === 'system' ? 'style="background:rgba(99,102,241,0.15);color:#6366f1;"' : '') + '>' + avatarContent + '</div>' +
       '<div style="flex:1;min-width:0;"><div class="chat-header-name">' + escapeHtml(name) + '</div>' +
       '<div class="chat-header-sub">' + sub + '</div></div>' +
-      (conversation.type === 'direct' ? '<button onclick="startCall(currentCallPeerId, currentCallPeerName, currentConversationId)" title="Voice call" style="background:none;border:none;color:var(--tf-text-muted);cursor:pointer;padding:4px 8px;border-radius:6px;font-size:0.95rem;display:flex;align-items:center;transition:color 0.15s;" onmouseover="this.style.color=\'#10b981\'" onmouseout="this.style.color=\'var(--tf-text-muted)\'"><i class="bi bi-telephone-fill"></i></button>' : '') +
-      '<button onclick="confirmClearChat()" title="Clear chat" style="background:none;border:none;color:var(--tf-text-muted);cursor:pointer;padding:4px 8px;border-radius:6px;font-size:0.8rem;display:flex;align-items:center;gap:4px;transition:color 0.15s;" onmouseover="this.style.color=\'#ef4444\'" onmouseout="this.style.color=\'var(--tf-text-muted)\'"><i class="bi bi-trash3"></i></button>' +
+      actions +
     '</div>';
+
+  // Toggle input area based on conversation type
+  var inputArea = document.getElementById('chatInputArea');
+  var systemNotice = document.getElementById('systemChatNotice');
+  if (conversation.type === 'system') {
+    inputArea.style.display = 'none';
+    if (!systemNotice) {
+      var notice = document.createElement('div');
+      notice.id = 'systemChatNotice';
+      notice.style.cssText = 'padding:0.75rem 1.25rem;text-align:center;font-size:0.75rem;color:#6366f1;background:rgba(99,102,241,0.08);border-top:1px solid var(--tf-border);';
+      notice.innerHTML = '<i class="bi bi-robot me-1"></i> System notifications — no reply allowed';
+      inputArea.parentNode.appendChild(notice);
+    } else {
+      systemNotice.style.display = 'block';
+    }
+  } else {
+    inputArea.style.display = 'block';
+    if (systemNotice) systemNotice.style.display = 'none';
+  }
 }
 
 function isViewableType(mime, name) {
@@ -1172,26 +1215,39 @@ function buildMessagesHTML(messages, isInitial) {
     }
 
     var isSent = m.sender_id === currentUserId;
+    var isSystem = m.sender_name === 'System';
     var time = new Date(m.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
 
-    html += '<div class="msg-row ' + (isSent ? 'sent' : 'received') + '" data-mid="' + m.id + '">';
-    html += '<div class="msg-bubble">';
+    if (isSystem) {
+      // System message: centered notification style
+      html += '<div class="msg-row" data-mid="' + m.id + '" style="justify-content:center;">';
+      html += '<div style="max-width:85%;background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.2);border-radius:12px;padding:0.75rem 1rem;text-align:left;">';
+      html += '<div style="font-size:0.65rem;color:#6366f1;font-weight:600;margin-bottom:4px;"><i class="bi bi-robot me-1"></i>System</div>';
+      if (m.content) {
+        html += '<div style="font-size:0.8rem;color:var(--tf-text);white-space:pre-wrap;">' + escapeHtml(m.content) + '</div>';
+      }
+      html += '<div class="msg-time" style="text-align:right;"><span>' + time + '</span></div>';
+      html += '</div></div>';
+    } else {
+      html += '<div class="msg-row ' + (isSent ? 'sent' : 'received') + '" data-mid="' + m.id + '">';
+      html += '<div class="msg-bubble">';
 
-    if (!isSent && m.sender_name) {
-      html += '<div class="msg-sender">' + escapeHtml(m.sender_name) + '</div>';
+      if (!isSent && m.sender_name) {
+        html += '<div class="msg-sender">' + escapeHtml(m.sender_name) + '</div>';
+      }
+
+      html += buildAttachmentHTML(m);
+
+      if (m.content) {
+        html += '<div>' + escapeHtml(m.content) + '</div>';
+      }
+
+      var tickHtml = isSent
+        ? '<span class="msg-tick ' + (m.is_read ? 'read' : 'sent') + '" data-tick="' + m.id + '"><i class="bi bi-check2-all"></i></span>'
+        : '';
+      html += '<div class="msg-time"><span>' + time + '</span>' + tickHtml + '</div>';
+      html += '</div></div>';
     }
-
-    html += buildAttachmentHTML(m);
-
-    if (m.content) {
-      html += '<div>' + escapeHtml(m.content) + '</div>';
-    }
-
-    var tickHtml = isSent
-      ? '<span class="msg-tick ' + (m.is_read ? 'read' : 'sent') + '" data-tick="' + m.id + '"><i class="bi bi-check2-all"></i></span>'
-      : '';
-    html += '<div class="msg-time"><span>' + time + '</span>' + tickHtml + '</div>';
-    html += '</div></div>';
   });
 
   return html;
@@ -1404,6 +1460,21 @@ socket.on('chat:read', function(data) {
       tick.classList.add('read');
     }
   });
+});
+
+// ============ System Chat Notification ============
+socket.on('chat:system', function(data) {
+  // Reload conversation list to show system chat
+  axios.get('/chat/conversations').then(function(res) {
+    if (res.data.success) {
+      // Find system conversation and open it or refresh current
+      var convs = res.data.data.conversations;
+      var sysConv = convs.find(function(c) { return c.type === 'system'; });
+      if (sysConv && currentConversationId === sysConv.id) {
+        loadMessages(sysConv.id);
+      }
+    }
+  }).catch(function() {});
 });
 
 // ============ Clear Chat ============

@@ -6,6 +6,9 @@ const authenticate = require('../middleware/authenticate');
 router.get('/login', AuthController.showLogin);
 router.post('/login', AuthController.login);
 router.get('/logout', authenticate, AuthController.logout);
+router.post('/logout', authenticate, AuthController.logout);
 router.get('/profile', authenticate, AuthController.getProfile);
+router.get('/check-late', authenticate, AuthController.checkLateLogin);
+router.post('/late-reason', authenticate, AuthController.submitLateReason);
 
 module.exports = router;
