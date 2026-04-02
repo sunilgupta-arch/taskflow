@@ -207,7 +207,7 @@ const _isFuture = _fd && _fd > todayDate;
             </td>
             <% } else { %>
             <%
-              var dueDateStr = task.due_date ? new Date(task.due_date).toISOString().split('T')[0] : null;
+              var dueDateStr = task.due_date ? (task.due_date instanceof Date ? task.due_date.toISOString().split('T')[0] : String(task.due_date).split('T')[0]) : null;
               var isOverdue = dueDateStr && dueDateStr < new Date().toISOString().split('T')[0] && task.status !== 'completed';
             %>
             <td style="font-size:0.8rem;color:<%= isOverdue ? '#ef4444' : 'var(--tf-text-muted)' %>;">

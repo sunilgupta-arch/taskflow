@@ -52,7 +52,7 @@
                 <span style="font-size:0.6rem;padding:2px 6px;border-radius:4px;background:<%= clr %>20;color:<%= clr %>;font-weight:600;text-transform:uppercase;"><%= t.priority %></span>
               </td>
               <td style="font-size:0.75rem;font-family:var(--tf-font-mono);color:var(--tf-text-muted);">
-                <%= t.due_date ? new Date(t.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—' %>
+                <%= t.due_date ? new Date(String(t.due_date).split('T')[0] + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—' %>
               </td>
               <td>
                 <span style="font-family:var(--tf-font-mono);font-size:0.8rem;font-weight:700;color:<%= t.days_late > 7 ? '#ef4444' : t.days_late > 3 ? '#f97316' : '#f59e0b' %>;">

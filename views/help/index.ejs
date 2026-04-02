@@ -303,6 +303,7 @@
       </div>
     </div>
     <div class="help-nav" id="helpNav">
+
       <div class="help-nav-section">Getting Started</div>
       <div class="help-nav-item active" data-topic="welcome" onclick="showTopic('welcome', this)">
         <i class="bi bi-house"></i> Welcome
@@ -318,27 +319,66 @@
       <div class="help-nav-item" data-topic="tasks-overview" onclick="showTopic('tasks-overview', this)">
         <i class="bi bi-check2-square"></i> Task Overview
       </div>
+      <% if (isAdmin || isManager) { %>
       <div class="help-nav-item" data-topic="tasks-create" onclick="showTopic('tasks-create', this)">
         <i class="bi bi-plus-circle"></i> Creating Tasks
       </div>
-      <div class="help-nav-item" data-topic="tasks-recurring" onclick="showTopic('tasks-recurring', this)">
-        <i class="bi bi-arrow-repeat"></i> Recurring Tasks
+      <div class="help-nav-item" data-topic="tasks-assign" onclick="showTopic('tasks-assign', this)">
+        <i class="bi bi-person-plus"></i> Assigning & Fallbacks
       </div>
+      <% } %>
       <div class="help-nav-item" data-topic="tasks-complete" onclick="showTopic('tasks-complete', this)">
         <i class="bi bi-check-circle"></i> Completing Tasks
       </div>
+      <% if (isAdmin || isManager) { %>
+      <div class="help-nav-item" data-topic="task-board" onclick="showTopic('task-board', this)">
+        <i class="bi bi-kanban"></i> Task Board
+      </div>
+      <% } %>
 
       <div class="help-nav-section">Communication</div>
       <div class="help-nav-item" data-topic="chat" onclick="showTopic('chat', this)">
         <i class="bi bi-chat-dots"></i> Chat
       </div>
+      <div class="help-nav-item" data-topic="system-chat" onclick="showTopic('system-chat', this)">
+        <i class="bi bi-robot"></i> System Chat
+      </div>
       <div class="help-nav-item" data-topic="chat-attach" onclick="showTopic('chat-attach', this)">
         <i class="bi bi-paperclip"></i> Chat Attachments
+      </div>
+      <div class="help-nav-item" data-topic="voice-calls" onclick="showTopic('voice-calls', this)">
+        <i class="bi bi-telephone"></i> Voice Calls
       </div>
 
       <div class="help-nav-section">Storage</div>
       <div class="help-nav-item" data-topic="drive" onclick="showTopic('drive', this)">
-        <i class="bi bi-cloud"></i> Drive
+        <i class="bi bi-cloud"></i> Google Drive
+      </div>
+
+      <div class="help-nav-section">Attendance & Shifts</div>
+      <div class="help-nav-item" data-topic="my-attendance" onclick="showTopic('my-attendance', this)">
+        <i class="bi bi-calendar-check"></i> My Attendance
+      </div>
+      <% if (isAdmin || isManager) { %>
+      <div class="help-nav-item" data-topic="attendance-dashboard" onclick="showTopic('attendance-dashboard', this)">
+        <i class="bi bi-calendar2-range"></i> Attendance Dashboard
+      </div>
+      <% } %>
+      <% if (isAdmin) { %>
+      <div class="help-nav-item" data-topic="attendance-override" onclick="showTopic('attendance-override', this)">
+        <i class="bi bi-pencil-square"></i> Attendance Override
+      </div>
+      <% } %>
+      <div class="help-nav-item" data-topic="shifts" onclick="showTopic('shifts', this)">
+        <i class="bi bi-clock-history"></i> Shifts & Auto-Logout
+      </div>
+
+      <div class="help-nav-section">Leave & Progress</div>
+      <div class="help-nav-item" data-topic="leaves" onclick="showTopic('leaves', this)">
+        <i class="bi bi-calendar-x"></i> Leave Management
+      </div>
+      <div class="help-nav-item" data-topic="progress" onclick="showTopic('progress', this)">
+        <i class="bi bi-graph-up"></i> My Progress
       </div>
 
       <div class="help-nav-section">Finance</div>
@@ -346,35 +386,32 @@
         <i class="bi bi-coin"></i> Rewards
       </div>
 
+      <% if (isAdmin || isManager) { %>
       <div class="help-nav-section">Team Management</div>
       <div class="help-nav-item" data-topic="users" onclick="showTopic('users', this)">
         <i class="bi bi-person-gear"></i> User Management
       </div>
-      <div class="help-nav-item" data-topic="leaves" onclick="showTopic('leaves', this)">
-        <i class="bi bi-calendar-x"></i> Leave Management
-      </div>
-      <div class="help-nav-item" data-topic="attendance" onclick="showTopic('attendance', this)">
-        <i class="bi bi-calendar-check"></i> Attendance
-      </div>
-
-      <div class="help-nav-section">Reports & Analytics</div>
       <div class="help-nav-item" data-topic="reports" onclick="showTopic('reports', this)">
         <i class="bi bi-bar-chart-line"></i> Reports
       </div>
-      <div class="help-nav-item" data-topic="progress" onclick="showTopic('progress', this)">
-        <i class="bi bi-graph-up"></i> My Progress
-      </div>
+      <% } %>
 
       <div class="help-nav-section">Account & System</div>
       <div class="help-nav-item" data-topic="account" onclick="showTopic('account', this)">
         <i class="bi bi-person-circle"></i> Account Settings
       </div>
-      <div class="help-nav-item" data-topic="shifts" onclick="showTopic('shifts', this)">
-        <i class="bi bi-clock-history"></i> Shifts & Auto-Logout
+      <div class="help-nav-item" data-topic="notes" onclick="showTopic('notes', this)">
+        <i class="bi bi-journal-text"></i> Notes
       </div>
+      <% if (isAdmin) { %>
       <div class="help-nav-item" data-topic="backups" onclick="showTopic('backups', this)">
         <i class="bi bi-database-down"></i> Backups
       </div>
+      <div class="help-nav-item" data-topic="settings" onclick="showTopic('settings', this)">
+        <i class="bi bi-gear"></i> System Settings
+      </div>
+      <% } %>
+
     </div>
   </div>
 
@@ -386,49 +423,49 @@
       <div class="help-welcome">
         <i class="bi bi-question-circle"></i>
         <h2>Welcome to TaskFlow Help</h2>
-        <p>Find guides, tips, and answers to help you get the most out of TaskFlow. Select a topic from the sidebar or pick a quick link below.</p>
+        <p>Find guides, tips, and step-by-step instructions to help you get the most out of TaskFlow. Select a topic from the sidebar or pick a quick link below.</p>
         <div class="help-quick-links">
           <div class="help-quick-link" onclick="showTopic('tasks-overview')">
             <i class="bi bi-check2-square"></i>
             <div class="ql-title">Tasks</div>
-            <div class="ql-desc">Create, assign, and complete tasks</div>
+            <div class="ql-desc">View, start, and complete tasks</div>
           </div>
           <div class="help-quick-link" onclick="showTopic('chat')">
             <i class="bi bi-chat-dots"></i>
             <div class="ql-title">Chat</div>
-            <div class="ql-desc">Direct & group messaging</div>
+            <div class="ql-desc">Direct, group, and system messages</div>
           </div>
           <div class="help-quick-link" onclick="showTopic('drive')">
             <i class="bi bi-cloud"></i>
-            <div class="ql-title">Drive</div>
-            <div class="ql-desc">Upload and manage files</div>
+            <div class="ql-title">Google Drive</div>
+            <div class="ql-desc">Upload, download, and share files</div>
           </div>
-          <div class="help-quick-link" onclick="showTopic('rewards')">
-            <i class="bi bi-coin"></i>
-            <div class="ql-title">Rewards</div>
-            <div class="ql-desc">Track earnings and payments</div>
+          <div class="help-quick-link" onclick="showTopic('my-attendance')">
+            <i class="bi bi-calendar-check"></i>
+            <div class="ql-title">Attendance</div>
+            <div class="ql-desc">Sessions, calendar, and history</div>
           </div>
           <div class="help-quick-link" onclick="showTopic('roles')">
             <i class="bi bi-people"></i>
             <div class="ql-title">Roles</div>
             <div class="ql-desc">Understand permissions</div>
           </div>
-          <div class="help-quick-link" onclick="showTopic('reports')">
-            <i class="bi bi-bar-chart-line"></i>
-            <div class="ql-title">Reports</div>
-            <div class="ql-desc">Analytics and reporting</div>
+          <div class="help-quick-link" onclick="showTopic('shifts')">
+            <i class="bi bi-clock-history"></i>
+            <div class="ql-title">Shifts</div>
+            <div class="ql-desc">Shift timing and auto-logout</div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- ==================== ROLES ==================== -->
+    <!-- ==================== ROLES & PERMISSIONS ==================== -->
     <div class="help-topic" id="topic-roles">
       <h2><i class="bi bi-people"></i> Roles & Permissions</h2>
-      <p class="topic-desc">TaskFlow has two organization types and five user roles. Each role has specific permissions that control what you can see and do.</p>
+      <p class="topic-desc">TaskFlow has two organization types and five user roles. Each role determines what you can see and do throughout the application.</p>
 
       <h3>Organization Types</h3>
-      <p><strong>CLIENT</strong> &mdash; The external client organization. They create tasks, track progress, and view reports on the work being done.</p>
+      <p><strong>CLIENT</strong> &mdash; The external client organization. They create tasks, track progress, and view reports on work being done by the local team.</p>
       <p><strong>LOCAL</strong> &mdash; The internal team that executes tasks, earns rewards, and manages day-to-day operations.</p>
 
       <h3>User Roles</h3>
@@ -440,17 +477,31 @@
       <p>Can create and assign tasks, set rewards, and view team reports. Similar to Client Admin but cannot manage users or system settings.</p>
 
       <h4><span class="help-role-badge admin">LOCAL_ADMIN</span> Local Administrator</h4>
-      <p>Full system administration. Can create and manage users, manage tasks, approve/reject leaves, mark rewards as paid, create database backups, and access all reports. This is the most powerful role.</p>
+      <p>Full system administration. Can create and manage users, manage tasks, approve/reject leaves, mark rewards as paid, override attendance records, create database backups, and access all reports. This is the most powerful role.</p>
 
       <h4><span class="help-role-badge manager">LOCAL_MANAGER</span> Local Manager</h4>
-      <p>Can manage the local team: create users (LOCAL_USER only), create/reassign tasks, approve leaves, and view reports. Cannot manage system settings or backups.</p>
+      <p>Can manage the local team: create users (LOCAL_USER only), create/reassign tasks, approve leaves, and view reports. Cannot manage system settings, backups, or override attendance.</p>
 
       <h4><span class="help-role-badge user">LOCAL_USER</span> Local User</h4>
-      <p>The individual team member. Can view assigned tasks, pick available tasks, complete tasks, create personal adhoc tasks, apply for leaves, and view their own progress. Cannot start new chats but can reply in conversations they are part of.</p>
+      <p>The individual team member. Can view assigned tasks, start sessions, complete tasks, create personal adhoc tasks, apply for leaves, use chat (reply only), and view their own progress and attendance.</p>
+
+      <h3>Quick Reference Table</h3>
+      <ul>
+        <li><strong>Create tasks for others</strong> &mdash; Admin, Manager</li>
+        <li><strong>Create personal adhoc tasks</strong> &mdash; All roles</li>
+        <li><strong>Start new chats</strong> &mdash; Admin, Manager</li>
+        <li><strong>Reply in chats</strong> &mdash; All roles</li>
+        <li><strong>Approve/reject leaves</strong> &mdash; Admin, Manager</li>
+        <li><strong>View team reports</strong> &mdash; Admin, Manager</li>
+        <li><strong>Override attendance</strong> &mdash; Admin only</li>
+        <li><strong>Mark rewards as paid</strong> &mdash; Admin only</li>
+        <li><strong>Manage backups</strong> &mdash; Admin only</li>
+        <li><strong>System settings</strong> &mdash; Admin only</li>
+      </ul>
 
       <div class="help-tip">
         <i class="bi bi-lightbulb"></i>
-        <div>Your current role is shown at the bottom of the sidebar under your name. The features visible in your sidebar are based on your role.</div>
+        <div>Your current role is shown at the bottom of the sidebar under your name. The features visible in your navigation menu are filtered based on your role.</div>
       </div>
     </div>
 
@@ -459,14 +510,20 @@
       <h2><i class="bi bi-grid-1x2"></i> Dashboard</h2>
       <p class="topic-desc">The dashboard is your home screen. It shows a snapshot of today's activity, tailored to your role.</p>
 
+      <% if (isAdmin || isManager) { %>
       <h3>Admin & Manager Dashboard</h3>
       <span class="help-role-badge admin">ADMIN</span> <span class="help-role-badge manager">MANAGER</span>
       <ul>
-        <li><strong>Task Statistics</strong> &mdash; Total tasks, pending, in progress, and completed counts</li>
-        <li><strong>Reward Summary</strong> &mdash; Total earned, pending amount, and paid amount</li>
+        <li><strong>Task Statistics</strong> &mdash; Total tasks, pending, in progress, and completed counts for the team</li>
+        <li><strong>Reward Summary</strong> &mdash; Total earned, pending amount, and paid amount across all users</li>
         <li><strong>Attendance Overview</strong> &mdash; Total users, logged in today, on leave, on weekly off</li>
         <li><strong>Per-User Metrics</strong> &mdash; Task completion rates and reward tracking for each team member</li>
       </ul>
+      <div class="help-tip">
+        <i class="bi bi-lightbulb"></i>
+        <div>Click on any statistic card on the dashboard to navigate directly to the detailed view for that metric.</div>
+      </div>
+      <% } %>
 
       <h3>User Dashboard</h3>
       <span class="help-role-badge user">LOCAL_USER</span>
@@ -474,38 +531,57 @@
         <li><strong>Today's Tasks</strong> &mdash; Your tasks for the current date (recurring + one-time)</li>
         <li><strong>Personal Statistics</strong> &mdash; Tasks completed, in progress, and pending</li>
         <li><strong>Reward Summary</strong> &mdash; Your earnings, pending, and paid amounts</li>
-        <li><strong>Date Navigation</strong> &mdash; Browse tasks for different dates</li>
+        <li><strong>Date Navigation</strong> &mdash; Browse tasks for different dates using the date picker</li>
       </ul>
 
-      <div class="help-tip">
-        <i class="bi bi-lightbulb"></i>
-        <div>Click on any statistic card on the dashboard to navigate directly to the detailed view.</div>
+      <h3>Navigating the Dashboard</h3>
+      <div class="help-step">
+        <div class="help-step-num">1</div>
+        <div class="help-step-content">
+          <strong>Click "Dashboard" in the sidebar</strong>
+          <p>This is the first item in the navigation menu and also the default landing page after login.</p>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">2</div>
+        <div class="help-step-content">
+          <strong>Review your statistics cards</strong>
+          <p>The top section shows summary cards with key numbers. Each card is clickable and leads to a more detailed view.</p>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">3</div>
+        <div class="help-step-content">
+          <strong>Use date navigation (if available)</strong>
+          <p>On the user dashboard, use the left/right arrows or date picker to view tasks for other days.</p>
+        </div>
       </div>
     </div>
 
-    <!-- ==================== TASKS OVERVIEW ==================== -->
+    <!-- ==================== TASK OVERVIEW ==================== -->
     <div class="help-topic" id="topic-tasks-overview">
       <h2><i class="bi bi-check2-square"></i> Task Overview</h2>
-      <p class="topic-desc">Tasks are the core of TaskFlow. There are two main types: one-time (adhoc) tasks and recurring tasks.</p>
+      <p class="topic-desc">Tasks are the core of TaskFlow. There are two main types: one-time (adhoc) tasks and recurring tasks that repeat on a schedule.</p>
 
       <h3>Task Types</h3>
       <h4>One-Time (Adhoc) Tasks</h4>
       <p>A single task that needs to be done once. It has a due date and moves through statuses: <strong>Pending</strong> &rarr; <strong>In Progress</strong> &rarr; <strong>Completed</strong>.</p>
 
       <h4>Recurring Tasks</h4>
-      <p>Tasks that repeat on a schedule. Patterns include:</p>
+      <p>Tasks that repeat on a schedule. Each day's instance is tracked separately. Patterns include:</p>
       <ul>
         <li><strong>Daily</strong> &mdash; Repeats every working day</li>
-        <li><strong>Weekly</strong> &mdash; Repeats on specific days of the week</li>
+        <li><strong>Weekly</strong> &mdash; Repeats on specific days of the week (e.g., Monday, Wednesday, Friday)</li>
+        <li><strong>Monthly</strong> &mdash; Repeats on a specific day of each month</li>
       </ul>
-      <p>Each day's instance is tracked separately. You can start a session, complete it, and even log completions for past dates.</p>
+      <p>You can start a session, complete it, and even log completions for past dates if you missed one.</p>
 
       <h3>Task Statuses</h3>
       <ul>
-        <li><strong style="color:#f59e0b;">Pending</strong> &mdash; Task is created but not yet started</li>
-        <li><strong style="color:var(--tf-accent);">In Progress</strong> &mdash; Work has begun on the task</li>
+        <li><strong style="color:#f59e0b;">Pending</strong> &mdash; Task is created but work has not yet started</li>
+        <li><strong style="color:var(--tf-accent);">In Progress</strong> &mdash; A work session has been started on the task</li>
         <li><strong style="color:#10b981;">Completed</strong> &mdash; Task is finished. Reward (if any) is automatically created</li>
-        <li><strong style="color:#9ca3af;">Deactivated</strong> &mdash; Task has been disabled by an admin/manager</li>
+        <li><strong style="color:#9ca3af;">Deactivated</strong> &mdash; Task has been disabled by an admin or manager</li>
       </ul>
 
       <h3>Task Priority Levels</h3>
@@ -516,17 +592,98 @@
         <li><strong style="color:#6b7280;">Low</strong> &mdash; Can be done when time allows</li>
       </ul>
 
-      <h3>Filters & Search</h3>
-      <p>On the Tasks page, you can filter by status, type (once/recurring), schedule (today/daily/weekly), assigned user, and search by title. Use these to quickly find the tasks you need.</p>
+      <h3>Viewing Your Tasks</h3>
+      <div class="help-step">
+        <div class="help-step-num">1</div>
+        <div class="help-step-content">
+          <strong>Navigate to "Tasks" in the sidebar</strong>
+          <p>This shows all tasks assigned to you (or all tasks if you are an admin/manager).</p>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">2</div>
+        <div class="help-step-content">
+          <strong>Use filters to narrow down</strong>
+          <p>Filter by status (pending, in progress, completed), type (once/recurring), schedule (today/daily/weekly/monthly), assigned user, and search by title.</p>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">3</div>
+        <div class="help-step-content">
+          <strong>Click a task to open its detail page</strong>
+          <p>The detail page shows full description, assigned users, session history, reward info, and action buttons.</p>
+        </div>
+      </div>
+
+      <h3>Starting a Work Session</h3>
+      <div class="help-step">
+        <div class="help-step-num">1</div>
+        <div class="help-step-content">
+          <strong>Open the task</strong>
+          <p>Click on the task from your task list to open the detail page.</p>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">2</div>
+        <div class="help-step-content">
+          <strong>Click "Start Session"</strong>
+          <p>This begins tracking your work time. The task status changes to In Progress. Your start time is recorded.</p>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">3</div>
+        <div class="help-step-content">
+          <strong>Work on the task</strong>
+          <p>You can leave the page and come back. Your session stays active until you complete or end it.</p>
+        </div>
+      </div>
+
+      <h3>Undoing a Completion</h3>
+      <p>If you completed a task by mistake, you can undo the completion for today. On the task detail page, click <strong>"Undo Completion"</strong>. This resets today's completion record and removes the associated reward entry if one was created.</p>
+
+      <div class="help-warn">
+        <i class="bi bi-exclamation-triangle"></i>
+        <div>Undoing a completion also removes the reward entry for that day. Make sure you truly need to undo before confirming.</div>
+      </div>
+
+      <h3>Logging a Past Completion</h3>
+      <p>If you forgot to mark a recurring task as complete on a previous day, you can backfill it:</p>
+      <div class="help-step">
+        <div class="help-step-num">1</div>
+        <div class="help-step-content">
+          <strong>Open the recurring task</strong>
+          <p>Navigate to the task detail page.</p>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">2</div>
+        <div class="help-step-content">
+          <strong>Click "Log Completion"</strong>
+          <p>A date picker appears. Select the date you want to log the completion for.</p>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">3</div>
+        <div class="help-step-content">
+          <strong>Confirm</strong>
+          <p>The completion is recorded for that date and a reward entry is created if applicable.</p>
+        </div>
+      </div>
+
+      <div class="help-tip">
+        <i class="bi bi-lightbulb"></i>
+        <div>Recurring tasks respect your weekly off day. They will not appear on your designated off day unless specifically configured otherwise.</div>
+      </div>
     </div>
 
     <!-- ==================== CREATING TASKS ==================== -->
+    <% if (isAdmin || isManager) { %>
     <div class="help-topic" id="topic-tasks-create">
       <h2><i class="bi bi-plus-circle"></i> Creating Tasks</h2>
-      <p class="topic-desc">Admins, managers, and users (for themselves) can create tasks.</p>
-      <span class="help-role-badge admin">ADMIN</span> <span class="help-role-badge manager">MANAGER</span> <span class="help-role-badge user">LOCAL_USER</span>
+      <p class="topic-desc">Admins and managers can create tasks and assign them to team members. Users can create personal adhoc tasks for themselves.</p>
+      <span class="help-role-badge admin">ADMIN</span> <span class="help-role-badge manager">MANAGER</span>
 
-      <h3>Step-by-Step</h3>
+      <h3>Creating a One-Time Task</h3>
       <div class="help-step">
         <div class="help-step-num">1</div>
         <div class="help-step-content">
@@ -537,115 +694,305 @@
       <div class="help-step">
         <div class="help-step-num">2</div>
         <div class="help-step-content">
-          <strong>Fill in Task Details</strong>
-          <p>Enter the title, description, priority level, and task type (One-time or Recurring).</p>
+          <strong>Enter task details</strong>
+          <p>Fill in the title, description, and select a priority level (Urgent, High, Medium, or Low).</p>
         </div>
       </div>
       <div class="help-step">
         <div class="help-step-num">3</div>
         <div class="help-step-content">
-          <strong>Set Schedule (if recurring)</strong>
-          <p>Choose the recurrence pattern (Daily or Weekly). For weekly, select which days. Optionally set a deadline time and end date.</p>
+          <strong>Select task type "One-Time"</strong>
+          <p>Choose "Once" as the task type. Set the due date for when the task should be completed.</p>
         </div>
       </div>
       <div class="help-step">
         <div class="help-step-num">4</div>
         <div class="help-step-content">
-          <strong>Assign &amp; Set Reward</strong>
-          <p>Assign the task to one or more users. Set a reward amount if applicable.</p>
+          <strong>Assign users</strong>
+          <p>Select one or more users to assign the task to. You can assign the same task to multiple people. See the "Assigning & Fallbacks" topic for details on fallback assignees.</p>
         </div>
       </div>
       <div class="help-step">
         <div class="help-step-num">5</div>
         <div class="help-step-content">
-          <strong>Submit</strong>
-          <p>Click Create. The assigned user(s) will be notified in real-time.</p>
+          <strong>Set reward amount (optional)</strong>
+          <p>If this task should earn a reward on completion, enter the amount in Rupees.</p>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">6</div>
+        <div class="help-step-content">
+          <strong>Click Create</strong>
+          <p>The task is created and assigned users are notified in real-time via system chat.</p>
         </div>
       </div>
 
-      <div class="help-warn">
-        <i class="bi bi-exclamation-triangle"></i>
-        <div><strong>LOCAL_USER</strong> can only create tasks for themselves (personal adhoc tasks). They cannot assign tasks to others.</div>
-      </div>
-    </div>
-
-    <!-- ==================== RECURRING TASKS ==================== -->
-    <div class="help-topic" id="topic-tasks-recurring">
-      <h2><i class="bi bi-arrow-repeat"></i> Recurring Tasks</h2>
-      <p class="topic-desc">Recurring tasks automatically repeat on a schedule. Each day's instance is tracked independently.</p>
-
-      <h3>How Recurring Tasks Work</h3>
-      <p>When a recurring task is created, it doesn't generate individual task records for each day. Instead, a single task record exists and daily completions are tracked separately in the background.</p>
-
-      <h3>Daily Workflow</h3>
+      <h3>Creating a Recurring Task</h3>
       <div class="help-step">
         <div class="help-step-num">1</div>
         <div class="help-step-content">
-          <strong>Start Session</strong>
-          <p>Click "Start Session" to begin working on today's instance. This records your start time.</p>
+          <strong>Follow steps 1-2 above</strong>
+          <p>Enter title, description, and priority as usual.</p>
         </div>
       </div>
       <div class="help-step">
         <div class="help-step-num">2</div>
         <div class="help-step-content">
-          <strong>Complete Session</strong>
-          <p>When done, click "Complete Session". This records end time and calculates duration. A reward entry is created if applicable.</p>
+          <strong>Select recurrence pattern</strong>
+          <p>Choose <strong>Daily</strong> (every working day), <strong>Weekly</strong> (select specific days), or <strong>Monthly</strong> (select day of month).</p>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">3</div>
+        <div class="help-step-content">
+          <strong>Configure schedule details</strong>
+          <p>For Weekly: check the days of the week. For Monthly: select the day number. Optionally set a deadline time and an end date after which the recurrence stops.</p>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">4</div>
+        <div class="help-step-content">
+          <strong>Assign, set reward, and create</strong>
+          <p>Assign to users, set reward amount per completion, and click Create.</p>
         </div>
       </div>
 
-      <h3>Additional Actions</h3>
-      <ul>
-        <li><strong>Log Completion</strong> &mdash; Missed a day? You can log a completion for a past date.</li>
-        <li><strong>Undo Completion</strong> &mdash; Made a mistake? Undo today's completion to reset it.</li>
-      </ul>
+      <div class="help-tip">
+        <i class="bi bi-lightbulb"></i>
+        <div>Recurring tasks generate a new completable instance each scheduled day. The reward amount applies per completion, so a daily task with a 100 Rupee reward earns 100 Rupees each day it is completed.</div>
+      </div>
+
+      <h3>Reassigning a Task</h3>
+      <p>To change who a task is assigned to, open the task detail page and click <strong>"Reassign"</strong>. Select the new user(s) and confirm. The previous assignee loses access and the new assignee is notified.</p>
+
+      <h3>Deactivating a Task</h3>
+      <p>To stop a task without deleting it, click <strong>"Deactivate"</strong> on the task detail page. The task status changes to Deactivated and it no longer appears in active task lists. The assigned user is notified via system chat that the task has been deactivated.</p>
+
+      <div class="help-warn">
+        <i class="bi bi-exclamation-triangle"></i>
+        <div>Deactivating a recurring task stops all future instances. Past completions and rewards are preserved.</div>
+      </div>
+    </div>
+    <% } %>
+
+    <!-- ==================== ASSIGNING & FALLBACKS ==================== -->
+    <% if (isAdmin || isManager) { %>
+    <div class="help-topic" id="topic-tasks-assign">
+      <h2><i class="bi bi-person-plus"></i> Assigning Tasks & Fallback Assignees</h2>
+      <p class="topic-desc">Tasks can be assigned to multiple users, and you can configure fallback assignees who take over when the primary assignee is unavailable.</p>
+      <span class="help-role-badge admin">ADMIN</span> <span class="help-role-badge manager">MANAGER</span>
+
+      <h3>Multi-Assignment</h3>
+      <p>When creating or editing a task, you can select multiple users in the assignment dropdown. Each assigned user receives their own independent instance of the task and can complete it separately. Each user earns the full reward amount on completion.</p>
+
+      <h3>Fallback Assignees (Primary / Secondary / Tertiary)</h3>
+      <p>For recurring tasks, you can set up a chain of fallback assignees to ensure the task always gets done, even when the primary person is on leave.</p>
+
+      <div class="help-step">
+        <div class="help-step-num">1</div>
+        <div class="help-step-content">
+          <strong>Primary Assignee</strong>
+          <p>The main person responsible for the task. They see it in their task list every scheduled day.</p>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">2</div>
+        <div class="help-step-content">
+          <strong>Secondary Assignee (first backup)</strong>
+          <p>If the primary assignee is on approved leave for a given day, the task automatically falls to the secondary assignee. They are notified via system chat.</p>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">3</div>
+        <div class="help-step-content">
+          <strong>Tertiary Assignee (second backup)</strong>
+          <p>If both the primary and secondary assignees are on leave, the task falls to the tertiary assignee.</p>
+        </div>
+      </div>
+
+      <h3>How to Set Fallback Assignees</h3>
+      <div class="help-step">
+        <div class="help-step-num">1</div>
+        <div class="help-step-content">
+          <strong>Open the task creation or edit form</strong>
+          <p>Navigate to create a new task or edit an existing one.</p>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">2</div>
+        <div class="help-step-content">
+          <strong>Select the primary assignee</strong>
+          <p>Choose the main person from the assignment dropdown.</p>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">3</div>
+        <div class="help-step-content">
+          <strong>Add secondary and tertiary assignees</strong>
+          <p>Use the Secondary Assignee and Tertiary Assignee dropdowns to select backup users. These fields are optional.</p>
+        </div>
+      </div>
 
       <div class="help-tip">
         <i class="bi bi-lightbulb"></i>
-        <div>Recurring tasks respect your weekly off day. They won't appear on your off day unless specifically configured.</div>
+        <div>Fallback assignment is checked automatically each day. The system looks at approved leave records to decide who should receive the task. The fallback assignee earns the reward for that day's completion.</div>
+      </div>
+
+      <div class="help-warn">
+        <i class="bi bi-exclamation-triangle"></i>
+        <div>If all three assignees (primary, secondary, and tertiary) are on leave on the same day, the task will have no active assignee for that day. Consider assigning different people with different off-days as backups.</div>
       </div>
     </div>
+    <% } %>
 
     <!-- ==================== COMPLETING TASKS ==================== -->
     <div class="help-topic" id="topic-tasks-complete">
       <h2><i class="bi bi-check-circle"></i> Completing Tasks</h2>
-      <p class="topic-desc">How to mark tasks as complete and what happens next.</p>
+      <p class="topic-desc">How to mark tasks as complete and what happens when you do.</p>
+      <span class="help-role-badge all">ALL USERS</span>
 
-      <h3>One-Time Tasks</h3>
-      <ol>
-        <li>Open the task from your task list</li>
-        <li>Click <strong>"Start"</strong> to move it to In Progress</li>
-        <li>Work on the task. You can add comments and upload attachments (up to 5 files)</li>
-        <li>Click <strong>"Complete"</strong> when finished</li>
-      </ol>
+      <h3>Completing a One-Time Task</h3>
+      <div class="help-step">
+        <div class="help-step-num">1</div>
+        <div class="help-step-content">
+          <strong>Open the task from your task list</strong>
+          <p>Click on the task to open its detail page.</p>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">2</div>
+        <div class="help-step-content">
+          <strong>Click "Start" to begin working</strong>
+          <p>This moves the task to In Progress status and records your start time.</p>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">3</div>
+        <div class="help-step-content">
+          <strong>Work on the task</strong>
+          <p>You can add comments and upload attachments (up to 5 files) while working.</p>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">4</div>
+        <div class="help-step-content">
+          <strong>Click "Complete" when finished</strong>
+          <p>The task status changes to Completed. Your end time and total duration are recorded.</p>
+        </div>
+      </div>
 
-      <h3>Recurring Tasks</h3>
-      <ol>
-        <li>Go to the task detail page</li>
-        <li>Click <strong>"Start Session"</strong> to begin today's work</li>
-        <li>Click <strong>"Complete Session"</strong> when done</li>
-      </ol>
+      <h3>Completing a Recurring Task Session</h3>
+      <div class="help-step">
+        <div class="help-step-num">1</div>
+        <div class="help-step-content">
+          <strong>Open the recurring task</strong>
+          <p>Go to the task detail page.</p>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">2</div>
+        <div class="help-step-content">
+          <strong>Click "Start Session"</strong>
+          <p>This begins today's work session. Your start time is recorded.</p>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">3</div>
+        <div class="help-step-content">
+          <strong>Click "Complete Session" when done</strong>
+          <p>This records end time, calculates duration, and marks today's instance as completed.</p>
+        </div>
+      </div>
 
       <h3>What Happens on Completion</h3>
       <ul>
         <li>Task status updates to <strong>Completed</strong></li>
-        <li>If a reward amount was set, a <strong>reward ledger entry</strong> is automatically created (status: Pending)</li>
+        <li>If a reward amount was set, a <strong>reward ledger entry</strong> is automatically created with status Pending</li>
         <li>Admins and managers are <strong>notified in real-time</strong></li>
         <li>The completion appears in <strong>reports and progress tracking</strong></li>
+        <li>Your <strong>completion streak</strong> may increase, triggering a streak notification via system chat</li>
       </ul>
+
+      <div class="help-tip">
+        <i class="bi bi-lightbulb"></i>
+        <div>You can undo today's completion if you made a mistake. On the task detail page, click "Undo Completion" to reset it. The associated reward entry will also be removed.</div>
+      </div>
     </div>
+
+    <!-- ==================== TASK BOARD ==================== -->
+    <% if (isAdmin || isManager) { %>
+    <div class="help-topic" id="topic-task-board">
+      <h2><i class="bi bi-kanban"></i> Task Board</h2>
+      <p class="topic-desc">A visual overview of all tasks and their statuses. The Task Board provides a centralized view for managers and admins to monitor team progress.</p>
+      <span class="help-role-badge admin">ADMIN</span> <span class="help-role-badge manager">MANAGER</span>
+
+      <h3>Today View</h3>
+      <p>The default view shows all tasks scheduled for today across all assigned users. Each task card shows the title, assigned user, status, and priority.</p>
+
+      <h3>Status Filters</h3>
+      <p>Use the status filter buttons at the top of the board to quickly focus on specific categories:</p>
+      <ul>
+        <li><strong>Total</strong> &mdash; Shows all tasks (default view)</li>
+        <li><strong>Completed</strong> &mdash; Shows only tasks that have been completed today</li>
+        <li><strong>In Progress</strong> &mdash; Shows tasks where a session has been started but not yet completed</li>
+        <li><strong>Not Started / Not Done</strong> &mdash; Shows tasks that have not been started yet for today</li>
+      </ul>
+
+      <h3>Employee Summary Modal</h3>
+      <div class="help-step">
+        <div class="help-step-num">1</div>
+        <div class="help-step-content">
+          <strong>Click on a user's name or avatar</strong>
+          <p>On the Task Board, click any team member's name to open their summary modal.</p>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">2</div>
+        <div class="help-step-content">
+          <strong>Review their task breakdown</strong>
+          <p>The modal shows all tasks assigned to that user for the selected day, grouped by status (completed, in progress, not started).</p>
+        </div>
+      </div>
+
+      <h3>All Tasks View</h3>
+      <p>Switch to "All Tasks" to see every task in the system regardless of date, including one-time tasks and all recurring tasks. Use the search and filter options to find specific tasks.</p>
+
+      <h3>Import / Export XLSX</h3>
+      <div class="help-step">
+        <div class="help-step-num">1</div>
+        <div class="help-step-content">
+          <strong>Export to XLSX</strong>
+          <p>Click the "Export" button to download the current task view as an Excel spreadsheet. The export includes task title, assignees, status, priority, type, schedule, and reward details.</p>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">2</div>
+        <div class="help-step-content">
+          <strong>Import from XLSX</strong>
+          <p>Click "Import" and upload an Excel file that follows the TaskFlow task format. The system will validate and create tasks in bulk. Use the exported file as a template for the correct column format.</p>
+        </div>
+      </div>
+
+      <div class="help-tip">
+        <i class="bi bi-lightbulb"></i>
+        <div>The Task Board auto-refreshes in real-time. When a team member starts or completes a task, the board updates immediately without needing to reload.</div>
+      </div>
+    </div>
+    <% } %>
 
     <!-- ==================== CHAT ==================== -->
     <div class="help-topic" id="topic-chat">
       <h2><i class="bi bi-chat-dots"></i> Chat</h2>
-      <p class="topic-desc">Real-time messaging for your team. Chat supports direct (1-to-1) and group conversations.</p>
+      <p class="topic-desc">Real-time messaging for your team. Chat supports direct (1-to-1) conversations, group chats, and system notifications.</p>
       <span class="help-role-badge all">ALL USERS</span>
 
-      <h3>Starting a Conversation</h3>
+      <% if (isAdmin || isManager) { %>
+      <h3>Starting a New Conversation</h3>
       <span class="help-role-badge admin">ADMIN</span> <span class="help-role-badge manager">MANAGER</span>
       <div class="help-step">
         <div class="help-step-num">1</div>
         <div class="help-step-content">
-          <strong>Click "New" button</strong>
+          <strong>Click the "New" button</strong>
           <p>On the Chat page, click the "New" button in the top-right of the conversation list.</p>
         </div>
       </div>
@@ -653,37 +1000,120 @@
         <div class="help-step-num">2</div>
         <div class="help-step-content">
           <strong>Choose Direct or Group</strong>
-          <p><strong>Direct:</strong> Select one user for a private conversation.<br><strong>Group:</strong> Select multiple users and give the group a name.</p>
+          <p><strong>Direct:</strong> Select one user for a private 1-to-1 conversation.<br><strong>Group:</strong> Select multiple users and give the group a name.</p>
         </div>
       </div>
       <div class="help-step">
         <div class="help-step-num">3</div>
         <div class="help-step-content">
-          <strong>Start Chatting</strong>
-          <p>Type your message and press Enter or click the send button.</p>
+          <strong>Start chatting</strong>
+          <p>Type your message and press Enter or click the send button. The message is delivered instantly.</p>
+        </div>
+      </div>
+      <% } %>
+
+      <h3>Replying in Conversations</h3>
+      <div class="help-step">
+        <div class="help-step-num">1</div>
+        <div class="help-step-content">
+          <strong>Open a conversation</strong>
+          <p>Click on any conversation in the left panel to open it.</p>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">2</div>
+        <div class="help-step-content">
+          <strong>Type your message</strong>
+          <p>Use the input field at the bottom. Press Enter to send, or Shift+Enter for a new line.</p>
         </div>
       </div>
 
-      <div class="help-warn">
-        <i class="bi bi-exclamation-triangle"></i>
-        <div><strong>LOCAL_USER</strong> cannot start new conversations. They can only reply in chats that an admin or manager has added them to.</div>
+      <div class="help-tip">
+        <i class="bi bi-lightbulb"></i>
+        <div>All users can start new direct or group conversations. Click the <strong>New</strong> button in the chat sidebar to begin.</div>
       </div>
 
-      <h3>Features</h3>
+      <h3>Chat Features</h3>
       <ul>
-        <li><strong>Real-time delivery</strong> &mdash; Messages appear instantly via WebSocket</li>
-        <li><strong>Typing indicators</strong> &mdash; See when someone is typing</li>
-        <li><strong>Unread badges</strong> &mdash; Unread count shown in sidebar and on each conversation</li>
-        <li><strong>Toast + sound alerts</strong> &mdash; Notification chime when a new message arrives</li>
-        <li><strong>Message history</strong> &mdash; Scroll up and load older messages</li>
-        <li><strong>Search</strong> &mdash; Filter conversations by name</li>
+        <li><strong>Real-time delivery</strong> &mdash; Messages appear instantly via WebSocket connection</li>
+        <li><strong>Typing indicators</strong> &mdash; See "typing..." when someone is composing a message</li>
+        <li><strong>Unread badges</strong> &mdash; Unread count shown in the sidebar and on each conversation</li>
+        <li><strong>Toast and sound alerts</strong> &mdash; A notification chime plays when a new message arrives</li>
+        <li><strong>Message history</strong> &mdash; Scroll up to load older messages automatically</li>
+        <li><strong>Search conversations</strong> &mdash; Use the search bar at the top of the chat list to filter conversations by name</li>
       </ul>
+
+      <div class="help-tip">
+        <i class="bi bi-lightbulb"></i>
+        <div>You can see the online status of other users in the chat list. A green dot indicates the user is currently active in TaskFlow.</div>
+      </div>
+    </div>
+
+    <!-- ==================== SYSTEM CHAT ==================== -->
+    <div class="help-topic" id="topic-system-chat">
+      <h2><i class="bi bi-robot"></i> System Chat</h2>
+      <p class="topic-desc">System Chat is an automated notification channel that keeps you informed about important events. You cannot reply to system messages.</p>
+      <span class="help-role-badge all">ALL USERS</span>
+
+      <h3>What is System Chat?</h3>
+      <p>System Chat is a special read-only conversation that appears in your chat list. It is managed by TaskFlow automatically and delivers notifications about tasks, attendance, streaks, and other system events. You cannot send messages in this conversation.</p>
+
+      <h3>Types of System Notifications</h3>
+
+      <h4>Welcome Greeting</h4>
+      <p>When your account is first created, you receive a welcome message in System Chat explaining the basics of TaskFlow and your role.</p>
+
+      <h4>Task Notifications</h4>
+      <ul>
+        <li><strong>Task Assigned</strong> &mdash; When a new task is assigned to you, you receive a notification with the task title and details</li>
+        <li><strong>Deadline Approaching</strong> &mdash; A reminder is sent when a task's deadline is approaching</li>
+        <li><strong>Overdue Task</strong> &mdash; If a task passes its due date without completion, you are notified</li>
+        <li><strong>Task Deactivated</strong> &mdash; When a task assigned to you is deactivated by an admin or manager</li>
+        <li><strong>Fallback Assignment</strong> &mdash; When a task falls to you as a backup assignee because the primary person is on leave</li>
+      </ul>
+
+      <h4>Daily Summary</h4>
+      <p>Each day, you receive a summary of your tasks for the day: how many are pending, in progress, and completed. This helps you plan your workday.</p>
+
+      <h4>Weekly Digest</h4>
+      <p>At the start of each week, you receive a digest summarizing the previous week: total tasks completed, rewards earned, attendance summary, and any overdue items.</p>
+
+      <h4>Streak Notifications</h4>
+      <p>A <strong>streak</strong> means a continuous run of days where you completed all your assigned tasks without missing any. The longer you go without missing a day, the higher your streak.</p>
+      <p><strong>How it works:</strong></p>
+      <ul>
+        <li>When you complete your <strong>last remaining task</strong> for the day, the system checks how many previous consecutive days you also completed everything.</li>
+        <li>If it is your first perfect day (no streak yet), you get: <em>"All tasks done for today! Great job — you've completed all 8 tasks."</em></li>
+        <li>If you have <strong>3 or more consecutive days</strong>, you get a streak notification: <em>"5-day streak! You've completed all tasks on time for 5 consecutive days."</em></li>
+        <li>If you <strong>miss even one task</strong> on any day, your streak resets to zero and starts fresh from the next perfect day.</li>
+      </ul>
+      <p><strong>Example:</strong></p>
+      <ul>
+        <li>Monday: All 8 tasks done — Day 1</li>
+        <li>Tuesday: All 6 tasks done — Day 2</li>
+        <li>Wednesday: All 7 tasks done — Day 3 — <strong>3-day streak!</strong></li>
+        <li>Thursday: All 5 tasks done — Day 4 — <strong>4-day streak!</strong></li>
+        <li>Friday: Missed 1 task — <strong>Streak broken</strong>, resets to 0</li>
+        <li>Next Monday: All tasks done — Day 1 again (starts fresh)</li>
+      </ul>
+      <div class="help-tip">
+        <i class="bi bi-lightbulb"></i>
+        <div>Try to complete all your tasks every day to build a long streak. It is a great way to track your consistency and stay motivated.</div>
+      </div>
+
+      <h4>Task Reminders</h4>
+      <p>Before your shift ends, if you have incomplete tasks, the system sends a reminder listing those tasks so you can address them before logging out.</p>
+
+      <div class="help-tip">
+        <i class="bi bi-lightbulb"></i>
+        <div>System Chat messages cannot be deleted or hidden. They serve as a permanent log of important events and notifications related to your account.</div>
+      </div>
     </div>
 
     <!-- ==================== CHAT ATTACHMENTS ==================== -->
     <div class="help-topic" id="topic-chat-attach">
       <h2><i class="bi bi-paperclip"></i> Chat Attachments</h2>
-      <p class="topic-desc">Send files in chat by uploading from your computer or picking from your Drive.</p>
+      <p class="topic-desc">Send files in chat by uploading from your computer or picking from your Google Drive.</p>
       <span class="help-role-badge all">ALL USERS</span>
 
       <h3>Sending an Attachment</h3>
@@ -691,29 +1121,29 @@
         <div class="help-step-num">1</div>
         <div class="help-step-content">
           <strong>Click the paperclip icon</strong>
-          <p>Located to the left of the message input field.</p>
+          <p>Located to the left of the message input field in any conversation.</p>
         </div>
       </div>
       <div class="help-step">
         <div class="help-step-num">2</div>
         <div class="help-step-content">
           <strong>Choose source</strong>
-          <p><strong>Upload File:</strong> Pick a file from your computer.<br><strong>From Drive:</strong> Browse and select a file from your Drive.</p>
+          <p><strong>Upload File:</strong> Pick a file from your computer.<br><strong>From Drive:</strong> Browse and select a file already in your Google Drive.</p>
         </div>
       </div>
       <div class="help-step">
         <div class="help-step-num">3</div>
         <div class="help-step-content">
-          <strong>Preview &amp; Send</strong>
-          <p>The file name appears in a preview bar. Optionally type a message, then click send. A progress bar shows the upload status.</p>
+          <strong>Preview and send</strong>
+          <p>The file name appears in a preview bar above the input field. Optionally type a message to accompany it, then click send. A progress bar shows the upload status.</p>
         </div>
       </div>
 
       <h3>Receiving Attachments</h3>
       <ul>
         <li><strong>Document files</strong> (PDFs, images, docs, sheets) &mdash; Click to open in Google Viewer or browser</li>
-        <li><strong>Other files</strong> (executables, zips, installers) &mdash; Click the <i class="bi bi-cloud-download"></i> button to save it to your Drive's <code>chat_attachments</code> folder</li>
-        <li>Once saved, the button changes to a <strong>green checkmark</strong> and cannot be saved again (no duplicates)</li>
+        <li><strong>Other files</strong> (executables, zips, installers) &mdash; Click the download button to save it to your Drive's <code>chat_attachments</code> folder</li>
+        <li>Once saved, the button changes to a <strong>green checkmark</strong> and cannot be saved again (prevents duplicates)</li>
       </ul>
 
       <h3>Upload Limits</h3>
@@ -724,50 +1154,500 @@
 
       <div class="help-tip">
         <i class="bi bi-lightbulb"></i>
-        <div>All uploaded attachments are automatically stored in your personal <strong>chat_attachments</strong> folder in Google Drive.</div>
+        <div>All uploaded chat attachments are automatically stored in your personal <strong>chat_attachments</strong> folder in Google Drive.</div>
       </div>
     </div>
 
-    <!-- ==================== DRIVE ==================== -->
-    <div class="help-topic" id="topic-drive">
-      <h2><i class="bi bi-cloud"></i> Drive</h2>
-      <p class="topic-desc">Your personal cloud storage, powered by Google Drive. Each user has their own private folder.</p>
+    <!-- ==================== VOICE CALLS ==================== -->
+    <div class="help-topic" id="topic-voice-calls">
+      <h2><i class="bi bi-telephone"></i> Voice Calls</h2>
+      <p class="topic-desc">Make voice calls directly within TaskFlow chat conversations.</p>
       <span class="help-role-badge all">ALL USERS</span>
 
-      <h3>First Visit</h3>
-      <p>When you open Drive for the first time, your personal folder is automatically created in the shared Google Drive. You don't need to set anything up.</p>
-
-      <h3>Uploading Files</h3>
+      <h3>Starting a Voice Call</h3>
       <div class="help-step">
         <div class="help-step-num">1</div>
         <div class="help-step-content">
-          <strong>Click "Upload" or drag &amp; drop</strong>
-          <p>Click the Upload button in the toolbar, or drag files directly onto the page.</p>
+          <strong>Open a direct conversation</strong>
+          <p>Navigate to the chat page and open a 1-to-1 conversation with the person you want to call.</p>
         </div>
       </div>
       <div class="help-step">
         <div class="help-step-num">2</div>
         <div class="help-step-content">
-          <strong>Wait for upload</strong>
-          <p>Progress is shown for each file. Files appear in the grid once uploaded.</p>
+          <strong>Click the phone icon</strong>
+          <p>Click the phone icon in the top-right corner of the conversation header.</p>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">3</div>
+        <div class="help-step-content">
+          <strong>Wait for the other person to answer</strong>
+          <p>The other user will see an incoming call notification. Once they accept, the call begins.</p>
         </div>
       </div>
 
-      <h3>Managing Files</h3>
+      <h3>During a Call</h3>
       <ul>
-        <li><strong>Create folders</strong> &mdash; Click "Folder" button in the toolbar</li>
-        <li><strong>Navigate folders</strong> &mdash; Double-click a folder to open it. Use the breadcrumb to go back</li>
-        <li><strong>Rename</strong> &mdash; Click the three-dot menu on any file/folder &rarr; Rename</li>
-        <li><strong>Delete</strong> &mdash; Click the three-dot menu &rarr; Delete (moves to Google Drive trash, recoverable)</li>
-        <li><strong>Download</strong> &mdash; Click the three-dot menu &rarr; Download</li>
-        <li><strong>Open in Google</strong> &mdash; Double-click a file to open it in Google's viewer</li>
+        <li><strong>Mute/Unmute</strong> &mdash; Toggle your microphone on or off</li>
+        <li><strong>End Call</strong> &mdash; Click the red phone button to hang up</li>
       </ul>
+
+      <div class="help-tip">
+        <i class="bi bi-lightbulb"></i>
+        <div>Voice calls require microphone permission in your browser. When prompted, allow microphone access for TaskFlow to work properly.</div>
+      </div>
+    </div>
+
+    <!-- ==================== GOOGLE DRIVE ==================== -->
+    <div class="help-topic" id="topic-drive">
+      <h2><i class="bi bi-cloud"></i> Google Drive</h2>
+      <p class="topic-desc">Your personal cloud storage, powered by Google Drive. Each user has their own private folder for storing and managing files.</p>
+      <span class="help-role-badge all">ALL USERS</span>
+
+      <h3>First Visit</h3>
+      <p>When you open Drive for the first time, your personal folder is automatically created in the shared Google Drive. No setup is required.</p>
+
+      <h3>Uploading Files</h3>
+      <div class="help-step">
+        <div class="help-step-num">1</div>
+        <div class="help-step-content">
+          <strong>Click "Upload" or drag and drop</strong>
+          <p>Click the Upload button in the toolbar, or drag files directly onto the page from your computer.</p>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">2</div>
+        <div class="help-step-content">
+          <strong>Wait for upload to finish</strong>
+          <p>Progress is shown for each file. Files appear in the grid once the upload completes.</p>
+        </div>
+      </div>
+
+      <h3>Downloading Files</h3>
+      <div class="help-step">
+        <div class="help-step-num">1</div>
+        <div class="help-step-content">
+          <strong>Locate the file</strong>
+          <p>Browse your folders or use search to find the file you need.</p>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">2</div>
+        <div class="help-step-content">
+          <strong>Click the three-dot menu and select Download</strong>
+          <p>The file will be downloaded to your computer's default download location.</p>
+        </div>
+      </div>
+
+      <h3>Creating Folders</h3>
+      <div class="help-step">
+        <div class="help-step-num">1</div>
+        <div class="help-step-content">
+          <strong>Click "Folder" in the toolbar</strong>
+          <p>A dialog appears asking for the folder name.</p>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">2</div>
+        <div class="help-step-content">
+          <strong>Enter a name and confirm</strong>
+          <p>The new folder appears in the current directory. Double-click it to navigate inside.</p>
+        </div>
+      </div>
+
+      <h3>Managing Files and Folders</h3>
+      <ul>
+        <li><strong>Navigate folders</strong> &mdash; Double-click a folder to open it. Use the breadcrumb trail at the top to go back</li>
+        <li><strong>Rename</strong> &mdash; Click the three-dot menu on any file or folder, then select Rename</li>
+        <li><strong>Delete</strong> &mdash; Click the three-dot menu, then select Delete (moves to Google Drive trash, recoverable for 30 days)</li>
+        <li><strong>Open in Google</strong> &mdash; Double-click a file to open it in Google's viewer or editor</li>
+      </ul>
+
+      <h3>Sharing Files</h3>
+      <p>To share a file with other TaskFlow users, use the three-dot menu and select <strong>Share</strong>. You can copy a shareable link or pick specific users to grant access.</p>
 
       <h3>Upload Limits</h3>
       <ul>
         <li><span class="help-role-badge user">LOCAL_USER</span> &mdash; 10 MB per file</li>
         <li><span class="help-role-badge admin">ADMIN</span> <span class="help-role-badge manager">MANAGER</span> &mdash; 100 MB per file</li>
       </ul>
+    </div>
+
+    <!-- ==================== MY ATTENDANCE ==================== -->
+    <div class="help-topic" id="topic-my-attendance">
+      <h2><i class="bi bi-calendar-check"></i> My Attendance</h2>
+      <p class="topic-desc">View your login history, today's sessions, and monthly attendance calendar. Attendance is tracked automatically when you log in and out of TaskFlow.</p>
+      <span class="help-role-badge all">ALL LOCAL USERS</span>
+
+      <h3>How Attendance Works</h3>
+      <p>Each time you log in to TaskFlow, a session is recorded with your login time. When you log out (manually or via auto-logout), the logout time is recorded. This creates a complete record of your working sessions for each day.</p>
+
+      <h3>Multi-Session Attendance</h3>
+      <p>TaskFlow supports multiple login/logout sessions per day. If you log in, log out for a break, and log in again, each session is tracked separately. The system calculates:</p>
+      <ul>
+        <li><strong>Total active time</strong> &mdash; Sum of all session durations for the day</li>
+        <li><strong>Gap time</strong> &mdash; Time between sessions (break time)</li>
+        <li><strong>First login</strong> &mdash; Your earliest login time of the day</li>
+        <li><strong>Last logout</strong> &mdash; Your latest logout time of the day</li>
+      </ul>
+
+      <h3>Today's Sessions</h3>
+      <div class="help-step">
+        <div class="help-step-num">1</div>
+        <div class="help-step-content">
+          <strong>Navigate to "My Attendance" in the sidebar</strong>
+          <p>This opens your personal attendance page.</p>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">2</div>
+        <div class="help-step-content">
+          <strong>View today's sessions at the top</strong>
+          <p>The top section shows your current session status, login time, and any previous sessions for today with their durations.</p>
+        </div>
+      </div>
+
+      <h3>Attendance Calendar</h3>
+      <p>Below today's sessions, a calendar view shows your monthly attendance at a glance:</p>
+      <ul>
+        <li><strong>Green</strong> &mdash; Present (logged in and worked)</li>
+        <li><strong>Red</strong> &mdash; Absent (no login recorded)</li>
+        <li><strong>Blue</strong> &mdash; On leave (approved leave)</li>
+        <li><strong>Gray</strong> &mdash; Weekly off day</li>
+      </ul>
+      <p>Click on any date in the calendar to see the detailed session log for that day.</p>
+
+      <h3>Login / Logout History</h3>
+      <p>A detailed table below the calendar lists every login and logout event, including timestamps, session duration, and the reason for logout (if applicable).</p>
+
+      <h3>Late Login Reason</h3>
+      <p>If you log in after your scheduled shift start time, a modal will appear asking you to provide a reason for the late login. Select from the list of common reasons or type a custom explanation. This reason is recorded alongside your attendance entry and is visible to admins and managers.</p>
+
+      <div class="help-tip">
+        <i class="bi bi-lightbulb"></i>
+        <div>Your attendance record is used by the system to determine fallback task assignments. If you are marked as on leave, your tasks may automatically fall to your designated backup assignee.</div>
+      </div>
+    </div>
+
+    <!-- ==================== ATTENDANCE DASHBOARD ==================== -->
+    <% if (isAdmin || isManager) { %>
+    <div class="help-topic" id="topic-attendance-dashboard">
+      <h2><i class="bi bi-calendar2-range"></i> Attendance Dashboard</h2>
+      <p class="topic-desc">View attendance records for all team members. Monitor who is present, absent, on leave, or on weekly off.</p>
+      <span class="help-role-badge admin">ADMIN</span> <span class="help-role-badge manager">MANAGER</span>
+
+      <h3>Viewing Team Attendance</h3>
+      <div class="help-step">
+        <div class="help-step-num">1</div>
+        <div class="help-step-content">
+          <strong>Navigate to "Attendance" in the sidebar</strong>
+          <p>This opens the team attendance dashboard showing today's data by default.</p>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">2</div>
+        <div class="help-step-content">
+          <strong>Review the summary cards</strong>
+          <p>The top section shows: Total Users, Present Today, On Leave, and On Weekly Off.</p>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">3</div>
+        <div class="help-step-content">
+          <strong>Browse the user list</strong>
+          <p>Below the summary, each user is listed with their login time, logout time, total hours, session count, and current status.</p>
+        </div>
+      </div>
+
+      <h3>Viewing Past Days</h3>
+      <div class="help-step">
+        <div class="help-step-num">1</div>
+        <div class="help-step-content">
+          <strong>Use the date picker</strong>
+          <p>Click the date picker at the top of the page to select a past date.</p>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">2</div>
+        <div class="help-step-content">
+          <strong>Review historical attendance</strong>
+          <p>The dashboard updates to show attendance records for the selected date, including all session details and late login reasons.</p>
+        </div>
+      </div>
+
+      <div class="help-tip">
+        <i class="bi bi-lightbulb"></i>
+        <div>Click on a user's row to expand and see their individual session details for that day, including each login/logout pair and gap times between sessions.</div>
+      </div>
+    </div>
+    <% } %>
+
+    <!-- ==================== ATTENDANCE OVERRIDE ==================== -->
+    <% if (isAdmin) { %>
+    <div class="help-topic" id="topic-attendance-override">
+      <h2><i class="bi bi-pencil-square"></i> Attendance Override</h2>
+      <p class="topic-desc">Override a user's attendance record for a specific day. This allows admins to correct attendance when the automatic tracking does not reflect reality.</p>
+      <span class="help-role-badge admin">LOCAL_ADMIN</span>
+
+      <h3>Override Options</h3>
+      <p>You can change a user's attendance status for any day to one of the following:</p>
+      <ul>
+        <li><strong>Present</strong> &mdash; Mark the user as present even if they did not log in (e.g., worked offline)</li>
+        <li><strong>Leave</strong> &mdash; Mark the user as on leave</li>
+        <li><strong>Half-Day</strong> &mdash; Mark the user as having worked a half day</li>
+        <li><strong>Official Duty</strong> &mdash; Mark the user as on official duty outside the office</li>
+        <li><strong>Work From Home (WFH)</strong> &mdash; Mark the user as working from home</li>
+      </ul>
+
+      <h3>How to Override Attendance</h3>
+      <div class="help-step">
+        <div class="help-step-num">1</div>
+        <div class="help-step-content">
+          <strong>Go to the Attendance dashboard</strong>
+          <p>Navigate to the team Attendance page.</p>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">2</div>
+        <div class="help-step-content">
+          <strong>Select the date</strong>
+          <p>Use the date picker to navigate to the date you want to override.</p>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">3</div>
+        <div class="help-step-content">
+          <strong>Find the user and click Override</strong>
+          <p>Locate the user in the attendance list and click the override button (pencil icon).</p>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">4</div>
+        <div class="help-step-content">
+          <strong>Select the new status and confirm</strong>
+          <p>Choose the desired status from the dropdown (Present, Leave, Half-Day, Official Duty, or WFH) and click Save.</p>
+        </div>
+      </div>
+
+      <div class="help-warn">
+        <i class="bi bi-exclamation-triangle"></i>
+        <div>Overriding attendance replaces the automatically tracked record for that user on that date. The original login/logout data is preserved internally but the displayed status will reflect your override.</div>
+      </div>
+    </div>
+    <% } %>
+
+    <!-- ==================== SHIFTS & AUTO-LOGOUT ==================== -->
+    <div class="help-topic" id="topic-shifts">
+      <h2><i class="bi bi-clock-history"></i> Shifts & Auto-Logout</h2>
+      <p class="topic-desc">TaskFlow enforces shift-based working hours with automatic session management, idle detection, and logout tracking.</p>
+      <span class="help-role-badge all">ALL LOCAL USERS</span>
+
+      <h3>How Shifts Work</h3>
+      <p>Each user has a configured <strong>shift start time</strong> (e.g., 10:00 AM) and <strong>shift duration</strong> (e.g., 8.5 hours). The system uses these settings to manage your session, send reminders, and trigger auto-logout.</p>
+
+      <h3>Shift End Warning</h3>
+      <p>5 minutes before your shift ends, a modal appears with a countdown timer. You have two options:</p>
+      <ul>
+        <li><strong>Logout Now</strong> &mdash; End your session immediately</li>
+        <li><strong>Continue (2.5 hrs)</strong> &mdash; Extend your session by 2.5 hours of overtime</li>
+      </ul>
+      <p>If you do not respond, you are automatically logged out when the countdown reaches zero.</p>
+
+      <h3>Idle Timeout</h3>
+      <p>If you are inactive (no mouse movement, clicks, or keyboard input) for 55 minutes, an idle warning modal appears. Click <strong>"I'm Here"</strong> to stay active, or you will be automatically logged out after 5 more minutes of inactivity.</p>
+
+      <h3>Logout Reason During Shift</h3>
+      <p>If you choose to log out before your shift ends, a modal appears asking you to provide a reason for the early logout. This helps track why users leave before their shift is complete.</p>
+      <div class="help-step">
+        <div class="help-step-num">1</div>
+        <div class="help-step-content">
+          <strong>Click the logout button</strong>
+          <p>Click the logout icon in the sidebar during your shift hours.</p>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">2</div>
+        <div class="help-step-content">
+          <strong>Select a reason</strong>
+          <p>A modal appears with a list of common reasons (e.g., "Personal work", "Feeling unwell", "Network issue", "Power outage", etc.). Select the one that applies.</p>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">3</div>
+        <div class="help-step-content">
+          <strong>Confirm logout</strong>
+          <p>Click confirm to log out. Your selected reason is recorded alongside the logout event in the attendance log.</p>
+        </div>
+      </div>
+
+      <h3>Late Login Reason</h3>
+      <p>If you log in after your scheduled shift start time, a prompt automatically appears asking you to explain the late login.</p>
+      <div class="help-step">
+        <div class="help-step-num">1</div>
+        <div class="help-step-content">
+          <strong>Log in to TaskFlow after your shift start time</strong>
+          <p>The system automatically detects that you are late and shows a modal.</p>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">2</div>
+        <div class="help-step-content">
+          <strong>Select a reason from the list</strong>
+          <p>Common reasons include "Traffic", "Personal errand", "Medical appointment", "Overslept", etc. Select the most appropriate one.</p>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">3</div>
+        <div class="help-step-content">
+          <strong>Submit</strong>
+          <p>Your late login reason is saved and visible to admins and managers in the attendance dashboard.</p>
+        </div>
+      </div>
+
+      <h3>Pending Tasks Reminder</h3>
+      <p>1 hour before your shift ends, if you have incomplete tasks for the day, a reminder modal pops up listing all pending tasks with direct links to each one.</p>
+
+      <div class="help-tip">
+        <i class="bi bi-lightbulb"></i>
+        <div>Admins are exempt from shift-based auto-logout and idle timeouts. However, their login/logout times are still tracked for attendance purposes.</div>
+      </div>
+    </div>
+
+    <!-- ==================== LEAVE MANAGEMENT ==================== -->
+    <div class="help-topic" id="topic-leaves">
+      <h2><i class="bi bi-calendar-x"></i> Leave Management</h2>
+      <p class="topic-desc">Apply for leave, view your leave status, and (for admins/managers) approve or reject leave requests from team members.</p>
+
+      <h3>Applying for Leave</h3>
+      <span class="help-role-badge all">ALL USERS</span>
+      <div class="help-step">
+        <div class="help-step-num">1</div>
+        <div class="help-step-content">
+          <strong>Go to "Leaves" in the sidebar</strong>
+          <p>This opens the leave management page showing your leave history and status.</p>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">2</div>
+        <div class="help-step-content">
+          <strong>Click "Apply for Leave"</strong>
+          <p>A form appears where you can enter your leave details.</p>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">3</div>
+        <div class="help-step-content">
+          <strong>Select the date range</strong>
+          <p>Choose the start date (from) and end date (to) for your leave period. For a single day, set both to the same date.</p>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">4</div>
+        <div class="help-step-content">
+          <strong>Provide a reason and submit</strong>
+          <p>Enter the reason for your leave and click Submit. Your request will be in <strong>Pending</strong> status until an admin or manager acts on it.</p>
+        </div>
+      </div>
+
+      <h3>Viewing Leave Status</h3>
+      <p>On the Leaves page, you can see all your leave requests and their current status:</p>
+      <ul>
+        <li><strong>Pending</strong> &mdash; Awaiting approval</li>
+        <li><strong>Approved</strong> &mdash; Leave has been granted</li>
+        <li><strong>Rejected</strong> &mdash; Leave request was denied (check remarks for the reason)</li>
+      </ul>
+
+      <% if (isAdmin || isManager) { %>
+      <h3>Approving / Rejecting Leave</h3>
+      <span class="help-role-badge admin">ADMIN</span> <span class="help-role-badge manager">MANAGER</span>
+      <p>Pending leave requests from team members appear in the leave list. Click <strong>Approve</strong> or <strong>Reject</strong> and optionally add a remark explaining your decision. The user is notified in real-time.</p>
+
+      <h3>Granting Leave Directly</h3>
+      <span class="help-role-badge admin">ADMIN</span> <span class="help-role-badge manager">MANAGER</span>
+      <p>You can grant leave directly to a user without requiring them to apply. This creates a pre-approved leave entry. Use this for situations where you know someone will be absent and want to record it proactively.</p>
+      <div class="help-step">
+        <div class="help-step-num">1</div>
+        <div class="help-step-content">
+          <strong>Click "Grant Leave"</strong>
+          <p>On the Leaves page, click the Grant Leave button.</p>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">2</div>
+        <div class="help-step-content">
+          <strong>Select the user and date range</strong>
+          <p>Choose which user and the dates for the leave.</p>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">3</div>
+        <div class="help-step-content">
+          <strong>Confirm</strong>
+          <p>The leave is created as already approved. The user is notified.</p>
+        </div>
+      </div>
+      <% } %>
+
+      <div class="help-warn">
+        <i class="bi bi-exclamation-triangle"></i>
+        <div>You cannot apply for leave on past dates or create overlapping leave requests. The system will reject duplicate date ranges.</div>
+      </div>
+
+      <div class="help-tip">
+        <i class="bi bi-lightbulb"></i>
+        <div>When a user is on approved leave, the fallback assignee system automatically redirects their recurring tasks to the designated secondary or tertiary assignee.</div>
+      </div>
+    </div>
+
+    <!-- ==================== MY PROGRESS ==================== -->
+    <div class="help-topic" id="topic-progress">
+      <h2><i class="bi bi-graph-up"></i> My Progress</h2>
+      <p class="topic-desc">Track your personal performance, task completion history, streaks, and monthly breakdown.</p>
+      <span class="help-role-badge all">ALL USERS</span>
+
+      <h3>Viewing Your Progress</h3>
+      <div class="help-step">
+        <div class="help-step-num">1</div>
+        <div class="help-step-content">
+          <strong>Navigate to "My Progress" in the sidebar</strong>
+          <p>This opens your personal progress page.</p>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">2</div>
+        <div class="help-step-content">
+          <strong>Review your statistics</strong>
+          <p>The page shows: tasks completed, in progress, pending, total active tasks, and reward summary (earned, pending, paid).</p>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">3</div>
+        <div class="help-step-content">
+          <strong>Navigate between dates</strong>
+          <p>Use the date navigation to browse your task status for any past day.</p>
+        </div>
+      </div>
+
+      <h3>Monthly Report</h3>
+      <p>Access from the My Progress page. The monthly report shows a month-by-month breakdown including:</p>
+      <ul>
+        <li>Adhoc task statistics (total, completed, in progress, pending)</li>
+        <li>Recurring task counts by type (daily, weekly, monthly)</li>
+        <li>Daily completion breakdown with success rates</li>
+        <li>Reward earnings summary for the month</li>
+      </ul>
+
+      <% if (isAdmin || isManager) { %>
+      <h3>Viewing Other Users' Progress</h3>
+      <span class="help-role-badge admin">ADMIN</span> <span class="help-role-badge manager">MANAGER</span>
+      <p>Admins and managers can view any team member's progress by clicking on their name in the Users page. This shows the same progress view but for the selected user.</p>
+      <% } %>
+
+      <div class="help-tip">
+        <i class="bi bi-lightbulb"></i>
+        <div>Your completion streak is tracked automatically. Completing all your tasks for a day counts toward your streak. The system sends congratulatory notifications via System Chat when you hit milestones.</div>
+      </div>
     </div>
 
     <!-- ==================== REWARDS ==================== -->
@@ -780,22 +1660,22 @@
       <div class="help-step">
         <div class="help-step-num">1</div>
         <div class="help-step-content">
-          <strong>Task Created with Reward</strong>
-          <p>When a task is created, the creator can set a reward amount (e.g., &#8377;500).</p>
+          <strong>Task created with a reward amount</strong>
+          <p>When an admin or manager creates a task, they can set a reward amount (e.g., &#8377;500). For recurring tasks, this amount applies per completion.</p>
         </div>
       </div>
       <div class="help-step">
         <div class="help-step-num">2</div>
         <div class="help-step-content">
-          <strong>Task Completed</strong>
-          <p>When you complete the task, a reward ledger entry is automatically created with status <strong>Pending</strong>.</p>
+          <strong>You complete the task</strong>
+          <p>When you mark the task as complete, a reward ledger entry is automatically created with status <strong>Pending</strong>.</p>
         </div>
       </div>
       <div class="help-step">
         <div class="help-step-num">3</div>
         <div class="help-step-content">
-          <strong>Admin Marks as Paid</strong>
-          <p>The Local Admin reviews pending rewards and marks them as <strong>Paid</strong> once payment is processed.</p>
+          <strong>Admin marks it as paid</strong>
+          <p>The Local Admin reviews pending rewards and marks them as <strong>Paid</strong> once the payment has been processed.</p>
         </div>
       </div>
 
@@ -805,211 +1685,383 @@
         <li><strong>Total Earned</strong> &mdash; Sum of all your completed task rewards</li>
         <li><strong>Pending</strong> &mdash; Amount waiting to be paid</li>
         <li><strong>Paid</strong> &mdash; Amount already paid out</li>
-        <li><strong>Ledger</strong> &mdash; Detailed list of each reward entry with task, amount, and status</li>
+        <li><strong>Ledger</strong> &mdash; Detailed list of each reward entry with task name, date, amount, and status</li>
       </ul>
+
+      <% if (isAdmin) { %>
+      <h3>Marking Rewards as Paid</h3>
+      <span class="help-role-badge admin">LOCAL_ADMIN</span>
+      <div class="help-step">
+        <div class="help-step-num">1</div>
+        <div class="help-step-content">
+          <strong>Go to the Rewards page</strong>
+          <p>Navigate to Rewards in the sidebar.</p>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">2</div>
+        <div class="help-step-content">
+          <strong>Filter by Pending status</strong>
+          <p>Use the status filter to show only pending rewards.</p>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">3</div>
+        <div class="help-step-content">
+          <strong>Click "Mark as Paid"</strong>
+          <p>Select the reward entries you want to mark and click the Mark as Paid button. The status changes and the user can see the updated status in their ledger.</p>
+        </div>
+      </div>
+      <% } %>
 
       <div class="help-tip">
         <i class="bi bi-lightbulb"></i>
-        <div>Only <span class="help-role-badge admin">LOCAL_ADMIN</span> can mark rewards as paid.</div>
+        <div>Only <span class="help-role-badge admin">LOCAL_ADMIN</span> can mark rewards as paid. Managers can view reward reports but cannot change payment status.</div>
       </div>
     </div>
 
     <!-- ==================== USER MANAGEMENT ==================== -->
+    <% if (isAdmin || isManager) { %>
     <div class="help-topic" id="topic-users">
       <h2><i class="bi bi-person-gear"></i> User Management</h2>
-      <p class="topic-desc">Create and manage team member accounts.</p>
+      <p class="topic-desc">Create and manage team member accounts, reset passwords, and control user access.</p>
       <span class="help-role-badge admin">LOCAL_ADMIN</span> <span class="help-role-badge manager">LOCAL_MANAGER</span>
 
-      <h3>Creating a User</h3>
-      <ol>
-        <li>Go to <strong>Users</strong> in the sidebar</li>
-        <li>Click <strong>Add User</strong></li>
-        <li>Fill in: name, email, password, role, weekly off day, shift start time, and shift hours</li>
-        <li>Click Create</li>
-      </ol>
+      <h3>Creating a New User</h3>
+      <div class="help-step">
+        <div class="help-step-num">1</div>
+        <div class="help-step-content">
+          <strong>Go to "Users" in the sidebar</strong>
+          <p>This opens the user management page listing all team members.</p>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">2</div>
+        <div class="help-step-content">
+          <strong>Click "Add User"</strong>
+          <p>A form appears with all the required fields.</p>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">3</div>
+        <div class="help-step-content">
+          <strong>Fill in user details</strong>
+          <p>Enter: name, email address, password, role, weekly off day (e.g., Sunday), shift start time, and shift duration in hours.</p>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">4</div>
+        <div class="help-step-content">
+          <strong>Click Create</strong>
+          <p>The user account is created immediately. The new user will receive a welcome message via System Chat on their first login.</p>
+        </div>
+      </div>
 
       <div class="help-warn">
         <i class="bi bi-exclamation-triangle"></i>
-        <div><strong>LOCAL_MANAGER</strong> can only create users with the LOCAL_USER role.</div>
+        <div><strong>LOCAL_MANAGER</strong> can only create users with the LOCAL_USER role. Only <strong>LOCAL_ADMIN</strong> can create managers or other admin accounts.</div>
       </div>
 
-      <h3>Managing Users</h3>
+      <h3>Managing Existing Users</h3>
       <ul>
-        <li><strong>Edit User</strong> &mdash; Update name, email, role, shift settings <span class="help-role-badge admin">LOCAL_ADMIN</span></li>
-        <li><strong>Toggle Active</strong> &mdash; Activate or deactivate a user account <span class="help-role-badge admin">LOCAL_ADMIN</span></li>
-        <li><strong>Reset Password</strong> &mdash; Force a password reset for any user <span class="help-role-badge admin">LOCAL_ADMIN</span></li>
-        <li><strong>View Progress</strong> &mdash; Click on a user to see their task progress and performance</li>
+        <li><strong>Edit User</strong> &mdash; Update name, email, role, shift settings, and weekly off day <span class="help-role-badge admin">LOCAL_ADMIN</span></li>
+        <li><strong>Toggle Active/Inactive</strong> &mdash; Deactivate a user to prevent them from logging in. Reactivate to restore access <span class="help-role-badge admin">LOCAL_ADMIN</span></li>
+        <li><strong>Reset Password</strong> &mdash; Force a password reset for any user. Enter a new password on their behalf <span class="help-role-badge admin">LOCAL_ADMIN</span></li>
+        <li><strong>View Progress</strong> &mdash; Click on a user's name to see their task progress and performance metrics</li>
       </ul>
-    </div>
 
-    <!-- ==================== LEAVE MANAGEMENT ==================== -->
-    <div class="help-topic" id="topic-leaves">
-      <h2><i class="bi bi-calendar-x"></i> Leave Management</h2>
-      <p class="topic-desc">Apply for leave, and admins/managers can approve, reject, or grant leave to team members.</p>
-      <span class="help-role-badge user">LOCAL_USER</span> <span class="help-role-badge manager">LOCAL_MANAGER</span> <span class="help-role-badge admin">LOCAL_ADMIN</span>
-
-      <h3>Applying for Leave</h3>
-      <span class="help-role-badge user">LOCAL_USER</span> <span class="help-role-badge manager">LOCAL_MANAGER</span>
-      <ol>
-        <li>Go to <strong>Leaves</strong> in the sidebar</li>
-        <li>Click <strong>Apply for Leave</strong></li>
-        <li>Select the date range (from &amp; to) and provide a reason</li>
-        <li>Submit. Your request will be <strong>Pending</strong> until approved</li>
-      </ol>
-
-      <h3>Approving / Rejecting Leave</h3>
-      <span class="help-role-badge admin">LOCAL_ADMIN</span> <span class="help-role-badge manager">LOCAL_MANAGER</span>
-      <p>Pending requests appear in the leave list. Click <strong>Approve</strong> or <strong>Reject</strong> and optionally add a remark. The user is notified in real-time.</p>
-
-      <h3>Granting Leave Directly</h3>
-      <span class="help-role-badge admin">LOCAL_ADMIN</span> <span class="help-role-badge manager">LOCAL_MANAGER</span>
-      <p>Admins can grant leave directly to a user, bypassing the application process. This creates a pre-approved leave entry.</p>
-
-      <div class="help-warn">
-        <i class="bi bi-exclamation-triangle"></i>
-        <div>You cannot apply for leave on past dates or create overlapping leave requests.</div>
+      <div class="help-tip">
+        <i class="bi bi-lightbulb"></i>
+        <div>Deactivating a user does not delete their data. Their task history, attendance records, and rewards are preserved. They simply cannot log in until reactivated.</div>
       </div>
     </div>
-
-    <!-- ==================== ATTENDANCE ==================== -->
-    <div class="help-topic" id="topic-attendance">
-      <h2><i class="bi bi-calendar-check"></i> Attendance</h2>
-      <p class="topic-desc">Attendance is tracked automatically when you log in. No manual clock-in required.</p>
-
-      <h3>How It Works</h3>
-      <p>When you log in to TaskFlow, your login time is automatically recorded. This data feeds into the attendance report.</p>
-
-      <h3>My Attendance</h3>
-      <span class="help-role-badge all">ALL LOCAL USERS</span>
-      <p>Go to <strong>My Attendance</strong> in the sidebar to view your personal login history and monthly breakdown.</p>
-
-      <h3>Attendance Report (Team)</h3>
-      <span class="help-role-badge admin">ADMIN</span> <span class="help-role-badge manager">MANAGER</span>
-      <p>The team attendance report shows daily login logs, weekly/monthly statistics, present/absent calendar views, and active user counts.</p>
-    </div>
+    <% } %>
 
     <!-- ==================== REPORTS ==================== -->
+    <% if (isAdmin || isManager) { %>
     <div class="help-topic" id="topic-reports">
       <h2><i class="bi bi-bar-chart-line"></i> Reports</h2>
-      <p class="topic-desc">Comprehensive analytics to track team performance, task completion, and more.</p>
+      <p class="topic-desc">Comprehensive analytics to track team performance, task completion, attendance, rewards, and workload distribution.</p>
       <span class="help-role-badge admin">ADMIN</span> <span class="help-role-badge manager">MANAGER</span>
 
       <h3>Available Reports</h3>
-      <ul>
-        <li><strong>All Reports</strong> &mdash; Central hub to access every report</li>
-        <li><strong>Task Completion Report</strong> &mdash; Per-user task completion metrics with counts and percentages</li>
-        <li><strong>Task Day Detail</strong> &mdash; Granular daily task breakdown</li>
-        <li><strong>Overdue Report</strong> &mdash; Tasks that have passed their due date without completion</li>
-        <li><strong>Punctuality Report</strong> &mdash; On-time completion rates</li>
-        <li><strong>Workload Report</strong> &mdash; Task distribution and load analysis across team members</li>
-        <li><strong>Completion Report</strong> &mdash; Overall completion statistics</li>
-        <li><strong>Reward Report</strong> &mdash; Reward earnings and payment status breakdown</li>
-        <li><strong>Attendance Report</strong> &mdash; Team-wide login and presence tracking</li>
-      </ul>
+
+      <h4>Completion Report</h4>
+      <p>Overall completion statistics across the team. Shows total tasks created vs. completed, completion rates, and trends over time.</p>
+
+      <h4>Task Completion Report</h4>
+      <p>Per-user task completion metrics. See each team member's completed count, in-progress count, pending count, and completion percentage.</p>
+
+      <h4>Rewards Report</h4>
+      <p>Reward earnings and payment status breakdown by user. Shows total earned, pending amount, and paid amount for each team member.</p>
+
+      <h4>Punctuality Report</h4>
+      <p>On-time completion rates. Tracks how often tasks are completed before their deadline vs. after. Helps identify users who consistently deliver on time.</p>
+
+      <h4>Workload Report</h4>
+      <p>Task distribution and load analysis across team members. Identifies who has too many tasks and who has capacity for more.</p>
+
+      <h4>Overdue Report</h4>
+      <p>Lists all tasks that have passed their due date without being completed. Useful for identifying bottlenecks and addressing missed deadlines.</p>
+
+      <h4>Task-Completion Report</h4>
+      <p>Detailed day-by-day task completion breakdown. Shows granular data about which tasks were completed on which dates by which users.</p>
+
+      <h3>Using Reports</h3>
+      <div class="help-step">
+        <div class="help-step-num">1</div>
+        <div class="help-step-content">
+          <strong>Navigate to "Reports" in the sidebar</strong>
+          <p>This opens the reports hub showing all available report types.</p>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">2</div>
+        <div class="help-step-content">
+          <strong>Select a report</strong>
+          <p>Click on the report you want to view.</p>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">3</div>
+        <div class="help-step-content">
+          <strong>Apply filters</strong>
+          <p>Most reports support date range filters and user filters. Set the start date, end date, and optionally select specific users to focus on.</p>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">4</div>
+        <div class="help-step-content">
+          <strong>Review the data</strong>
+          <p>Reports display in tables and charts. You can sort columns and drill down into specific entries.</p>
+        </div>
+      </div>
 
       <div class="help-tip">
         <i class="bi bi-lightbulb"></i>
-        <div>Most reports support date range filters and user filters. Use these to focus on specific time periods or team members.</div>
+        <div>Most reports can be exported or printed. Use your browser's print function (Ctrl+P) to save a report as PDF for sharing or archival.</div>
       </div>
     </div>
+    <% } %>
 
-    <!-- ==================== PROGRESS ==================== -->
-    <div class="help-topic" id="topic-progress">
-      <h2><i class="bi bi-graph-up"></i> My Progress</h2>
-      <p class="topic-desc">Track your personal performance, task completion, and monthly breakdown.</p>
-      <span class="help-role-badge all">ALL USERS</span>
-
-      <h3>My Progress Page</h3>
-      <p>Shows your personal statistics: tasks completed, in progress, pending, active tasks, and reward summary. You can navigate between dates to see task status for any day.</p>
-
-      <h3>Monthly Report</h3>
-      <p>Access from <strong>My Progress</strong> page. Shows a month-by-month breakdown including:</p>
-      <ul>
-        <li>Adhoc task statistics (total, completed, in progress, pending)</li>
-        <li>Recurring task counts by type (daily, weekly)</li>
-        <li>Daily completion breakdown</li>
-      </ul>
-
-      <h3>Viewing Other Users' Progress</h3>
-      <span class="help-role-badge admin">ADMIN</span> <span class="help-role-badge manager">MANAGER</span>
-      <p>Admins and managers can view any team member's progress by clicking on their name in the Users page.</p>
-    </div>
-
-    <!-- ==================== ACCOUNT ==================== -->
+    <!-- ==================== ACCOUNT SETTINGS ==================== -->
     <div class="help-topic" id="topic-account">
       <h2><i class="bi bi-person-circle"></i> Account Settings</h2>
-      <p class="topic-desc">Manage your password and account preferences.</p>
+      <p class="topic-desc">Manage your password and personalize your TaskFlow experience.</p>
       <span class="help-role-badge all">ALL USERS</span>
 
       <h3>Changing Your Password</h3>
-      <ol>
-        <li>Click the <strong>key icon</strong> (<i class="bi bi-key"></i>) at the bottom of the sidebar, next to your name</li>
-        <li>Enter your new password (minimum 6 characters)</li>
-        <li>Confirm the password and click <strong>Reset</strong></li>
-      </ol>
+      <div class="help-step">
+        <div class="help-step-num">1</div>
+        <div class="help-step-content">
+          <strong>Click the key icon in the sidebar</strong>
+          <p>At the bottom of the sidebar, next to your name, click the key icon (<i class="bi bi-key"></i>).</p>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">2</div>
+        <div class="help-step-content">
+          <strong>Enter your new password</strong>
+          <p>Type a new password (minimum 6 characters) in the password field.</p>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">3</div>
+        <div class="help-step-content">
+          <strong>Confirm and click Reset</strong>
+          <p>Re-enter the password to confirm, then click the Reset button. Your password is updated immediately.</p>
+        </div>
+      </div>
 
       <h3>Theme Toggle</h3>
-      <p>Click the <strong>sun/moon icon</strong> in the top-right corner of the page to switch between <strong>Dark</strong> and <strong>Light</strong> themes. Your preference is saved automatically.</p>
+      <p>Click the <strong>sun/moon icon</strong> in the top-right corner of the page to switch between <strong>Dark</strong> and <strong>Light</strong> themes. Your preference is saved automatically and persists across sessions.</p>
 
       <h3>Logging Out</h3>
-      <p>Click the <strong>logout icon</strong> (<i class="bi bi-box-arrow-right"></i>) at the bottom of the sidebar.</p>
+      <div class="help-step">
+        <div class="help-step-num">1</div>
+        <div class="help-step-content">
+          <strong>Click the logout icon</strong>
+          <p>Click the logout icon (<i class="bi bi-box-arrow-right"></i>) at the bottom of the sidebar.</p>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">2</div>
+        <div class="help-step-content">
+          <strong>Provide a reason (if during shift)</strong>
+          <p>If you are logging out before your shift ends, a modal appears asking you to select a reason. Choose from the list and confirm.</p>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">3</div>
+        <div class="help-step-content">
+          <strong>Session ends</strong>
+          <p>You are logged out and redirected to the login page. Your logout time is recorded in the attendance log.</p>
+        </div>
+      </div>
     </div>
 
-    <!-- ==================== SHIFTS ==================== -->
-    <div class="help-topic" id="topic-shifts">
-      <h2><i class="bi bi-clock-history"></i> Shifts & Auto-Logout</h2>
-      <p class="topic-desc">TaskFlow enforces shift-based working hours with automatic session management.</p>
-      <span class="help-role-badge user">LOCAL_USER</span> <span class="help-role-badge manager">LOCAL_MANAGER</span>
+    <!-- ==================== NOTES ==================== -->
+    <div class="help-topic" id="topic-notes">
+      <h2><i class="bi bi-journal-text"></i> Notes</h2>
+      <p class="topic-desc">Keep personal notes for yourself. Notes are private and visible only to you.</p>
+      <span class="help-role-badge all">ALL USERS</span>
 
-      <h3>How Shifts Work</h3>
-      <p>Each user has a configured <strong>shift start time</strong> (e.g., 10:00 AM) and <strong>shift duration</strong> (e.g., 8.5 hours). When your shift is about to end, you'll see a warning.</p>
+      <h3>Creating a Note</h3>
+      <div class="help-step">
+        <div class="help-step-num">1</div>
+        <div class="help-step-content">
+          <strong>Navigate to "Notes" in the sidebar</strong>
+          <p>This opens your personal notes page.</p>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">2</div>
+        <div class="help-step-content">
+          <strong>Click "New Note"</strong>
+          <p>A blank note editor opens where you can type your content.</p>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">3</div>
+        <div class="help-step-content">
+          <strong>Enter a title and content</strong>
+          <p>Give your note a title and write the body content. Notes support plain text.</p>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">4</div>
+        <div class="help-step-content">
+          <strong>Save</strong>
+          <p>Click Save to store the note. It appears in your notes list and can be edited or deleted at any time.</p>
+        </div>
+      </div>
 
-      <h3>Shift End Warning</h3>
-      <p>5 minutes before your shift ends, a modal appears with a countdown timer. You have two options:</p>
+      <h3>Managing Notes</h3>
       <ul>
-        <li><strong>Logout Now</strong> &mdash; End your session immediately</li>
-        <li><strong>Continue (2.5 hrs)</strong> &mdash; Extend your session by 2.5 hours</li>
+        <li><strong>Edit</strong> &mdash; Click on a note to open it, make changes, and save</li>
+        <li><strong>Delete</strong> &mdash; Click the delete button to permanently remove a note</li>
+        <li><strong>Search</strong> &mdash; Use the search bar to filter notes by title or content</li>
       </ul>
-      <p>If you don't respond, you'll be automatically logged out when the countdown reaches zero.</p>
-
-      <h3>Idle Timeout</h3>
-      <p>If you're inactive for 55 minutes, an idle warning modal appears. Click <strong>"I'm Here"</strong> to stay active, or you'll be logged out after 5 minutes.</p>
 
       <div class="help-tip">
         <i class="bi bi-lightbulb"></i>
-        <div>Admins are exempt from shift-based auto-logout and idle timeouts.</div>
+        <div>Notes are personal and private. No other user, including admins, can see your notes.</div>
       </div>
-
-      <h3>Pending Tasks Reminder</h3>
-      <p>1 hour before your shift ends, if you have incomplete tasks for the day, a reminder modal will pop up listing all pending tasks with links to each one.</p>
     </div>
 
     <!-- ==================== BACKUPS ==================== -->
+    <% if (isAdmin) { %>
     <div class="help-topic" id="topic-backups">
-      <h2><i class="bi bi-database-down"></i> Backups</h2>
-      <p class="topic-desc">Create, restore, and manage database backups.</p>
+      <h2><i class="bi bi-database-down"></i> Database Backups</h2>
+      <p class="topic-desc">Create, restore, and manage database backups to protect your data.</p>
       <span class="help-role-badge admin">LOCAL_ADMIN</span>
 
-      <h3>Creating a Backup</h3>
-      <p>Go to <strong>Backups</strong> in the sidebar and click <strong>Create Backup</strong>. A .sql file of the entire database is generated and stored on the server.</p>
+      <h3>Creating a Manual Backup</h3>
+      <div class="help-step">
+        <div class="help-step-num">1</div>
+        <div class="help-step-content">
+          <strong>Go to "Backups" in the sidebar</strong>
+          <p>This opens the backup management page showing all existing backups.</p>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">2</div>
+        <div class="help-step-content">
+          <strong>Click "Create Backup"</strong>
+          <p>A .sql file of the entire database is generated and stored on the server. The process takes a few seconds depending on database size.</p>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">3</div>
+        <div class="help-step-content">
+          <strong>Verify the backup appears in the list</strong>
+          <p>The new backup shows up at the top of the backup list with its timestamp and file size.</p>
+        </div>
+      </div>
 
       <h3>Scheduled Backups</h3>
-      <p>Configure automatic backups in the settings: set the time of day and maximum number of backups to retain.</p>
+      <p>Configure automatic backups in System Settings:</p>
+      <ul>
+        <li><strong>Schedule time</strong> &mdash; Set the time of day when the automatic backup runs</li>
+        <li><strong>Retention count</strong> &mdash; Set the maximum number of backups to retain. Older backups are automatically deleted when the limit is exceeded</li>
+      </ul>
 
       <h3>Restoring a Backup</h3>
-      <p>Click <strong>Restore</strong> on any backup in the list to restore the database to that point in time. You can also upload an external .sql file (up to 100MB) and restore from it.</p>
-
-      <div class="help-warn">
-        <i class="bi bi-exclamation-triangle"></i>
-        <div>Restoring a backup <strong>replaces all current data</strong>. Always create a fresh backup before restoring an older one.</div>
+      <div class="help-step">
+        <div class="help-step-num">1</div>
+        <div class="help-step-content">
+          <strong>Click "Restore" on any backup in the list</strong>
+          <p>A confirmation dialog appears warning that this will replace all current data.</p>
+        </div>
       </div>
+      <div class="help-step">
+        <div class="help-step-num">2</div>
+        <div class="help-step-content">
+          <strong>Confirm the restore</strong>
+          <p>Click Confirm to proceed. The database is restored to the state captured in that backup file.</p>
+        </div>
+      </div>
+
+      <h3>Uploading an External Backup</h3>
+      <p>You can also upload a .sql file from your computer (up to 100 MB) and restore from it. Click the "Upload" button, select the file, and then click Restore.</p>
 
       <h3>Managing Backups</h3>
       <ul>
-        <li><strong>Download</strong> &mdash; Save a backup file to your computer</li>
-        <li><strong>Delete</strong> &mdash; Remove a backup from the server</li>
+        <li><strong>Download</strong> &mdash; Save a backup file to your computer for off-site storage</li>
+        <li><strong>Delete</strong> &mdash; Remove a backup from the server to free up space</li>
       </ul>
+
+      <div class="help-warn">
+        <i class="bi bi-exclamation-triangle"></i>
+        <div>Restoring a backup <strong>replaces all current data</strong> in the database. Always create a fresh backup of the current state before restoring an older one, so you can roll back if needed.</div>
+      </div>
     </div>
+    <% } %>
+
+    <!-- ==================== SYSTEM SETTINGS ==================== -->
+    <% if (isAdmin) { %>
+    <div class="help-topic" id="topic-settings">
+      <h2><i class="bi bi-gear"></i> System Settings</h2>
+      <p class="topic-desc">Configure global application settings that affect all users and system behavior.</p>
+      <span class="help-role-badge admin">LOCAL_ADMIN</span>
+
+      <h3>Accessing Settings</h3>
+      <div class="help-step">
+        <div class="help-step-num">1</div>
+        <div class="help-step-content">
+          <strong>Navigate to "Settings" in the sidebar</strong>
+          <p>This page is only visible to LOCAL_ADMIN users.</p>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">2</div>
+        <div class="help-step-content">
+          <strong>Review and modify settings</strong>
+          <p>Each setting has a description explaining what it controls. Modify values as needed.</p>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">3</div>
+        <div class="help-step-content">
+          <strong>Save changes</strong>
+          <p>Click Save to apply the new settings. Some settings may require users to refresh their browser to take effect.</p>
+        </div>
+      </div>
+
+      <h3>Common Settings</h3>
+      <ul>
+        <li><strong>Backup schedule</strong> &mdash; Configure automatic database backup time and retention count</li>
+        <li><strong>Shift defaults</strong> &mdash; Default shift start time and duration for new users</li>
+        <li><strong>Idle timeout</strong> &mdash; How long a user can be inactive before the idle warning appears</li>
+        <li><strong>Session extension</strong> &mdash; How much overtime is granted when a user clicks "Continue" at shift end</li>
+      </ul>
+
+      <div class="help-warn">
+        <i class="bi bi-exclamation-triangle"></i>
+        <div>Changing system settings affects all users. Test changes carefully and communicate any significant changes to your team.</div>
+      </div>
+    </div>
+    <% } %>
 
   </div>
 </div>
@@ -1028,7 +2080,9 @@ function showTopic(topicId, navItem) {
 
   // Show the selected topic
   var topic = document.getElementById('topic-' + topicId);
-  if (topic) topic.classList.add('active');
+  if (topic) {
+    topic.classList.add('active');
+  }
 
   // Activate nav item
   if (navItem) {
@@ -1060,21 +2114,27 @@ function filterHelpTopics() {
     el.style.display = match ? '' : 'none';
   });
 
-  // Show/hide section labels
+  // Show/hide section labels based on whether they have visible children
   document.querySelectorAll('.help-nav-section').forEach(function(label) {
     var next = label.nextElementSibling;
     var hasVisible = false;
     while (next && !next.classList.contains('help-nav-section')) {
-      if (next.style.display !== 'none') hasVisible = true;
+      if (next.classList.contains('help-nav-item') && next.style.display !== 'none') {
+        hasVisible = true;
+      }
       next = next.nextElementSibling;
     }
     label.style.display = hasVisible ? '' : 'none';
   });
 }
 
-// Auto-open topic from URL
+// Auto-open topic from URL or server-side activeTopic
 (function() {
   var activeTopic = '<%= activeTopic || "" %>';
+  if (!activeTopic) {
+    var params = new URLSearchParams(window.location.search);
+    activeTopic = params.get('topic') || '';
+  }
   if (activeTopic) {
     showTopic(activeTopic);
   }

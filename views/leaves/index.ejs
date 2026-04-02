@@ -43,8 +43,10 @@
         <% if (leaves.length > 0) { %>
           <% leaves.forEach(function(lv) { %>
             <%
-              var from = new Date(lv.from_date);
-              var to = new Date(lv.to_date);
+              var _fd = lv.from_date instanceof Date ? lv.from_date.toISOString().split('T')[0] : String(lv.from_date).split('T')[0];
+              var _td = lv.to_date instanceof Date ? lv.to_date.toISOString().split('T')[0] : String(lv.to_date).split('T')[0];
+              var from = new Date(_fd + 'T12:00:00');
+              var to = new Date(_td + 'T12:00:00');
               var days = Math.round((to - from) / (1000 * 60 * 60 * 24)) + 1;
             %>
           <tr>

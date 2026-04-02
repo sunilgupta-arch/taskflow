@@ -236,8 +236,8 @@ dayTasks.forEach(function(t) {
               <div style="font-size:0.7rem;color:var(--tf-text-muted);margin-top:2px;">
                 <span class="badge badge-<%= t.type %>" style="font-size:0.6rem;padding:1px 5px;border-radius:3px;"><%= t.type === 'once' ? 'one time' : t.type %></span>
                 <% if (t.due_date) { %>
-                <span style="margin-left:6px;color:<%= new Date(t.due_date) < new Date() ? '#ef4444' : 'var(--tf-text-muted)' %>;">
-                  Due: <%= new Date(t.due_date).toLocaleDateString() %>
+                <span style="margin-left:6px;color:<%= new Date(String(t.due_date).split('T')[0] + 'T12:00:00') < new Date() ? '#ef4444' : 'var(--tf-text-muted)' %>;">
+                  Due: <%= new Date(String(t.due_date).split('T')[0] + 'T12:00:00').toLocaleDateString() %>
                 </span>
                 <% } %>
                 <span style="margin-left:6px;"><i class="bi bi-person" style="font-size:0.6rem;"></i> <%= t.created_by_name || '—' %></span>

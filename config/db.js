@@ -8,6 +8,7 @@ const pool = mysql.createPool({
   password: process.env.DB_PASSWORD || '',
   database: process.env.DB_NAME || 'taskflow_db',
   timezone: process.env.DB_TIMEZONE || '+00:00',
+  dateStrings: ['DATE'],  // Return DATE columns as strings to prevent timezone shifting
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
