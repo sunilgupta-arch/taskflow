@@ -238,28 +238,35 @@ const isManager = ['CLIENT_MANAGER', 'LOCAL_MANAGER'].includes(user.role_name);
 <% } else { %>
 <!-- LOCAL_USER Dashboard -->
 <div class="row g-3 mb-4">
-  <div class="col-6 col-md-3">
+  <div class="col-6 col-md">
+    <a href="/tasks/my" class="stat-card stat-card-link" style="--stat-color:#8b5cf6;">
+      <div class="stat-value"><%= taskStats?.total || 0 %></div>
+      <div class="stat-label">Total Tasks</div>
+      <i class="bi bi-list-task stat-icon"></i>
+    </a>
+  </div>
+  <div class="col-6 col-md">
     <a href="/tasks?status=in_progress" class="stat-card stat-card-link" style="--stat-color:#00d4ff;">
       <div class="stat-value"><%= taskStats?.in_progress || 0 %></div>
       <div class="stat-label">Active Tasks</div>
       <i class="bi bi-play-circle stat-icon"></i>
     </a>
   </div>
-  <div class="col-6 col-md-3">
+  <div class="col-6 col-md">
     <a href="/tasks?status=completed" class="stat-card stat-card-link" style="--stat-color:#10b981;">
       <div class="stat-value"><%= taskStats?.completed || 0 %></div>
       <div class="stat-label">Completed</div>
       <i class="bi bi-check-circle stat-icon"></i>
     </a>
   </div>
-  <div class="col-6 col-md-3">
+  <div class="col-6 col-md">
     <a href="/rewards?status=pending" class="stat-card stat-card-link" style="--stat-color:#f59e0b;">
       <div class="stat-value"><%= parseFloat(rewardSummary?.pending_amount || 0).toFixed(0) %> pts</div>
       <div class="stat-label">Pending Reward</div>
       <i class="bi bi-hourglass stat-icon"></i>
     </a>
   </div>
-  <div class="col-6 col-md-3">
+  <div class="col-6 col-md">
     <a href="/rewards?status=paid" class="stat-card stat-card-link" style="--stat-color:#10b981;">
       <div class="stat-value"><%= parseFloat(rewardSummary?.paid_amount || 0).toFixed(0) %> pts</div>
       <div class="stat-label">Paid Out</div>

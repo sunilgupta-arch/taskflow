@@ -145,30 +145,32 @@ const _dateLabel = _isViewingToday ? 'Today' : new Date(selectedDate + 'T12:00:0
 </div>
 
 <%
-const total = parseInt(taskStats.total) || 0;
-const completed = parseInt(taskStats.completed) || 0;
-const progress = total > 0 ? Math.round((completed / total) * 100) : 0;
-
-// Count day's pending/done
+// Day-level counts from dayTasks
 var pendingCount = 0;
 var doneCount = 0;
+var dayRecurring = 0;
+var dayOnce = 0;
 dayTasks.forEach(function(t) {
   if (t.is_recurring) {
+    dayRecurring++;
     if (t.is_completed) doneCount++;
     else pendingCount++;
   } else {
+    dayOnce++;
     if (t.status === 'completed') doneCount++;
     else pendingCount++;
   }
 });
+var dayTotal = dayTasks.length;
+var dayProgress = dayTotal > 0 ? Math.round((doneCount / dayTotal) * 100) : 0;
 %>
 
-<!-- Status Stats -->
+<!-- Day Stats -->
 <div class="row g-3 mb-3">
   <div class="col-6 col-md-3">
     <div class="stat-card" style="--stat-color: #00d4ff;">
-      <div class="stat-value"><%= taskStats.total || 0 %></div>
-      <div class="stat-label">Total Tasks</div>
+      <div class="stat-value"><%= dayTotal %></div>
+      <div class="stat-label">Total — <%= _dateLabel %></div>
       <i class="bi bi-list-task stat-icon"></i>
     </div>
   </div>
@@ -187,46 +189,48 @@ dayTasks.forEach(function(t) {
     </div>
   </div>
   <div class="col-6 col-md-3">
+    <div class="stat-card" style="--stat-color: #10b981;">
+      <div class="stat-value"><%= dayProgress %>%</div>
+      <div class="stat-label">Completion — <%= _dateLabel %></div>
+      <div class="tf-progress mt-2" style="height:6px;">
+        <div class="tf-progress-bar" style="width:<%= dayProgress %>%"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Type Breakdown for the day -->
+<div class="row g-3 mb-3">
+  <div class="col-6 col-md-3">
+    <div class="stat-card" style="--stat-color: #06b6d4;">
+      <div class="stat-value"><%= dayRecurring %></div>
+      <div class="stat-label">Recurring — <%= _dateLabel %></div>
+      <i class="bi bi-arrow-repeat stat-icon"></i>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card" style="--stat-color: #f97316;">
+      <div class="stat-value"><%= dayOnce %></div>
+      <div class="stat-label">One Time — <%= _dateLabel %></div>
+      <i class="bi bi-lightning stat-icon"></i>
+    </div>
+  </div>
+  <% if (_isViewingToday) { %>
+  <div class="col-6 col-md-3">
     <div class="stat-card" style="--stat-color: #00d4ff;">
       <div class="stat-value"><%= taskStats.in_progress || 0 %></div>
       <div class="stat-label">In Progress</div>
       <i class="bi bi-play-circle stat-icon"></i>
     </div>
   </div>
-</div>
-
-<!-- Type Stats + Overall Progress -->
-<div class="row g-3 mb-3">
-  <div class="col-6 col-md-3">
-    <div class="stat-card" style="--stat-color: #06b6d4;">
-      <div class="stat-value"><%= (taskStats.type_daily || 0) + (taskStats.type_weekly || 0) + (taskStats.type_monthly || 0) %></div>
-      <div class="stat-label">Recurring Tasks</div>
-      <i class="bi bi-arrow-repeat stat-icon"></i>
-    </div>
-  </div>
-  <div class="col-6 col-md-3">
-    <div class="stat-card" style="--stat-color: #f97316;">
-      <div class="stat-value"><%= taskStats.type_once || 0 %></div>
-      <div class="stat-label">One Time Tasks</div>
-      <i class="bi bi-lightning stat-icon"></i>
-    </div>
-  </div>
   <div class="col-6 col-md-3">
     <div class="stat-card" style="--stat-color: #8b5cf6;">
-      <div class="stat-value"><%= (taskStats.type_daily || 0) %>/<%= (taskStats.type_weekly || 0) %>/<%= (taskStats.type_monthly || 0) %></div>
-      <div class="stat-label">Daily / Weekly / Monthly</div>
-      <i class="bi bi-calendar-week stat-icon"></i>
+      <div class="stat-value"><%= taskStats.total || 0 %></div>
+      <div class="stat-label">Total Tasks (Overall)</div>
+      <i class="bi bi-archive stat-icon"></i>
     </div>
   </div>
-  <div class="col-6 col-md-3">
-    <div class="stat-card" style="--stat-color: #10b981;">
-      <div class="stat-value"><%= progress %>%</div>
-      <div class="stat-label">Completion Rate</div>
-      <div class="tf-progress mt-2" style="height:6px;">
-        <div class="tf-progress-bar" style="width:<%= progress %>%"></div>
-      </div>
-    </div>
-  </div>
+  <% } %>
 </div>
 
 <div class="row g-3 mb-3">
