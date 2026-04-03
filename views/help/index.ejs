@@ -528,11 +528,15 @@
       <h3>User Dashboard</h3>
       <span class="help-role-badge user">LOCAL_USER</span>
       <ul>
+        <li><strong>Total Tasks</strong> &mdash; Total number of tasks assigned to you (links to My Tasks)</li>
         <li><strong>Today's Tasks</strong> &mdash; Your tasks for the current date (recurring + one-time)</li>
-        <li><strong>Personal Statistics</strong> &mdash; Tasks completed, in progress, and pending</li>
-        <li><strong>Reward Summary</strong> &mdash; Your earnings, pending, and paid amounts</li>
-        <li><strong>Date Navigation</strong> &mdash; Browse tasks for different dates using the date picker</li>
+        <li><strong>Personal Statistics</strong> &mdash; Tasks active, completed, and reward summary</li>
+        <li><strong>Date Navigation</strong> &mdash; Browse tasks for different dates using Prev/Next buttons or date picker</li>
       </ul>
+      <div class="help-tip">
+        <i class="bi bi-lightbulb"></i>
+        <div>When viewing a past date, incomplete tasks show as <strong style="color:#ef4444;">"Not Done"</strong> (in red) instead of "Pending" &mdash; making it easy to distinguish between missed work and today's pending tasks.</div>
+      </div>
 
       <h3>Navigating the Dashboard</h3>
       <div class="help-step">
@@ -766,7 +770,15 @@
       <p>To change who a task is assigned to, open the task detail page and click <strong>"Reassign"</strong>. Select the new user(s) and confirm. The previous assignee loses access and the new assignee is notified.</p>
 
       <h3>Deactivating a Task</h3>
-      <p>To stop a task without deleting it, click <strong>"Deactivate"</strong> on the task detail page. The task status changes to Deactivated and it no longer appears in active task lists. The assigned user is notified via system chat that the task has been deactivated.</p>
+      <p>To stop a task without deleting it, click <strong>"Deactivate"</strong> on the task list. The task status changes to Deactivated and it no longer appears in active task lists. The assigned user is notified via system chat that the task has been deactivated.</p>
+
+      <h4>Who Can Deactivate</h4>
+      <ul>
+        <li><strong>CLIENT_ADMIN / CLIENT_MANAGER</strong> &mdash; Can deactivate any task (except completed tasks)</li>
+        <li><strong>LOCAL_ADMIN</strong> &mdash; Can deactivate any LOCAL-created task, <strong>including completed tasks</strong></li>
+        <li><strong>LOCAL_MANAGER</strong> &mdash; Can deactivate LOCAL-created tasks (except completed tasks)</li>
+        <li><strong>LOCAL_USER</strong> &mdash; Can only deactivate tasks they created, within 24 hours of creation</li>
+      </ul>
 
       <div class="help-warn">
         <i class="bi bi-exclamation-triangle"></i>
@@ -1318,6 +1330,14 @@
       </ul>
       <p>Click on any date in the calendar to see the detailed session log for that day.</p>
 
+      <h3>Monthly Summary</h3>
+      <p>Below the calendar, a summary shows:</p>
+      <ul>
+        <li><strong>Days Present</strong> &mdash; Number of unique days you logged in during the month</li>
+        <li><strong>Days Absent</strong> &mdash; Working days (excluding weekly offs and approved leaves) where no login was recorded</li>
+        <li><strong>Attendance Rate</strong> &mdash; Percentage of expected working days you were present (capped at 100%). Logging in on a weekly off or leave day still counts as present but doesn't inflate the rate beyond 100%</li>
+      </ul>
+
       <h3>Login / Logout History</h3>
       <p>A detailed table below the calendar lists every login and logout event, including timestamps, session duration, and the reason for logout (if applicable).</p>
 
@@ -1445,6 +1465,14 @@
 
       <h3>How Shifts Work</h3>
       <p>Each user has a configured <strong>shift start time</strong> (e.g., 10:00 AM) and <strong>shift duration</strong> (e.g., 8.5 hours). The system uses these settings to manage your session, send reminders, and trigger auto-logout.</p>
+
+      <h3>Night Shifts (Cross-Midnight)</h3>
+      <p>TaskFlow fully supports night shifts that cross midnight (e.g., 19:30 &ndash; 04:30). Key behaviors:</p>
+      <ul>
+        <li><strong>Work date</strong> &mdash; Your tasks and completions are tracked against the date your shift <em>started</em>, not the calendar date. For example, a 19:30 shift starting on April 2 is treated as "April 2" work even after midnight.</li>
+        <li><strong>System reminders</strong> &mdash; The task reminder bot uses your shift's work date, so you won't get false "incomplete tasks" messages for the next calendar day while you're still on shift.</li>
+        <li><strong>Auto-logout</strong> &mdash; Runs at 11:59 PM in the organization's timezone, affecting only sessions from that calendar date.</li>
+      </ul>
 
       <h3>Shift End Warning</h3>
       <p>5 minutes before your shift ends, a modal appears with a countdown timer. You have two options:</p>
@@ -1617,17 +1645,27 @@
       <div class="help-step">
         <div class="help-step-num">2</div>
         <div class="help-step-content">
-          <strong>Review your statistics</strong>
-          <p>The page shows: tasks completed, in progress, pending, total active tasks, and reward summary (earned, pending, paid).</p>
+          <strong>Review your day report</strong>
+          <p>All statistics are specific to the selected date: total tasks for the day, done count, pending/not done count, recurring vs one-time breakdown, and a completion rate for that day.</p>
         </div>
       </div>
       <div class="help-step">
         <div class="help-step-num">3</div>
         <div class="help-step-content">
           <strong>Navigate between dates</strong>
-          <p>Use the date navigation to browse your task status for any past day.</p>
+          <p>Use the <strong>Prev / Next</strong> buttons or the date picker to browse any day. A "Today" button appears when viewing a past or future date.</p>
         </div>
       </div>
+
+      <h3>Past Date View</h3>
+      <p>When viewing a past date, the page adapts to show historical context:</p>
+      <ul>
+        <li>Incomplete tasks show as <strong style="color:#ef4444;">"Not Done"</strong> instead of "Pending"</li>
+        <li>The stat cards show the date label (e.g., "Not Done &mdash; Apr 1" instead of "Pending Today")</li>
+        <li>The "Currently Working On" section is hidden (not relevant for past dates)</li>
+        <li>The pending section expands to full width and shows "NOT DONE" with red styling</li>
+      </ul>
+      <p>When viewing today, all stats show "Today" labels and the "Currently Working On" and "Total Tasks (Overall)" cards are visible.</p>
 
       <h3>Monthly Report</h3>
       <p>Access from the My Progress page. The monthly report shows a month-by-month breakdown including:</p>
@@ -2008,12 +2046,40 @@
       <h3>Managing Backups</h3>
       <ul>
         <li><strong>Download</strong> &mdash; Save a backup file to your computer for off-site storage</li>
+        <li><strong>Drive</strong> &mdash; Upload a backup to Google Drive (stored in the <code>db_backup</code> folder)</li>
         <li><strong>Delete</strong> &mdash; Remove a backup from the server to free up space</li>
       </ul>
 
+      <h3>Google Drive Integration</h3>
+      <p>Backups can be saved to and restored from Google Drive for off-site storage:</p>
+      <h4>Uploading to Drive</h4>
+      <p>Click the <strong>"Drive"</strong> button next to any successful backup in the list. The .sql file is uploaded to the <code>db_backup</code> folder in your organization's shared Google Drive.</p>
+      <h4>Restoring from Drive</h4>
+      <div class="help-step">
+        <div class="help-step-num">1</div>
+        <div class="help-step-content">
+          <strong>Click "Refresh" in the "Restore from Google Drive" section</strong>
+          <p>This loads a list of all backup files stored in the Drive <code>db_backup</code> folder, sorted with the latest first.</p>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">2</div>
+        <div class="help-step-content">
+          <strong>Select a backup from the dropdown</strong>
+          <p>Each entry shows the filename, file size, and upload date.</p>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">3</div>
+        <div class="help-step-content">
+          <strong>Click "Restore from Drive"</strong>
+          <p>A safety backup of the current database is created automatically before the restore proceeds.</p>
+        </div>
+      </div>
+
       <div class="help-warn">
         <i class="bi bi-exclamation-triangle"></i>
-        <div>Restoring a backup <strong>replaces all current data</strong> in the database. Always create a fresh backup of the current state before restoring an older one, so you can roll back if needed.</div>
+        <div>Restoring a backup <strong>replaces all current data</strong> in the database. A safety backup is always created first, so you can roll back if needed.</div>
       </div>
     </div>
     <% } %>
