@@ -296,14 +296,14 @@ const isManager = ['CLIENT_MANAGER', 'LOCAL_MANAGER'].includes(user.role_name);
 <!-- Day Tasks with Date Navigation -->
 <%
   const selDate = typeof selectedDate !== 'undefined' ? selectedDate : new Date().toISOString().split('T')[0];
-  const dateObj = new Date(selDate + 'T00:00:00');
+  const dateObj = new Date(selDate + 'T12:00:00Z');
   const prevDate = new Date(dateObj); prevDate.setDate(prevDate.getDate() - 1);
   const nextDate = new Date(dateObj); nextDate.setDate(nextDate.getDate() + 1);
   const prevStr = prevDate.toISOString().split('T')[0];
   const nextStr = nextDate.toISOString().split('T')[0];
   const isTodayView = typeof isToday !== 'undefined' ? isToday : true;
   const todayStr = isTodayView ? selDate : '__not_today__';
-  const displayDate = dateObj.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  const displayDate = dateObj.toLocaleDateString('en-US', { timeZone: 'UTC', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 %>
 <div class="tf-card">
   <div class="card-header d-flex align-items-center justify-content-between">
@@ -363,11 +363,19 @@ const isManager = ['CLIENT_MANAGER', 'LOCAL_MANAGER'].includes(user.role_name);
               <span class="badge" style="font-size:0.65rem;border-radius:4px;padding:3px 8px;background:rgba(16,185,129,0.15);color:#10b981;">
                 <i class="bi bi-check-circle-fill"></i> Done
               </span>
+              <% } else if (typeof isPast !== 'undefined' && isPast) { %>
+              <span class="badge" style="font-size:0.65rem;border-radius:4px;padding:3px 8px;background:rgba(239,68,68,0.15);color:#ef4444;">
+                <i class="bi bi-x-circle"></i> Not Done
+              </span>
               <% } else { %>
               <span class="badge" style="font-size:0.65rem;border-radius:4px;padding:3px 8px;background:rgba(245,158,11,0.15);color:#f59e0b;">
                 <i class="bi bi-circle"></i> Pending
               </span>
               <% } %>
+            <% } else if (typeof isPast !== 'undefined' && isPast && t.status !== 'completed') { %>
+            <span class="badge" style="font-size:0.65rem;border-radius:4px;padding:3px 8px;background:rgba(239,68,68,0.15);color:#ef4444;">
+              <i class="bi bi-x-circle"></i> Not Done
+            </span>
             <% } else { %>
             <span class="badge badge-<%= t.status %>" style="font-size:0.65rem;border-radius:4px;padding:2px 6px;"><%= t.status.replace('_',' ') %></span>
             <% } %>

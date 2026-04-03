@@ -1,6 +1,6 @@
 const cron = require('node-cron');
 const db = require('../config/db');
-const { getToday, getNow } = require('./timezone');
+const { getToday, getNow, getEffectiveWorkDate } = require('./timezone');
 const ChatModel = require('../models/Chat');
 
 /**
@@ -74,25 +74,39 @@ const taskReminderJob = cron.schedule('*/15 * * * *', async () => {
       // Skip if weekly off
       if (user.weekly_off_day === dayName) continue;
 
-      // Skip if already sent today
-      const key = `${user.id}-${today}`;
+      // Use per-user effective work date (accounts for night shifts post-midnight)
+      const userWorkDate = getEffectiveWorkDate(tz, user.shift_start, user.shift_hours);
+
+      // Skip if already sent for this work date
+      const key = `${user.id}-${userWorkDate}`;
       if (sentReminders[key]) continue;
 
-      // Calculate shift end in minutes from midnight
+      // Calculate shift end and reminder window
       const [sh, sm] = user.shift_start.split(':').map(Number);
       const shiftStartMin = sh * 60 + (sm || 0);
       const shiftHours = parseFloat(user.shift_hours) || 8;
-      let shiftEndMin = shiftStartMin + Math.round(shiftHours * 60);
-      // Handle overnight shifts (shift_end > 1440 means next day)
-      // For reminder, only trigger if we're within the same calendar day portion
-      if (shiftEndMin > 1440) shiftEndMin = 1440; // cap at midnight for same-day check
-
+      const shiftEndMin = shiftStartMin + Math.round(shiftHours * 60);
       const reminderMin = shiftEndMin - 120; // 2 hours before shift end
 
-      // Check if current time is within the reminder window (±15 min of the 2hr mark)
-      if (nowMinutes < reminderMin || nowMinutes > reminderMin + 15) continue;
+      // Check if current time is within the reminder window (15 min range)
+      let inWindow = false;
+      if (shiftEndMin <= 1440) {
+        // Day shift: straightforward check
+        inWindow = nowMinutes >= reminderMin && nowMinutes <= reminderMin + 15;
+      } else {
+        // Night shift: reminder may be post-midnight
+        if (reminderMin >= 1440) {
+          // Reminder is post-midnight (e.g., shift 19:30-04:30, reminder at 02:30)
+          const postMidnightReminder = reminderMin - 1440;
+          inWindow = nowMinutes >= postMidnightReminder && nowMinutes <= postMidnightReminder + 15;
+        } else {
+          // Reminder is pre-midnight (e.g., shift 22:00-04:00, reminder at 02:00 = still pre-midnight? No, 26*60-120=1440, edge case)
+          inWindow = nowMinutes >= reminderMin && nowMinutes <= reminderMin + 15;
+        }
+      }
+      if (!inWindow) continue;
 
-      // Get incomplete tasks for today
+      // Get incomplete tasks for the user's effective work date
       const [pendingTasks] = await db.query(
         `SELECT t.id, t.title, t.type, t.recurrence_pattern
          FROM tasks t
@@ -109,11 +123,8 @@ const taskReminderJob = cron.schedule('*/15 * * * *', async () => {
              )
            )
          ORDER BY t.title`,
-        [user.id, user.id, today, today, today]
+        [user.id, user.id, userWorkDate, userWorkDate, userWorkDate]
       );
-
-      // Also check fallback tasks (where user is secondary/tertiary and effective doer today)
-      // Skip for now — primary assigned tasks are the main concern
 
       if (pendingTasks.length === 0) {
         sentReminders[key] = true;
@@ -121,7 +132,7 @@ const taskReminderJob = cron.schedule('*/15 * * * *', async () => {
       }
 
       // Build the reminder message
-      let msg = `You have ${pendingTasks.length} incomplete task${pendingTasks.length > 1 ? 's' : ''} for today (${today}):\n\n`;
+      let msg = `You have ${pendingTasks.length} incomplete task${pendingTasks.length > 1 ? 's' : ''} for today (${userWorkDate}):\n\n`;
       pendingTasks.forEach((t, i) => {
         const typeLabel = t.type === 'recurring' ? `${t.recurrence_pattern || 'recurring'}` : 'one-time';
         msg += `${i + 1}. ${t.title} (${typeLabel})\n`;
@@ -141,7 +152,7 @@ const taskReminderJob = cron.schedule('*/15 * * * *', async () => {
         }
       } catch (e) { /* socket not ready */ }
 
-      console.log(`[CRON] Task reminder sent to ${user.name} (${pendingTasks.length} tasks)`);
+      console.log(`[CRON] Task reminder sent to ${user.name} for ${userWorkDate} (${pendingTasks.length} tasks)`);
     }
   } catch (err) {
     console.error('[CRON] Task reminder error:', err.message);
@@ -158,7 +169,6 @@ const deadlineAlertJob = cron.schedule('*/15 * * * *', async () => {
   try {
     const [[org]] = await db.query("SELECT timezone FROM organizations WHERE org_type = 'LOCAL' LIMIT 1");
     const tz = (org && org.timezone) || 'UTC';
-    const today = getToday(tz);
 
     // Get recurring tasks with deadline_time approaching within next hour
     const now = new Date(getNow(tz));
@@ -166,31 +176,40 @@ const deadlineAlertJob = cron.schedule('*/15 * * * *', async () => {
     const targetMin = nowMin + 60; // 1 hour from now
 
     const [tasks] = await db.query(
-      `SELECT t.id, t.title, t.assigned_to, t.deadline_time, t.type, u.name as user_name
+      `SELECT t.id, t.title, t.assigned_to, t.deadline_time, t.type, u.name as user_name,
+              u.shift_start, u.shift_hours
        FROM tasks t
        JOIN users u ON t.assigned_to = u.id
        WHERE t.is_deleted = 0 AND t.assigned_to IS NOT NULL
          AND t.deadline_time IS NOT NULL
          AND (
            (t.type = 'recurring' AND t.status = 'active')
-           OR (t.type = 'once' AND t.status IN ('pending', 'in_progress') AND t.due_date = ?)
-         )`, [today]
+           OR (t.type = 'once' AND t.status IN ('pending', 'in_progress'))
+         )`
     );
 
     for (const t of tasks) {
-      const key = `${t.id}-${t.assigned_to}-${today}`;
+      // Use per-user effective work date
+      const userWorkDate = getEffectiveWorkDate(tz, t.shift_start, t.shift_hours);
+      const key = `${t.id}-${t.assigned_to}-${userWorkDate}`;
       if (deadlineAlertSent[key]) continue;
+
+      // For one-time tasks, check due_date matches user's work date
+      if (t.type === 'once' && t.due_date) {
+        const dueStr = t.due_date instanceof Date ? t.due_date.toISOString().split('T')[0] : String(t.due_date).split('T')[0];
+        if (dueStr !== userWorkDate) continue;
+      }
 
       const [dH, dM] = t.deadline_time.split(':').map(Number);
       const deadlineMin = dH * 60 + (dM || 0);
 
       // Check if deadline is within next 60 minutes (and not already past)
       if (deadlineMin > nowMin && deadlineMin <= targetMin) {
-        // Check if task is not yet completed today
+        // Check if task is not yet completed for user's work date
         if (t.type === 'recurring') {
           const [[done]] = await db.query(
             'SELECT id FROM task_completions WHERE task_id = ? AND user_id = ? AND completion_date = ? AND completed_at IS NOT NULL',
-            [t.id, t.assigned_to, today]
+            [t.id, t.assigned_to, userWorkDate]
           );
           if (done) continue;
         }
@@ -217,18 +236,20 @@ const overdueAlertHandler = async () => {
   try {
     const [[org]] = await db.query("SELECT timezone FROM organizations WHERE org_type = 'LOCAL' LIMIT 1");
     const tz = (org && org.timezone) || 'UTC';
-    const today = getToday(tz);
-    const yesterday = new Date(new Date(today + 'T12:00:00').getTime() - 86400000).toISOString().split('T')[0];
-    const dayName = new Date(yesterday + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long' });
 
-    // Get active LOCAL users
+    // Get active LOCAL users with shift info
     const [users] = await db.query(
-      `SELECT u.id, u.name, u.weekly_off_day
+      `SELECT u.id, u.name, u.weekly_off_day, u.shift_start, u.shift_hours
        FROM users u JOIN roles r ON u.role_id = r.id JOIN organizations o ON u.organization_id = o.id
        WHERE u.is_active = 1 AND o.org_type = 'LOCAL' AND r.name IN ('LOCAL_USER', 'LOCAL_MANAGER')`
     );
 
     for (const user of users) {
+      // Use per-user effective work date, then compute their "yesterday"
+      const userToday = getEffectiveWorkDate(tz, user.shift_start, user.shift_hours);
+      const yesterday = new Date(new Date(userToday + 'T12:00:00Z').getTime() - 86400000).toISOString().split('T')[0];
+      const dayName = new Date(yesterday + 'T12:00:00Z').toLocaleDateString('en-US', { weekday: 'long' });
+
       if (user.weekly_off_day === dayName) continue;
 
       // Find recurring tasks that were assigned but not completed yesterday
@@ -284,18 +305,26 @@ const dailySummaryJob = cron.schedule('*/15 * * * *', async () => {
     );
 
     for (const user of users) {
-      const key = `summary-${user.id}-${today}`;
+      // Use per-user effective work date (accounts for night shifts post-midnight)
+      const userWorkDate = getEffectiveWorkDate(tz, user.shift_start, user.shift_hours);
+      const key = `summary-${user.id}-${userWorkDate}`;
       if (dailySummarySent[key]) continue;
 
       const [sH, sM] = user.shift_start.split(':').map(Number);
       const shiftHours = parseFloat(user.shift_hours) || 8;
-      let shiftEndMin = sH * 60 + (sM || 0) + Math.round(shiftHours * 60);
-      if (shiftEndMin > 1440) shiftEndMin = 1440;
+      const shiftEndMin = sH * 60 + (sM || 0) + Math.round(shiftHours * 60);
 
-      // Trigger within 15 min after shift end
-      if (nowMin < shiftEndMin || nowMin > shiftEndMin + 15) continue;
+      // Trigger within 15 min after shift end (handle cross-midnight)
+      let inWindow = false;
+      if (shiftEndMin <= 1440) {
+        inWindow = nowMin >= shiftEndMin && nowMin <= shiftEndMin + 15;
+      } else {
+        const postMidnightEnd = shiftEndMin - 1440;
+        inWindow = nowMin >= postMidnightEnd && nowMin <= postMidnightEnd + 15;
+      }
+      if (!inWindow) continue;
 
-      // Count tasks done vs total
+      // Count tasks done vs total using effective work date
       const [[recurringTotal]] = await db.query(
         `SELECT COUNT(*) as cnt FROM tasks WHERE is_deleted = 0 AND assigned_to = ? AND type = 'recurring' AND status = 'active'`,
         [user.id]
@@ -303,15 +332,15 @@ const dailySummaryJob = cron.schedule('*/15 * * * *', async () => {
       const [[recurringDone]] = await db.query(
         `SELECT COUNT(*) as cnt FROM task_completions tc JOIN tasks t ON tc.task_id = t.id
          WHERE t.assigned_to = ? AND tc.user_id = ? AND tc.completion_date = ? AND tc.completed_at IS NOT NULL`,
-        [user.id, user.id, today]
+        [user.id, user.id, userWorkDate]
       );
       const [[onceTotal]] = await db.query(
         `SELECT COUNT(*) as cnt FROM tasks WHERE is_deleted = 0 AND assigned_to = ? AND type = 'once' AND (due_date = ? OR (due_date IS NULL AND DATE(created_at) = ?)) AND status IN ('pending', 'in_progress', 'completed')`,
-        [user.id, today, today]
+        [user.id, userWorkDate, userWorkDate]
       );
       const [[onceDone]] = await db.query(
         `SELECT COUNT(*) as cnt FROM tasks WHERE is_deleted = 0 AND assigned_to = ? AND type = 'once' AND status = 'completed' AND DATE(completed_at) = ?`,
-        [user.id, today]
+        [user.id, userWorkDate]
       );
 
       const total = (recurringTotal.cnt || 0) + (onceTotal.cnt || 0);
@@ -322,13 +351,13 @@ const dailySummaryJob = cron.schedule('*/15 * * * *', async () => {
       const [[timeData]] = await db.query(
         `SELECT SEC_TO_TIME(SUM(TIME_TO_SEC(TIMEDIFF(COALESCE(logout_time, NOW()), login_time)))) as total_time
          FROM attendance_logs WHERE user_id = ? AND date = ?`,
-        [user.id, today]
+        [user.id, userWorkDate]
       );
       const activeTime = timeData?.total_time ? timeData.total_time.substring(0, 5) + 'h' : '0h';
 
       let emoji = pct === 100 ? '🎉' : pct >= 75 ? '👍' : pct >= 50 ? '📊' : '⚠️';
 
-      let msg = `${emoji} Daily Summary — ${today}\n\n`;
+      let msg = `${emoji} Daily Summary — ${userWorkDate}\n\n`;
       msg += `Tasks: ${done}/${total} completed (${pct}%)\n`;
       msg += `Active Time: ${activeTime}\n`;
       if (pct === 100) msg += `\nPerfect day! All tasks completed. Great work!`;
@@ -337,7 +366,7 @@ const dailySummaryJob = cron.schedule('*/15 * * * *', async () => {
 
       await ChatModel.sendSystemMessage(user.id, msg);
       dailySummarySent[key] = true;
-      console.log(`[CRON] Daily summary sent to ${user.name} (${done}/${total})`);
+      console.log(`[CRON] Daily summary sent to ${user.name} for ${userWorkDate} (${done}/${total})`);
     }
   } catch (err) {
     console.error('[CRON] Daily summary error:', err.message);
