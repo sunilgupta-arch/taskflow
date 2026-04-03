@@ -1818,6 +1818,8 @@ window.endCall = function(notifyPeer) {
 
 window.acceptCall = function() {
   document.getElementById('_incomingOverlay').style.display = 'none';
+  _stopRingtone();
+  if (window._titleFlashIv) { clearInterval(window._titleFlashIv); document.title = window._origTitle || 'TaskFlow'; }
   if (!_pendingOffer || !_pendingFromId) return;
   _callState = 'active';
 
@@ -1853,6 +1855,8 @@ window.acceptCall = function() {
 
 window.rejectCall = function() {
   document.getElementById('_incomingOverlay').style.display = 'none';
+  _stopRingtone();
+  if (window._titleFlashIv) { clearInterval(window._titleFlashIv); document.title = window._origTitle || 'TaskFlow'; }
   if (_pendingFromId) callSocket.emit('call:reject', { to_user_id: _pendingFromId, conversation_id: _callConvId });
   _pendingOffer = null; _pendingFromId = null;
   _callState = 'idle';
@@ -1890,6 +1894,67 @@ function _callCleanup() {
   var a = document.getElementById('_callAudio'); if (a) a.srcObject = null;
 }
 
+// ── Ringtone generator (no external audio file needed) ──
+var _ringtoneCtx = null;
+var _ringtoneIv = null;
+function _startRingtone() {
+  try {
+    _ringtoneCtx = new (window.AudioContext || window.webkitAudioContext)();
+    var playBeep = function() {
+      var osc = _ringtoneCtx.createOscillator();
+      var gain = _ringtoneCtx.createGain();
+      osc.connect(gain);
+      gain.connect(_ringtoneCtx.destination);
+      osc.type = 'sine';
+      osc.frequency.value = 440;
+      gain.gain.value = 0.3;
+      osc.start();
+      gain.gain.exponentialRampToValueAtTime(0.001, _ringtoneCtx.currentTime + 0.3);
+      osc.stop(_ringtoneCtx.currentTime + 0.3);
+      // Second beep after short gap
+      setTimeout(function() {
+        if (!_ringtoneCtx) return;
+        var osc2 = _ringtoneCtx.createOscillator();
+        var gain2 = _ringtoneCtx.createGain();
+        osc2.connect(gain2);
+        gain2.connect(_ringtoneCtx.destination);
+        osc2.type = 'sine';
+        osc2.frequency.value = 523;
+        gain2.gain.value = 0.3;
+        osc2.start();
+        gain2.gain.exponentialRampToValueAtTime(0.001, _ringtoneCtx.currentTime + 0.3);
+        osc2.stop(_ringtoneCtx.currentTime + 0.3);
+      }, 350);
+    };
+    playBeep();
+    _ringtoneIv = setInterval(playBeep, 2000);
+  } catch (e) {}
+}
+function _stopRingtone() {
+  if (_ringtoneIv) { clearInterval(_ringtoneIv); _ringtoneIv = null; }
+  if (_ringtoneCtx) { _ringtoneCtx.close().catch(function(){}); _ringtoneCtx = null; }
+}
+
+// ── Browser notification for incoming calls ──
+function _notifyIncomingCall(callerName) {
+  if (!('Notification' in window)) return;
+  if (Notification.permission === 'granted') {
+    var n = new Notification('Incoming Call', { body: callerName + ' is calling you', icon: '/favicon.ico', requireInteraction: true, tag: 'incoming-call' });
+    n.onclick = function() { window.focus(); n.close(); };
+  } else if (Notification.permission !== 'denied') {
+    Notification.requestPermission();
+  }
+}
+function _clearCallNotification() {
+  // Close the notification if still showing
+  try { if ('Notification' in window) { /* tag-based auto-replaces */ } } catch(e) {}
+}
+
+// Request notification permission on page load (silent, no prompt until needed)
+if ('Notification' in window && Notification.permission === 'default') {
+  // Will prompt on first incoming call
+}
+
 // Socket events
 callSocket.on('call:incoming', function(data) {
   if (_callState !== 'idle') {
@@ -1902,6 +1967,16 @@ callSocket.on('call:incoming', function(data) {
   _pendingFromId = data.from_user_id;
   document.getElementById('_incomingName').textContent = data.from_user_name;
   document.getElementById('_incomingOverlay').style.display = 'flex';
+  _startRingtone();
+  _notifyIncomingCall(data.from_user_name);
+  // Flash the page title to draw attention
+  var _origTitle = document.title;
+  var _titleFlash = setInterval(function() {
+    document.title = document.title === _origTitle ? '📞 ' + data.from_user_name + ' calling...' : _origTitle;
+  }, 1000);
+  // Store flash interval to clear on accept/reject
+  window._titleFlashIv = _titleFlash;
+  window._origTitle = _origTitle;
 });
 
 callSocket.on('call:answered', function(data) {
@@ -1927,8 +2002,13 @@ callSocket.on('call:rejected', function() {
 });
 
 callSocket.on('call:ended', function() {
+  var wasIncoming = _callState === 'incoming';
+  _stopRingtone();
+  if (window._titleFlashIv) { clearInterval(window._titleFlashIv); document.title = window._origTitle || 'TaskFlow'; }
+  document.getElementById('_incomingOverlay').style.display = 'none';
   window.endCall(false);
-  if (_callState !== 'idle') showToast('Call ended', 'success');
+  if (wasIncoming) showToast('Missed call', 'error');
+  else if (_callState !== 'idle') showToast('Call ended', 'success');
 });
 
 callSocket.on('call:busy', function() {
