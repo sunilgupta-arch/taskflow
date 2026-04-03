@@ -1756,7 +1756,32 @@ function submitLogoutWithReason() {
 
 <script>
 // ── Global Voice Call (WebRTC, works on every page) ──────────────────────────
-var callSocket = io({ withCredentials: true });
+var callSocket = io({ withCredentials: true, forceNew: true, reconnection: true, reconnectionAttempts: Infinity, reconnectionDelay: 1000 });
+
+var _callSocketReady = false;
+callSocket.on('connect', function() {
+  _callSocketReady = true;
+  console.log('[Call] Socket connected, id:', callSocket.id);
+});
+callSocket.on('connect_error', function(err) {
+  _callSocketReady = false;
+  console.error('[Call] Socket connection error:', err.message);
+});
+callSocket.on('disconnect', function(reason) {
+  _callSocketReady = false;
+  console.warn('[Call] Socket disconnected:', reason);
+  // If in a call, clean up
+  if (_callState === 'calling' || _callState === 'active') {
+    window.endCall(false);
+    showToast('Call disconnected — connection lost', 'error');
+  }
+  if (_callState === 'incoming') {
+    _stopRingtone();
+    if (window._titleFlashIv) { clearInterval(window._titleFlashIv); document.title = window._origTitle || 'TaskFlow'; }
+    document.getElementById('_incomingOverlay').style.display = 'none';
+    _callState = 'idle';
+  }
+});
 
 var _callState = 'idle';   // idle | calling | incoming | active
 var _pc        = null;
@@ -1777,6 +1802,7 @@ var _ICE = { iceServers: [
 // Called from chat page button: startCall(peerId, peerName, convId)
 window.startCall = function(peerId, peerName, convId) {
   if (_callState !== 'idle') { showToast('Already in a call', 'error'); return; }
+  if (!callSocket.connected) { showToast('Not connected to server — please refresh the page', 'error'); return; }
   _callPeerId = peerId; _callPeerName = peerName; _callConvId = convId;
   _callState = 'calling';
   document.getElementById('_callOverlayName').textContent = peerName;
@@ -1980,6 +2006,7 @@ callSocket.on('call:incoming', function(data) {
 });
 
 callSocket.on('call:answered', function(data) {
+  console.log('[Call] Received call:answered', !!_pc, !!data.answer);
   if (!_pc) return;
   _pc.setRemoteDescription(new RTCSessionDescription(data.answer))
     .then(function() {
@@ -1987,7 +2014,7 @@ callSocket.on('call:answered', function(data) {
       document.getElementById('_callOverlay').style.display = 'none';
       _showActivePanel(_callPeerName);
     })
-    .catch(function() { window.endCall(true); });
+    .catch(function(err) { console.error('[Call] setRemoteDescription error:', err); window.endCall(true); });
 });
 
 callSocket.on('call:ice-candidate', function(data) {
