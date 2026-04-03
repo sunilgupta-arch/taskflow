@@ -281,7 +281,12 @@ const _isFuture = _fd && _fd > todayDate;
                   <% } %>
                 <% } %>
 
-                <% if (((['CLIENT_ADMIN', 'CLIENT_MANAGER'].includes(user.role_name)) || (['LOCAL_ADMIN', 'LOCAL_MANAGER'].includes(user.role_name) && task.created_by_org === 'LOCAL') || isOwnerWithin24h) && task.status !== 'deactivated' && task.status !== 'completed') { %>
+                <% if (task.status !== 'deactivated' && (
+                  (['CLIENT_ADMIN', 'CLIENT_MANAGER'].includes(user.role_name) && task.status !== 'completed') ||
+                  (user.role_name === 'LOCAL_ADMIN' && task.created_by_org === 'LOCAL') ||
+                  (['LOCAL_MANAGER'].includes(user.role_name) && task.created_by_org === 'LOCAL' && task.status !== 'completed') ||
+                  (isOwnerWithin24h && task.status !== 'completed')
+                )) { %>
                 <button class="btn-tf" style="font-size:0.65rem;padding:2px 8px;background:rgba(239,68,68,0.1);color:#ef4444;border:1px solid rgba(239,68,68,0.3);"
                   onclick="deactivateTask(<%= task.id %>)">
                   Deactivate
