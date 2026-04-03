@@ -2,6 +2,9 @@
 const selfView = typeof isSelf !== 'undefined' && isSelf;
 const progressUrl = selfView ? '/my-progress' : '/users/' + targetUser.id + '/progress';
 const reportUrl = selfView ? '/my-monthly-report' : '/users/' + targetUser.id + '/monthly-report';
+const _isPast = typeof isPast !== 'undefined' && isPast;
+const _isViewingToday = typeof isViewingToday !== 'undefined' ? isViewingToday : true;
+const _dateLabel = _isViewingToday ? 'Today' : new Date(selectedDate + 'T12:00:00Z').toLocaleDateString('en-US', { timeZone: 'UTC', month: 'short', day: 'numeric' });
 %>
 <!-- User Header -->
 <div class="tf-card mb-3">
@@ -145,10 +148,6 @@ const reportUrl = selfView ? '/my-monthly-report' : '/users/' + targetUser.id + 
 const total = parseInt(taskStats.total) || 0;
 const completed = parseInt(taskStats.completed) || 0;
 const progress = total > 0 ? Math.round((completed / total) * 100) : 0;
-
-const _isPast = typeof isPast !== 'undefined' && isPast;
-const _isViewingToday = typeof isViewingToday !== 'undefined' ? isViewingToday : true;
-const _dateLabel = _isViewingToday ? 'Today' : new Date(selectedDate + 'T12:00:00Z').toLocaleDateString('en-US', { timeZone: 'UTC', month: 'short', day: 'numeric' });
 
 // Count day's pending/done
 var pendingCount = 0;
