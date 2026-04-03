@@ -50,7 +50,7 @@ const reportUrl = selfView ? '/my-monthly-report' : '/users/' + targetUser.id + 
 <!-- Day Tasks -->
 <div class="tf-card mb-3">
   <div class="card-header">
-    <i class="bi bi-calendar-event me-2" style="color:#06b6d4;"></i>TASKS FOR <%= new Date(selectedDate + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) %>
+    <i class="bi bi-calendar-event me-2" style="color:#06b6d4;"></i>TASKS FOR <%= new Date(selectedDate + 'T12:00:00Z').toLocaleDateString('en-US', { timeZone: 'UTC', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) %>
     <% if (isWeekOff) { %>
     <span style="font-size:0.7rem;background:rgba(100,116,139,0.15);color:#94a3b8;padding:2px 8px;border-radius:4px;margin-left:8px;">WEEK OFF</span>
     <% } else { %>
@@ -89,11 +89,19 @@ const reportUrl = selfView ? '/my-monthly-report' : '/users/' + targetUser.id + 
                 <span class="badge" style="font-size:0.6rem;padding:2px 6px;border-radius:3px;background:rgba(16,185,129,0.15);color:#10b981;">
                   <i class="bi bi-check-circle-fill"></i> done
                 </span>
+                <% } else if (_isPast) { %>
+                <span class="badge" style="font-size:0.6rem;padding:2px 6px;border-radius:3px;background:rgba(239,68,68,0.15);color:#ef4444;">
+                  <i class="bi bi-x-circle"></i> not done
+                </span>
                 <% } else { %>
                 <span class="badge" style="font-size:0.6rem;padding:2px 6px;border-radius:3px;background:rgba(245,158,11,0.15);color:#f59e0b;">
                   <i class="bi bi-circle"></i> pending
                 </span>
                 <% } %>
+              <% } else if (_isPast && t.status !== 'completed') { %>
+              <span class="badge" style="font-size:0.6rem;padding:2px 6px;border-radius:3px;background:rgba(239,68,68,0.15);color:#ef4444;">
+                <i class="bi bi-x-circle"></i> not done
+              </span>
               <% } else { %>
               <span class="badge badge-<%= t.status %>" style="font-size:0.6rem;padding:2px 6px;border-radius:3px;"><%= t.status.replace('_', ' ') %></span>
               <% } %>
@@ -138,16 +146,20 @@ const total = parseInt(taskStats.total) || 0;
 const completed = parseInt(taskStats.completed) || 0;
 const progress = total > 0 ? Math.round((completed / total) * 100) : 0;
 
-// Count today's pending (recurring not done + one-time pending/in_progress)
-var pendingToday = 0;
-var doneToday = 0;
+const _isPast = typeof isPast !== 'undefined' && isPast;
+const _isViewingToday = typeof isViewingToday !== 'undefined' ? isViewingToday : true;
+const _dateLabel = _isViewingToday ? 'Today' : new Date(selectedDate + 'T12:00:00Z').toLocaleDateString('en-US', { timeZone: 'UTC', month: 'short', day: 'numeric' });
+
+// Count day's pending/done
+var pendingCount = 0;
+var doneCount = 0;
 dayTasks.forEach(function(t) {
   if (t.is_recurring) {
-    if (t.is_completed) doneToday++;
-    else pendingToday++;
+    if (t.is_completed) doneCount++;
+    else pendingCount++;
   } else {
-    if (t.status === 'completed') doneToday++;
-    else pendingToday++;
+    if (t.status === 'completed') doneCount++;
+    else pendingCount++;
   }
 });
 %>
@@ -162,16 +174,16 @@ dayTasks.forEach(function(t) {
     </div>
   </div>
   <div class="col-6 col-md-3">
-    <div class="stat-card" style="--stat-color: #f59e0b;">
-      <div class="stat-value"><%= pendingToday %></div>
-      <div class="stat-label">Pending Today</div>
-      <i class="bi bi-hourglass stat-icon"></i>
+    <div class="stat-card" style="--stat-color: <%= _isPast ? '#ef4444' : '#f59e0b' %>;">
+      <div class="stat-value"><%= pendingCount %></div>
+      <div class="stat-label"><%= _isPast ? 'Not Done' : 'Pending' %> — <%= _dateLabel %></div>
+      <i class="bi bi-<%= _isPast ? 'x-circle' : 'hourglass' %> stat-icon"></i>
     </div>
   </div>
   <div class="col-6 col-md-3">
     <div class="stat-card" style="--stat-color: #10b981;">
-      <div class="stat-value"><%= doneToday %></div>
-      <div class="stat-label">Done Today</div>
+      <div class="stat-value"><%= doneCount %></div>
+      <div class="stat-label">Done — <%= _dateLabel %></div>
       <i class="bi bi-check-circle stat-icon"></i>
     </div>
   </div>
@@ -219,7 +231,8 @@ dayTasks.forEach(function(t) {
 </div>
 
 <div class="row g-3 mb-3">
-  <!-- Currently Working On -->
+  <!-- Currently Working On (only for today) -->
+  <% if (_isViewingToday) { %>
   <div class="col-md-6">
     <div class="tf-card h-100">
       <div class="card-header">
@@ -252,18 +265,23 @@ dayTasks.forEach(function(t) {
       </div>
     </div>
   </div>
+  <% } %>
 
-  <!-- Pending Today -->
-  <div class="col-md-6">
+  <!-- Pending / Not Done for selected date -->
+  <div class="<%= _isViewingToday ? 'col-md-6' : 'col-md-12' %>">
     <div class="tf-card h-100">
       <div class="card-header">
-        <i class="bi bi-hourglass me-2" style="color:#f59e0b;"></i>PENDING TODAY (<%= pendingToday %>)
+        <% if (_isPast) { %>
+        <i class="bi bi-x-circle me-2" style="color:#ef4444;"></i>NOT DONE — <%= _dateLabel %> (<%= pendingCount %>)
+        <% } else { %>
+        <i class="bi bi-hourglass me-2" style="color:#f59e0b;"></i>PENDING — <%= _dateLabel %> (<%= pendingCount %>)
+        <% } %>
       </div>
       <div class="p-3">
         <% var pendingDayTasks = dayTasks.filter(function(t) { return t.is_recurring ? !t.is_completed : t.status !== 'completed'; }); %>
         <% if (pendingDayTasks.length > 0) { %>
           <% pendingDayTasks.forEach(function(t) { %>
-          <div class="d-flex align-items-center gap-2 mb-2 p-2" style="background:var(--tf-surface-2);border-radius:6px;border-left:3px solid #f59e0b;">
+          <div class="d-flex align-items-center gap-2 mb-2 p-2" style="background:var(--tf-surface-2);border-radius:6px;border-left:3px solid <%= _isPast ? '#ef4444' : '#f59e0b' %>;">
             <div class="flex-grow-1">
               <a href="/tasks/<%= t.id %>" style="color:var(--tf-text);text-decoration:none;font-weight:500;font-size:0.85rem;">
                 <span style="color:var(--tf-text-muted);font-family:var(--tf-font-mono);font-size:0.75rem;">#<%= t.id %></span> <%= t.title %>
@@ -273,11 +291,15 @@ dayTasks.forEach(function(t) {
                 <span style="margin-left:6px;"><i class="bi bi-person" style="font-size:0.6rem;"></i> <%= t.created_by_name || '—' %></span>
               </div>
             </div>
+            <% if (_isPast) { %>
+            <span class="badge" style="font-size:0.6rem;padding:2px 6px;border-radius:3px;background:rgba(239,68,68,0.15);color:#ef4444;">not done</span>
+            <% } else { %>
             <span class="badge" style="font-size:0.6rem;padding:2px 6px;border-radius:3px;background:rgba(245,158,11,0.15);color:#f59e0b;">pending</span>
+            <% } %>
           </div>
           <% }) %>
         <% } else { %>
-        <p style="color:var(--tf-text-muted);font-size:0.85rem;text-align:center;padding:1rem;">All tasks done for today!</p>
+        <p style="color:var(--tf-text-muted);font-size:0.85rem;text-align:center;padding:1rem;"><%= _isPast ? 'All tasks were completed!' : 'All tasks done for today!' %></p>
         <% } %>
       </div>
     </div>

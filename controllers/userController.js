@@ -209,6 +209,9 @@ class UserController {
       const selectedDayName = new Date(selectedDate + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long' });
       const isWeekOff = targetUser.weekly_off_day === selectedDayName;
 
+      const isPast = selectedDate < todayDate;
+      const isViewingToday = selectedDate === todayDate;
+
       res.render('users/progress', {
         title: `${targetUser.name} - Progress`,
         targetUser,
@@ -219,6 +222,9 @@ class UserController {
         recentCompleted,
         dayTasks: isWeekOff ? [] : dayTasks,
         selectedDate,
+        todayDate,
+        isPast,
+        isViewingToday,
         isSelf,
         isWeekOff,
         orgTimezone: tz
