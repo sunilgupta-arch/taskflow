@@ -38,13 +38,26 @@ const _dateLabel = _isViewingToday ? 'Today' : new Date(selectedDate + 'T12:00:0
 </div>
 
 <!-- Date Picker -->
+<%
+  var _selObj = new Date(selectedDate + 'T12:00:00Z');
+  var _prevObj = new Date(_selObj); _prevObj.setUTCDate(_prevObj.getUTCDate() - 1);
+  var _nextObj = new Date(_selObj); _nextObj.setUTCDate(_nextObj.getUTCDate() + 1);
+  var _prevDateStr = _prevObj.toISOString().split('T')[0];
+  var _nextDateStr = _nextObj.toISOString().split('T')[0];
+%>
 <div class="tf-card mb-3">
   <div class="p-3 d-flex align-items-center gap-3">
     <i class="bi bi-calendar3" style="color:var(--tf-accent);font-size:1.1rem;"></i>
     <span style="font-size:0.8rem;color:var(--tf-text-muted);font-family:var(--tf-font-mono);">DAY REPORT</span>
     <input type="date" id="dateSelect" value="<%= selectedDate %>" class="tf-form-control" style="max-width:180px;font-size:0.85rem;"
       onchange="window.location.href='<%= progressUrl %>?date=' + this.value">
-    <% if (selectedDate !== new Date().toISOString().split('T')[0]) { %>
+    <a href="<%= progressUrl %>?date=<%= _prevDateStr %>" class="btn-tf btn-tf-outline" style="font-size:0.75rem;padding:4px 10px;text-decoration:none;">
+      <i class="bi bi-chevron-left"></i> Prev
+    </a>
+    <a href="<%= progressUrl %>?date=<%= _nextDateStr %>" class="btn-tf btn-tf-outline" style="font-size:0.75rem;padding:4px 10px;text-decoration:none;">
+      Next <i class="bi bi-chevron-right"></i>
+    </a>
+    <% if (!_isViewingToday) { %>
     <a href="<%= progressUrl %>" class="btn-tf btn-tf-outline" style="font-size:0.7rem;padding:3px 10px;">Today</a>
     <% } %>
   </div>
