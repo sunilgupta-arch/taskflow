@@ -138,24 +138,26 @@
       <div class="col-4">
         <%
           var workingDays = 0;
+          var leaveDays = 0;
           for (var d = 1; d <= lastDay; d++) {
             var cd2 = calendarData[d];
             if (cd2.status !== 'off' && cd2.status !== 'future') workingDays++;
+            if (cd2.status === 'leave') leaveDays++;
           }
-          var absentDays = workingDays - totalPresent;
-          // Subtract leave days
-          for (var d = 1; d <= lastDay; d++) {
-            var cd3 = calendarData[d];
-            if (cd3.status === 'leave') absentDays--;
-          }
+          var expectedDays = workingDays - leaveDays;
+          var absentDays = expectedDays - totalPresent;
           if (absentDays < 0) absentDays = 0;
         %>
         <div style="font-family:var(--tf-font-mono);font-size:1.5rem;font-weight:700;color:#ef4444;"><%= absentDays %></div>
         <div style="font-size:0.7rem;color:var(--tf-text-muted);">Days Absent</div>
       </div>
       <div class="col-4">
+        <%
+          var attendanceRate = expectedDays > 0 ? Math.round((totalPresent / expectedDays) * 100) : 0;
+          if (attendanceRate > 100) attendanceRate = 100;
+        %>
         <div style="font-family:var(--tf-font-mono);font-size:1.5rem;font-weight:700;color:var(--tf-text);">
-          <%= workingDays > 0 ? Math.round((totalPresent / workingDays) * 100) : 0 %>%
+          <%= attendanceRate %>%
         </div>
         <div style="font-size:0.7rem;color:var(--tf-text-muted);">Attendance Rate</div>
       </div>
