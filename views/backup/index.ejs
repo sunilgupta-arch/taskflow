@@ -74,6 +74,35 @@
   </div>
 </div>
 
+<!-- Restore from Drive -->
+<div class="tf-card mb-4">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span><i class="bi bi-cloud-download me-2"></i>RESTORE FROM GOOGLE DRIVE</span>
+    <button class="btn-tf btn-tf-outline" style="font-size:0.65rem;padding:2px 8px;" onclick="loadDriveBackups()" id="refreshDriveBtn">
+      <i class="bi bi-arrow-clockwise me-1"></i>Refresh
+    </button>
+  </div>
+  <div class="p-3">
+    <div class="row g-3 align-items-end">
+      <div class="col-sm-8">
+        <label style="font-size:0.7rem;color:var(--tf-text-muted);display:block;margin-bottom:0.3rem;text-transform:uppercase;letter-spacing:0.5px;">SELECT BACKUP FROM DRIVE</label>
+        <select id="driveBackupSelect" class="tf-form-control" style="font-family:var(--tf-font-mono);font-size:0.8rem;">
+          <option value="">— Click Refresh to load backups from Drive —</option>
+        </select>
+      </div>
+      <div class="col-sm-4">
+        <button class="btn-tf btn-tf-primary w-100" style="font-size:0.7rem;" onclick="restoreFromDrive()" id="driveRestoreBtn">
+          <i class="bi bi-cloud-download me-1"></i>Restore from Drive
+        </button>
+      </div>
+    </div>
+    <div style="font-size:0.7rem;color:var(--tf-text-muted);margin-top:0.75rem;">
+      <i class="bi bi-info-circle me-1"></i>
+      Backups stored in Google Drive <strong>db_backup</strong> folder. Select a backup and restore to overwrite the current database.
+    </div>
+  </div>
+</div>
+
 <!-- Backup List -->
 <div class="tf-card">
   <div class="card-header d-flex justify-content-between align-items-center">
@@ -138,6 +167,11 @@
                 <% if (b.status === 'success') { %>
                 <button class="btn-tf btn-tf-outline" style="font-size:0.6rem;padding:2px 6px;" onclick="restoreBackup(<%= b.id %>, '<%= b.filename %>')" title="Restore this backup">
                   <i class="bi bi-arrow-counterclockwise"></i> Restore
+                </button>
+                <% } %>
+                <% if (b.status === 'success') { %>
+                <button class="btn-tf btn-tf-outline" style="font-size:0.6rem;padding:2px 6px;" onclick="uploadToDrive(<%= b.id %>, '<%= b.filename %>')" title="Upload to Google Drive">
+                  <i class="bi bi-google"></i> Drive
                 </button>
                 <% } %>
                 <a href="/backups/download/<%= b.id %>" class="btn-tf btn-tf-outline" style="font-size:0.6rem;padding:2px 6px;" title="Download">
@@ -257,6 +291,84 @@ function disableSchedule() {
   }).catch(function(e) {
     showToast(e.response?.data?.message || 'Failed', 'error');
   });
+}
+
+async function uploadToDrive(id, filename) {
+  if (!confirm('Upload "' + filename + '" to Google Drive db_backup folder?')) return;
+
+  showToast('Uploading to Google Drive...', 'info');
+  try {
+    var res = await axios.post('/backups/upload-drive/' + id);
+    showToast(res.data.message);
+  } catch (e) {
+    showToast(e.response?.data?.message || 'Drive upload failed', 'error');
+  }
+}
+
+async function loadDriveBackups() {
+  var btn = document.getElementById('refreshDriveBtn');
+  var select = document.getElementById('driveBackupSelect');
+  btn.disabled = true;
+  select.innerHTML = '<option value="">Loading...</option>';
+
+  try {
+    var res = await axios.get('/backups/drive-list');
+    var files = res.data.data || [];
+    select.innerHTML = '';
+
+    if (files.length === 0) {
+      select.innerHTML = '<option value="">No backups found in Drive</option>';
+    } else {
+      select.innerHTML = '<option value="">— Select a backup —</option>';
+      files.forEach(function(f) {
+        var size = f.size > 1048576 ? (f.size / 1048576).toFixed(1) + ' MB' : (f.size / 1024).toFixed(1) + ' KB';
+        var date = new Date(f.createdTime).toLocaleString('en-US', { month:'short', day:'numeric', year:'numeric', hour:'2-digit', minute:'2-digit' });
+        var opt = document.createElement('option');
+        opt.value = f.id;
+        opt.dataset.name = f.name;
+        opt.textContent = f.name + '  (' + size + '  •  ' + date + ')';
+        select.appendChild(opt);
+      });
+    }
+  } catch (e) {
+    select.innerHTML = '<option value="">Failed to load — check Drive connection</option>';
+    showToast(e.response?.data?.message || 'Failed to load Drive backups', 'error');
+  }
+  btn.disabled = false;
+}
+
+async function restoreFromDrive() {
+  var select = document.getElementById('driveBackupSelect');
+  var fileId = select.value;
+  if (!fileId) {
+    showToast('Please select a backup from the list', 'error');
+    return;
+  }
+
+  var selectedOption = select.options[select.selectedIndex];
+  var fileName = selectedOption.dataset.name;
+
+  if (!confirm('⚠️ RESTORE FROM DRIVE\n\nThis will OVERWRITE the current database with:\n' + fileName + '\n\nA safety backup of the current state will be created first.\n\nAre you sure?')) return;
+  if (!confirm('Final confirmation: Restore database from Drive backup "' + fileName + '"?')) return;
+
+  var btn = document.getElementById('driveRestoreBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="bi bi-hourglass-split me-1"></i>Restoring...';
+
+  showToast('Creating safety backup before restore...', 'info');
+
+  try {
+    await axios.post('/backups/create');
+    showToast('Safety backup created. Downloading from Drive and restoring...', 'info');
+
+    var res = await axios.post('/backups/restore-drive', { fileId: fileId, fileName: fileName });
+    showToast(res.data.message);
+    setTimeout(function() { location.reload(); }, 1500);
+  } catch (e) {
+    showToast(e.response?.data?.message || 'Drive restore failed', 'error');
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-cloud-download me-1"></i>Restore from Drive';
+  }
 }
 
 async function uploadRestore(input) {

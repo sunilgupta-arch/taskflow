@@ -91,7 +91,7 @@ app.use((err, req, res, next) => {
 
   // Start Cron Jobs
   const { startCronJobs } = require('./utils/cronJobs');
-  startCronJobs();
+  await startCronJobs();
 
   const server = http.createServer(app);
   const io = initSocket(server);

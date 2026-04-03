@@ -10,22 +10,9 @@ const ChatModel = require('../models/Chat');
  */
 
 /**
- * Auto-logout attendance cleanup - runs at 11:59 PM
+ * Auto-logout attendance cleanup - runs at 11:59 PM in LOCAL org timezone
  */
-const attendanceCleanupJob = cron.schedule('59 23 * * *', async () => {
-  try {
-    const [[org]] = await db.query("SELECT timezone FROM organizations WHERE org_type = 'LOCAL' LIMIT 1");
-    const tz = (org && org.timezone) || 'UTC';
-    const today = getToday(tz);
-    await db.query(
-      `UPDATE attendance_logs SET logout_time = '23:59:59', logout_reason = 'Auto - Session Expired'
-       WHERE date = ? AND logout_time IS NULL`, [today]
-    );
-    console.log('[CRON] Attendance cleanup done');
-  } catch (err) {
-    console.error('[CRON] Attendance cleanup error:', err.message);
-  }
-}, { scheduled: false });
+let attendanceCleanupJob = null;
 
 /**
  * Scheduled database backup - runs every minute to check if it's time.
@@ -222,10 +209,11 @@ const deadlineAlertJob = cron.schedule('*/15 * * * *', async () => {
 }, { scheduled: false });
 
 /**
- * Task overdue alert — runs at 9:00 AM daily.
+ * Task overdue alert — runs at 9:00 AM daily in LOCAL org timezone.
  * Notifies users about tasks they missed yesterday.
  */
-const overdueAlertJob = cron.schedule('0 9 * * *', async () => {
+let overdueAlertJob = null;
+const overdueAlertHandler = async () => {
   try {
     const [[org]] = await db.query("SELECT timezone FROM organizations WHERE org_type = 'LOCAL' LIMIT 1");
     const tz = (org && org.timezone) || 'UTC';
@@ -273,7 +261,7 @@ const overdueAlertJob = cron.schedule('0 9 * * *', async () => {
   } catch (err) {
     console.error('[CRON] Overdue alert error:', err.message);
   }
-}, { scheduled: false });
+};
 
 /**
  * Daily end-of-day summary — runs every 15 minutes, triggers at shift end.
@@ -357,9 +345,10 @@ const dailySummaryJob = cron.schedule('*/15 * * * *', async () => {
 }, { scheduled: false });
 
 /**
- * Weekly performance digest — runs every Monday at 9:30 AM.
+ * Weekly performance digest — runs every Monday at 9:30 AM in LOCAL org timezone.
  */
-const weeklyDigestJob = cron.schedule('30 9 * * 1', async () => {
+let weeklyDigestJob = null;
+const weeklyDigestHandler = async () => {
   try {
     const [[org]] = await db.query("SELECT timezone FROM organizations WHERE org_type = 'LOCAL' LIMIT 1");
     const tz = (org && org.timezone) || 'UTC';
@@ -424,17 +413,43 @@ const weeklyDigestJob = cron.schedule('30 9 * * 1', async () => {
   } catch (err) {
     console.error('[CRON] Weekly digest error:', err.message);
   }
-}, { scheduled: false });
+};
 
-const startCronJobs = () => {
-  attendanceCleanupJob.start();
+const startCronJobs = async () => {
+  // Load LOCAL org timezone from DB for fixed-schedule crons
+  let orgTz = 'UTC';
+  try {
+    const [[org]] = await db.query("SELECT timezone FROM organizations WHERE org_type = 'LOCAL' LIMIT 1");
+    if (org && org.timezone) orgTz = org.timezone;
+  } catch (e) {
+    console.warn('[CRON] Could not load org timezone, using UTC:', e.message);
+  }
+
+  // Create timezone-aware cron schedules for fixed-time jobs
+  attendanceCleanupJob = cron.schedule('59 23 * * *', async () => {
+    try {
+      const tz = orgTz;
+      const today = getToday(tz);
+      await db.query(
+        `UPDATE attendance_logs SET logout_time = '23:59:59', logout_reason = 'Auto - Session Expired'
+         WHERE date = ? AND logout_time IS NULL`, [today]
+      );
+      console.log('[CRON] Attendance cleanup done');
+    } catch (err) {
+      console.error('[CRON] Attendance cleanup error:', err.message);
+    }
+  }, { timezone: orgTz });
+
+  overdueAlertJob = cron.schedule('0 9 * * *', overdueAlertHandler, { timezone: orgTz });
+  weeklyDigestJob = cron.schedule('30 9 * * 1', weeklyDigestHandler, { timezone: orgTz });
+
+  // These jobs already self-check timing via getNow()/getToday(), safe with any server TZ
   scheduledBackupJob.start();
   taskReminderJob.start();
   deadlineAlertJob.start();
-  overdueAlertJob.start();
   dailySummaryJob.start();
-  weeklyDigestJob.start();
-  console.log('⏰ Cron jobs started (attendance, backup, reminders, deadline, overdue, summary, weekly)');
+
+  console.log(`⏰ Cron jobs started (timezone: ${orgTz}) — attendance, backup, reminders, deadline, overdue, summary, weekly`);
 };
 
 module.exports = { startCronJobs };

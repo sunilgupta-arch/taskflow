@@ -250,6 +250,78 @@ class GoogleDriveService {
     }
   }
 
+  // Get or create the db_backup folder under root
+  static async getBackupFolder() {
+    const folderName = 'db_backup';
+
+    const searchRes = await drive.files.list({
+      q: `'${ROOT_FOLDER_ID}' in parents AND name = '${folderName}' AND mimeType = 'application/vnd.google-apps.folder' AND trashed = false`,
+      fields: 'files(id)',
+      corpora: 'allDrives',
+      ...SHARED_DRIVE_PARAMS
+    });
+
+    if (searchRes.data.files.length > 0) {
+      return searchRes.data.files[0].id;
+    }
+
+    const folderRes = await drive.files.create({
+      requestBody: {
+        name: folderName,
+        mimeType: 'application/vnd.google-apps.folder',
+        parents: [ROOT_FOLDER_ID]
+      },
+      fields: 'id',
+      ...SHARED_DRIVE_PARAMS
+    });
+
+    return folderRes.data.id;
+  }
+
+  // Upload a backup .sql file from disk to db_backup folder
+  static async uploadBackupToDrive(filePath, fileName) {
+    const fs = require('fs');
+    const backupFolderId = await this.getBackupFolder();
+
+    const res = await drive.files.create({
+      requestBody: {
+        name: fileName,
+        parents: [backupFolderId]
+      },
+      media: {
+        mimeType: 'application/sql',
+        body: fs.createReadStream(filePath)
+      },
+      fields: 'id,name,size,createdTime,webViewLink',
+      ...SHARED_DRIVE_PARAMS
+    });
+
+    return res.data;
+  }
+
+  // List all backup files in db_backup folder, sorted latest first
+  static async listBackupFiles() {
+    const backupFolderId = await this.getBackupFolder();
+
+    const res = await drive.files.list({
+      q: `'${backupFolderId}' in parents AND trashed = false`,
+      fields: 'files(id,name,size,createdTime,modifiedTime)',
+      orderBy: 'createdTime desc',
+      pageSize: 100,
+      corpora: 'allDrives',
+      ...SHARED_DRIVE_PARAMS
+    });
+
+    return res.data.files;
+  }
+
+  // Download a backup file from drive and return as buffer
+  static async downloadBackupBuffer(fileId) {
+    const meta = await drive.files.get({ fileId, fields: 'name,mimeType', ...SHARED_DRIVE_PARAMS });
+    const res = await drive.files.get({ fileId, alt: 'media', ...SHARED_DRIVE_PARAMS }, { responseType: 'arraybuffer' });
+    return { buffer: Buffer.from(res.data), name: meta.data.name };
+  }
+
   // Get breadcrumb path from file to user root
   static async getBreadcrumb(fileId, rootFolderId) {
     const crumbs = [];

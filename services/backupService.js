@@ -44,6 +44,9 @@ async function createDump() {
   lines.push('');
 
   try {
+    // Force UTC so TIMESTAMP columns are read/written as UTC (not server-local TZ)
+    await conn.query("SET time_zone = '+00:00'");
+
     // Get all tables
     const [tables] = await conn.query('SHOW TABLES');
     const tableKey = `Tables_in_${dbName}`;
@@ -168,6 +171,7 @@ async function restoreBackup(backupId, userId) {
     // Re-connect to pool (tables were recreated) and update status
     // We need a fresh connection since tables were dropped/recreated
     const freshConn = await createConnection();
+    await freshConn.query("SET time_zone = '+00:00'");
     await freshConn.query('UPDATE backup_logs SET status = ? WHERE id = ?', ['restored', backupId]);
     await freshConn.end();
 
@@ -176,6 +180,7 @@ async function restoreBackup(backupId, userId) {
     try {
       await conn.end();
       const freshConn = await createConnection();
+      await freshConn.query("SET time_zone = '+00:00'");
       await freshConn.query('UPDATE backup_logs SET status = ?, notes = ? WHERE id = ?', ['failed', `Restore failed: ${err.message}`, backupId]);
       await freshConn.end();
     } catch (_) {}
@@ -292,6 +297,7 @@ async function restoreFromFile(uploadedPath, originalName, userId) {
     await conn.end();
 
     const freshConn = await createConnection();
+    await freshConn.query("SET time_zone = '+00:00'");
     await freshConn.query('UPDATE backup_logs SET status = ? WHERE id = ?', ['restored', logId]);
     await freshConn.end();
 
@@ -300,6 +306,7 @@ async function restoreFromFile(uploadedPath, originalName, userId) {
     try {
       await conn.end();
       const freshConn = await createConnection();
+      await freshConn.query("SET time_zone = '+00:00'");
       await freshConn.query('UPDATE backup_logs SET status = ?, notes = ? WHERE id = ?',
         ['failed', `Restore failed: ${err.message}`, logId]);
       await freshConn.end();

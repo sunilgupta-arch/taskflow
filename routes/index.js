@@ -71,6 +71,9 @@ router.post('/backups/upload-restore', authenticate, requireRoles('LOCAL_ADMIN')
 router.post('/backups/restore/:id', authenticate, requireRoles('LOCAL_ADMIN'), BackupController.restore);
 router.post('/backups/settings', authenticate, requireRoles('LOCAL_ADMIN'), BackupController.updateSettings);
 router.get('/backups/download/:id', authenticate, requireRoles('LOCAL_ADMIN'), BackupController.download);
+router.post('/backups/upload-drive/:id', authenticate, requireRoles('LOCAL_ADMIN'), BackupController.uploadToDrive);
+router.get('/backups/drive-list', authenticate, requireRoles('LOCAL_ADMIN'), BackupController.listDriveBackups);
+router.post('/backups/restore-drive', authenticate, requireRoles('LOCAL_ADMIN'), BackupController.restoreFromDrive);
 router.delete('/backups/:id', authenticate, requireRoles('LOCAL_ADMIN'), BackupController.destroy);
 
 module.exports = router;

@@ -63,36 +63,33 @@ function getDayOfWeek(timezone = 'UTC') {
 }
 
 /**
- * Get UTC offset in minutes for common IANA timezones.
- * Avoids reliance on full ICU support in Node.js.
+ * Get UTC offset in minutes for a given IANA timezone.
+ * Uses Intl API (DST-aware) as primary, with hardcoded fallback for
+ * non-DST timezones only when Intl is unavailable.
  */
 function getTimezoneOffsetMinutes(timezone) {
-  const offsets = {
-    'UTC': 0,
-    'Asia/Kolkata': 330,
-    'Asia/Calcutta': 330,
-    'America/New_York': -300,
-    'America/Chicago': -360,
-    'America/Denver': -420,
-    'America/Los_Angeles': -480,
-    'Europe/London': 0,
-    'Europe/Berlin': 60,
-    'Europe/Paris': 60,
-    'Asia/Dubai': 240,
-    'Asia/Singapore': 480,
-    'Asia/Tokyo': 540,
-    'Australia/Sydney': 660,
-  };
-  if (offsets.hasOwnProperty(timezone)) return offsets[timezone];
-  // Fallback: try Intl (works if full ICU is available)
+  if (timezone === 'UTC') return 0;
+
+  // Primary: Intl API — correctly handles DST transitions
   try {
     const now = new Date();
     const utcStr = now.toLocaleString('en-US', { timeZone: 'UTC' });
     const tzStr = now.toLocaleString('en-US', { timeZone: timezone });
     return Math.round((new Date(tzStr) - new Date(utcStr)) / 60000);
   } catch (e) {
-    return 0;
+    // Intl unavailable — fall back to hardcoded offsets (non-DST zones only)
   }
+
+  const fallbackOffsets = {
+    'Asia/Kolkata': 330,
+    'Asia/Calcutta': 330,
+    'Asia/Dubai': 240,
+    'Asia/Singapore': 480,
+    'Asia/Tokyo': 540,
+  };
+  if (fallbackOffsets.hasOwnProperty(timezone)) return fallbackOffsets[timezone];
+
+  return 0;
 }
 
 function formatTime(date, timezone = 'UTC') {
