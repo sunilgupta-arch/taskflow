@@ -1218,7 +1218,18 @@ function buildMessagesHTML(messages, isInitial) {
     var isSystem = m.sender_name === 'System';
     var time = new Date(m.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
 
-    if (isSystem) {
+    if (m.message_type && m.message_type.startsWith('call_')) {
+      // Call event message: centered with phone icon
+      var isCallMissed = m.message_type === 'call_missed';
+      var callIcon = isCallMissed ? 'bi-telephone-x-fill' : (m.message_type === 'call_outgoing' ? 'bi-telephone-outbound-fill' : 'bi-telephone-inbound-fill');
+      var callColor = isCallMissed ? '#ef4444' : '#10b981';
+      html += '<div class="msg-row" data-mid="' + m.id + '" style="justify-content:center;">';
+      html += '<div style="display:inline-flex;align-items:center;gap:8px;background:rgba(' + (isCallMissed ? '239,68,68' : '16,185,129') + ',0.08);border:1px solid rgba(' + (isCallMissed ? '239,68,68' : '16,185,129') + ',0.2);border-radius:20px;padding:6px 16px;">';
+      html += '<i class="bi ' + callIcon + '" style="color:' + callColor + ';font-size:0.85rem;"></i>';
+      html += '<span style="font-size:0.8rem;color:' + callColor + ';font-weight:500;">' + escapeHtml(m.content) + '</span>';
+      html += '<span style="font-size:0.65rem;color:var(--tf-text-muted);margin-left:4px;">' + time + '</span>';
+      html += '</div></div>';
+    } else if (isSystem) {
       // System message: centered notification style
       html += '<div class="msg-row" data-mid="' + m.id + '" style="justify-content:center;">';
       html += '<div style="max-width:85%;background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.2);border-radius:12px;padding:0.75rem 1rem;text-align:left;">';

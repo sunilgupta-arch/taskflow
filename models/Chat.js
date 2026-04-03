@@ -352,6 +352,34 @@ class ChatModel {
     return { conversationId, messageId: result.insertId };
   }
 
+  // Log a call event as a message in a conversation
+  static async sendCallMessage({ conversation_id, sender_id, message_type, call_duration }) {
+    const labels = {
+      'call_outgoing': 'Outgoing call',
+      'call_incoming': 'Incoming call',
+      'call_missed': 'Missed call'
+    };
+    const content = labels[message_type] || 'Call';
+    if (call_duration) {
+      const mins = Math.floor(call_duration / 60);
+      const secs = call_duration % 60;
+      var durationText = (mins > 0 ? mins + 'm ' : '') + secs + 's';
+    }
+
+    const [result] = await db.query(
+      `INSERT INTO chat_messages (conversation_id, sender_id, content, message_type, call_duration) VALUES (?, ?, ?, ?, ?)`,
+      [conversation_id, sender_id, call_duration ? content + ' (' + durationText + ')' : content, message_type, call_duration || null]
+    );
+
+    await db.query('UPDATE chat_conversations SET updated_at = NOW() WHERE id = ?', [conversation_id]);
+
+    const [rows] = await db.query(
+      `SELECT m.*, u.name AS sender_name FROM chat_messages m JOIN users u ON u.id = m.sender_id WHERE m.id = ?`,
+      [result.insertId]
+    );
+    return rows[0];
+  }
+
   // Clear chat history for a specific user (hides all current messages for that user only)
   static async clearChatForUser(conversationId, userId) {
     const [[latest]] = await db.query(

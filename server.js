@@ -124,8 +124,9 @@ app.use((err, req, res, next) => {
     }
   });
 
-  // Track active calls in memory: userId -> { conversation_id, peer_id }
+  // Track active calls in memory: userId -> { conversation_id, peer_id, started_at }
   const activeCalls = new Map();
+  const ChatModel = require('./models/Chat');
 
   // Socket.IO connection handler
   io.on('connection', (socket) => {
@@ -182,7 +183,11 @@ app.use((err, req, res, next) => {
     socket.on('call:answer', (data) => {
       // { to_user_id, conversation_id, answer }
       console.log(`[Call] ${user.name} (${user.id}) → answer to user ${data.to_user_id}`);
-      activeCalls.set(user.id, { conversation_id: data.conversation_id, peer_id: data.to_user_id });
+      const now = Date.now();
+      activeCalls.set(user.id, { conversation_id: data.conversation_id, peer_id: data.to_user_id, started_at: now });
+      // Update caller's record with start time too
+      const callerCall = activeCalls.get(data.to_user_id);
+      if (callerCall) callerCall.started_at = now;
       const targetRoom = `user:${data.to_user_id}`;
       const socketsInRoom = io.sockets.adapter.rooms.get(targetRoom);
       console.log(`[Call] Emitting call:answered to room ${targetRoom} (${socketsInRoom ? socketsInRoom.size : 0} sockets)`);
@@ -199,15 +204,36 @@ app.use((err, req, res, next) => {
     socket.on('call:reject', (data) => {
       // { to_user_id, conversation_id }
       console.log(`[Call] ${user.name} (${user.id}) → rejected call from user ${data.to_user_id}`);
+      activeCalls.delete(data.to_user_id);
       io.to(`user:${data.to_user_id}`).emit('call:rejected', { conversation_id: data.conversation_id });
+
+      // Log as missed call (the caller's call was declined)
+      if (data.conversation_id) {
+        ChatModel.sendCallMessage({ conversation_id: data.conversation_id, sender_id: data.to_user_id, message_type: 'call_missed', call_duration: null }).catch(() => {});
+      }
     });
 
     // Either party ends the call
     socket.on('call:end', (data) => {
       // { to_user_id }
       console.log(`[Call] ${user.name} (${user.id}) → ended call with user ${data.to_user_id}`);
+      const myCall = activeCalls.get(user.id);
+      const peerCall = activeCalls.get(data.to_user_id);
+      const convId = (myCall && myCall.conversation_id) || (peerCall && peerCall.conversation_id);
+      const startedAt = (myCall && myCall.started_at) || (peerCall && peerCall.started_at);
       activeCalls.delete(user.id);
+      activeCalls.delete(data.to_user_id);
       io.to(`user:${data.to_user_id}`).emit('call:ended');
+
+      // Log call in chat
+      if (convId && startedAt) {
+        // Completed call — log for both parties
+        const duration = Math.round((Date.now() - startedAt) / 1000);
+        ChatModel.sendCallMessage({ conversation_id: convId, sender_id: user.id, message_type: 'call_outgoing', call_duration: duration }).catch(() => {});
+      } else if (convId) {
+        // Call was never answered (caller hung up) — missed call for the peer
+        ChatModel.sendCallMessage({ conversation_id: convId, sender_id: user.id, message_type: 'call_missed', call_duration: null }).catch(() => {});
+      }
     });
 
     // Clean up if user disconnects mid-call
@@ -216,7 +242,16 @@ app.use((err, req, res, next) => {
         const call = activeCalls.get(user.id);
         console.log(`[Call] ${user.name} (${user.id}) disconnected mid-call, notifying peer ${call.peer_id}`);
         activeCalls.delete(user.id);
+        activeCalls.delete(call.peer_id);
         io.to(`user:${call.peer_id}`).emit('call:ended');
+
+        // Log call
+        if (call.conversation_id && call.started_at) {
+          const duration = Math.round((Date.now() - call.started_at) / 1000);
+          ChatModel.sendCallMessage({ conversation_id: call.conversation_id, sender_id: user.id, message_type: 'call_outgoing', call_duration: duration }).catch(() => {});
+        } else if (call.conversation_id) {
+          ChatModel.sendCallMessage({ conversation_id: call.conversation_id, sender_id: user.id, message_type: 'call_missed', call_duration: null }).catch(() => {});
+        }
       }
     });
   });
