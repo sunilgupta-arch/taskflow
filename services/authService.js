@@ -1,7 +1,7 @@
 const jwt = require('jsonwebtoken');
 const UserModel = require('../models/User');
 const db = require('../config/db');
-const { getToday } = require('../utils/timezone');
+const { getToday, getEffectiveWorkDate } = require('../utils/timezone');
 const ChatModel = require('../models/Chat');
 
 class AuthService {
@@ -21,8 +21,8 @@ class AuthService {
     const valid = await UserModel.verifyPassword(password, user.password);
     if (!valid) throw new Error('Invalid credentials');
 
-    // Record attendance using user's org timezone
-    await this.recordAttendance(user.id, user.org_timezone || 'UTC');
+    // Record attendance using user's org timezone and shift info
+    await this.recordAttendance(user.id, user.org_timezone || 'UTC', user.shift_start, user.shift_hours);
 
     const token = this.generateToken(user);
 
@@ -31,8 +31,8 @@ class AuthService {
     return { token, user: userData };
   }
 
-  static async recordAttendance(userId, timezone = 'UTC') {
-    const today = getToday(timezone);
+  static async recordAttendance(userId, timezone = 'UTC', shiftStart = null, shiftHours = null) {
+    const today = getEffectiveWorkDate(timezone, shiftStart, shiftHours);
 
     // Check if any session exists for today (to detect first login)
     const [allSessions] = await db.query(
@@ -71,8 +71,8 @@ class AuthService {
     }
   }
 
-  static async recordLogout(userId, timezone = 'UTC', reason = null) {
-    const today = getToday(timezone);
+  static async recordLogout(userId, timezone = 'UTC', reason = null, shiftStart = null, shiftHours = null) {
+    const today = getEffectiveWorkDate(timezone, shiftStart, shiftHours);
     await db.query(
       `UPDATE attendance_logs SET logout_time = NOW(), logout_reason = ?
        WHERE user_id = ? AND date = ? AND logout_time IS NULL`,

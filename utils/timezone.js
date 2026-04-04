@@ -38,7 +38,8 @@ function getUTCNow() {
  * @returns {string} YYYY-MM-DD date string
  */
 function getEffectiveWorkDate(timezone, shiftStart, shiftHours) {
-  if (!shiftStart || !shiftHours) return getToday(timezone);
+  const today = getToday(timezone);
+  if (!shiftStart || !shiftHours) return today;
 
   const now = new Date();
   const timeStr = now.toLocaleTimeString('en-GB', { timeZone: timezone, hour12: false });
@@ -55,7 +56,40 @@ function getEffectiveWorkDate(timezone, shiftStart, shiftHours) {
     return yesterday.toLocaleDateString('en-CA', { timeZone: timezone });
   }
 
-  return now.toLocaleDateString('en-CA', { timeZone: timezone });
+  return today;
+}
+
+/**
+ * Enhanced effective work date that also checks for an open attendance session.
+ * If the user has an active (not logged-out) session from a previous date, that
+ * session's date takes priority — the user's shift is still ongoing.
+ *
+ * @param {object} db          - Database pool (mysql2/promise)
+ * @param {number} userId      - User ID
+ * @param {string} timezone    - IANA timezone
+ * @param {string} shiftStart  - HH:MM:SS
+ * @param {number} shiftHours  - Duration in hours
+ * @returns {Promise<string>}  - YYYY-MM-DD
+ */
+async function getEffectiveWorkDateWithSession(db, userId, timezone, shiftStart, shiftHours) {
+  const shiftDate = getEffectiveWorkDate(timezone, shiftStart, shiftHours);
+
+  // Check if there's an open attendance session from a date earlier than shiftDate
+  const [[openSession]] = await db.query(
+    `SELECT date FROM attendance_logs
+     WHERE user_id = ? AND logout_time IS NULL AND date < ?
+     ORDER BY date DESC LIMIT 1`,
+    [userId, shiftDate]
+  );
+
+  if (openSession) {
+    const sessionDate = openSession.date instanceof Date
+      ? openSession.date.toISOString().split('T')[0]
+      : String(openSession.date).split('T')[0];
+    return sessionDate;
+  }
+
+  return shiftDate;
 }
 
 function getDayOfWeek(timezone = 'UTC') {
@@ -156,4 +190,4 @@ function getTimezoneOffsetString(timezone) {
   return `${sign}${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 }
 
-module.exports = { getNow, getToday, getUTCNow, getEffectiveWorkDate, getDayOfWeek, formatTime, getTimezoneOffsetMinutes, getTimezoneOffsetString, isScheduledForDate };
+module.exports = { getNow, getToday, getUTCNow, getEffectiveWorkDate, getEffectiveWorkDateWithSession, getDayOfWeek, formatTime, getTimezoneOffsetMinutes, getTimezoneOffsetString, isScheduledForDate };

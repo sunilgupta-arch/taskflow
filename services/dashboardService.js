@@ -57,7 +57,8 @@ class DashboardService {
     const [rows] = await db.query(
       `SELECT t.id, t.title, t.status, t.type, t.priority, t.due_date, t.reward_amount, t.created_at,
               CASE WHEN t.type = 'recurring' AND t.status = 'active' THEN 1 ELSE 0 END as is_recurring,
-              (SELECT COUNT(*) FROM task_completions tc WHERE tc.task_id = t.id AND tc.user_id = ? AND tc.completion_date = ?) as is_completed_for_date
+              (SELECT COUNT(*) FROM task_completions tc WHERE tc.task_id = t.id AND tc.user_id = ? AND tc.completion_date = ? AND tc.completed_at IS NOT NULL) as is_completed_for_date,
+              (SELECT COUNT(*) FROM task_completions tc WHERE tc.task_id = t.id AND tc.user_id = ? AND tc.completion_date = ? AND tc.started_at IS NOT NULL AND tc.completed_at IS NULL) as is_started_for_date
        FROM tasks t
        JOIN users u_assignee ON u_assignee.id = t.assigned_to
        WHERE t.assigned_to = ? AND t.is_deleted = 0
@@ -73,7 +74,7 @@ class DashboardService {
            OR (t.type = 'once' AND t.status = 'completed' AND DATE(t.completed_at) = ?)
          )
        ORDER BY FIELD(t.priority, 'urgent', 'high', 'medium', 'low'), t.created_at DESC`,
-      [userId, date, userId, date, date, today, date, date]
+      [userId, date, userId, date, userId, date, date, today, date, date]
     );
     return rows;
   }

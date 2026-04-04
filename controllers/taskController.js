@@ -5,7 +5,7 @@ const DashboardService = require('../services/dashboardService');
 const { ApiResponse, getPagination, getPaginationMeta } = require('../utils/response');
 const db = require('../config/db');
 const { getIO } = require('../config/socket');
-const { getToday, getEffectiveWorkDate, isScheduledForDate } = require('../utils/timezone');
+const { getToday, getEffectiveWorkDate, getEffectiveWorkDateWithSession, isScheduledForDate } = require('../utils/timezone');
 const XLSX = require('xlsx');
 
 class TaskController {
@@ -16,7 +16,7 @@ class TaskController {
       const role = req.user.role_name;
 
       const tz = req.user.org_timezone || 'UTC';
-      const today = getEffectiveWorkDate(tz, req.user.shift_start, req.user.shift_hours);
+      const today = await getEffectiveWorkDateWithSession(db, req.user.id, tz, req.user.shift_start, req.user.shift_hours);
       const filters = { status, type, search, completed_period, assigned_to, for_date, page, limit, orgType: req.user.organization_type, todayDate: today };
       if (role === 'LOCAL_USER') {
         filters.user = req.user.id;
@@ -42,7 +42,7 @@ class TaskController {
           if (task.assigned_to) {
             // Use the employee's effective work date, not the admin's
             const empShift = userShiftMap[task.assigned_to];
-            const empCheckDate = for_date || getEffectiveWorkDate(tz, empShift ? empShift.shift_start : null, empShift ? empShift.shift_hours : null);
+            const empCheckDate = for_date || await getEffectiveWorkDateWithSession(db, task.assigned_to, tz, empShift ? empShift.shift_start : null, empShift ? empShift.shift_hours : null);
             const session = await TaskCompletion.getTodaySession(task.id, task.assigned_to, empCheckDate);
             task.is_started_today = !!(session && session.started_at && !session.completed_at);
             task.is_completed_today = !!(session && session.completed_at);
@@ -78,25 +78,30 @@ class TaskController {
   // GET /tasks/my
   static async myTasks(req, res) {
     try {
-      const { page = 1, limit = 20, status, type, search, schedule = 'today' } = req.query;
+      const { page = 1, limit = 20, status, type, search, schedule = 'today', for_date } = req.query;
       const tz = req.user.org_timezone || 'UTC';
-      const today = getEffectiveWorkDate(tz, req.user.shift_start, req.user.shift_hours);
+      const today = await getEffectiveWorkDateWithSession(db, req.user.id, tz, req.user.shift_start, req.user.shift_hours);
+      const checkDate = for_date || today;
       const filters = {
-        status, type, search, schedule, page, limit,
+        status, type, search, for_date, page, limit,
         orgType: req.user.organization_type,
         user: req.user.id,
         role: 'LOCAL_USER', // reuse individual-row query path
         todayDate: today
       };
+      // Only apply schedule filter when no specific date is selected
+      if (!for_date) {
+        filters.schedule = schedule;
+      }
 
       const { rows, total } = await TaskModel.getAll(filters);
 
-      // For recurring tasks, attach today's session status and schedule check
+      // For recurring tasks, attach session status and schedule check for the relevant date
       for (const task of rows) {
         if (task.type === 'recurring' && task.status === 'active') {
-          task.is_scheduled_today = isScheduledForDate(task, today);
+          task.is_scheduled_today = isScheduledForDate(task, checkDate);
           if (task.assigned_to) {
-            const session = await TaskCompletion.getTodaySession(task.id, task.assigned_to, today);
+            const session = await TaskCompletion.getTodaySession(task.id, task.assigned_to, checkDate);
             task.is_started_today = !!(session && session.started_at && !session.completed_at);
             task.is_completed_today = !!(session && session.completed_at);
           }
@@ -108,9 +113,10 @@ class TaskController {
         tasks: rows,
         pagination: getPaginationMeta(total, page, limit),
         ourUsers: [],
-        filters: { status, type, search, schedule },
+        filters: { status, type, search, schedule, for_date },
         role: req.user.role_name,
-        isMyTasks: true
+        isMyTasks: true,
+        todayDate: today
       });
     } catch (err) {
       res.status(500).render('error', { title: 'Error', message: err.message, code: 500, layout: false });
@@ -303,7 +309,7 @@ class TaskController {
         const [[empUser]] = await db.query(`SELECT shift_start, shift_hours FROM users WHERE id = ?`, [task.assigned_to]);
         const empShiftStart = (req.user.id === task.assigned_to) ? req.user.shift_start : (empUser ? empUser.shift_start : null);
         const empShiftHours = (req.user.id === task.assigned_to) ? req.user.shift_hours : (empUser ? empUser.shift_hours : null);
-        const today = getEffectiveWorkDate(req.user.org_timezone || 'UTC', empShiftStart, empShiftHours);
+        const today = await getEffectiveWorkDateWithSession(db, task.assigned_to, req.user.org_timezone || 'UTC', empShiftStart, empShiftHours);
         todaySession = await TaskCompletion.getTodaySession(task.id, task.assigned_to, today);
         isStartedToday = !!(todaySession && todaySession.started_at && !todaySession.completed_at);
         isCompletedToday = !!(todaySession && todaySession.completed_at);
@@ -548,7 +554,7 @@ class TaskController {
     try {
       const userId = req.user.id;
       const tz = req.user.org_timezone || 'UTC';
-      const today = getEffectiveWorkDate(tz, req.user.shift_start, req.user.shift_hours);
+      const today = await getEffectiveWorkDateWithSession(db, userId, tz, req.user.shift_start, req.user.shift_hours);
       const tasks = await DashboardService.getTasksForDate(userId, today, today);
 
       // Filter to only incomplete tasks for today

@@ -1,7 +1,7 @@
 const AuthService = require('../services/authService');
 const { ApiResponse } = require('../utils/response');
 const db = require('../config/db');
-const { getToday } = require('../utils/timezone');
+const { getToday, getEffectiveWorkDate } = require('../utils/timezone');
 
 class AuthController {
   static showLogin(req, res) {
@@ -35,7 +35,7 @@ class AuthController {
     try {
       if (req.user?.id) {
         const reason = req.body?.logout_reason || req.query?.reason || null;
-        await AuthService.recordLogout(req.user.id, req.user.org_timezone || 'UTC', reason);
+        await AuthService.recordLogout(req.user.id, req.user.org_timezone || 'UTC', reason, req.user.shift_start, req.user.shift_hours);
       }
     } catch (e) {}
 
@@ -53,7 +53,7 @@ class AuthController {
   static async checkLateLogin(req, res) {
     try {
       const tz = req.user.org_timezone || 'UTC';
-      const today = getToday(tz);
+      const today = getEffectiveWorkDate(tz, req.user.shift_start, req.user.shift_hours);
       // Check only the first session of the day (earliest login)
       const [[attendance]] = await db.query(
         `SELECT login_time, late_login_reason FROM attendance_logs WHERE user_id = ? AND date = ? ORDER BY login_time ASC LIMIT 1`,
@@ -94,7 +94,7 @@ class AuthController {
         return ApiResponse.error(res, 'Reason is required', 400);
       }
       const tz = req.user.org_timezone || 'UTC';
-      const today = getToday(tz);
+      const today = getEffectiveWorkDate(tz, req.user.shift_start, req.user.shift_hours);
       // Update only the first session of the day
       await db.query(
         `UPDATE attendance_logs SET late_login_reason = ? WHERE user_id = ? AND date = ? AND late_login_reason IS NULL ORDER BY login_time ASC LIMIT 1`,

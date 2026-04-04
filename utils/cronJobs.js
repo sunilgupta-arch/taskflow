@@ -459,9 +459,16 @@ const startCronJobs = async () => {
     try {
       const tz = orgTz;
       const today = getToday(tz);
+      // Only close sessions for users whose shift does NOT cross midnight
+      // Night shift users (shift crosses midnight) keep their sessions open
       await db.query(
-        `UPDATE attendance_logs SET logout_time = '23:59:59', logout_reason = 'Auto - Session Expired'
-         WHERE date = ? AND logout_time IS NULL`, [today]
+        `UPDATE attendance_logs al
+         JOIN users u ON al.user_id = u.id
+         SET al.logout_time = NOW(), al.logout_reason = 'Auto - Session Expired'
+         WHERE al.date = ? AND al.logout_time IS NULL
+           AND (u.shift_start IS NULL OR u.shift_hours IS NULL
+                OR (CAST(SUBSTRING_INDEX(u.shift_start, ':', 1) AS UNSIGNED) + u.shift_hours) <= 24)`,
+        [today]
       );
       console.log('[CRON] Attendance cleanup done');
     } catch (err) {

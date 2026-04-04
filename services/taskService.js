@@ -2,7 +2,7 @@ const TaskModel = require('../models/Task');
 const TaskCompletion = require('../models/TaskCompletion');
 const RewardModel = require('../models/Reward');
 const db = require('../config/db');
-const { getToday, getUTCNow, getEffectiveWorkDate } = require('../utils/timezone');
+const { getToday, getUTCNow, getEffectiveWorkDate, getEffectiveWorkDateWithSession } = require('../utils/timezone');
 const ChatModel = require('../models/Chat');
 
 // Helper: send system notification (non-blocking)
@@ -74,7 +74,7 @@ async function checkStreakAndNotify(userId, timezone) {
 async function getUserWorkDate(userId, timezone) {
   const [[user]] = await db.query(`SELECT shift_start, shift_hours FROM users WHERE id = ?`, [userId]);
   if (!user) return getToday(timezone);
-  return getEffectiveWorkDate(timezone, user.shift_start, user.shift_hours);
+  return getEffectiveWorkDateWithSession(db, userId, timezone, user.shift_start, user.shift_hours);
 }
 
 class TaskService {
