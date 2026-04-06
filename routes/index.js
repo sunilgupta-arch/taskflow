@@ -50,6 +50,7 @@ router.get('/reports/punctuality', authenticate, requireRoles('LOCAL_ADMIN', 'LO
 router.get('/reports/workload', authenticate, requireRoles('LOCAL_ADMIN', 'LOCAL_MANAGER', 'CLIENT_ADMIN', 'CLIENT_MANAGER'), ReportController.workloadReport);
 router.get('/my-attendance', authenticate, ReportController.myAttendance);
 router.post('/attendance/override', authenticate, requireRoles('LOCAL_ADMIN'), ReportController.attendanceOverride);
+router.post('/attendance/force-logout', authenticate, requireRoles('LOCAL_ADMIN', 'LOCAL_MANAGER'), ReportController.forceLogout);
 router.delete('/attendance/override', authenticate, requireRoles('LOCAL_ADMIN'), ReportController.removeOverride);
 
 // Leaves (LOCAL roles only: users/managers apply, admin/manager approve/reject)

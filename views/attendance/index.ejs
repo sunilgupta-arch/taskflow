@@ -351,7 +351,18 @@
                   <% } %>
                 </td>
                 <td style="font-family:var(--tf-font-mono);font-size:0.75rem;color:var(--tf-text-muted);">
-                  <%- l.logoutFormatted || '<span style="color:#10b981;">Active</span>' %>
+                  <% if (l.logoutFormatted) { %>
+                    <%= l.logoutFormatted %>
+                  <% } else { %>
+                    <span style="color:#10b981;">Active</span>
+                    <% if (isAdmin) { %>
+                    <button onclick="forceLogout(<%= l.id %>, '<%= l.user_name.replace(/'/g, "\\'") %>')"
+                      style="margin-left:4px;background:none;border:1px solid rgba(239,68,68,0.3);color:#ef4444;padding:1px 6px;border-radius:4px;font-size:0.55rem;cursor:pointer;font-family:var(--tf-font-mono);"
+                      title="Force logout this session">
+                      <i class="bi bi-box-arrow-right"></i> Logout
+                    </button>
+                    <% } %>
+                  <% } %>
                 </td>
                 <td style="font-size:0.75rem;color:var(--tf-text-muted);">
                   <%= l.duration ? l.duration.substring(0,5) + 'h' : '—' %>
@@ -438,6 +449,16 @@
 </div>
 
 <script>
+function forceLogout(attendanceId, userName) {
+  if (!confirm('Force logout ' + userName + '? This will end their active session now.')) return;
+  axios.post('/attendance/force-logout', { attendance_id: attendanceId }).then(function(res) {
+    showToast(res.data.message || 'User logged out');
+    setTimeout(function() { location.reload(); }, 800);
+  }).catch(function(err) {
+    showToast(err.response?.data?.message || 'Failed to force logout', 'error');
+  });
+}
+
 function openOverrideModal(userId, userName, date, currentStatus) {
   document.getElementById('overrideUserId').value = userId;
   document.getElementById('overrideDate').value = date;

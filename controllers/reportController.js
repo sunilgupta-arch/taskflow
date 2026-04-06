@@ -981,6 +981,43 @@ class ReportController {
       return ApiResponse.error(res, 'Failed to remove override');
     }
   }
+
+  // POST /attendance/force-logout — Admin forces logout for a user's open session
+  static async forceLogout(req, res) {
+    try {
+      const { attendance_id } = req.body;
+      if (!attendance_id) {
+        return ApiResponse.error(res, 'Attendance record ID is required', 400);
+      }
+
+      // Find the open session
+      const [[record]] = await db.query(
+        'SELECT id, user_id, date, logout_time FROM attendance_logs WHERE id = ?',
+        [attendance_id]
+      );
+
+      if (!record) {
+        return ApiResponse.error(res, 'Attendance record not found', 404);
+      }
+      if (record.logout_time) {
+        return ApiResponse.error(res, 'User is already logged out', 400);
+      }
+
+      // Force logout with current timestamp
+      await db.query(
+        `UPDATE attendance_logs SET logout_time = NOW(), logout_reason = ? WHERE id = ?`,
+        [`Admin Force Logout by ${req.user.name}`, attendance_id]
+      );
+
+      // Get user name for response
+      const [[user]] = await db.query('SELECT name FROM users WHERE id = ?', [record.user_id]);
+
+      return ApiResponse.success(res, {}, `${user ? user.name : 'User'} has been logged out`);
+    } catch (err) {
+      console.error('Force logout error:', err);
+      return ApiResponse.error(res, 'Failed to force logout');
+    }
+  }
 }
 
 module.exports = ReportController;

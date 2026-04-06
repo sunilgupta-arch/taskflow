@@ -133,6 +133,14 @@
       <i class="bi bi-exclamation-triangle me-1"></i>Still logged in — likely forgot to logout
     </div>
     <% } %>
+    <% if (emp.attendanceId && ['stale', 'extending', 'idle'].includes(emp.statusType)) { %>
+    <div style="margin-top:0.4rem;padding-left:2.5rem;">
+      <button onclick="forceLogout(<%= emp.attendanceId %>, '<%= emp.name.replace(/'/g, "\\'") %>')"
+        style="background:none;border:1px solid rgba(239,68,68,0.3);color:#ef4444;padding:2px 8px;border-radius:5px;font-size:0.6rem;cursor:pointer;font-family:var(--tf-font-mono);">
+        <i class="bi bi-box-arrow-right me-1"></i>Force Logout
+      </button>
+    </div>
+    <% } %>
   </div>
   <% }) %>
 </div>
@@ -149,6 +157,7 @@
           <th>Current Task</th>
           <th>Started At</th>
           <th>Elapsed</th>
+          <th></th>
         </tr>
       </thead>
       <tbody>
@@ -191,6 +200,14 @@
             <span style="color:var(--tf-border);">—</span>
             <% } %>
           </td>
+          <td>
+            <% if (emp.attendanceId && ['stale', 'extending', 'idle'].includes(emp.statusType)) { %>
+            <button onclick="forceLogout(<%= emp.attendanceId %>, '<%= emp.name.replace(/'/g, "\\'") %>')"
+              style="background:none;border:1px solid rgba(239,68,68,0.3);color:#ef4444;padding:1px 6px;border-radius:4px;font-size:0.55rem;cursor:pointer;font-family:var(--tf-font-mono);white-space:nowrap;">
+              <i class="bi bi-box-arrow-right"></i> Logout
+            </button>
+            <% } %>
+          </td>
         </tr>
         <% }) %>
       </tbody>
@@ -205,6 +222,17 @@
 <% } %>
 
 <script>
+// Force logout
+function forceLogout(attendanceId, userName) {
+  if (!confirm('Force logout ' + userName + '? This will end their active session now.')) return;
+  axios.post('/attendance/force-logout', { attendance_id: attendanceId }).then(function(res) {
+    showToast(res.data.message || 'User logged out');
+    setTimeout(function() { location.reload(); }, 800);
+  }).catch(function(err) {
+    showToast(err.response?.data?.message || 'Failed to force logout', 'error');
+  });
+}
+
 // View toggle with localStorage
 function setView(view) {
   var cards = document.getElementById('viewCards');

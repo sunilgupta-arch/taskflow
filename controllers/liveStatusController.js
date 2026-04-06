@@ -53,7 +53,7 @@ class LiveStatusController {
 
       // Fetch today's attendance with login/logout info
       const [attendance] = await db.query(
-        `SELECT user_id, login_time, logout_time FROM attendance_logs
+        `SELECT id, user_id, login_time, logout_time FROM attendance_logs
          WHERE date = ? AND login_time IS NOT NULL
          ORDER BY login_time DESC`,
         [today]
@@ -77,6 +77,7 @@ class LiveStatusController {
           taskName: null,
           taskId: null,
           startedAt: null,
+          attendanceId: null,
         };
 
         // (a) Weekly off
@@ -128,6 +129,7 @@ class LiveStatusController {
         const session = sessionMap.get(user.id);
         const att = attendanceMap.get(user.id);
         const isLoggedIn = att && !att.logout_time;
+        if (isLoggedIn) result.attendanceId = att.id;
 
         if (onShift) {
           // ON SHIFT

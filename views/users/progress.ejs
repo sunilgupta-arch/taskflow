@@ -105,6 +105,10 @@ const _dateLabel = _isViewingToday ? 'Today' : new Date(selectedDate + 'T12:00:0
                 <span class="badge" style="font-size:0.6rem;padding:2px 6px;border-radius:3px;background:rgba(16,185,129,0.15);color:#10b981;">
                   <i class="bi bi-check-circle-fill"></i> done
                 </span>
+                <% } else if (t.is_in_progress) { %>
+                <span class="badge" style="font-size:0.6rem;padding:2px 6px;border-radius:3px;background:rgba(0,212,255,0.15);color:#00d4ff;">
+                  <i class="bi bi-play-circle-fill"></i> in progress
+                </span>
                 <% } else if (_isPast) { %>
                 <span class="badge" style="font-size:0.6rem;padding:2px 6px;border-radius:3px;background:rgba(239,68,68,0.15);color:#ef4444;">
                   <i class="bi bi-x-circle"></i> not done
@@ -132,7 +136,7 @@ const _dateLabel = _isViewingToday ? 'Today' : new Date(selectedDate + 'T12:00:0
               <% if (t.started_at) { %>
                 <div><i class="bi bi-play-fill" style="color:#10b981;"></i> Started: <%= new Date(t.started_at).toLocaleTimeString('en-IN', _fmtSec) %></div>
               <% } %>
-              <% if ((t.is_recurring && t.is_completed) || (t.status === 'completed' && t.completed_at)) { %>
+              <% if (t.completed_at && ((t.is_recurring && t.is_completed) || t.status === 'completed')) { %>
                 <div><i class="bi bi-check-circle-fill" style="color:#10b981;"></i> Completed: <%= new Date(t.completed_at).toLocaleTimeString('en-IN', _fmtSec) %></div>
               <% } else if (!t.started_at && !t.is_recurring) { %>
                 <div>Created: <%= new Date(t.created_at).toLocaleTimeString('en-IN', _fmt) %></div>

@@ -166,7 +166,8 @@ class UserController {
         db.query(
           `SELECT t.id, t.title, t.type, t.created_at, t.status, t.due_date,
                   u.name as created_by_name,
-                  tc.id IS NOT NULL as is_completed,
+                  (tc.id IS NOT NULL AND tc.completed_at IS NOT NULL) as is_completed,
+                  (tc.id IS NOT NULL AND tc.started_at IS NOT NULL AND tc.completed_at IS NULL) as is_in_progress,
                   tc.completed_at as completed_at,
                   tc.started_at as started_at,
                   tc.duration_minutes as duration_minutes
@@ -188,7 +189,7 @@ class UserController {
       // Merge recurring tasks into dayTasks with proper status display
       const recurringDayTasks = recurringTasks[0].map(t => ({
         ...t,
-        status: t.is_completed ? 'completed' : 'active',
+        status: t.is_completed ? 'completed' : t.is_in_progress ? 'in_progress' : 'active',
         is_recurring: true
       }));
 
