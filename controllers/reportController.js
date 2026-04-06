@@ -2,13 +2,14 @@ const TaskService = require('../services/taskService');
 const RewardModel = require('../models/Reward');
 const db = require('../config/db');
 const { ApiResponse } = require('../utils/response');
-const { getToday, formatTime, getTimezoneOffsetString, isScheduledForDate } = require('../utils/timezone');
+const { getToday, getNow, formatTime, getTimezoneOffsetString, isScheduledForDate } = require('../utils/timezone');
 const DashboardService = require('../services/dashboardService');
 
 class ReportController {
   static async completionReport(req, res) {
     try {
-      const todayDate = getToday(req.user.org_timezone || 'UTC');
+      const [[localOrg]] = await db.query("SELECT timezone FROM organizations WHERE org_type = 'LOCAL' LIMIT 1");
+      const todayDate = getToday((localOrg && localOrg.timezone) || req.user.org_timezone || 'UTC');
       const [stats, perUser] = await Promise.all([
         TaskService.getTaskStats(null, null, todayDate),
         TaskService.getCompletionPerUser()
@@ -198,8 +199,8 @@ class ReportController {
                 calendarData[u.id][d] = 'present';
               } else if (dateStr === today && u.shift_start) {
                 // Don't mark absent if shift hasn't started yet
-                const nowInTz = new Date(new Date().toLocaleString('en-US', { timeZone: tz }));
-                const nowMins = nowInTz.getHours() * 60 + nowInTz.getMinutes();
+                const nowInTz = new Date(getNow(tz));
+                const nowMins = nowInTz.getUTCHours() * 60 + nowInTz.getUTCMinutes();
                 const [sh, sm] = u.shift_start.split(':').map(Number);
                 const shiftMins = sh * 60 + sm;
                 calendarData[u.id][d] = nowMins >= shiftMins ? 'absent' : 'future';
@@ -365,7 +366,9 @@ class ReportController {
    */
   static async taskCompletionReport(req, res) {
     try {
-      const tz = req.user.org_timezone || 'UTC';
+      // Report shows LOCAL team tasks — use LOCAL timezone for date calculations
+      const [[localOrg]] = await db.query("SELECT timezone FROM organizations WHERE org_type = 'LOCAL' LIMIT 1");
+      const tz = (localOrg && localOrg.timezone) || req.user.org_timezone || 'UTC';
       const today = getToday(tz);
       const month = req.query.month || today.slice(0, 7);
       const [yearStr, monStr] = month.split('-');
@@ -502,18 +505,18 @@ class ReportController {
 
       const tasks = await DashboardService.getTasksForDate(parseInt(userId), date, date);
 
-      // Attach schedule check for recurring
-      const result = tasks.map(t => ({
+      // Filter recurring tasks by schedule, then map to response shape
+      const result = tasks.filter(t => {
+        if (t.type === 'recurring') return isScheduledForDate(t, date) || !!t.is_completed_for_date;
+        return true;
+      }).map(t => ({
         id: t.id,
         title: t.title,
         type: t.type,
         priority: t.priority,
         status: t.type === 'recurring' ? (t.is_completed_for_date ? 'completed' : 'pending') : t.status,
         is_completed: t.type === 'recurring' ? !!t.is_completed_for_date : t.status === 'completed'
-      })).filter(t => {
-        if (t.type === 'recurring') return isScheduledForDate(t, date) || t.is_completed;
-        return true;
-      });
+      }));
 
       // Get user name
       const [[user]] = await db.query('SELECT name FROM users WHERE id = ?', [userId]);
@@ -536,7 +539,9 @@ class ReportController {
    */
   static async overdueReport(req, res) {
     try {
-      const tz = req.user.org_timezone || 'UTC';
+      // Overdue report is about LOCAL team tasks — use LOCAL timezone
+      const [[localOrgOd]] = await db.query("SELECT timezone FROM organizations WHERE org_type = 'LOCAL' LIMIT 1");
+      const tz = (localOrgOd && localOrgOd.timezone) || req.user.org_timezone || 'UTC';
       const today = getToday(tz);
 
       // Get all active LOCAL users

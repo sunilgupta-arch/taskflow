@@ -244,8 +244,8 @@
         </a>
         <% } %>
 
-        <a href="/tasks" class="btn-tf btn-tf-outline text-center text-decoration-none">
-          <i class="bi bi-arrow-left me-1"></i> Back to Tasks
+        <a href="javascript:history.back()" class="btn-tf btn-tf-outline text-center text-decoration-none">
+          <i class="bi bi-arrow-left me-1"></i> Go Back
         </a>
       </div>
     </div>
@@ -274,6 +274,84 @@
         <% } %>
       </div>
     </div>
+
+    <%
+      /* Task Logs: show start/end times in both Indian and Client timezones */
+      const etz = typeof empTimezone !== 'undefined' ? empTimezone : 'UTC';
+      const ctz = typeof otherOrgTimezone !== 'undefined' ? otherOrgTimezone : 'UTC';
+      /* If the viewer IS the client org, swap: empTz=India, otherOrg=Client's own tz */
+      const indiaTz = etz;
+      const clientTz = (user && user.org_type === 'LOCAL') ? ctz : etz === ctz ? 'America/New_York' : ctz;
+      const indiaLabel = 'IST';
+      const clientLabel = 'ET';
+      const fmtTz = (dt, tz) => {
+        if (!dt) return null;
+        return new Date(dt).toLocaleString('en-US', { timeZone: tz, hour: '2-digit', minute: '2-digit', hour12: true });
+      };
+      const fmtDateTz = (dt, tz) => {
+        if (!dt) return null;
+        return new Date(dt).toLocaleString('en-US', { timeZone: tz, month: 'short', day: 'numeric' });
+      };
+      const logsWithTimes = (typeof sessionLogs !== 'undefined' ? sessionLogs : []).filter(rc => rc.started_at || rc.completed_at);
+    %>
+    <% if (logsWithTimes.length > 0) { %>
+    <div class="tf-card mt-3">
+      <div class="card-header"><i class="bi bi-journal-text me-2"></i>TASK LOGS</div>
+      <div class="p-3" style="max-height:400px;overflow-y:auto;">
+        <% logsWithTimes.forEach(rc => {
+          const cd = rc.completion_date instanceof Date ? rc.completion_date.toISOString().slice(0,10) : String(rc.completion_date).slice(0,10);
+          const [cy,cm,cdd] = cd.split('-');
+          const dateLabel = parseInt(cm) + '/' + parseInt(cdd) + '/' + cy;
+          const dur = rc.duration_minutes;
+          const startIndia = fmtTz(rc.started_at, indiaTz);
+          const endIndia = fmtTz(rc.completed_at, indiaTz);
+          const startClient = fmtTz(rc.started_at, clientTz);
+          const endClient = fmtTz(rc.completed_at, clientTz);
+          const startDateClient = fmtDateTz(rc.started_at, clientTz);
+          const endDateClient = fmtDateTz(rc.completed_at, clientTz);
+        %>
+        <div style="border-bottom:1px solid var(--tf-border);padding:0.6rem 0;">
+          <div class="d-flex align-items-center gap-2" style="font-size:0.8rem;font-weight:600;">
+            <i class="bi bi-calendar3" style="color:var(--tf-text-muted);font-size:0.7rem;"></i>
+            <span><%= dateLabel %></span>
+            <% if (dur != null && dur > 0) { %>
+            <span style="font-family:var(--tf-font-mono);font-size:0.65rem;color:#00d4ff;margin-left:auto;padding:2px 6px;background:rgba(0,212,255,0.08);border-radius:4px;"><%= dur >= 60 ? Math.floor(dur/60) + 'h ' + (dur%60) + 'm' : dur + ' min' %></span>
+            <% } %>
+          </div>
+          <%/* Indian time row */%>
+          <div style="display:flex;align-items:center;gap:0.5rem;margin-top:0.4rem;margin-left:1.25rem;font-size:0.72rem;">
+            <span style="font-size:0.6rem;font-weight:600;color:#a78bfa;min-width:22px;"><%= indiaLabel %></span>
+            <% if (startIndia) { %>
+            <span style="color:#10b981;"><i class="bi bi-play-fill" style="font-size:0.6rem;"></i> <%= startIndia %></span>
+            <% } %>
+            <% if (startIndia && endIndia) { %>
+            <span style="color:var(--tf-border);">&#8594;</span>
+            <% } %>
+            <% if (endIndia) { %>
+            <span style="color:#f59e0b;"><i class="bi bi-stop-fill" style="font-size:0.6rem;"></i> <%= endIndia %></span>
+            <% } else if (startIndia) { %>
+            <span style="color:var(--tf-border);">&#8594;</span>
+            <span style="color:var(--tf-text-muted);font-style:italic;">not completed</span>
+            <% } %>
+          </div>
+          <%/* Client time row */%>
+          <div style="display:flex;align-items:center;gap:0.5rem;margin-top:0.2rem;margin-left:1.25rem;font-size:0.72rem;">
+            <span style="font-size:0.6rem;font-weight:600;color:#f59e0b;min-width:22px;"><%= clientLabel %></span>
+            <% if (startClient) { %>
+            <span style="color:#10b981;opacity:0.7;"><i class="bi bi-play-fill" style="font-size:0.6rem;"></i> <%= startClient %> <span style="font-size:0.58rem;color:var(--tf-text-muted);">(<%= startDateClient %>)</span></span>
+            <% } %>
+            <% if (startClient && endClient) { %>
+            <span style="color:var(--tf-border);">&#8594;</span>
+            <% } %>
+            <% if (endClient) { %>
+            <span style="color:#f59e0b;opacity:0.7;"><i class="bi bi-stop-fill" style="font-size:0.6rem;"></i> <%= endClient %> <span style="font-size:0.58rem;color:var(--tf-text-muted);">(<%= endDateClient %>)</span></span>
+            <% } %>
+          </div>
+        </div>
+        <% }) %>
+      </div>
+    </div>
+    <% } %>
     <% } %>
 
     <div class="tf-card mt-3">

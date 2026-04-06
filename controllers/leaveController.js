@@ -4,6 +4,12 @@ const { ApiResponse, getPaginationMeta } = require('../utils/response');
 const { getIO } = require('../config/socket');
 const { getToday } = require('../utils/timezone');
 
+// Helper: get LOCAL org timezone for leave date validation
+async function getLocalTz() {
+  const [[org]] = await db.query("SELECT timezone FROM organizations WHERE org_type = 'LOCAL' LIMIT 1");
+  return (org && org.timezone) || 'UTC';
+}
+
 class LeaveController {
   static async index(req, res) {
     try {
@@ -55,7 +61,7 @@ class LeaveController {
         return ApiResponse.error(res, 'From date cannot be after to date', 400);
       }
 
-      const today = getToday(req.user.org_timezone || 'UTC');
+      const today = getToday(await getLocalTz());
       if (from_date < today) {
         return ApiResponse.error(res, 'Cannot apply for leave in the past', 400);
       }

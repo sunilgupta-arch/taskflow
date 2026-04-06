@@ -56,6 +56,7 @@ class DashboardService {
   static async getTasksForDate(userId, date, today) {
     const [rows] = await db.query(
       `SELECT t.id, t.title, t.status, t.type, t.priority, t.due_date, t.reward_amount, t.created_at,
+              t.recurrence_pattern, t.recurrence_days, t.recurrence_end_date,
               CASE WHEN t.type = 'recurring' AND t.status = 'active' THEN 1 ELSE 0 END as is_recurring,
               (SELECT COUNT(*) FROM task_completions tc WHERE tc.task_id = t.id AND tc.user_id = ? AND tc.completion_date = ? AND tc.completed_at IS NOT NULL) as is_completed_for_date,
               (SELECT COUNT(*) FROM task_completions tc WHERE tc.task_id = t.id AND tc.user_id = ? AND tc.completion_date = ? AND tc.started_at IS NOT NULL AND tc.completed_at IS NULL) as is_started_for_date

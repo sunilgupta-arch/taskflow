@@ -1,0 +1,247 @@
+<!-- Live Status — Who's Working on What -->
+<style>
+  .ls-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); gap:0.75rem; }
+  .ls-card { background:var(--tf-surface); border:1px solid var(--tf-border); border-radius:12px; padding:1rem; transition:border-color 0.2s; }
+  .ls-card:hover { border-color:rgba(0,212,255,0.3); }
+  .ls-card.working { border-left:3px solid #10b981; }
+  .ls-card.extending { border-left:3px solid #8b5cf6; }
+  .ls-card.idle { border-left:3px solid #f59e0b; }
+  .ls-card.absent { border-left:3px solid #ef4444; }
+  .ls-card.stale { border-left:3px solid #f97316; }
+  .ls-card.off, .ls-card.leave { border-left:3px solid #475569; opacity:0.55; }
+  .ls-badge { display:inline-flex; align-items:center; gap:4px; font-size:0.6rem; font-weight:600; padding:2px 8px; border-radius:6px; font-family:var(--tf-font-mono); white-space:nowrap; }
+  .ls-badge.working { background:rgba(16,185,129,0.15); color:#10b981; }
+  .ls-badge.extending { background:rgba(139,92,246,0.15); color:#a78bfa; }
+  .ls-badge.idle { background:rgba(245,158,11,0.15); color:#f59e0b; }
+  .ls-badge.absent { background:rgba(239,68,68,0.12); color:#ef4444; }
+  .ls-badge.stale { background:rgba(249,115,22,0.12); color:#f97316; }
+  .ls-badge.off { background:rgba(100,116,139,0.1); color:#64748b; }
+  .ls-badge.leave { background:rgba(139,92,246,0.12); color:#a78bfa; }
+  .ls-stat { text-align:center; padding:0.75rem; border-radius:10px; background:var(--tf-surface); border:1px solid var(--tf-border); }
+  .ls-stat-val { font-size:1.5rem; font-weight:700; font-family:var(--tf-font-mono); }
+  .ls-stat-label { font-size:0.65rem; color:var(--tf-text-muted); margin-top:2px; }
+  .ls-pulse { display:inline-block; width:8px; height:8px; border-radius:50%; background:#10b981; animation:ls-pulse 1.5s ease-in-out infinite; }
+  @keyframes ls-pulse { 0%,100% { opacity:1; } 50% { opacity:0.3; } }
+  .ls-toggle-btn { background:var(--tf-surface); border:1px solid var(--tf-border); color:var(--tf-text-muted); padding:4px 10px; border-radius:6px; font-size:0.7rem; cursor:pointer; transition:all 0.15s; }
+  .ls-toggle-btn.active { background:rgba(0,212,255,0.1); border-color:#00d4ff; color:#00d4ff; }
+  .ls-toggle-btn:hover { border-color:rgba(0,212,255,0.4); }
+  /* Table layout */
+  .ls-table { width:100%; border-collapse:collapse; font-size:0.78rem; }
+  .ls-table th { padding:8px 10px; text-align:left; font-size:0.65rem; color:var(--tf-text-muted); border-bottom:1px solid var(--tf-border); font-family:var(--tf-font-mono); text-transform:uppercase; letter-spacing:0.5px; }
+  .ls-table td { padding:8px 10px; border-bottom:1px solid var(--tf-border); vertical-align:middle; }
+  .ls-table tr:hover { background:rgba(0,212,255,0.03); }
+  .ls-table tr.off-row, .ls-table tr.leave-row { opacity:0.55; }
+</style>
+
+<!-- Header -->
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+  <div>
+    <h5 style="font-family:var(--tf-font-mono);font-weight:700;margin:0;">
+      <i class="bi bi-broadcast me-2" style="color:#00d4ff;"></i>LIVE STATUS
+    </h5>
+    <div style="font-size:0.7rem;color:var(--tf-text-muted);margin-top:2px;">
+      <%= new Date().toLocaleString('en-US', { timeZone: timezone, weekday: 'long', month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true }) %>
+      <span class="ls-pulse ms-2"></span> <span style="color:#10b981;">Live</span>
+    </div>
+  </div>
+  <div class="d-flex align-items-center gap-2">
+    <div class="d-flex gap-1">
+      <button class="ls-toggle-btn active" id="btnCards" onclick="setView('cards')"><i class="bi bi-grid-3x2-gap"></i></button>
+      <button class="ls-toggle-btn" id="btnTable" onclick="setView('table')"><i class="bi bi-list-ul"></i></button>
+    </div>
+    <a href="javascript:location.reload()" class="btn-tf btn-tf-outline" style="font-size:0.7rem;padding:4px 12px;">
+      <i class="bi bi-arrow-clockwise me-1"></i> Refresh
+    </a>
+  </div>
+</div>
+
+<!-- Summary Stats -->
+<div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(90px, 1fr));gap:0.5rem;margin-bottom:1rem;">
+  <div class="ls-stat">
+    <div class="ls-stat-val" style="color:#10b981;"><%= counts.working %></div>
+    <div class="ls-stat-label">Working</div>
+  </div>
+  <% if (counts.extending > 0) { %>
+  <div class="ls-stat">
+    <div class="ls-stat-val" style="color:#a78bfa;"><%= counts.extending %></div>
+    <div class="ls-stat-label">Extending</div>
+  </div>
+  <% } %>
+  <div class="ls-stat">
+    <div class="ls-stat-val" style="color:#f59e0b;"><%= counts.idle %></div>
+    <div class="ls-stat-label">Idle</div>
+  </div>
+  <div class="ls-stat">
+    <div class="ls-stat-val" style="color:#00d4ff;"><%= counts.onShift %></div>
+    <div class="ls-stat-label">On Shift</div>
+  </div>
+  <div class="ls-stat">
+    <div class="ls-stat-val" style="color:#64748b;"><%= counts.offOrLeave %></div>
+    <div class="ls-stat-label">Off / Leave</div>
+  </div>
+  <% if (counts.stale > 0) { %>
+  <div class="ls-stat">
+    <div class="ls-stat-val" style="color:#f97316;"><%= counts.stale %></div>
+    <div class="ls-stat-label">Forgot Logout</div>
+  </div>
+  <% } %>
+</div>
+
+<!-- ===== CARD VIEW ===== -->
+<div id="viewCards" class="ls-grid">
+  <% employees.forEach(emp => { %>
+  <div class="ls-card <%= emp.statusType %>">
+    <div class="d-flex align-items-center gap-2 mb-2">
+      <div style="width:32px;height:32px;border-radius:50%;background:rgba(0,212,255,0.1);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.75rem;color:#00d4ff;flex-shrink:0;">
+        <%= emp.name.charAt(0).toUpperCase() %>
+      </div>
+      <div style="flex-grow:1;min-width:0;">
+        <a href="/users/<%= emp.id %>/progress" style="color:var(--tf-text);text-decoration:none;font-weight:600;font-size:0.85rem;"><%= emp.name %></a>
+        <div style="font-size:0.6rem;color:var(--tf-text-muted);font-family:var(--tf-font-mono);">
+          Shift: <%= emp.shiftStart ? emp.shiftStart.substring(0,5) : '--' %>
+        </div>
+      </div>
+      <span class="ls-badge <%= emp.statusType %>">
+        <% if (emp.statusType === 'working') { %><span class="ls-pulse" style="width:6px;height:6px;"></span><% } %>
+        <%= emp.status %>
+      </span>
+    </div>
+
+    <% if ((emp.statusType === 'working' || emp.statusType === 'extending') && emp.taskName) { %>
+    <div style="background:<%= emp.statusType === 'extending' ? 'rgba(139,92,246,0.06)' : 'rgba(16,185,129,0.06)' %>;border:1px solid <%= emp.statusType === 'extending' ? 'rgba(139,92,246,0.15)' : 'rgba(16,185,129,0.15)' %>;border-radius:8px;padding:0.5rem 0.7rem;margin-top:0.25rem;">
+      <a href="/tasks/<%= emp.taskId %>" style="color:var(--tf-text);text-decoration:none;font-size:0.78rem;font-weight:500;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+        <i class="bi bi-play-circle-fill me-1" style="color:<%= emp.statusType === 'extending' ? '#a78bfa' : '#10b981' %>;font-size:0.7rem;"></i><%= emp.taskName %>
+      </a>
+      <div style="display:flex;align-items:center;gap:0.75rem;margin-top:0.3rem;font-size:0.65rem;font-family:var(--tf-font-mono);">
+        <span style="color:var(--tf-text-muted);">
+          <i class="bi bi-clock me-1"></i>Started:
+          <%= new Date(emp.startedAt).toLocaleString('en-US', { timeZone: timezone, hour: '2-digit', minute: '2-digit', hour12: true }) %>
+        </span>
+        <span style="color:#00d4ff;font-weight:600;" data-started="<%= new Date(emp.startedAt).toISOString() %>">--</span>
+      </div>
+    </div>
+    <% } else if (emp.statusType === 'idle') { %>
+    <div style="font-size:0.7rem;color:var(--tf-text-muted);margin-top:0.2rem;padding-left:2.5rem;">
+      Logged in, no active task session
+    </div>
+    <% } else if (emp.statusType === 'absent') { %>
+    <div style="font-size:0.7rem;color:#ef4444;margin-top:0.2rem;padding-left:2.5rem;">
+      Shift started but not logged in
+    </div>
+    <% } else if (emp.statusType === 'stale') { %>
+    <div style="font-size:0.7rem;color:#f97316;margin-top:0.2rem;padding-left:2.5rem;">
+      <i class="bi bi-exclamation-triangle me-1"></i>Still logged in — likely forgot to logout
+    </div>
+    <% } %>
+  </div>
+  <% }) %>
+</div>
+
+<!-- ===== TABLE VIEW ===== -->
+<div id="viewTable" style="display:none;">
+  <div class="tf-card" style="overflow-x:auto;">
+    <table class="ls-table">
+      <thead>
+        <tr>
+          <th>Employee</th>
+          <th>Shift</th>
+          <th>Status</th>
+          <th>Current Task</th>
+          <th>Started At</th>
+          <th>Elapsed</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% employees.forEach(emp => { %>
+        <tr class="<%= ['off','leave'].includes(emp.statusType) ? emp.statusType + '-row' : '' %>">
+          <td>
+            <a href="/users/<%= emp.id %>/progress" style="color:var(--tf-text);text-decoration:none;font-weight:500;">
+              <%= emp.name %>
+            </a>
+          </td>
+          <td style="font-family:var(--tf-font-mono);font-size:0.72rem;color:var(--tf-text-muted);">
+            <%= emp.shiftStart ? emp.shiftStart.substring(0,5) : '--' %>
+          </td>
+          <td>
+            <span class="ls-badge <%= emp.statusType %>">
+              <% if (emp.statusType === 'working') { %><span class="ls-pulse" style="width:5px;height:5px;"></span><% } %>
+              <%= emp.status %>
+            </span>
+          </td>
+          <td>
+            <% if (emp.taskName) { %>
+            <a href="/tasks/<%= emp.taskId %>" style="color:var(--tf-text);text-decoration:none;font-size:0.75rem;">
+              <i class="bi bi-play-circle-fill me-1" style="color:<%= emp.statusType === 'extending' ? '#a78bfa' : '#10b981' %>;font-size:0.65rem;"></i><%= emp.taskName %>
+            </a>
+            <% } else { %>
+            <span style="color:var(--tf-border);">—</span>
+            <% } %>
+          </td>
+          <td style="font-family:var(--tf-font-mono);font-size:0.7rem;">
+            <% if (emp.startedAt) { %>
+            <%= new Date(emp.startedAt).toLocaleString('en-US', { timeZone: timezone, hour: '2-digit', minute: '2-digit', hour12: true }) %>
+            <% } else { %>
+            <span style="color:var(--tf-border);">—</span>
+            <% } %>
+          </td>
+          <td style="font-family:var(--tf-font-mono);font-size:0.7rem;">
+            <% if (emp.startedAt) { %>
+            <span style="color:#00d4ff;font-weight:600;" data-started="<%= new Date(emp.startedAt).toISOString() %>">--</span>
+            <% } else { %>
+            <span style="color:var(--tf-border);">—</span>
+            <% } %>
+          </td>
+        </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<% if (employees.length === 0) { %>
+<div class="tf-card p-4 text-center" style="color:var(--tf-text-muted);">
+  No active employees found.
+</div>
+<% } %>
+
+<script>
+// View toggle with localStorage
+function setView(view) {
+  var cards = document.getElementById('viewCards');
+  var table = document.getElementById('viewTable');
+  var btnC = document.getElementById('btnCards');
+  var btnT = document.getElementById('btnTable');
+  if (view === 'table') {
+    cards.style.display = 'none';
+    table.style.display = 'block';
+    btnC.classList.remove('active');
+    btnT.classList.add('active');
+  } else {
+    cards.style.display = 'grid';
+    table.style.display = 'none';
+    btnT.classList.remove('active');
+    btnC.classList.add('active');
+  }
+  try { localStorage.setItem('ls-view', view); } catch(e) {}
+}
+// Restore saved view
+try {
+  var saved = localStorage.getItem('ls-view');
+  if (saved === 'table') setView('table');
+} catch(e) {}
+
+// Live elapsed timer
+setInterval(function() {
+  document.querySelectorAll('[data-started]').forEach(function(el) {
+    var ms = Date.now() - new Date(el.dataset.started).getTime();
+    if (ms < 0) ms = 0;
+    var totalMin = Math.floor(ms / 60000);
+    var h = Math.floor(totalMin / 60);
+    var m = totalMin % 60;
+    el.textContent = h > 0 ? h + 'h ' + m + 'm' : m + 'm';
+  });
+}, 1000);
+
+// Auto-refresh every 60 seconds
+setTimeout(function() { location.reload(); }, 60000);
+</script>

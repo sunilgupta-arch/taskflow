@@ -125,7 +125,9 @@ class UserController {
       const targetUser = await UserModel.findById(req.params.id);
       if (!targetUser) return res.status(404).render('error', { title: 'Not Found', message: 'User not found', code: 404, layout: false });
 
-      const tz = req.user.org_timezone || targetUser.org_timezone || 'UTC';
+      // User progress shows LOCAL employee data — use LOCAL timezone
+      const [[localOrg]] = await db.query("SELECT timezone FROM organizations WHERE org_type = 'LOCAL' LIMIT 1");
+      const tz = (localOrg && localOrg.timezone) || req.user.org_timezone || 'UTC';
       const selectedDate = req.query.date || getToday(tz);
 
       const todayDate = getToday(tz);
@@ -238,7 +240,8 @@ class UserController {
   static async monthlyReport(req, res) {
     try {
       const userId = req.params.id;
-      const month = req.query.month || getToday(req.user.org_timezone || 'UTC').slice(0, 7); // YYYY-MM
+      const [[localOrg2]] = await db.query("SELECT timezone FROM organizations WHERE org_type = 'LOCAL' LIMIT 1");
+      const month = req.query.month || getToday((localOrg2 && localOrg2.timezone) || 'UTC').slice(0, 7); // YYYY-MM
       const [year, mon] = month.split('-');
 
       // Adhoc stats for the month

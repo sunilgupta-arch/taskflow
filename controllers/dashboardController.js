@@ -10,8 +10,14 @@ class DashboardController {
       let data = {};
 
       const tz = req.user.org_timezone || 'UTC';
+      // Admin dashboard shows LOCAL team task stats — use LOCAL timezone for date calculations
+      let taskTz = tz;
+      if (req.user.organization_type === 'CLIENT') {
+        const [[localOrg]] = await db.query("SELECT timezone FROM organizations WHERE org_type = 'LOCAL' LIMIT 1");
+        taskTz = (localOrg && localOrg.timezone) || tz;
+      }
       if (['CLIENT_ADMIN', 'LOCAL_ADMIN', 'CLIENT_MANAGER', 'LOCAL_MANAGER'].includes(role)) {
-        data = await DashboardService.getAdminDashboard(req.user.organization_type, tz);
+        data = await DashboardService.getAdminDashboard(req.user.organization_type, taskTz);
       } else {
         const workDate = await getEffectiveWorkDateWithSession(db, req.user.id, tz, req.user.shift_start, req.user.shift_hours);
         data = await DashboardService.getUserDashboard(req.user.id, req.query.date || null, tz, workDate);

@@ -1,6 +1,6 @@
 const cron = require('node-cron');
 const db = require('../config/db');
-const { getToday, getNow, getEffectiveWorkDate } = require('./timezone');
+const { getToday, getNow, getEffectiveWorkDate, isScheduledForDate } = require('./timezone');
 const ChatModel = require('../models/Chat');
 
 /**
@@ -65,10 +65,11 @@ const taskReminderJob = cron.schedule('*/15 * * * *', async () => {
          AND u.shift_start IS NOT NULL AND u.shift_hours IS NOT NULL`
     );
 
-    // Current time in org timezone
+    // Current time in org timezone — use getUTCHours/getUTCMinutes because
+    // getNow() stores the tz-adjusted time in the Date's UTC fields
     const now = new Date(getNow(tz));
-    const nowMinutes = now.getHours() * 60 + now.getMinutes();
-    const dayName = now.toLocaleDateString('en-US', { weekday: 'long' });
+    const nowMinutes = now.getUTCHours() * 60 + now.getUTCMinutes();
+    const dayName = new Date().toLocaleDateString('en-US', { timeZone: tz, weekday: 'long' });
 
     for (const user of users) {
       // Skip if weekly off
@@ -100,31 +101,41 @@ const taskReminderJob = cron.schedule('*/15 * * * *', async () => {
           const postMidnightReminder = reminderMin - 1440;
           inWindow = nowMinutes >= postMidnightReminder && nowMinutes <= postMidnightReminder + 15;
         } else {
-          // Reminder is pre-midnight (e.g., shift 22:00-04:00, reminder at 02:00 = still pre-midnight? No, 26*60-120=1440, edge case)
+          // Reminder is pre-midnight
           inWindow = nowMinutes >= reminderMin && nowMinutes <= reminderMin + 15;
         }
       }
       if (!inWindow) continue;
 
-      // Get incomplete tasks for the user's effective work date
-      const [pendingTasks] = await db.query(
+      // Get incomplete recurring tasks for the user's effective work date
+      const [recurringTasks] = await db.query(
+        `SELECT t.id, t.title, t.type, t.recurrence_pattern, t.recurrence_days, t.recurrence_end_date
+         FROM tasks t
+         WHERE t.is_deleted = 0 AND t.assigned_to = ?
+           AND t.type = 'recurring' AND t.status = 'active'
+           AND NOT EXISTS (
+             SELECT 1 FROM task_completions tc
+             WHERE tc.task_id = t.id AND tc.user_id = ? AND tc.completion_date = ? AND tc.completed_at IS NOT NULL
+           )
+         ORDER BY t.title`,
+        [user.id, user.id, userWorkDate]
+      );
+
+      // Filter recurring tasks to only those scheduled for the work date
+      const scheduledRecurring = recurringTasks.filter(t => isScheduledForDate(t, userWorkDate));
+
+      // Get incomplete one-time tasks
+      const [onceTasks] = await db.query(
         `SELECT t.id, t.title, t.type, t.recurrence_pattern
          FROM tasks t
          WHERE t.is_deleted = 0 AND t.assigned_to = ?
-           AND (
-             (t.type = 'recurring' AND t.status = 'active'
-               AND NOT EXISTS (
-                 SELECT 1 FROM task_completions tc
-                 WHERE tc.task_id = t.id AND tc.user_id = ? AND tc.completion_date = ? AND tc.completed_at IS NOT NULL
-               )
-             )
-             OR (t.type = 'once' AND t.status IN ('pending', 'in_progress')
-               AND (t.due_date = ? OR (t.due_date IS NULL AND DATE(t.created_at) = ?))
-             )
-           )
+           AND t.type = 'once' AND t.status IN ('pending', 'in_progress')
+           AND (t.due_date = ? OR (t.due_date IS NULL AND DATE(t.created_at) = ?))
          ORDER BY t.title`,
-        [user.id, user.id, userWorkDate, userWorkDate, userWorkDate]
+        [user.id, userWorkDate, userWorkDate]
       );
+
+      const pendingTasks = [...scheduledRecurring, ...onceTasks];
 
       if (pendingTasks.length === 0) {
         sentReminders[key] = true;
@@ -172,7 +183,7 @@ const deadlineAlertJob = cron.schedule('*/15 * * * *', async () => {
 
     // Get recurring tasks with deadline_time approaching within next hour
     const now = new Date(getNow(tz));
-    const nowMin = now.getHours() * 60 + now.getMinutes();
+    const nowMin = now.getUTCHours() * 60 + now.getUTCMinutes();
     const targetMin = nowMin + 60; // 1 hour from now
 
     const [tasks] = await db.query(
@@ -295,7 +306,7 @@ const dailySummaryJob = cron.schedule('*/15 * * * *', async () => {
     const tz = (org && org.timezone) || 'UTC';
     const today = getToday(tz);
     const now = new Date(getNow(tz));
-    const nowMin = now.getHours() * 60 + now.getMinutes();
+    const nowMin = now.getUTCHours() * 60 + now.getUTCMinutes();
 
     const [users] = await db.query(
       `SELECT u.id, u.name, u.shift_start, u.shift_hours
@@ -459,8 +470,7 @@ const startCronJobs = async () => {
     try {
       const tz = orgTz;
       const today = getToday(tz);
-      // Only close sessions for users whose shift does NOT cross midnight
-      // Night shift users (shift crosses midnight) keep their sessions open
+      // Close today's sessions for day-shift users (shift does NOT cross midnight)
       await db.query(
         `UPDATE attendance_logs al
          JOIN users u ON al.user_id = u.id
@@ -470,6 +480,17 @@ const startCronJobs = async () => {
                 OR (CAST(SUBSTRING_INDEX(u.shift_start, ':', 1) AS UNSIGNED) + u.shift_hours) <= 24)`,
         [today]
       );
+      // Close stale sessions for ALL users (including night shift) — any open
+      // session older than 1 day is a missed logout, not a legitimate crossover
+      const [staleResult] = await db.query(
+        `UPDATE attendance_logs
+         SET logout_time = NOW(), logout_reason = 'Auto - Stale Session Cleanup'
+         WHERE logout_time IS NULL AND date < DATE_SUB(?, INTERVAL 1 DAY)`,
+        [today]
+      );
+      if (staleResult.affectedRows > 0) {
+        console.log(`[CRON] Closed ${staleResult.affectedRows} stale attendance session(s)`);
+      }
       console.log('[CRON] Attendance cleanup done');
     } catch (err) {
       console.error('[CRON] Attendance cleanup error:', err.message);

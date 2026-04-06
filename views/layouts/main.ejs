@@ -585,6 +585,11 @@
     <% } %>
 
     <% if (['LOCAL_ADMIN', 'CLIENT_ADMIN', 'LOCAL_MANAGER', 'CLIENT_MANAGER'].includes(user.role_name)) { %>
+    <div class="nav-item">
+      <a href="/live-status" class="<%= typeof title !== 'undefined' && title === 'Live Status' ? 'active' : '' %>">
+        <i class="bi bi-broadcast"></i> Live Status
+      </a>
+    </div>
     <div class="nav-section-label mt-2">Reports</div>
     <div class="nav-item">
       <a href="/reports" class="<%= typeof title !== 'undefined' && title === 'Reports' ? 'active' : '' %>">

@@ -10,6 +10,7 @@ const ReportController = require('../controllers/reportController');
 const NoteController = require('../controllers/noteController');
 const LeaveController = require('../controllers/leaveController');
 const BackupController = require('../controllers/backupController');
+const LiveStatusController = require('../controllers/liveStatusController');
 
 // Dashboard
 router.get('/dashboard', authenticate, DashboardController.show);
@@ -33,6 +34,9 @@ router.post('/change-password', authenticate, UserController.changePassword);
 // Rewards
 router.get('/rewards', authenticate, RewardController.index);
 router.post('/rewards/mark-paid/:id', authenticate, requireRoles('LOCAL_ADMIN'), RewardController.markPaid);
+
+// Live Status
+router.get('/live-status', authenticate, requireRoles('CLIENT_ADMIN', 'CLIENT_MANAGER', 'LOCAL_ADMIN', 'LOCAL_MANAGER'), LiveStatusController.show);
 
 // Reports
 router.get('/reports', authenticate, requireRoles('CLIENT_ADMIN', 'LOCAL_ADMIN', 'CLIENT_MANAGER', 'LOCAL_MANAGER'), ReportController.reportsIndex);

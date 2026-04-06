@@ -74,12 +74,17 @@ function getEffectiveWorkDate(timezone, shiftStart, shiftHours) {
 async function getEffectiveWorkDateWithSession(db, userId, timezone, shiftStart, shiftHours) {
   const shiftDate = getEffectiveWorkDate(timezone, shiftStart, shiftHours);
 
-  // Check if there's an open attendance session from a date earlier than shiftDate
+  // Only check for an open session from yesterday (one day before shiftDate).
+  // A legitimate night shift crossover only spans 1 day. Sessions older than
+  // that are stale (missed logout) and should not pull the work date backwards.
+  const yesterday = new Date(new Date(shiftDate + 'T12:00:00').getTime() - 86400000)
+    .toISOString().split('T')[0];
+
   const [[openSession]] = await db.query(
     `SELECT date FROM attendance_logs
-     WHERE user_id = ? AND logout_time IS NULL AND date < ?
-     ORDER BY date DESC LIMIT 1`,
-    [userId, shiftDate]
+     WHERE user_id = ? AND logout_time IS NULL AND date = ?
+     LIMIT 1`,
+    [userId, yesterday]
   );
 
   if (openSession) {
