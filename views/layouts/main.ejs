@@ -530,6 +530,7 @@
       #sidebar.show { transform: translateX(0); }
       #main-content { margin-left: 0; }
       .btn-menu { display: inline-flex; }
+      #topbar .badge span:not([id]) { display: none; }
     }
   </style>
   <%- style %>
@@ -704,7 +705,24 @@
       <i class="bi bi-list"></i>
     </button>
     <div class="page-title"><%= typeof title !== 'undefined' ? title.split(' - ')[0] : 'TaskFlow' %></div>
-    <div class="d-flex align-items-center gap-2">
+    <div class="d-flex align-items-center gap-2 flex-wrap justify-content-end">
+      <% var isClient = user.org_type === 'CLIENT'; %>
+      <span class="badge d-flex align-items-center gap-1" style="background:var(--tf-surface-2);color:var(--tf-text-muted);font-family:var(--tf-font-mono);font-size:0.65rem;" title="<%= isClient ? 'Your' : 'Client' %> Time (<%= isClient ? user.org_timezone : (typeof otherOrgTimezone !== 'undefined' ? otherOrgTimezone : 'UTC') %>)">
+        <i class="bi bi-building" style="font-size:0.6rem;"></i>
+        <span>Client</span>
+        <span id="clockClient" style="min-width:52px;">--:--:--</span>
+      </span>
+      <span class="badge d-flex align-items-center gap-1" style="background:var(--tf-surface-2);color:var(--tf-text-muted);font-family:var(--tf-font-mono);font-size:0.65rem;" title="<%= !isClient ? 'Your' : 'Team' %> Time (<%= !isClient ? user.org_timezone : (typeof otherOrgTimezone !== 'undefined' ? otherOrgTimezone : 'UTC') %>)">
+        <i class="bi bi-people" style="font-size:0.6rem;"></i>
+        <span>Team</span>
+        <span id="clockTeam" style="min-width:52px;">--:--:--</span>
+      </span>
+      <% if (!isClient && (user.role_name === 'LOCAL_USER' || user.role_name === 'LOCAL_MANAGER')) { %>
+      <span class="badge d-flex align-items-center gap-1" style="background:var(--tf-primary-alpha);color:var(--tf-primary);font-family:var(--tf-font-mono);font-size:0.65rem;" title="Time remaining in shift">
+        <i class="bi bi-hourglass-split" style="font-size:0.6rem;"></i>
+        <span id="shiftRemaining">--:--</span>
+      </span>
+      <% } %>
       <span class="badge" style="background:var(--tf-surface-2);color:var(--tf-text-muted);font-family:var(--tf-font-mono);font-size:0.65rem;">
         <%= new Date().toLocaleDateString('en-US', {weekday:'short',month:'short',day:'numeric'}) %>
       </span>
@@ -844,6 +862,71 @@ function showToast(message, type = 'success', duration) {
 
 // User's timezone
 var USER_TIMEZONE = '<%= typeof user !== "undefined" && user.org_timezone ? user.org_timezone : "UTC" %>';
+
+// Topbar clocks — Client time, Team time, Shift remaining
+(function() {
+  var isClient = '<%= user.org_type %>' === 'CLIENT';
+  var clientTz = isClient
+    ? '<%= user.org_timezone %>'
+    : '<%= typeof otherOrgTimezone !== "undefined" ? otherOrgTimezone : "UTC" %>';
+  var teamTz = !isClient
+    ? '<%= user.org_timezone %>'
+    : '<%= typeof otherOrgTimezone !== "undefined" ? otherOrgTimezone : "UTC" %>';
+  var shiftStart = '<%= user.shift_start || "10:00:00" %>';
+  var shiftHours = parseFloat('<%= user.shift_hours || 8.5 %>');
+
+  var elClient = document.getElementById('clockClient');
+  var elTeam = document.getElementById('clockTeam');
+  var elShift = document.getElementById('shiftRemaining');
+
+  function fmtTime(tz) {
+    return new Date().toLocaleTimeString('en-GB', { timeZone: tz, hour12: false, hour:'2-digit', minute:'2-digit', second:'2-digit' });
+  }
+
+  function updateClocks() {
+    if (elClient) elClient.textContent = fmtTime(clientTz);
+    if (elTeam) elTeam.textContent = fmtTime(teamTz);
+
+    // Shift remaining — based on user's own org timezone
+    if (elShift) {
+      var userTz = USER_TIMEZONE;
+      var str = new Date().toLocaleTimeString('en-GB', { timeZone: userTz, hour12: false });
+      var p = str.split(':');
+      var nowMin = parseInt(p[0]) * 60 + parseInt(p[1]);
+      var sp = shiftStart.split(':');
+      var startMin = parseInt(sp[0]) * 60 + parseInt(sp[1]);
+      var endMin = startMin + Math.round(shiftHours * 60);
+
+      var remaining;
+      if (endMin > 1440) {
+        // Night shift crosses midnight
+        if (nowMin >= startMin) {
+          remaining = endMin - nowMin;
+        } else if (nowMin < (endMin - 1440)) {
+          remaining = (endMin - 1440) - nowMin;
+        } else {
+          remaining = -1;
+        }
+      } else {
+        remaining = endMin - nowMin;
+      }
+
+      if (remaining > 0) {
+        var h = Math.floor(remaining / 60);
+        var m = remaining % 60;
+        elShift.textContent = h + 'h ' + (m < 10 ? '0' : '') + m + 'm left';
+        elShift.closest('.badge').style.display = '';
+      } else {
+        elShift.textContent = 'Shift over';
+        elShift.closest('.badge').style.background = 'var(--tf-surface-2)';
+        elShift.closest('.badge').style.color = 'var(--tf-text-muted)';
+      }
+    }
+  }
+
+  updateClocks();
+  setInterval(updateClocks, 1000);
+})();
 
 // Global Axios defaults
 axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';

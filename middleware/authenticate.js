@@ -33,6 +33,16 @@ const authenticate = async (req, res, next) => {
 
     req.user = users[0];
     res.locals.user = users[0];
+
+    // Fetch the "other" org timezone (CLIENT for LOCAL users, LOCAL for CLIENT users)
+    const otherOrgType = users[0].org_type === 'LOCAL' ? 'CLIENT' : 'LOCAL';
+    const [otherOrgs] = await db.query(
+      'SELECT timezone FROM organizations WHERE org_type = ? LIMIT 1',
+      [otherOrgType]
+    );
+    res.locals.otherOrgTimezone = otherOrgs.length ? otherOrgs[0].timezone : users[0].org_timezone;
+    res.locals.otherOrgType = otherOrgType;
+
     next();
   } catch (err) {
     if (req.xhr || req.path.startsWith('/api/')) {
