@@ -5,8 +5,8 @@
 -- Step 1: Update both organization timezones to Eastern
 UPDATE organizations SET timezone = 'America/New_York';
 
--- Step 2: Convert shift_start from IST to ET
--- Uses CONVERT_TZ on a reference date (2026-04-07) to get correct DST-aware offset
+-- Step 2: Convert shift_start from IST (UTC+5:30) to EDT (UTC-4:00)
+-- Uses numeric offsets so it works even without MySQL timezone tables loaded
 UPDATE users
-SET shift_start = TIME(CONVERT_TZ(CONCAT('2026-04-07 ', shift_start), 'Asia/Kolkata', 'America/New_York'))
+SET shift_start = TIME(CONVERT_TZ(CONCAT('2026-04-07 ', shift_start), '+05:30', '-04:00'))
 WHERE shift_start IS NOT NULL;
