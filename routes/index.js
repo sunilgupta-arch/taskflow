@@ -11,6 +11,7 @@ const NoteController = require('../controllers/noteController');
 const LeaveController = require('../controllers/leaveController');
 const BackupController = require('../controllers/backupController');
 const LiveStatusController = require('../controllers/liveStatusController');
+const AnnouncementController = require('../controllers/announcementController');
 
 // Dashboard — old dashboard at /dashboard/overview; /dashboard redirects to task board
 router.get('/dashboard/overview', authenticate, DashboardController.show);
@@ -83,5 +84,11 @@ router.post('/backups/upload-drive/:id', authenticate, requireRoles('LOCAL_ADMIN
 router.get('/backups/drive-list', authenticate, requireRoles('LOCAL_ADMIN'), BackupController.listDriveBackups);
 router.post('/backups/restore-drive', authenticate, requireRoles('LOCAL_ADMIN'), BackupController.restoreFromDrive);
 router.delete('/backups/:id', authenticate, requireRoles('LOCAL_ADMIN'), BackupController.destroy);
+
+// Announcements / Info Board
+router.get('/announcements', authenticate, requireRoles('LOCAL_ADMIN', 'LOCAL_MANAGER', 'LOCAL_USER', 'CLIENT_ADMIN', 'CLIENT_MANAGER'), AnnouncementController.index);
+router.post('/announcements', authenticate, requireRoles('LOCAL_ADMIN', 'CLIENT_ADMIN', 'CLIENT_MANAGER'), AnnouncementController.create);
+router.put('/announcements/:id/pin', authenticate, requireRoles('LOCAL_ADMIN', 'CLIENT_ADMIN'), AnnouncementController.togglePin);
+router.delete('/announcements/:id', authenticate, requireRoles('LOCAL_ADMIN', 'CLIENT_ADMIN'), AnnouncementController.destroy);
 
 module.exports = router;

@@ -21,8 +21,10 @@ class AuthService {
     const valid = await UserModel.verifyPassword(password, user.password);
     if (!valid) throw new Error('Invalid credentials');
 
-    // Record attendance using user's org timezone and shift info
-    await this.recordAttendance(user.id, user.org_timezone || 'America/New_York', user.shift_start, user.shift_hours);
+    // Record attendance (skip for CLIENT roles — no attendance tracking)
+    if (!user.role_name.startsWith('CLIENT_')) {
+      await this.recordAttendance(user.id, user.org_timezone || 'America/New_York', user.shift_start, user.shift_hours);
+    }
 
     const token = this.generateToken(user);
 

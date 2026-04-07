@@ -191,10 +191,45 @@
 </div>
 
 <script>
-// Map role IDs to role names for shift field visibility
+// Map role IDs to role names, and org IDs to org types
 var roleMap = {};
 <% roles.forEach(r => { %>roleMap['<%= r.id %>'] = '<%= r.name %>';
 <% }) %>
+var orgTypeMap = {};
+<% orgs.forEach(o => { %>orgTypeMap['<%= o.id %>'] = '<%= o.org_type %>';
+<% }) %>
+
+// All roles as {id, name} for rebuilding the dropdown
+var allRoles = [<% roles.forEach((r, i) => { %><% if (i > 0) { %>,<% } %>{ id: '<%= r.id %>', name: '<%= r.name %>' }<% }) %>];
+
+function filterRolesByOrg() {
+  var orgId = document.getElementById('uOrgId').value;
+  var orgType = orgTypeMap[orgId] || '';
+  var roleSelect = document.getElementById('uRoleId');
+  var currentVal = roleSelect.value;
+
+  // Filter roles: LOCAL org -> LOCAL_* roles, CLIENT org -> CLIENT_* roles
+  <% if (user.role_name === 'LOCAL_MANAGER') { %>
+  var filtered = allRoles.filter(function(r) { return r.name === 'LOCAL_USER'; });
+  <% } else { %>
+  var filtered = allRoles.filter(function(r) {
+    if (orgType === 'LOCAL') return r.name.startsWith('LOCAL_');
+    if (orgType === 'CLIENT') return r.name.startsWith('CLIENT_');
+    return true;
+  });
+  <% } %>
+
+  roleSelect.innerHTML = '';
+  filtered.forEach(function(r) {
+    var opt = document.createElement('option');
+    opt.value = r.id;
+    opt.textContent = r.name;
+    if (r.id === currentVal) opt.selected = true;
+    roleSelect.appendChild(opt);
+  });
+
+  toggleShiftFields();
+}
 
 function toggleShiftFields() {
   var roleId = document.getElementById('uRoleId').value;
@@ -203,7 +238,11 @@ function toggleShiftFields() {
   document.getElementById('shiftFields').style.display = show ? 'block' : 'none';
 }
 
+document.getElementById('uOrgId').addEventListener('change', filterRolesByOrg);
 document.getElementById('uRoleId').addEventListener('change', toggleShiftFields);
+
+// Filter on page load
+filterRolesByOrg();
 
 function openCreateModal() {
   document.getElementById('modalTitle').textContent = 'CREATE USER';
@@ -219,7 +258,7 @@ function openCreateModal() {
   document.getElementById('uShiftHours').value = '8.5';
   document.getElementById('modalSubmitBtn').textContent = 'CREATE';
   document.getElementById('userModal').style.display = 'flex';
-  toggleShiftFields();
+  filterRolesByOrg();
 }
 function openEditModal(u) {
   document.getElementById('modalTitle').textContent = 'EDIT USER';
@@ -228,6 +267,7 @@ function openEditModal(u) {
   document.getElementById('uEmail').value = u.email;
   document.getElementById('passwordField').style.display = 'none';
   if (u.organization_id) document.getElementById('uOrgId').value = u.organization_id;
+  filterRolesByOrg();
   if (u.role_id) document.getElementById('uRoleId').value = u.role_id;
   if (u.weekly_off_day) document.getElementById('uWeeklyOff').value = u.weekly_off_day;
   document.getElementById('uShiftStart').value = u.shift_start ? u.shift_start.substring(0, 5) : '10:00';

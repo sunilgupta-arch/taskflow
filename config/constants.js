@@ -4,7 +4,8 @@ module.exports = {
     CLIENT_MANAGER: 'CLIENT_MANAGER',
     LOCAL_ADMIN: 'LOCAL_ADMIN',
     LOCAL_MANAGER: 'LOCAL_MANAGER',
-    LOCAL_USER: 'LOCAL_USER'
+    LOCAL_USER: 'LOCAL_USER',
+    CLIENT_USER: 'CLIENT_USER'
   },
 
   ORG_TYPES: {
@@ -55,6 +56,9 @@ module.exports = {
     LOCAL_USER: [
       'task:view_assigned', 'task:pick', 'task:update_status',
       'task:upload_attachment', 'task:complete', 'task:create_self', 'dashboard:user'
+    ],
+    CLIENT_USER: [
+      'task:create', 'task:assign', 'task:view_created', 'dashboard:user'
     ]
   }
 };

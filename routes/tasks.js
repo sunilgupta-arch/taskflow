@@ -18,9 +18,9 @@ router.get('/board/export', requireRoles('CLIENT_ADMIN', 'CLIENT_MANAGER', 'LOCA
 router.post('/board/import', requireRoles('LOCAL_ADMIN', 'LOCAL_MANAGER'), upload.single('file'), TaskController.boardImport);
 router.post('/board/import/confirm', requireRoles('LOCAL_ADMIN', 'LOCAL_MANAGER'), auditLog('IMPORT', 'task'), TaskController.boardImportConfirm);
 router.post('/board/merge', requireRoles('LOCAL_ADMIN', 'LOCAL_MANAGER'), auditLog('MERGE', 'task'), TaskController.boardMerge);
-router.get('/create', requireRoles('CLIENT_ADMIN', 'CLIENT_MANAGER', 'LOCAL_ADMIN', 'LOCAL_MANAGER', 'LOCAL_USER'), TaskController.showCreate);
-router.post('/create', requireRoles('CLIENT_ADMIN', 'CLIENT_MANAGER', 'LOCAL_ADMIN', 'LOCAL_MANAGER', 'LOCAL_USER'), auditLog('CREATE', 'task'), TaskController.create);
-router.post('/assign', requireRoles('CLIENT_ADMIN', 'CLIENT_MANAGER', 'LOCAL_ADMIN', 'LOCAL_MANAGER'), auditLog('ASSIGN', 'task'), TaskController.assign);
+router.get('/create', requireRoles('CLIENT_ADMIN', 'CLIENT_MANAGER', 'CLIENT_USER', 'LOCAL_ADMIN', 'LOCAL_MANAGER', 'LOCAL_USER'), TaskController.showCreate);
+router.post('/create', requireRoles('CLIENT_ADMIN', 'CLIENT_MANAGER', 'CLIENT_USER', 'LOCAL_ADMIN', 'LOCAL_MANAGER', 'LOCAL_USER'), auditLog('CREATE', 'task'), TaskController.create);
+router.post('/assign', requireRoles('CLIENT_ADMIN', 'CLIENT_MANAGER', 'CLIENT_USER', 'LOCAL_ADMIN', 'LOCAL_MANAGER'), auditLog('ASSIGN', 'task'), TaskController.assign);
 router.post('/pick/:id', requireRoles('LOCAL_USER'), TaskController.pick);
 router.post('/start/:id', requireRoles('LOCAL_USER', 'LOCAL_MANAGER', 'LOCAL_ADMIN'), TaskController.start);
 router.post('/complete/:id', requireRoles('LOCAL_USER', 'LOCAL_MANAGER', 'LOCAL_ADMIN'), auditLog('COMPLETE', 'task'), TaskController.complete);
@@ -28,13 +28,13 @@ router.post('/:id/start-session', requireRoles('LOCAL_USER', 'LOCAL_MANAGER', 'L
 router.post('/:id/complete-session', requireRoles('LOCAL_USER', 'LOCAL_MANAGER', 'LOCAL_ADMIN'), auditLog('COMPLETE_SESSION', 'task'), TaskController.completeSession);
 router.post('/:id/log-completion', requireRoles('LOCAL_USER', 'LOCAL_MANAGER', 'LOCAL_ADMIN'), auditLog('LOG_COMPLETION', 'task'), TaskController.logCompletion);
 router.post('/:id/undo-completion', requireRoles('LOCAL_USER', 'LOCAL_MANAGER', 'LOCAL_ADMIN'), auditLog('UNDO_COMPLETION', 'task'), TaskController.undoCompletion);
-router.post('/deactivate/:id', requireRoles('CLIENT_ADMIN', 'CLIENT_MANAGER', 'LOCAL_ADMIN', 'LOCAL_MANAGER', 'LOCAL_USER'), auditLog('DEACTIVATE', 'task'), TaskController.deactivate);
-router.get('/:id/edit', requireRoles('CLIENT_ADMIN', 'CLIENT_MANAGER', 'LOCAL_ADMIN', 'LOCAL_MANAGER', 'LOCAL_USER'), TaskController.showEdit);
-router.put('/:id', requireRoles('CLIENT_ADMIN', 'CLIENT_MANAGER', 'LOCAL_ADMIN', 'LOCAL_MANAGER', 'LOCAL_USER'), auditLog('UPDATE', 'task'), TaskController.update);
+router.post('/deactivate/:id', requireRoles('CLIENT_ADMIN', 'CLIENT_MANAGER', 'CLIENT_USER', 'LOCAL_ADMIN', 'LOCAL_MANAGER', 'LOCAL_USER'), auditLog('DEACTIVATE', 'task'), TaskController.deactivate);
+router.get('/:id/edit', requireRoles('CLIENT_ADMIN', 'CLIENT_MANAGER', 'CLIENT_USER', 'LOCAL_ADMIN', 'LOCAL_MANAGER', 'LOCAL_USER'), TaskController.showEdit);
+router.put('/:id', requireRoles('CLIENT_ADMIN', 'CLIENT_MANAGER', 'CLIENT_USER', 'LOCAL_ADMIN', 'LOCAL_MANAGER', 'LOCAL_USER'), auditLog('UPDATE', 'task'), TaskController.update);
 router.get('/:id', TaskController.show);
 router.get('/:id/comments', TaskController.getComments);
 router.post('/:id/comments', TaskController.addComment);
 router.post('/:id/upload', upload.array('files', 5), TaskController.uploadAttachments);
-router.delete('/:id', requireRoles('CLIENT_ADMIN', 'LOCAL_ADMIN', 'LOCAL_USER'), TaskController.destroy);
+router.delete('/:id', requireRoles('CLIENT_ADMIN', 'CLIENT_USER', 'LOCAL_ADMIN', 'LOCAL_USER'), TaskController.destroy);
 
 module.exports = router;

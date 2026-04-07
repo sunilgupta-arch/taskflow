@@ -321,39 +321,57 @@ const deadlineAlertJob = cron.schedule('*/15 * * * *', async () => {
 }, { scheduled: false });
 
 /**
- * Task overdue alert — runs at 9:00 AM daily in LOCAL org timezone.
- * Notifies users about tasks they missed yesterday.
+ * Task overdue alert — runs every 15 minutes.
+ * Triggers per-user at their shift start, notifying about tasks missed yesterday.
  */
-let overdueAlertJob = null;
-const overdueAlertHandler = async () => {
+const overdueAlertSent = {}; // "userId-date" => true
+
+const overdueAlertJob = cron.schedule('*/15 * * * *', async () => {
   try {
     const [[org]] = await db.query("SELECT timezone FROM organizations WHERE org_type = 'LOCAL' LIMIT 1");
     const tz = (org && org.timezone) || 'America/New_York';
+    const now = new Date(getNow(tz));
+    const nowMin = now.getUTCHours() * 60 + now.getUTCMinutes();
 
     // Get active LOCAL users with shift info
     const [users] = await db.query(
       `SELECT u.id, u.name, u.weekly_off_day, u.shift_start, u.shift_hours
        FROM users u JOIN roles r ON u.role_id = r.id JOIN organizations o ON u.organization_id = o.id
-       WHERE u.is_active = 1 AND o.org_type = 'LOCAL' AND r.name IN ('LOCAL_USER', 'LOCAL_MANAGER')`
+       WHERE u.is_active = 1 AND o.org_type = 'LOCAL' AND r.name IN ('LOCAL_USER', 'LOCAL_MANAGER')
+         AND u.shift_start IS NOT NULL`
     );
 
     for (const user of users) {
-      // Use per-user effective work date, then compute their "yesterday"
       const userToday = getEffectiveWorkDate(tz, user.shift_start, user.shift_hours);
+      const key = `${user.id}-${userToday}`;
+      if (overdueAlertSent[key]) continue;
+
+      // Only trigger within the first 15 min of the user's shift
+      const [sH, sM] = user.shift_start.split(':').map(Number);
+      const shiftStartMin = sH * 60 + (sM || 0);
+      if (nowMin < shiftStartMin || nowMin > shiftStartMin + 15) continue;
+
       const yesterday = new Date(new Date(userToday + 'T12:00:00Z').getTime() - 86400000).toISOString().split('T')[0];
       const dayName = new Date(yesterday + 'T12:00:00Z').toLocaleDateString('en-US', { weekday: 'long' });
 
-      if (user.weekly_off_day === dayName) continue;
+      if (user.weekly_off_day === dayName) {
+        overdueAlertSent[key] = true;
+        continue;
+      }
 
       // Find recurring tasks that were assigned but not completed yesterday
       const [missed] = await db.query(
-        `SELECT t.title FROM tasks t
+        `SELECT t.id, t.title, t.recurrence_pattern, t.recurrence_days, t.recurrence_end_date, t.type
+         FROM tasks t
          WHERE t.is_deleted = 0 AND t.assigned_to = ? AND t.type = 'recurring' AND t.status = 'active'
            AND NOT EXISTS (
              SELECT 1 FROM task_completions tc
              WHERE tc.task_id = t.id AND tc.user_id = ? AND tc.completion_date = ? AND tc.completed_at IS NOT NULL
            )`, [user.id, user.id, yesterday]
       );
+
+      // Only count tasks that were actually scheduled for yesterday
+      const scheduledMissed = missed.filter(t => isScheduledForDate(t, yesterday));
 
       // Find one-time tasks due yesterday that weren't completed
       const [missedOnce] = await db.query(
@@ -362,7 +380,9 @@ const overdueAlertHandler = async () => {
         [user.id, yesterday]
       );
 
-      const allMissed = [...missed, ...missedOnce];
+      const allMissed = [...scheduledMissed, ...missedOnce];
+      overdueAlertSent[key] = true;
+
       if (allMissed.length === 0) continue;
 
       let msg = `⚠️ You missed ${allMissed.length} task${allMissed.length > 1 ? 's' : ''} yesterday (${yesterday}):\n\n`;
@@ -375,7 +395,7 @@ const overdueAlertHandler = async () => {
   } catch (err) {
     console.error('[CRON] Overdue alert error:', err.message);
   }
-};
+}, { scheduled: false });
 
 /**
  * Daily end-of-day summary — runs every 15 minutes, triggers at shift end.
@@ -579,7 +599,7 @@ const startCronJobs = async () => {
     }
   }, { timezone: orgTz });
 
-  overdueAlertJob = cron.schedule('0 9 * * *', overdueAlertHandler, { timezone: orgTz });
+  overdueAlertJob.start();
   weeklyDigestJob = cron.schedule('30 9 * * 1', weeklyDigestHandler, { timezone: orgTz });
 
   // These jobs already self-check timing via getNow()/getToday(), safe with any server TZ

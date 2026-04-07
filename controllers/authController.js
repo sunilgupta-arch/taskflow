@@ -5,7 +5,7 @@ const { getToday, getEffectiveWorkDate } = require('../utils/timezone');
 
 class AuthController {
   static showLogin(req, res) {
-    if (req.cookies?.token) return res.redirect('/tasks/board');
+    if (req.cookies?.token) return res.redirect('/tasks');
     res.render('auth/login', { title: 'Login - TaskFlow', layout: false });
   }
 
@@ -25,7 +25,9 @@ class AuthController {
         maxAge: 12 * 60 * 60 * 1000 // 12 hours
       });
 
-      return ApiResponse.success(res, { user, redirectUrl: '/tasks/board' }, 'Login successful');
+      // CLIENT_USER and LOCAL_USER go to tasks list; admins/managers go to task board
+      const redirectUrl = ['LOCAL_USER', 'CLIENT_USER'].includes(user.role_name) ? '/tasks' : '/tasks/board';
+      return ApiResponse.success(res, { user, redirectUrl }, 'Login successful');
     } catch (err) {
       return res.status(401).json({ success: false, message: err.message });
     }

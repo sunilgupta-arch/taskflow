@@ -43,6 +43,26 @@ const authenticate = async (req, res, next) => {
     res.locals.otherOrgTimezone = otherOrgs.length ? otherOrgs[0].timezone : users[0].org_timezone;
     res.locals.otherOrgType = otherOrgType;
 
+    // Load latest announcements for banner (max 4, pinned first, filtered by audience)
+    const isLocalOrg = users[0].org_type === 'LOCAL';
+    const audienceFilter = isLocalOrg ? "a.audience IN ('local', 'all')" : "a.audience IN ('client', 'all')";
+    const showBanner = ['LOCAL_ADMIN', 'LOCAL_MANAGER', 'LOCAL_USER', 'CLIENT_ADMIN', 'CLIENT_MANAGER'].includes(users[0].role_name);
+    if (showBanner) {
+      try {
+        const [announcements] = await db.query(
+          `SELECT a.id, a.title, a.body, a.is_pinned, a.audience, a.created_at, u.name as author_name
+           FROM announcements a JOIN users u ON a.created_by = u.id
+           WHERE ${audienceFilter}
+           ORDER BY a.is_pinned DESC, a.created_at DESC LIMIT 4`
+        );
+        res.locals.announcements = announcements;
+      } catch (e) {
+        res.locals.announcements = [];
+      }
+    } else {
+      res.locals.announcements = [];
+    }
+
     next();
   } catch (err) {
     if (req.xhr || req.path.startsWith('/api/')) {

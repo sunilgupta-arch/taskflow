@@ -18,7 +18,8 @@ async function seed() {
       (2, 'CLIENT_MANAGER', 'CLIENT'),
       (3, 'LOCAL_ADMIN', 'LOCAL'),
       (4, 'LOCAL_MANAGER', 'LOCAL'),
-      (5, 'LOCAL_USER', 'LOCAL')`);
+      (5, 'LOCAL_USER', 'LOCAL'),
+      (6, 'CLIENT_USER', 'CLIENT')`);
     console.log('Roles seeded');
 
     // Default admin users (one per org type)

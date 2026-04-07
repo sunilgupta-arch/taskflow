@@ -29,6 +29,9 @@ class TaskController {
       if (role === 'LOCAL_USER') {
         filters.user = req.user.id;
         filters.role = role;
+      } else if (role === 'CLIENT_USER') {
+        filters.created_by = req.user.id;
+        filters.role = role;
       }
 
       const { rows, total } = await TaskModel.getAll(filters);
@@ -139,10 +142,13 @@ class TaskController {
     // LOCAL_USER gets simplified form (no user dropdown, no reward)
     // All other roles get the full form with user dropdown
     if (role !== 'LOCAL_USER') {
+      // CLIENT_USER can only assign to LOCAL users; admins/managers see all LOCAL users
       const [users] = await db.query(
         `SELECT u.id, u.name FROM users u
          JOIN organizations o ON u.organization_id = o.id
-         WHERE o.org_type = 'LOCAL' AND u.is_active = 1`
+         JOIN roles r ON u.role_id = r.id
+         WHERE o.org_type = 'LOCAL' AND u.is_active = 1
+           AND r.name IN ('LOCAL_USER', 'LOCAL_MANAGER', 'LOCAL_ADMIN')`
       );
       ourUsers = users;
     }

@@ -551,6 +551,13 @@
 
   <nav class="sidebar-nav">
     <div class="nav-section-label">Navigation</div>
+    <% if (['LOCAL_ADMIN', 'LOCAL_MANAGER', 'LOCAL_USER', 'CLIENT_ADMIN', 'CLIENT_MANAGER'].includes(user.role_name)) { %>
+    <div class="nav-item">
+      <a href="/announcements" class="<%= typeof title !== 'undefined' && title === 'Info Board' ? 'active' : '' %>" style="position:relative;">
+        <i class="bi bi-megaphone"></i> Info Board
+      </a>
+    </div>
+    <% } %>
     <% if (['LOCAL_ADMIN', 'CLIENT_ADMIN', 'LOCAL_MANAGER', 'CLIENT_MANAGER'].includes(user.role_name)) { %>
     <div class="nav-item">
       <a href="/tasks/board" class="<%= typeof title !== 'undefined' && title === 'Task Board' ? 'active' : '' %>">
@@ -733,6 +740,63 @@
   </div>
 
   <div class="content-area">
+    <% if (typeof announcements !== 'undefined' && announcements.length > 0 && typeof title !== 'undefined' && title !== 'Info Board') { %>
+    <div id="announceBanner" style="margin-bottom:0.75rem;background:linear-gradient(135deg, rgba(168,85,247,0.08), rgba(0,212,255,0.05));border:1px solid rgba(168,85,247,0.2);border-radius:10px;padding:0.6rem 1rem;position:relative;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.4rem;">
+        <span style="font-size:0.7rem;font-weight:700;font-family:var(--tf-font-mono);color:#a855f7;text-transform:uppercase;letter-spacing:0.5px;"><i class="bi bi-megaphone me-1"></i>Info Board</span>
+        <div style="display:flex;gap:0.5rem;align-items:center;">
+          <a href="/announcements" style="font-size:0.6rem;color:var(--tf-accent);text-decoration:none;">View All</a>
+          <button onclick="document.getElementById('announceBanner').style.display='none'" style="background:none;border:none;color:var(--tf-text-muted);cursor:pointer;font-size:0.8rem;padding:0;line-height:1;" title="Dismiss"><i class="bi bi-x"></i></button>
+        </div>
+      </div>
+      <%
+        var localPosts = announcements.filter(function(a) { return a.audience === 'local'; });
+        var clientPosts = announcements.filter(function(a) { return a.audience !== 'local'; });
+      %>
+      <div style="display:flex;gap:0.75rem;">
+        <!-- Local posts (left) -->
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:0.6rem;color:#a855f7;font-weight:600;font-family:var(--tf-font-mono);margin-bottom:0.35rem;text-transform:uppercase;letter-spacing:0.5px;"><i class="bi bi-people me-1"></i>Local Team</div>
+          <div style="display:flex;flex-direction:column;gap:0.4rem;">
+            <% if (localPosts.length === 0) { %>
+            <div style="font-size:0.65rem;color:var(--tf-text-muted);padding:0.4rem;opacity:0.5;">No updates</div>
+            <% } %>
+            <% localPosts.forEach(function(a) { %>
+            <div style="background:var(--tf-surface);border:1px solid var(--tf-border);border-radius:8px;padding:0.5rem 0.75rem;<%= a.is_pinned ? 'border-left:3px solid #a855f7;' : '' %>">
+              <div style="font-size:0.75rem;font-weight:600;color:var(--tf-text);margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                <% if (a.is_pinned) { %><i class="bi bi-pin-angle-fill me-1" style="color:#a855f7;font-size:0.6rem;"></i><% } %><%= a.title %>
+              </div>
+              <% if (a.body) { %>
+              <div style="font-size:0.65rem;color:var(--tf-text-muted);line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;"><%= a.body %></div>
+              <% } %>
+              <div style="font-size:0.55rem;color:var(--tf-text-muted);margin-top:3px;"><%= a.author_name %> &middot; <%= new Date(a.created_at).toLocaleDateString('en-US', { month:'short', day:'numeric' }) %></div>
+            </div>
+            <% }) %>
+          </div>
+        </div>
+        <!-- Client posts (right) -->
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:0.6rem;color:#f59e0b;font-weight:600;font-family:var(--tf-font-mono);margin-bottom:0.35rem;text-transform:uppercase;letter-spacing:0.5px;"><i class="bi bi-building me-1"></i>Client</div>
+          <div style="display:flex;flex-direction:column;gap:0.4rem;">
+            <% if (clientPosts.length === 0) { %>
+            <div style="font-size:0.65rem;color:var(--tf-text-muted);padding:0.4rem;opacity:0.5;">No updates</div>
+            <% } %>
+            <% clientPosts.forEach(function(a) { %>
+            <div style="background:rgba(245,158,11,0.04);border:1px solid rgba(245,158,11,0.2);border-radius:8px;padding:0.5rem 0.75rem;<%= a.is_pinned ? 'border-left:3px solid #f59e0b;' : '' %>">
+              <div style="font-size:0.75rem;font-weight:600;color:var(--tf-text);margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                <% if (a.is_pinned) { %><i class="bi bi-pin-angle-fill me-1" style="color:#f59e0b;font-size:0.6rem;"></i><% } %><%= a.title %>
+              </div>
+              <% if (a.body) { %>
+              <div style="font-size:0.65rem;color:var(--tf-text-muted);line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;"><%= a.body %></div>
+              <% } %>
+              <div style="font-size:0.55rem;color:var(--tf-text-muted);margin-top:3px;"><%= a.author_name %> &middot; <%= new Date(a.created_at).toLocaleDateString('en-US', { month:'short', day:'numeric' }) %></div>
+            </div>
+            <% }) %>
+          </div>
+        </div>
+      </div>
+    </div>
+    <% } %>
     <%- body %>
   </div>
 </div>
@@ -953,7 +1017,7 @@ function autoLogoutWithReason(reason) {
 // Shift-end warning & auto-logout (skip for admins)
 (function() {
   var userRole = '<%= user.role_name %>';
-  if (userRole === 'LOCAL_ADMIN' || userRole === 'CLIENT_ADMIN') return;
+  if (userRole === 'LOCAL_ADMIN' || userRole.startsWith('CLIENT_')) return;
 
   var SHIFT_START = '<%= user.shift_start || "10:00:00" %>';
   var SHIFT_HOURS = parseFloat('<%= user.shift_hours || 8.5 %>');
@@ -1089,7 +1153,7 @@ function autoLogoutWithReason(reason) {
 // Pending tasks reminder — 1 hour before shift ends
 (function() {
   var userRole = '<%= user.role_name %>';
-  if (userRole === 'LOCAL_ADMIN' || userRole === 'CLIENT_ADMIN' || userRole === 'CLIENT_MANAGER') return;
+  if (userRole === 'LOCAL_ADMIN' || userRole.startsWith('CLIENT_')) return;
 
   var SHIFT_START = '<%= user.shift_start || "10:00:00" %>';
   var SHIFT_HOURS = parseFloat('<%= user.shift_hours || 8.5 %>');
@@ -1469,7 +1533,7 @@ async function submitChangePassword() {
 (function() {
   var role = '<%= user.role_name %>';
   // Skip for admins
-  if (role === 'LOCAL_ADMIN' || role === 'CLIENT_ADMIN' || role === 'CLIENT_MANAGER') return;
+  if (role === 'LOCAL_ADMIN' || role.startsWith('CLIENT_')) return;
 
   // Highlight selected radio
   document.querySelectorAll('.late-reason-opt input[type="radio"]').forEach(function(radio) {
@@ -1567,7 +1631,7 @@ function isMidShift() {
 function handleLogout() {
   var role = '<%= user.role_name %>';
   // Admins can logout without reason
-  if (role === 'LOCAL_ADMIN' || role === 'CLIENT_ADMIN' || role === 'CLIENT_MANAGER') {
+  if (role === 'LOCAL_ADMIN' || role.startsWith('CLIENT_')) {
     window.location.href = '/auth/logout';
     return;
   }

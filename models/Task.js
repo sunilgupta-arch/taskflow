@@ -65,15 +65,22 @@ class TaskModel {
     const todaySql = todayDate ? '?' : 'CURDATE()';
     const todayParam = todayDate || null;
 
-    // Visibility filtering: CLIENT users should NOT see LOCAL-created tasks
-    if (orgType === 'CLIENT') {
+    // Visibility filtering
+    if (role === 'CLIENT_USER' && created_by) {
+      // CLIENT_USER sees only tasks they created + tasks assigned to them
+      where.push('(t.created_by = ? OR t.assigned_to = ?)');
+      params.push(created_by, created_by);
+    } else if (orgType === 'CLIENT') {
+      // CLIENT admin/manager: see all CLIENT-created tasks
       where.push("t.created_by_org = 'CLIENT'");
-    }
-
-    // Role-based filtering: LOCAL_USER sees only their own tasks (no grouping)
-    if (role === 'LOCAL_USER' && user) {
+    } else if (role === 'LOCAL_USER' && user) {
+      // LOCAL_USER sees only tasks assigned to them (exclude client-internal tasks)
       where.push('t.assigned_to = ?');
       params.push(user);
+      where.push("NOT (t.created_by_org = 'CLIENT' AND t.assigned_to IN (SELECT u.id FROM users u JOIN roles r ON u.role_id = r.id WHERE r.name = 'CLIENT_USER'))");
+    } else if (orgType === 'LOCAL') {
+      // LOCAL admin/manager: hide tasks assigned TO CLIENT_USER (client-internal)
+      where.push("NOT (t.assigned_to IN (SELECT u.id FROM users u JOIN roles r ON u.role_id = r.id WHERE r.name = 'CLIENT_USER'))");
     }
 
     if (status) {
@@ -89,7 +96,7 @@ class TaskModel {
     }
     if (type) { where.push('t.type = ?'); params.push(type); }
     if (assigned_to) { where.push('t.assigned_to = ?'); params.push(assigned_to); }
-    if (created_by) { where.push('t.created_by = ?'); params.push(created_by); }
+    if (created_by && role !== 'CLIENT_USER') { where.push('t.created_by = ?'); params.push(created_by); }
     if (search) { where.push('(t.title LIKE ? OR t.description LIKE ?)'); params.push(`%${search}%`, `%${search}%`); }
 
     // Completed period filter for dashboard drill-down
