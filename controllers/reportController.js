@@ -2,14 +2,14 @@ const TaskService = require('../services/taskService');
 const RewardModel = require('../models/Reward');
 const db = require('../config/db');
 const { ApiResponse } = require('../utils/response');
-const { getToday, getNow, formatTime, getTimezoneOffsetString, isScheduledForDate } = require('../utils/timezone');
+const { getToday, getNow, isScheduledForDate } = require('../utils/timezone');
 const DashboardService = require('../services/dashboardService');
 
 class ReportController {
   static async completionReport(req, res) {
     try {
       const [[localOrg]] = await db.query("SELECT timezone FROM organizations WHERE org_type = 'LOCAL' LIMIT 1");
-      const todayDate = getToday((localOrg && localOrg.timezone) || req.user.org_timezone || 'UTC');
+      const todayDate = getToday((localOrg && localOrg.timezone) || req.user.org_timezone || 'America/New_York');
       const [stats, perUser] = await Promise.all([
         TaskService.getTaskStats(null, null, todayDate),
         TaskService.getCompletionPerUser()
@@ -82,7 +82,7 @@ class ReportController {
     try {
       // Always use LOCAL org timezone for attendance (data belongs to LOCAL team)
       const [orgs] = await db.query("SELECT timezone FROM organizations WHERE org_type = 'LOCAL' LIMIT 1");
-      const tz = (orgs.length && orgs[0].timezone) || req.user.org_timezone || 'UTC';
+      const tz = (orgs.length && orgs[0].timezone) || req.user.org_timezone || 'America/New_York';
       const today = getToday(tz);
       const month = req.query.month || today.slice(0, 7); // 'YYYY-MM'
       const [yearStr, monStr] = month.split('-');
@@ -92,21 +92,20 @@ class ReportController {
       const startDate = `${month}-01`;
       const endDate = `${month}-${String(lastDay).padStart(2, '0')}`;
 
-      const tzOffset = getTimezoneOffsetString(tz);
       const selectedDate = req.query.date || today;
 
-      const [dailyLogs, weeklyStats, activeUsers, attendanceDays, leaveData] = await Promise.all([
+      const [dailyLogs, weeklyStats, activeUsers, attendanceDays, leaveData, holidayData] = await Promise.all([
         db.query(
           `SELECT al.*, u.name as user_name, u.email, u.shift_start, u.shift_hours,
                   al.logout_reason, al.late_login_reason,
-                  DATE_FORMAT(CONVERT_TZ(al.login_time, '+00:00', ?), '%h:%i %p') as loginFormatted,
-                  DATE_FORMAT(CONVERT_TZ(al.logout_time, '+00:00', ?), '%h:%i %p') as logoutFormatted,
+                  DATE_FORMAT(al.login_time, '%h:%i %p') as loginFormatted,
+                  DATE_FORMAT(al.logout_time, '%h:%i %p') as logoutFormatted,
                   TIMEDIFF(COALESCE(al.logout_time, NOW()), al.login_time) as duration
            FROM attendance_logs al
            JOIN users u ON al.user_id = u.id
            JOIN roles r ON u.role_id = r.id
            WHERE al.date = ? AND r.name IN ('LOCAL_USER', 'LOCAL_MANAGER')
-           ORDER BY u.name, al.login_time`, [tzOffset, tzOffset, selectedDate]
+           ORDER BY u.name, al.login_time`, [selectedDate]
         ),
         db.query(
           `SELECT u.id, u.name, COUNT(al.id) as days_present
@@ -125,16 +124,22 @@ class ReportController {
            ORDER BY u.name`
         ),
         db.query(
-          `SELECT user_id, date, DATE_FORMAT(CONVERT_TZ(login_time, '+00:00', ?), '%h:%i %p') as login_formatted,
+          `SELECT user_id, date, DATE_FORMAT(login_time, '%h:%i %p') as login_formatted,
                   is_manual, manual_status, manual_remark
            FROM attendance_logs
            WHERE date >= ? AND date <= ?`,
-          [tzOffset, startDate, endDate]
+          [startDate, endDate]
         ),
         db.query(
           `SELECT user_id, from_date, to_date, status FROM leave_requests
            WHERE from_date <= ? AND to_date >= ? AND status IN ('approved', 'pending')`,
           [endDate, startDate]
+        ),
+        db.query(
+          `SELECT id, date, name FROM holidays
+           WHERE date >= ? AND date <= ? AND organization_id = (SELECT id FROM organizations WHERE org_type = 'LOCAL' LIMIT 1)
+           ORDER BY date`,
+          [startDate, endDate]
         )
       ]);
 
@@ -151,6 +156,15 @@ class ReportController {
         if (row.is_manual && row.manual_status) {
           overrideMap.set(`${row.user_id}-${d}`, { status: row.manual_status, remark: row.manual_remark });
         }
+      });
+
+      // Build holiday map: date -> name
+      const holidayMap = new Map();
+      const holidays = [];
+      holidayData[0].forEach(h => {
+        const d = h.date instanceof Date ? h.date.toISOString().split('T')[0] : String(h.date).split('T')[0];
+        holidayMap.set(d, h.name);
+        holidays.push({ id: h.id, date: d, name: h.name });
       });
 
       const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -177,6 +191,8 @@ class ReportController {
             calendarData[u.id][d] = futureStatus;
           } else if (dayName === u.weekly_off_day) {
             calendarData[u.id][d] = 'weekoff';
+          } else if (holidayMap.has(dateStr)) {
+            calendarData[u.id][d] = 'holiday';
           } else {
             // Check leaves
             let onLeave = false;
@@ -226,6 +242,8 @@ class ReportController {
         calendarData,
         loginTimeMap: Object.fromEntries(loginTimeMap),
         overrideMap: Object.fromEntries(overrideMap),
+        holidayMap: Object.fromEntries(holidayMap),
+        holidays,
         isAdmin: req.user.role_name === 'LOCAL_ADMIN',
         month,
         year,
@@ -245,8 +263,7 @@ class ReportController {
   static async myAttendance(req, res) {
     try {
       const userId = req.user.id;
-      const tz = req.user.org_timezone || 'UTC';
-      const tzOffset = getTimezoneOffsetString(tz);
+      const tz = req.user.org_timezone || 'America/New_York';
       const today = getToday(tz);
       const month = req.query.month || today.slice(0, 7);
       const [yearStr, monStr] = month.split('-');
@@ -263,23 +280,23 @@ class ReportController {
         ),
         db.query(
           `SELECT date, logout_reason, late_login_reason,
-                  DATE_FORMAT(CONVERT_TZ(login_time, '+00:00', ?), '%h:%i %p') as loginFormatted,
-                  DATE_FORMAT(CONVERT_TZ(logout_time, '+00:00', ?), '%h:%i %p') as logoutFormatted,
+                  DATE_FORMAT(login_time, '%h:%i %p') as loginFormatted,
+                  DATE_FORMAT(logout_time, '%h:%i %p') as logoutFormatted,
                   TIMEDIFF(COALESCE(logout_time, NOW()), login_time) as duration
            FROM attendance_logs
            WHERE user_id = ? AND date >= ? AND date <= ?
            ORDER BY date DESC, login_time ASC`,
-          [tzOffset, tzOffset, userId, startDate, endDate]
+          [userId, startDate, endDate]
         ),
         db.query(
-          `SELECT DATE_FORMAT(CONVERT_TZ(login_time, '+00:00', ?), '%h:%i %p') as loginFormatted,
-                  DATE_FORMAT(CONVERT_TZ(logout_time, '+00:00', ?), '%h:%i %p') as logoutFormatted,
+          `SELECT DATE_FORMAT(login_time, '%h:%i %p') as loginFormatted,
+                  DATE_FORMAT(logout_time, '%h:%i %p') as logoutFormatted,
                   TIMEDIFF(COALESCE(logout_time, NOW()), login_time) as duration,
                   login_time, logout_time, logout_reason, late_login_reason
            FROM attendance_logs
            WHERE user_id = ? AND date = ?
            ORDER BY login_time ASC`,
-          [tzOffset, tzOffset, userId, today]
+          [userId, today]
         )
       ]);
 
@@ -321,21 +338,36 @@ class ReportController {
         }
       });
 
+      // Fetch holidays for this month
+      const [myHolidays] = await db.query(
+        `SELECT date, name FROM holidays
+         WHERE date >= ? AND date <= ? AND organization_id = (SELECT organization_id FROM users WHERE id = ?)
+         ORDER BY date`,
+        [startDate, endDate, userId]
+      );
+      const myHolidayMap = new Map();
+      myHolidays.forEach(h => {
+        const d = h.date instanceof Date ? h.date.toISOString().split('T')[0] : String(h.date).split('T')[0];
+        myHolidayMap.set(d, h.name);
+      });
+
       for (let d = 1; d <= lastDay; d++) {
         const dateStr = `${year}-${String(mon).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
         const dateObj = new Date(year, mon - 1, d);
         const dayName = dayNames[dateObj.getDay()];
         const isOff = dayName === shift.weekly_off_day;
+        const isHoliday = myHolidayMap.has(dateStr);
         const sessions = logMap[dateStr] || [];
         const log = sessions[0] || null;
         let status = 'absent';
         if (dateStr > today) status = 'future';
         else if (isOff) status = 'off';
+        else if (isHoliday) status = 'holiday';
         else if (log) status = 'present';
         else if (leaveSet.has(dateStr + '-approved')) status = 'leave';
         else if (leaveSet.has(dateStr + '-pending')) status = 'pending_leave';
 
-        calendarData[d] = { status, dayName, log, sessions, isOff };
+        calendarData[d] = { status, dayName, log, sessions, isOff, holidayName: isHoliday ? myHolidayMap.get(dateStr) : null };
       }
 
       const prevMonth = mon === 1 ? `${year - 1}-12` : `${year}-${String(mon - 1).padStart(2, '0')}`;
@@ -368,7 +400,7 @@ class ReportController {
     try {
       // Report shows LOCAL team tasks — use LOCAL timezone for date calculations
       const [[localOrg]] = await db.query("SELECT timezone FROM organizations WHERE org_type = 'LOCAL' LIMIT 1");
-      const tz = (localOrg && localOrg.timezone) || req.user.org_timezone || 'UTC';
+      const tz = (localOrg && localOrg.timezone) || req.user.org_timezone || 'America/New_York';
       const today = getToday(tz);
       const month = req.query.month || today.slice(0, 7);
       const [yearStr, monStr] = month.split('-');
@@ -427,6 +459,18 @@ class ReportController {
         completionSet.add(`${c.task_id}-${d}`);
       });
 
+      // Fetch holidays for this month
+      const [tcHolidays] = await db.query(
+        `SELECT date FROM holidays
+         WHERE date >= ? AND date <= ? AND organization_id = (SELECT id FROM organizations WHERE org_type = 'LOCAL' LIMIT 1)`,
+        [startDate, endDate]
+      );
+      const tcHolidaySet = new Set();
+      tcHolidays.forEach(h => {
+        const d = h.date instanceof Date ? h.date.toISOString().split('T')[0] : String(h.date).split('T')[0];
+        tcHolidaySet.add(d);
+      });
+
       // Build calendar grid data
       const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
       const gridData = {};
@@ -441,10 +485,11 @@ class ReportController {
           const dateObj = new Date(year, mon - 1, d);
           const dayName = dayNames[dateObj.getDay()];
           const isOff = dayName === u.weekly_off_day;
+          const isHoliday = tcHolidaySet.has(dateStr);
           const isFuture = dateStr > today;
 
-          if (isOff || isFuture) {
-            gridData[u.id][d] = { total: 0, done: 0, isOff, isFuture };
+          if (isOff || isFuture || isHoliday) {
+            gridData[u.id][d] = { total: 0, done: 0, isOff, isFuture, isHoliday };
             continue;
           }
 
@@ -471,7 +516,7 @@ class ReportController {
             }
           });
 
-          gridData[u.id][d] = { total, done, isOff: false, isFuture: false };
+          gridData[u.id][d] = { total, done, isOff: false, isFuture: false, isHoliday: false };
         }
       });
 
@@ -541,7 +586,7 @@ class ReportController {
     try {
       // Overdue report is about LOCAL team tasks — use LOCAL timezone
       const [[localOrgOd]] = await db.query("SELECT timezone FROM organizations WHERE org_type = 'LOCAL' LIMIT 1");
-      const tz = (localOrgOd && localOrgOd.timezone) || req.user.org_timezone || 'UTC';
+      const tz = (localOrgOd && localOrgOd.timezone) || req.user.org_timezone || 'America/New_York';
       const today = getToday(tz);
 
       // Get all active LOCAL users
@@ -652,7 +697,7 @@ class ReportController {
   static async punctualityReport(req, res) {
     try {
       const [orgs] = await db.query("SELECT timezone FROM organizations WHERE org_type = 'LOCAL' LIMIT 1");
-      const tz = (orgs.length && orgs[0].timezone) || req.user.org_timezone || 'UTC';
+      const tz = (orgs.length && orgs[0].timezone) || req.user.org_timezone || 'America/New_York';
       const today = getToday(tz);
       const month = req.query.month || today.slice(0, 7);
       const [yearStr, monStr] = month.split('-');
@@ -661,7 +706,6 @@ class ReportController {
       const lastDay = new Date(year, mon, 0).getDate();
       const startDate = `${month}-01`;
       const endDate = `${month}-${String(lastDay).padStart(2, '0')}`;
-      const tzOffset = getTimezoneOffsetString(tz);
 
       // Get active LOCAL users with shift info
       const [activeUsers] = await db.query(
@@ -675,10 +719,10 @@ class ReportController {
       // Get attendance logs for the month with local login time
       const [logs] = await db.query(
         `SELECT al.user_id, al.date,
-                TIME(CONVERT_TZ(al.login_time, '+00:00', ?)) as local_login_time
+                TIME(al.login_time) as local_login_time
          FROM attendance_logs al
          WHERE al.date >= ? AND al.date <= ?`,
-        [tzOffset, startDate, endDate]
+        [startDate, endDate]
       );
 
       // Build per-user punctuality data
@@ -863,7 +907,7 @@ class ReportController {
         return ApiResponse.error(res, 'User, date, and status are required', 400);
       }
 
-      const validStatuses = ['present', 'leave', 'half_day', 'official_duty', 'work_from_home'];
+      const validStatuses = ['present', 'leave', 'half_day', 'official_duty', 'work_from_home', 'holiday'];
       if (!validStatuses.includes(status)) {
         return ApiResponse.error(res, 'Invalid status', 400);
       }
@@ -902,7 +946,7 @@ class ReportController {
         logoutTime = `${date} ${String(eH).padStart(2, '0')}:${String(eM).padStart(2, '0')}:00`;
         if (!remark) autoRemark = 'Half day — Marked by admin';
       }
-      // leave: no login/logout time
+      // leave/holiday: no login/logout time
 
       // Check if there's already an attendance record for this user+date
       const [existing] = await db.query(
@@ -912,12 +956,12 @@ class ReportController {
 
       if (existing.length > 0) {
         // Update existing — mark as manual override
-        if (status === 'leave') {
+        if (status === 'leave' || status === 'holiday') {
           await db.query(
             `UPDATE attendance_logs SET is_manual = 1, manual_status = ?, manual_remark = ?, updated_by = ?,
                     login_time = NULL, logout_time = NULL
              WHERE user_id = ? AND date = ? ORDER BY login_time ASC LIMIT 1`,
-            [status, autoRemark || 'Leave — Marked by admin', req.user.id, user_id, date]
+            [status, autoRemark || (status === 'holiday' ? 'Holiday — Marked by admin' : 'Leave — Marked by admin'), req.user.id, user_id, date]
           );
         } else {
           await db.query(
@@ -979,6 +1023,42 @@ class ReportController {
     } catch (err) {
       console.error('Remove override error:', err);
       return ApiResponse.error(res, 'Failed to remove override');
+    }
+  }
+
+  // POST /attendance/holiday — Add an org-wide holiday
+  static async addHoliday(req, res) {
+    try {
+      const { date, name } = req.body;
+      if (!date || !name) {
+        return ApiResponse.error(res, 'Date and name are required', 400);
+      }
+
+      await db.query(
+        'INSERT IGNORE INTO holidays (date, name, organization_id, created_by) VALUES (?, ?, ?, ?)',
+        [date, name.trim(), req.user.organization_id, req.user.id]
+      );
+
+      return ApiResponse.success(res, {}, `Holiday "${name}" added for ${date}`);
+    } catch (err) {
+      console.error('Add holiday error:', err);
+      return ApiResponse.error(res, 'Failed to add holiday');
+    }
+  }
+
+  // DELETE /attendance/holiday — Remove a holiday
+  static async removeHoliday(req, res) {
+    try {
+      const { id } = req.body;
+      if (!id) {
+        return ApiResponse.error(res, 'Holiday ID is required', 400);
+      }
+
+      await db.query('DELETE FROM holidays WHERE id = ?', [id]);
+      return ApiResponse.success(res, {}, 'Holiday removed');
+    } catch (err) {
+      console.error('Remove holiday error:', err);
+      return ApiResponse.error(res, 'Failed to remove holiday');
     }
   }
 

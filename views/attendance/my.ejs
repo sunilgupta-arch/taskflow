@@ -39,7 +39,14 @@
           <div class="col-sm-6 col-md-2">
             <div style="font-size:0.7rem;color:var(--tf-text-muted);margin-bottom:2px;">Logout</div>
             <div style="font-family:var(--tf-font-mono);font-size:0.9rem;color:var(--tf-text-muted);">
-              <%- s.logoutFormatted || '<span style="color:#10b981;">Active</span>' %>
+              <% if (s.logoutFormatted) { %>
+                <%= s.logoutFormatted %>
+                <% if (s.logout_reason && s.logout_reason.startsWith('Auto')) { %>
+                <div style="font-size:0.55rem;color:#f59e0b;margin-top:2px;"><i class="bi bi-robot me-1"></i>Auto Logout</div>
+                <% } %>
+              <% } else { %>
+                <span style="color:#10b981;">Active</span>
+              <% } %>
             </div>
             <% if (s.logout_reason) { %>
             <div style="font-size:0.6rem;color:#f59e0b;margin-top:2px;"><i class="bi bi-chat-left-text me-1"></i><%= s.logout_reason %></div>
@@ -83,6 +90,7 @@
         else if (cd.status === 'absent') { bg = 'rgba(239,68,68,0.1)'; clr = '#ef4444'; icon = 'bi-x-circle-fill'; label = 'Absent'; }
         else if (cd.status === 'leave') { bg = 'rgba(0,212,255,0.1)'; clr = '#00d4ff'; icon = 'bi-calendar-check'; label = 'Leave'; }
         else if (cd.status === 'pending_leave') { bg = 'rgba(245,158,11,0.1)'; clr = '#f59e0b'; icon = 'bi-hourglass-split'; label = 'Pending'; }
+        else if (cd.status === 'holiday') { bg = 'rgba(168,85,247,0.12)'; clr = '#a855f7'; icon = 'bi-calendar-heart'; label = cd.holidayName || 'Holiday'; }
         else if (cd.status === 'off') { bg = 'rgba(100,116,139,0.08)'; clr = '#64748b'; icon = 'bi-moon'; label = 'Off'; }
         else if (cd.status === 'future') { bg = 'transparent'; clr = 'var(--tf-text-muted)'; icon = ''; label = ''; }
         else { bg = 'rgba(239,68,68,0.1)'; clr = '#ef4444'; icon = 'bi-x-circle-fill'; label = 'Absent'; }
@@ -141,7 +149,7 @@
           var leaveDays = 0;
           for (var d = 1; d <= lastDay; d++) {
             var cd2 = calendarData[d];
-            if (cd2.status !== 'off' && cd2.status !== 'future') workingDays++;
+            if (cd2.status !== 'off' && cd2.status !== 'future' && cd2.status !== 'holiday') workingDays++;
             if (cd2.status === 'leave') leaveDays++;
           }
           var expectedDays = workingDays - leaveDays;

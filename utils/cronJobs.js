@@ -52,7 +52,7 @@ const sentReminders = {}; // Track: { "userId-date": true }
 const taskReminderJob = cron.schedule('*/15 * * * *', async () => {
   try {
     const [[org]] = await db.query("SELECT timezone FROM organizations WHERE org_type = 'LOCAL' LIMIT 1");
-    const tz = (org && org.timezone) || 'UTC';
+    const tz = (org && org.timezone) || 'America/New_York';
     const today = getToday(tz);
 
     // Get all active LOCAL users with shift info
@@ -171,6 +171,88 @@ const taskReminderJob = cron.schedule('*/15 * * * *', async () => {
 }, { scheduled: false });
 
 /**
+ * Auto-logout — runs every 15 minutes.
+ * Safety net for sessions left open when user's browser was closed.
+ * - If shift ended 2+ hours ago, assume user forgot → logout_time = shift end.
+ * - The client-side handles the normal flow: warning modal at shift end,
+ *   user can click "Continue (2 hrs)" to extend, or get logged out at shift end.
+ */
+const autoLogoutJob = cron.schedule('*/15 * * * *', async () => {
+  try {
+    const [[org]] = await db.query("SELECT timezone FROM organizations WHERE org_type = 'LOCAL' LIMIT 1");
+    const tz = (org && org.timezone) || 'America/New_York';
+    const now = new Date(getNow(tz));
+    const nowMin = now.getUTCHours() * 60 + now.getUTCMinutes();
+    const today = getToday(tz);
+
+    // Find all open sessions with user shift info
+    const [openSessions] = await db.query(
+      `SELECT al.id, al.user_id, al.date, u.shift_start, u.shift_hours, u.name
+       FROM attendance_logs al
+       JOIN users u ON al.user_id = u.id
+       WHERE al.logout_time IS NULL
+         AND u.shift_start IS NOT NULL AND u.shift_hours IS NOT NULL`
+    );
+
+    for (const session of openSessions) {
+      const sessionDate = session.date instanceof Date
+        ? session.date.toISOString().split('T')[0]
+        : String(session.date).split('T')[0];
+
+      const [sh, sm] = session.shift_start.split(':').map(Number);
+      const shiftStartMin = sh * 60 + (sm || 0);
+      const shiftHours = parseFloat(session.shift_hours) || 8;
+      const shiftEndMin = shiftStartMin + Math.round(shiftHours * 60);
+      const autoLogoutMin = shiftEndMin + 120; // 2 hours after shift end
+
+      let shouldLogout = false;
+
+      if (shiftEndMin <= 1440) {
+        if (sessionDate === today) {
+          shouldLogout = nowMin >= autoLogoutMin;
+        } else if (sessionDate < today) {
+          shouldLogout = true;
+        }
+      } else {
+        if (sessionDate < today) {
+          if (autoLogoutMin <= 1440) {
+            shouldLogout = true;
+          } else {
+            const nextDay = new Date(new Date(sessionDate + 'T12:00:00Z').getTime() + 86400000)
+              .toISOString().split('T')[0];
+            if (today > nextDay) {
+              shouldLogout = true;
+            } else if (today === nextDay) {
+              shouldLogout = nowMin >= (autoLogoutMin - 1440);
+            }
+          }
+        }
+      }
+
+      if (shouldLogout) {
+        // Set logout_time to shift end in ET (no conversion needed — DB is ET native)
+        const shiftEndDay = shiftEndMin >= 1440 ? 1 : 0;
+        const endHour = Math.floor((shiftEndMin % 1440) / 60);
+        const endMinute = (shiftEndMin % 1440) % 60;
+        const logoutDate = shiftEndDay > 0
+          ? new Date(new Date(sessionDate + 'T12:00:00').getTime() + 86400000).toISOString().split('T')[0]
+          : sessionDate;
+        const logoutTimeStr = `${logoutDate} ${String(endHour).padStart(2,'0')}:${String(endMinute).padStart(2,'0')}:00`;
+
+        await db.query(
+          `UPDATE attendance_logs SET logout_time = ?, logout_reason = 'Auto Logout'
+           WHERE id = ? AND logout_time IS NULL`,
+          [logoutTimeStr, session.id]
+        );
+        console.log(`[CRON] Auto-logged out ${session.name} (shift end: ${logoutTimeStr}, session ${session.id})`);
+      }
+    }
+  } catch (err) {
+    console.error('[CRON] Auto-logout error:', err.message);
+  }
+}, { scheduled: false });
+
+/**
  * Task deadline approaching — runs every 15 minutes.
  * Notifies users about one-time tasks due within the next hour.
  */
@@ -179,7 +261,7 @@ const deadlineAlertSent = {}; // "taskId-userId" => true
 const deadlineAlertJob = cron.schedule('*/15 * * * *', async () => {
   try {
     const [[org]] = await db.query("SELECT timezone FROM organizations WHERE org_type = 'LOCAL' LIMIT 1");
-    const tz = (org && org.timezone) || 'UTC';
+    const tz = (org && org.timezone) || 'America/New_York';
 
     // Get recurring tasks with deadline_time approaching within next hour
     const now = new Date(getNow(tz));
@@ -246,7 +328,7 @@ let overdueAlertJob = null;
 const overdueAlertHandler = async () => {
   try {
     const [[org]] = await db.query("SELECT timezone FROM organizations WHERE org_type = 'LOCAL' LIMIT 1");
-    const tz = (org && org.timezone) || 'UTC';
+    const tz = (org && org.timezone) || 'America/New_York';
 
     // Get active LOCAL users with shift info
     const [users] = await db.query(
@@ -303,7 +385,7 @@ const dailySummarySent = {}; // "userId-date" => true
 const dailySummaryJob = cron.schedule('*/15 * * * *', async () => {
   try {
     const [[org]] = await db.query("SELECT timezone FROM organizations WHERE org_type = 'LOCAL' LIMIT 1");
-    const tz = (org && org.timezone) || 'UTC';
+    const tz = (org && org.timezone) || 'America/New_York';
     const today = getToday(tz);
     const now = new Date(getNow(tz));
     const nowMin = now.getUTCHours() * 60 + now.getUTCMinutes();
@@ -391,7 +473,7 @@ let weeklyDigestJob = null;
 const weeklyDigestHandler = async () => {
   try {
     const [[org]] = await db.query("SELECT timezone FROM organizations WHERE org_type = 'LOCAL' LIMIT 1");
-    const tz = (org && org.timezone) || 'UTC';
+    const tz = (org && org.timezone) || 'America/New_York';
     const today = getToday(tz);
     const weekAgo = new Date(new Date(today + 'T12:00:00').getTime() - 7 * 86400000).toISOString().split('T')[0];
 
@@ -457,7 +539,7 @@ const weeklyDigestHandler = async () => {
 
 const startCronJobs = async () => {
   // Load LOCAL org timezone from DB for fixed-schedule crons
-  let orgTz = 'UTC';
+  let orgTz = 'America/New_York';
   try {
     const [[org]] = await db.query("SELECT timezone FROM organizations WHERE org_type = 'LOCAL' LIMIT 1");
     if (org && org.timezone) orgTz = org.timezone;
@@ -474,17 +556,17 @@ const startCronJobs = async () => {
       await db.query(
         `UPDATE attendance_logs al
          JOIN users u ON al.user_id = u.id
-         SET al.logout_time = NOW(), al.logout_reason = 'Auto - Session Expired'
+         SET al.logout_time = NOW(), al.logout_reason = 'Auto Logout'
          WHERE al.date = ? AND al.logout_time IS NULL
            AND (u.shift_start IS NULL OR u.shift_hours IS NULL
-                OR (CAST(SUBSTRING_INDEX(u.shift_start, ':', 1) AS UNSIGNED) + u.shift_hours) <= 24)`,
+                OR (HOUR(u.shift_start) + u.shift_hours) <= 24)`,
         [today]
       );
       // Close stale sessions for ALL users (including night shift) — any open
       // session older than 1 day is a missed logout, not a legitimate crossover
       const [staleResult] = await db.query(
         `UPDATE attendance_logs
-         SET logout_time = NOW(), logout_reason = 'Auto - Stale Session Cleanup'
+         SET logout_time = NOW(), logout_reason = 'Auto Logout'
          WHERE logout_time IS NULL AND date < DATE_SUB(?, INTERVAL 1 DAY)`,
         [today]
       );
@@ -503,10 +585,11 @@ const startCronJobs = async () => {
   // These jobs already self-check timing via getNow()/getToday(), safe with any server TZ
   scheduledBackupJob.start();
   taskReminderJob.start();
+  autoLogoutJob.start();
   deadlineAlertJob.start();
   dailySummaryJob.start();
 
-  console.log(`⏰ Cron jobs started (timezone: ${orgTz}) — attendance, backup, reminders, deadline, overdue, summary, weekly`);
+  console.log(`⏰ Cron jobs started (timezone: ${orgTz}) — attendance, auto-logout, backup, reminders, deadline, overdue, summary, weekly`);
 };
 
 module.exports = { startCronJobs };

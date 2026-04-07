@@ -18,7 +18,7 @@ function createConnection(opts = {}) {
     user: process.env.DB_USER || 'root',
     password: process.env.DB_PASSWORD || '',
     database: process.env.DB_NAME || 'taskflow_db',
-    timezone: process.env.DB_TIMEZONE || '+00:00',
+    timezone: '+00:00',
     multipleStatements: true,
     ...opts
   });

@@ -9,8 +9,9 @@
 <!-- Tab Navigation -->
 <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
   <div class="d-flex align-items-center gap-3">
-    <h5 style="font-family:var(--tf-font-mono);font-weight:700;margin:0;">
-      <i class="bi bi-kanban me-2" style="color:var(--tf-accent);"></i>Task Board
+    <h5 style="font-family:var(--tf-font-mono);font-weight:700;margin:0;display:flex;align-items:center;gap:0.75rem;">
+      <span><i class="bi bi-kanban me-2" style="color:var(--tf-accent);"></i>Task Board</span>
+      <a href="/dashboard/overview" style="font-size:0.6rem;color:var(--tf-text-muted);text-decoration:none;border:1px solid var(--tf-border);padding:2px 8px;border-radius:4px;font-weight:500;" title="View Dashboard"><i class="bi bi-grid-1x2 me-1"></i>Dashboard</a>
     </h5>
     <div class="d-flex" style="border:1px solid var(--tf-border);border-radius:8px;overflow:hidden;">
       <a href="/tasks/board?tab=today&date=<%= selectedDate %>"
@@ -119,7 +120,7 @@
       <tbody>
         <% if (taskGroups.length > 0) { %>
           <%
-            var _tz = orgTimezone || 'UTC';
+            var _tz = orgTimezone || 'America/New_York';
             var _tfmt = { hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:true, timeZone: _tz };
             var _colors = ['var(--tf-accent)', 'var(--tf-accent-2)'];
             var _bgColors = ['rgba(0,212,255,0.03)', 'rgba(124,58,237,0.03)'];
@@ -186,12 +187,12 @@
               </td>
               <td style="font-size:0.75rem;color:var(--tf-text-muted);">
                 <% if (emp.started_at) { %>
-                <i class="bi bi-play-fill" style="color:#10b981;"></i> <%= new Date(emp.started_at).toLocaleTimeString('en-IN', _tfmt) %>
+                <i class="bi bi-play-fill" style="color:#10b981;"></i> <%= new Date(emp.started_at).toLocaleTimeString('en-US', _tfmt) %>
                 <% } else { %>—<% } %>
               </td>
               <td style="font-size:0.75rem;color:var(--tf-text-muted);">
                 <% if (emp.completed_at) { %>
-                <i class="bi bi-stop-fill" style="color:#ef4444;"></i> <%= new Date(emp.completed_at).toLocaleTimeString('en-IN', _tfmt) %>
+                <i class="bi bi-stop-fill" style="color:#ef4444;"></i> <%= new Date(emp.completed_at).toLocaleTimeString('en-US', _tfmt) %>
                 <% } else { %>—<% } %>
               </td>
               <td style="font-size:0.75rem;color:#3b82f6;">
@@ -239,7 +240,7 @@
           </td>
           <td style="font-size:0.75rem;color:var(--tf-text-muted);">
             <% if (e.shift_start) { %>
-            <%= new Date('2000-01-01T' + e.shift_start).toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit', hour12:true }) %>
+            <%= new Date('2000-01-01T' + e.shift_start).toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit', hour12:true }) %>
             <% } else { %>—<% } %>
           </td>
           <td style="font-family:var(--tf-font-mono);"><%= e.assigned %></td>

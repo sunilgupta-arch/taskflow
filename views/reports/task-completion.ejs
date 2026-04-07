@@ -53,6 +53,9 @@
               var bg = 'transparent', clr = 'var(--tf-text-muted)', cellText = '', cursor = 'default', title = '';
               if (cell.isFuture) {
                 bg = 'transparent'; clr = 'var(--tf-border)'; cellText = '';
+              } else if (cell.isHoliday) {
+                bg = 'rgba(168,85,247,0.15)'; clr = '#a855f7'; cellText = 'H';
+                title = 'Holiday';
               } else if (cell.isOff) {
                 bg = 'rgba(100,116,139,0.08)'; clr = '#64748b'; cellText = 'W';
                 title = 'Week Off';
@@ -79,6 +82,9 @@
             <% if (cell.total > 0 && !cell.isOff && !cell.isFuture) { %>
             <div style="min-width:30px;padding:2px 3px;border-radius:4px;background:<%= bg %>;color:<%= clr %>;font-size:0.6rem;font-weight:600;font-family:var(--tf-font-mono);cursor:<%= cursor %>;"
               onclick="showTaskDetail(<%= u.id %>, '<%= dateStr %>')"><%= cellText %></div>
+            <% } else if (cell.isHoliday) { %>
+            <div style="width:22px;height:22px;border-radius:4px;background:<%= bg %>;color:<%= clr %>;display:inline-flex;align-items:center;justify-content:center;font-size:0.6rem;font-weight:600;font-family:var(--tf-font-mono);"
+              title="<%= title %>">H</div>
             <% } else if (cell.isOff) { %>
             <div style="width:22px;height:22px;border-radius:4px;background:<%= bg %>;color:<%= clr %>;display:inline-flex;align-items:center;justify-content:center;font-size:0.6rem;font-weight:600;font-family:var(--tf-font-mono);"
               title="<%= title %>">W</div>
@@ -106,6 +112,7 @@
     <span style="font-size:0.65rem;color:var(--tf-text-muted);"><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:rgba(249,115,22,0.15);vertical-align:middle;margin-right:3px;"></span> 1-49%</span>
     <span style="font-size:0.65rem;color:var(--tf-text-muted);"><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:rgba(239,68,68,0.15);vertical-align:middle;margin-right:3px;"></span> 0%</span>
     <span style="font-size:0.65rem;color:var(--tf-text-muted);"><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:rgba(100,116,139,0.1);vertical-align:middle;margin-right:3px;"></span> Week Off</span>
+    <span style="font-size:0.65rem;color:var(--tf-text-muted);"><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:rgba(168,85,247,0.15);vertical-align:middle;margin-right:3px;"></span> Holiday</span>
   </div>
 </div>
 

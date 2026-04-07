@@ -9,7 +9,7 @@ class DashboardController {
       const role = req.user.role_name;
       let data = {};
 
-      const tz = req.user.org_timezone || 'UTC';
+      const tz = req.user.org_timezone || 'America/New_York';
       // Admin dashboard shows LOCAL team task stats — use LOCAL timezone for date calculations
       let taskTz = tz;
       if (req.user.organization_type === 'CLIENT') {

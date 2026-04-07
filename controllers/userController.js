@@ -127,7 +127,7 @@ class UserController {
 
       // User progress shows LOCAL employee data — use LOCAL timezone
       const [[localOrg]] = await db.query("SELECT timezone FROM organizations WHERE org_type = 'LOCAL' LIMIT 1");
-      const tz = (localOrg && localOrg.timezone) || req.user.org_timezone || 'UTC';
+      const tz = (localOrg && localOrg.timezone) || req.user.org_timezone || 'America/New_York';
       const selectedDate = req.query.date || getToday(tz);
 
       const todayDate = getToday(tz);
@@ -242,7 +242,7 @@ class UserController {
     try {
       const userId = req.params.id;
       const [[localOrg2]] = await db.query("SELECT timezone FROM organizations WHERE org_type = 'LOCAL' LIMIT 1");
-      const month = req.query.month || getToday((localOrg2 && localOrg2.timezone) || 'UTC').slice(0, 7); // YYYY-MM
+      const month = req.query.month || getToday((localOrg2 && localOrg2.timezone) || 'America/New_York').slice(0, 7); // YYYY-MM
       const [year, mon] = month.split('-');
 
       // Adhoc stats for the month

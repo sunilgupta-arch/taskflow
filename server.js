@@ -56,7 +56,7 @@ const driveRoutes = require('./routes/drive');
 const helpRoutes = require('./routes/help');
 const indexRoutes = require('./routes/index');
 
-app.get('/', (req, res) => res.redirect('/dashboard'));
+app.get('/', (req, res) => res.redirect('/tasks/board'));
 app.use('/auth', authRoutes);
 app.use('/tasks', taskRoutes);
 app.use('/chat', chatRoutes);

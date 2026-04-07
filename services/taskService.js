@@ -2,7 +2,7 @@ const TaskModel = require('../models/Task');
 const TaskCompletion = require('../models/TaskCompletion');
 const RewardModel = require('../models/Reward');
 const db = require('../config/db');
-const { getToday, getUTCNow, getEffectiveWorkDate, getEffectiveWorkDateWithSession } = require('../utils/timezone');
+const { getToday, getEffectiveWorkDate, getEffectiveWorkDateWithSession } = require('../utils/timezone');
 const ChatModel = require('../models/Chat');
 
 // Helper: send system notification (non-blocking)
@@ -222,7 +222,7 @@ class TaskService {
       await conn.beginTransaction();
 
       await conn.query(
-        `UPDATE tasks SET status = 'completed', completed_at = ? WHERE id = ?`, [getUTCNow(), taskId]
+        `UPDATE tasks SET status = 'completed', completed_at = NOW() WHERE id = ?`, [taskId]
       );
 
       if (task.reward_amount && parseFloat(task.reward_amount) > 0) {
@@ -235,7 +235,7 @@ class TaskService {
       }
 
       await conn.commit();
-      checkStreakAndNotify(userId, 'UTC');
+      checkStreakAndNotify(userId, 'America/New_York');
       return TaskModel.findById(taskId);
     } catch (err) {
       await conn.rollback();
@@ -248,7 +248,7 @@ class TaskService {
   /**
    * Log completion for a recurring task for today (or a specific date).
    */
-  static async logCompletion(taskId, userId, date = null, timezone = 'UTC') {
+  static async logCompletion(taskId, userId, date = null, timezone = 'America/New_York') {
     const task = await TaskModel.findById(taskId);
     if (!task) throw new Error('Task not found');
     if (task.assigned_to !== userId) throw new Error('You can only log completion for tasks assigned to you');
@@ -297,7 +297,7 @@ class TaskService {
   /**
    * Undo completion for a recurring task for today (or a specific date).
    */
-  static async undoCompletion(taskId, userId, date = null, timezone = 'UTC') {
+  static async undoCompletion(taskId, userId, date = null, timezone = 'America/New_York') {
     const task = await TaskModel.findById(taskId);
     if (!task) throw new Error('Task not found');
     if (task.assigned_to !== userId) throw new Error('You can only undo completion for tasks assigned to you');
@@ -334,7 +334,7 @@ class TaskService {
     }
   }
 
-  static async startSession(taskId, userId, timezone = 'UTC', workDate = null) {
+  static async startSession(taskId, userId, timezone = 'America/New_York', workDate = null) {
     const task = await TaskModel.findById(taskId);
     if (!task) throw new Error('Task not found');
     if (task.assigned_to !== userId) throw new Error('You can only start tasks assigned to you');
@@ -355,7 +355,7 @@ class TaskService {
     return task;
   }
 
-  static async completeSession(taskId, userId, timezone = 'UTC', workDate = null) {
+  static async completeSession(taskId, userId, timezone = 'America/New_York', workDate = null) {
     const task = await TaskModel.findById(taskId);
     if (!task) throw new Error('Task not found');
     if (task.assigned_to !== userId) throw new Error('You can only complete tasks assigned to you');
@@ -376,11 +376,10 @@ class TaskService {
     try {
       await conn.beginTransaction();
 
-      const now = getUTCNow();
       await conn.query(
-        `UPDATE task_completions SET completed_at = ?, duration_minutes = TIMESTAMPDIFF(MINUTE, started_at, ?)
+        `UPDATE task_completions SET completed_at = NOW(), duration_minutes = TIMESTAMPDIFF(MINUTE, started_at, NOW())
          WHERE task_id = ? AND user_id = ? AND completion_date = ?`,
-        [now, now, taskId, userId, today]
+        [taskId, userId, today]
       );
 
       if (task.reward_amount && parseFloat(task.reward_amount) > 0) {
@@ -519,7 +518,7 @@ class TaskService {
   static async getTaskStats(userId = null, orgType = null, todayDate = null) {
     let userFilter = userId ? `AND (t.assigned_to = ${db.escape(userId)} OR t.created_by = ${db.escape(userId)})` : '';
     let orgFilter = orgType === 'CLIENT' ? "AND t.created_by_org = 'CLIENT'" : '';
-    // Use timezone-aware date if provided, otherwise fallback to UTC CURDATE()/NOW()
+    // Use timezone-aware date if provided, otherwise fallback to CURDATE()/NOW()
     const todayExpr = todayDate ? db.escape(todayDate) : 'CURDATE()';
     const nowExpr = todayDate ? db.escape(todayDate) : 'NOW()';
 

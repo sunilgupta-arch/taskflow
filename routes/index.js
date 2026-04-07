@@ -12,8 +12,9 @@ const LeaveController = require('../controllers/leaveController');
 const BackupController = require('../controllers/backupController');
 const LiveStatusController = require('../controllers/liveStatusController');
 
-// Dashboard
-router.get('/dashboard', authenticate, DashboardController.show);
+// Dashboard — old dashboard at /dashboard/overview; /dashboard redirects to task board
+router.get('/dashboard/overview', authenticate, DashboardController.show);
+router.get('/dashboard', authenticate, (req, res) => res.redirect('/tasks/board'));
 
 // Self-service progress & reports (any authenticated user)
 router.get('/my-progress', authenticate, UserController.showMyProgress);
@@ -52,6 +53,8 @@ router.get('/my-attendance', authenticate, ReportController.myAttendance);
 router.post('/attendance/override', authenticate, requireRoles('LOCAL_ADMIN'), ReportController.attendanceOverride);
 router.post('/attendance/force-logout', authenticate, requireRoles('LOCAL_ADMIN', 'LOCAL_MANAGER'), ReportController.forceLogout);
 router.delete('/attendance/override', authenticate, requireRoles('LOCAL_ADMIN'), ReportController.removeOverride);
+router.post('/attendance/holiday', authenticate, requireRoles('LOCAL_ADMIN'), ReportController.addHoliday);
+router.delete('/attendance/holiday', authenticate, requireRoles('LOCAL_ADMIN'), ReportController.removeHoliday);
 
 // Leaves (LOCAL roles only: users/managers apply, admin/manager approve/reject)
 router.get('/leaves', authenticate, requireRoles('LOCAL_ADMIN', 'LOCAL_MANAGER', 'LOCAL_USER'), LeaveController.index);

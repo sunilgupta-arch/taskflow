@@ -10,7 +10,7 @@ const { getToday, getEffectiveWorkDate, getEffectiveWorkDateWithSession, isSched
 // Helper: fetch the LOCAL org timezone (for employee date calculations)
 async function getLocalOrgTimezone() {
   const [[org]] = await db.query("SELECT timezone FROM organizations WHERE org_type = 'LOCAL' LIMIT 1");
-  return (org && org.timezone) || 'UTC';
+  return (org && org.timezone) || 'America/New_York';
 }
 const XLSX = require('xlsx');
 
@@ -21,7 +21,7 @@ class TaskController {
       const { page = 1, limit = 20, status, type, search, completed_period, assigned_to, for_date } = req.query;
       const role = req.user.role_name;
 
-      const tz = req.user.org_timezone || 'UTC';
+      const tz = req.user.org_timezone || 'America/New_York';
       // Always use LOCAL org timezone for employee date calculations
       const empTz = req.user.organization_type === 'LOCAL' ? tz : await getLocalOrgTimezone();
       const today = await getEffectiveWorkDateWithSession(db, req.user.id, tz, req.user.shift_start, req.user.shift_hours);
@@ -87,7 +87,7 @@ class TaskController {
   static async myTasks(req, res) {
     try {
       const { page = 1, limit = 20, status, type, search, schedule = 'today', for_date } = req.query;
-      const tz = req.user.org_timezone || 'UTC';
+      const tz = req.user.org_timezone || 'America/New_York';
       const today = await getEffectiveWorkDateWithSession(db, req.user.id, tz, req.user.shift_start, req.user.shift_hours);
       const checkDate = for_date || today;
       const filters = {
@@ -317,7 +317,7 @@ class TaskController {
         const [[empUser]] = await db.query(`SELECT shift_start, shift_hours FROM users WHERE id = ?`, [task.assigned_to]);
         const empShiftStart = (req.user.id === task.assigned_to) ? req.user.shift_start : (empUser ? empUser.shift_start : null);
         const empShiftHours = (req.user.id === task.assigned_to) ? req.user.shift_hours : (empUser ? empUser.shift_hours : null);
-        const empTz = req.user.organization_type === 'LOCAL' ? (req.user.org_timezone || 'UTC') : await getLocalOrgTimezone();
+        const empTz = req.user.organization_type === 'LOCAL' ? (req.user.org_timezone || 'America/New_York') : await getLocalOrgTimezone();
         const today = await getEffectiveWorkDateWithSession(db, task.assigned_to, empTz, empShiftStart, empShiftHours);
         todaySession = await TaskCompletion.getTodaySession(task.id, task.assigned_to, today);
         isStartedToday = !!(todaySession && todaySession.started_at && !todaySession.completed_at);
@@ -342,7 +342,7 @@ class TaskController {
         );
       }
 
-      const showTz = isRecurring ? (req.user.organization_type === 'LOCAL' ? (req.user.org_timezone || 'UTC') : await getLocalOrgTimezone()) : 'UTC';
+      const showTz = isRecurring ? (req.user.organization_type === 'LOCAL' ? (req.user.org_timezone || 'America/New_York') : await getLocalOrgTimezone()) : 'America/New_York';
       if (!isRecurring) var sessionLogs = [];
       res.render('tasks/show', { title: task.title, task, attachments, comments, groupAssignees, role: req.user.role_name, isRecurring, isCompletedToday, isStartedToday, todaySession, recentCompletions, sessionLogs, empTimezone: showTz });
     } catch (err) {
@@ -454,7 +454,7 @@ class TaskController {
   // POST /tasks/:id/start-session  (recurring tasks)
   static async startSession(req, res) {
     try {
-      const tz = req.user.org_timezone || 'UTC';
+      const tz = req.user.org_timezone || 'America/New_York';
       const workDate = await getEffectiveWorkDateWithSession(db, req.user.id, tz, req.user.shift_start, req.user.shift_hours);
       const task = await TaskService.startSession(req.params.id, req.user.id, tz, workDate);
       return ApiResponse.success(res, task, 'Task started');
@@ -466,7 +466,7 @@ class TaskController {
   // POST /tasks/:id/complete-session  (recurring tasks)
   static async completeSession(req, res) {
     try {
-      const tz = req.user.org_timezone || 'UTC';
+      const tz = req.user.org_timezone || 'America/New_York';
       const workDate = await getEffectiveWorkDateWithSession(db, req.user.id, tz, req.user.shift_start, req.user.shift_hours);
       const task = await TaskService.completeSession(req.params.id, req.user.id, tz, workDate);
 
@@ -485,7 +485,7 @@ class TaskController {
   // POST /tasks/complete/:id
   static async complete(req, res) {
     try {
-      const tz = req.user.org_timezone || 'UTC';
+      const tz = req.user.org_timezone || 'America/New_York';
       const workDate = await getEffectiveWorkDateWithSession(db, req.user.id, tz, req.user.shift_start, req.user.shift_hours);
       const task = await TaskService.completeTask(req.params.id, req.user.id, workDate);
 
@@ -540,7 +540,7 @@ class TaskController {
   static async logCompletion(req, res) {
     try {
       const { date } = req.body;
-      const tz = req.user.org_timezone || 'UTC';
+      const tz = req.user.org_timezone || 'America/New_York';
       const workDate = date || await getEffectiveWorkDateWithSession(db, req.user.id, tz, req.user.shift_start, req.user.shift_hours);
       const task = await TaskService.logCompletion(req.params.id, req.user.id, workDate, tz);
 
@@ -562,7 +562,7 @@ class TaskController {
   static async undoCompletion(req, res) {
     try {
       const { date } = req.body;
-      const tz = req.user.org_timezone || 'UTC';
+      const tz = req.user.org_timezone || 'America/New_York';
       const workDate = date || await getEffectiveWorkDateWithSession(db, req.user.id, tz, req.user.shift_start, req.user.shift_hours);
       const task = await TaskService.undoCompletion(req.params.id, req.user.id, workDate, tz);
       return ApiResponse.success(res, task, 'Completion undone');
@@ -575,7 +575,7 @@ class TaskController {
   static async pendingToday(req, res) {
     try {
       const userId = req.user.id;
-      const tz = req.user.org_timezone || 'UTC';
+      const tz = req.user.org_timezone || 'America/New_York';
       const today = await getEffectiveWorkDateWithSession(db, userId, tz, req.user.shift_start, req.user.shift_hours);
       const tasks = await DashboardService.getTasksForDate(userId, today, today);
 
@@ -617,7 +617,7 @@ class TaskController {
   // GET /tasks/board — Task Board (Today + All Tasks)
   static async board(req, res) {
     try {
-      const tz = req.user.org_timezone || 'UTC';
+      const tz = req.user.org_timezone || 'America/New_York';
       // Board shows LOCAL team tasks — default date should use LOCAL timezone
       const localTz = req.user.organization_type === 'LOCAL' ? tz : await getLocalOrgTimezone();
       const selectedDate = req.query.date || getToday(localTz);

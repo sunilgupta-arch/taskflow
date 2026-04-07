@@ -170,6 +170,9 @@
   <div class="card-header d-flex justify-content-between align-items-center">
     <span><i class="bi bi-calendar3 me-2"></i>MONTHLY ATTENDANCE</span>
     <div class="d-flex align-items-center gap-2">
+      <% if (isAdmin) { %>
+      <button class="btn-tf btn-tf-outline" style="font-size:0.65rem;padding:3px 8px;color:#a855f7;border-color:rgba(168,85,247,0.3);" onclick="openHolidayModal()"><i class="bi bi-calendar-heart me-1"></i>Manage Holidays</button>
+      <% } %>
       <a href="/attendance?month=<%= prevMonth %>" class="btn-tf btn-tf-outline" style="font-size:0.7rem;padding:3px 8px;"><i class="bi bi-chevron-left"></i></a>
       <span style="font-family:var(--tf-font-mono);font-size:0.85rem;min-width:120px;text-align:center;">
         <%= new Date(year, mon - 1).toLocaleString('default', { month: 'long', year: 'numeric' }) %>
@@ -223,6 +226,7 @@
               else if (st === 'absent') { bg = 'rgba(239,68,68,0.15)'; clr = '#ef4444'; icon = 'A'; tipText = 'Absent'; }
               else if (st === 'approved_leave') { bg = 'rgba(0,212,255,0.15)'; clr = '#00d4ff'; icon = 'L'; tipText = 'Approved Leave'; }
               else if (st === 'pending_leave') { bg = 'rgba(245,158,11,0.15)'; clr = '#f59e0b'; icon = '?'; tipText = 'Pending Leave'; }
+              else if (st === 'holiday') { bg = 'rgba(168,85,247,0.2)'; clr = '#a855f7'; icon = 'H*'; tipText = typeof holidayMap !== 'undefined' && holidayMap[dateStr2] ? holidayMap[dateStr2] : 'Holiday'; }
               else if (st === 'weekoff') { bg = 'rgba(100,116,139,0.1)'; clr = '#64748b'; icon = 'W'; tipText = 'Week Off'; }
               else { bg = 'transparent'; clr = 'var(--tf-border)'; icon = ''; tipText = ''; }
           %>
@@ -254,6 +258,7 @@
     <span style="font-size:0.65rem;color:var(--tf-text-muted);"><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:rgba(99,102,241,0.2);vertical-align:middle;margin-right:3px;"></span> Official Duty</span>
     <span style="font-size:0.65rem;color:var(--tf-text-muted);"><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:rgba(16,185,129,0.15);vertical-align:middle;margin-right:3px;border:1px solid #059669;"></span> WFH</span>
     <span style="font-size:0.65rem;color:var(--tf-text-muted);"><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:rgba(100,116,139,0.1);vertical-align:middle;margin-right:3px;"></span> Week Off</span>
+    <span style="font-size:0.65rem;color:var(--tf-text-muted);"><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:rgba(168,85,247,0.2);vertical-align:middle;margin-right:3px;"></span> Holiday</span>
   </div>
 </div>
 
@@ -353,7 +358,10 @@
                 <td style="font-family:var(--tf-font-mono);font-size:0.75rem;color:var(--tf-text-muted);">
                   <% if (l.logoutFormatted) { %>
                     <%= l.logoutFormatted %>
-                  <% } else { %>
+                    <% if (l.logout_reason && l.logout_reason.startsWith('Auto')) { %>
+                    <div style="font-size:0.55rem;color:#f59e0b;margin-top:2px;"><i class="bi bi-robot me-1"></i>Auto Logout</div>
+                    <% } %>
+                  <% } else if (selectedDate === today) { %>
                     <span style="color:#10b981;">Active</span>
                     <% if (isAdmin) { %>
                     <button onclick="forceLogout(<%= l.id %>, '<%= l.user_name.replace(/'/g, "\\'") %>')"
@@ -362,10 +370,12 @@
                       <i class="bi bi-box-arrow-right"></i> Logout
                     </button>
                     <% } %>
+                  <% } else { %>
+                    <span style="color:#ef4444;">No Logout</span>
                   <% } %>
                 </td>
                 <td style="font-size:0.75rem;color:var(--tf-text-muted);">
-                  <%= l.duration ? l.duration.substring(0,5) + 'h' : '—' %>
+                  <%= (l.logoutFormatted || selectedDate === today) && l.duration ? l.duration.substring(0,5) + 'h' : '—' %>
                 </td>
                 <td style="font-size:0.7rem;color:var(--tf-text-muted);">
                   <% if (l.logout_reason) { %>
@@ -426,6 +436,7 @@
         <option value="half_day">Half Day</option>
         <option value="official_duty">Official Duty</option>
         <option value="work_from_home">Work from Home</option>
+        <option value="holiday">Holiday</option>
       </select>
     </div>
 
@@ -468,7 +479,7 @@ function openOverrideModal(userId, userName, date, currentStatus) {
 
   // Pre-select current status if it's an overridable type
   var sel = document.getElementById('overrideStatus');
-  var validOpts = ['present', 'leave', 'half_day', 'official_duty', 'work_from_home'];
+  var validOpts = ['present', 'leave', 'half_day', 'official_duty', 'work_from_home', 'holiday'];
   sel.value = validOpts.includes(currentStatus) ? currentStatus : 'present';
 
   // Show remove button if there's an existing override
@@ -514,7 +525,103 @@ function removeOverride() {
     if (data.success) window.location.reload();
   }).catch(function() {});
 }
+
+// Holiday management
+var holidayList = <%- JSON.stringify(typeof holidays !== 'undefined' ? holidays : []) %>;
+
+function openHolidayModal() {
+  document.getElementById('holidayModal').style.display = 'flex';
+  renderHolidayList();
+}
+
+function renderHolidayList() {
+  var list = document.getElementById('holidayList');
+  list.innerHTML = '';
+  if (holidayList.length === 0) {
+    list.innerHTML = '<div style="text-align:center;color:var(--tf-text-muted);padding:1rem;font-size:0.8rem;">No holidays this month</div>';
+    return;
+  }
+  holidayList.forEach(function(h) {
+    var dateLabel = new Date(h.date + 'T12:00:00').toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' });
+    list.innerHTML +=
+      '<div style="display:flex;align-items:center;justify-content:space-between;padding:0.5rem 0.75rem;border-bottom:1px solid var(--tf-border);">' +
+        '<div><span style="font-size:0.8rem;font-weight:500;">' + h.name + '</span>' +
+        '<span style="font-size:0.7rem;color:var(--tf-text-muted);margin-left:0.5rem;">' + dateLabel + '</span></div>' +
+        '<button onclick="removeHoliday(' + h.id + ')" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:0.75rem;padding:2px 6px;" title="Remove"><i class="bi bi-trash3"></i></button>' +
+      '</div>';
+  });
+}
+
+function addHoliday() {
+  var date = document.getElementById('holidayDate').value;
+  var name = document.getElementById('holidayName').value.trim();
+  var errEl = document.getElementById('holidayError');
+  if (!date || !name) {
+    errEl.textContent = 'Date and name are required';
+    errEl.style.display = 'block';
+    return;
+  }
+  errEl.style.display = 'none';
+  fetch('/attendance/holiday', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ date: date, name: name })
+  }).then(function(r) { return r.json(); }).then(function(data) {
+    if (data.success) {
+      window.location.reload();
+    } else {
+      errEl.textContent = data.message || 'Failed to add holiday';
+      errEl.style.display = 'block';
+    }
+  }).catch(function() {
+    errEl.textContent = 'Request failed';
+    errEl.style.display = 'block';
+  });
+}
+
+function removeHoliday(id) {
+  if (!confirm('Remove this holiday?')) return;
+  fetch('/attendance/holiday', {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id: id })
+  }).then(function(r) { return r.json(); }).then(function(data) {
+    if (data.success) window.location.reload();
+  });
+}
 </script>
+
+<!-- Holiday Management Modal -->
+<div id="holidayModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:5000;align-items:center;justify-content:center;padding:1rem;">
+  <div style="background:var(--tf-surface);border:1px solid var(--tf-border);border-radius:12px;width:100%;max-width:480px;overflow:hidden;">
+    <div style="padding:1.25rem 1.5rem;border-bottom:1px solid var(--tf-border);display:flex;justify-content:space-between;align-items:center;">
+      <h6 style="font-family:var(--tf-font-mono);margin:0;"><i class="bi bi-calendar-heart me-2" style="color:#a855f7;"></i>Manage Holidays — <%= new Date(year, mon - 1).toLocaleString('default', { month: 'long', year: 'numeric' }) %></h6>
+      <button onclick="document.getElementById('holidayModal').style.display='none'" style="background:none;border:none;color:var(--tf-text-muted);font-size:1.2rem;cursor:pointer;"><i class="bi bi-x-lg"></i></button>
+    </div>
+
+    <div style="padding:1rem 1.5rem;border-bottom:1px solid var(--tf-border);">
+      <div style="display:flex;gap:0.5rem;align-items:flex-end;">
+        <div style="flex:1;">
+          <label style="font-size:0.65rem;color:var(--tf-text-muted);display:block;margin-bottom:0.3rem;text-transform:uppercase;">Date</label>
+          <input type="date" id="holidayDate" class="tf-form-control" style="font-size:0.8rem;" min="<%= year %>-<%= String(mon).padStart(2,'0') %>-01" max="<%= year %>-<%= String(mon).padStart(2,'0') %>-<%= lastDay %>">
+        </div>
+        <div style="flex:2;">
+          <label style="font-size:0.65rem;color:var(--tf-text-muted);display:block;margin-bottom:0.3rem;text-transform:uppercase;">Holiday Name</label>
+          <input type="text" id="holidayName" class="tf-form-control" style="font-size:0.8rem;" placeholder="e.g., Christmas Day">
+        </div>
+        <button class="btn-tf btn-tf-primary" onclick="addHoliday()" style="font-size:0.8rem;padding:6px 12px;white-space:nowrap;"><i class="bi bi-plus-lg me-1"></i>Add</button>
+      </div>
+      <div id="holidayError" style="display:none;font-size:0.7rem;color:#ef4444;margin-top:0.4rem;"></div>
+    </div>
+
+    <div id="holidayList" style="max-height:300px;overflow-y:auto;">
+    </div>
+
+    <div style="padding:0.75rem 1.5rem;border-top:1px solid var(--tf-border);text-align:right;">
+      <button class="btn-tf btn-tf-outline" onclick="document.getElementById('holidayModal').style.display='none'">Close</button>
+    </div>
+  </div>
+</div>
 <% } %>
 
 <% } %>

@@ -6,7 +6,7 @@ class LiveStatusController {
     try {
       // Use LOCAL org timezone — this page is about LOCAL team employees
       const [[org]] = await db.query("SELECT timezone FROM organizations WHERE org_type = 'LOCAL' LIMIT 1");
-      const tz = (org && org.timezone) || 'UTC';
+      const tz = (org && org.timezone) || 'America/New_York';
       const today = getToday(tz);
       const dayName = getDayOfWeek(tz);
 

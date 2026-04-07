@@ -4,7 +4,7 @@ const RewardModel = require('../models/Reward');
 const { getToday, getDayOfWeek } = require('../utils/timezone');
 
 class DashboardService {
-  static async getAdminDashboard(orgType = null, timezone = 'UTC') {
+  static async getAdminDashboard(orgType = null, timezone = 'America/New_York') {
     const todayDate = getToday(timezone);
     const [taskStats, rewardSummary, attendanceSummary, perUserStats, perUserRewards] = await Promise.all([
       TaskService.getTaskStats(null, orgType, todayDate),
@@ -23,7 +23,7 @@ class DashboardService {
     };
   }
 
-  static async getUserDashboard(userId, viewDate = null, timezone = 'UTC', workDate = null) {
+  static async getUserDashboard(userId, viewDate = null, timezone = 'America/New_York', workDate = null) {
     const today = workDate || getToday(timezone);
     const selectedDate = viewDate || today;
     const isToday = selectedDate === today;
@@ -80,7 +80,7 @@ class DashboardService {
     return rows;
   }
 
-  static async getAttendanceSummary(timezone = 'UTC') {
+  static async getAttendanceSummary(timezone = 'America/New_York') {
     const today = getToday(timezone);
     const dayOfWeek = getDayOfWeek(timezone);
 

@@ -7,7 +7,7 @@ const { getToday } = require('../utils/timezone');
 // Helper: get LOCAL org timezone for leave date validation
 async function getLocalTz() {
   const [[org]] = await db.query("SELECT timezone FROM organizations WHERE org_type = 'LOCAL' LIMIT 1");
-  return (org && org.timezone) || 'UTC';
+  return (org && org.timezone) || 'America/New_York';
 }
 
 class LeaveController {

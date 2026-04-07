@@ -129,17 +129,17 @@ const _dateLabel = _isViewingToday ? 'Today' : new Date(selectedDate + 'T12:00:0
             <td style="font-size:0.8rem;color:var(--tf-text-muted);"><%= t.created_by_name || '—' %></td>
             <td style="font-size:0.75rem;color:var(--tf-text-muted);">
               <%
-                var _tz = typeof orgTimezone !== 'undefined' ? orgTimezone : 'UTC';
+                var _tz = typeof orgTimezone !== 'undefined' ? orgTimezone : 'America/New_York';
                 var _fmt = { hour:'2-digit', minute:'2-digit', hour12:true, timeZone: _tz };
                 var _fmtSec = { hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:true, timeZone: _tz };
               %>
               <% if (t.started_at) { %>
-                <div><i class="bi bi-play-fill" style="color:#10b981;"></i> Started: <%= new Date(t.started_at).toLocaleTimeString('en-IN', _fmtSec) %></div>
+                <div><i class="bi bi-play-fill" style="color:#10b981;"></i> Started: <%= new Date(t.started_at).toLocaleTimeString('en-US', _fmtSec) %></div>
               <% } %>
               <% if (t.completed_at && ((t.is_recurring && t.is_completed) || t.status === 'completed')) { %>
-                <div><i class="bi bi-check-circle-fill" style="color:#10b981;"></i> Completed: <%= new Date(t.completed_at).toLocaleTimeString('en-IN', _fmtSec) %></div>
+                <div><i class="bi bi-check-circle-fill" style="color:#10b981;"></i> Completed: <%= new Date(t.completed_at).toLocaleTimeString('en-US', _fmtSec) %></div>
               <% } else if (!t.started_at && !t.is_recurring) { %>
-                <div>Created: <%= new Date(t.created_at).toLocaleTimeString('en-IN', _fmt) %></div>
+                <div>Created: <%= new Date(t.created_at).toLocaleTimeString('en-US', _fmt) %></div>
               <% } else if (!t.started_at && t.is_recurring) { %>
                 <div style="color:var(--tf-text-muted);">—</div>
               <% } %>
@@ -349,7 +349,7 @@ var dayProgress = dayTotal > 0 ? Math.round((doneCount / dayTotal) * 100) : 0;
                 </td>
                 <td><span class="badge badge-<%= t.type %>" style="font-size:0.6rem;padding:2px 6px;border-radius:3px;"><%= t.type === 'once' ? 'one time' : t.type %></span></td>
                 <td style="font-size:0.8rem;color:var(--tf-text-muted);"><%= t.created_by_name || '—' %></td>
-                <td style="font-size:0.8rem;color:#10b981;"><%= t.completed_at ? new Date(t.completed_at).toLocaleString('en-IN', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit', hour12:true, timeZone: typeof orgTimezone !== 'undefined' ? orgTimezone : 'UTC' }) : '—' %></td>
+                <td style="font-size:0.8rem;color:#10b981;"><%= t.completed_at ? new Date(t.completed_at).toLocaleString('en-US', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit', hour12:true, timeZone: typeof orgTimezone !== 'undefined' ? orgTimezone : 'America/New_York' }) : '—' %></td>
               </tr>
               <% }) %>
             <% } else { %>

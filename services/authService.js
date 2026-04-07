@@ -22,7 +22,7 @@ class AuthService {
     if (!valid) throw new Error('Invalid credentials');
 
     // Record attendance using user's org timezone and shift info
-    await this.recordAttendance(user.id, user.org_timezone || 'UTC', user.shift_start, user.shift_hours);
+    await this.recordAttendance(user.id, user.org_timezone || 'America/New_York', user.shift_start, user.shift_hours);
 
     const token = this.generateToken(user);
 
@@ -31,7 +31,7 @@ class AuthService {
     return { token, user: userData };
   }
 
-  static async recordAttendance(userId, timezone = 'UTC', shiftStart = null, shiftHours = null) {
+  static async recordAttendance(userId, timezone = 'America/New_York', shiftStart = null, shiftHours = null) {
     const today = getEffectiveWorkDate(timezone, shiftStart, shiftHours);
 
     // Check if any session exists for today (to detect first login)
@@ -71,7 +71,7 @@ class AuthService {
     }
   }
 
-  static async recordLogout(userId, timezone = 'UTC', reason = null, shiftStart = null, shiftHours = null) {
+  static async recordLogout(userId, timezone = 'America/New_York', reason = null, shiftStart = null, shiftHours = null) {
     const today = getEffectiveWorkDate(timezone, shiftStart, shiftHours);
     await db.query(
       `UPDATE attendance_logs SET logout_time = NOW(), logout_reason = ?

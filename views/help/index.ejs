@@ -1471,14 +1471,14 @@
       <ul>
         <li><strong>Work date</strong> &mdash; Your tasks and completions are tracked against the date your shift <em>started</em>, not the calendar date. For example, a 19:30 shift starting on April 2 is treated as "April 2" work even after midnight.</li>
         <li><strong>System reminders</strong> &mdash; The task reminder bot uses your shift's work date, so you won't get false "incomplete tasks" messages for the next calendar day while you're still on shift.</li>
-        <li><strong>Auto-logout</strong> &mdash; Runs at 11:59 PM in the organization's timezone, affecting only sessions from that calendar date.</li>
+        <li><strong>Auto-logout</strong> &mdash; If a user doesn't respond to the shift-end warning, they are logged out at shift end. If they click "Continue", they are auto-logged out 2 hours later. A server-side safety net also closes any stale sessions.</li>
       </ul>
 
       <h3>Shift End Warning</h3>
       <p>5 minutes before your shift ends, a modal appears with a countdown timer. You have two options:</p>
       <ul>
         <li><strong>Logout Now</strong> &mdash; End your session immediately</li>
-        <li><strong>Continue (2.5 hrs)</strong> &mdash; Extend your session by 2.5 hours of overtime</li>
+        <li><strong>Continue (2 hrs)</strong> &mdash; Extend your session by 2 hours of overtime</li>
       </ul>
       <p>If you do not respond, you are automatically logged out when the countdown reaches zero.</p>
 

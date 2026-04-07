@@ -5,7 +5,7 @@ const { getToday, getEffectiveWorkDate } = require('../utils/timezone');
 
 class AuthController {
   static showLogin(req, res) {
-    if (req.cookies?.token) return res.redirect('/dashboard');
+    if (req.cookies?.token) return res.redirect('/tasks/board');
     res.render('auth/login', { title: 'Login - TaskFlow', layout: false });
   }
 
@@ -25,7 +25,7 @@ class AuthController {
         maxAge: 12 * 60 * 60 * 1000 // 12 hours
       });
 
-      return ApiResponse.success(res, { user, redirectUrl: '/dashboard' }, 'Login successful');
+      return ApiResponse.success(res, { user, redirectUrl: '/tasks/board' }, 'Login successful');
     } catch (err) {
       return res.status(401).json({ success: false, message: err.message });
     }
@@ -35,7 +35,7 @@ class AuthController {
     try {
       if (req.user?.id) {
         const reason = req.body?.logout_reason || req.query?.reason || null;
-        await AuthService.recordLogout(req.user.id, req.user.org_timezone || 'UTC', reason, req.user.shift_start, req.user.shift_hours);
+        await AuthService.recordLogout(req.user.id, req.user.org_timezone || 'America/New_York', reason, req.user.shift_start, req.user.shift_hours);
       }
     } catch (e) {}
 
@@ -52,7 +52,7 @@ class AuthController {
 
   static async checkLateLogin(req, res) {
     try {
-      const tz = req.user.org_timezone || 'UTC';
+      const tz = req.user.org_timezone || 'America/New_York';
       const today = getEffectiveWorkDate(tz, req.user.shift_start, req.user.shift_hours);
       // Check only the first session of the day (earliest login)
       const [[attendance]] = await db.query(
@@ -93,7 +93,7 @@ class AuthController {
       if (!reason || !reason.trim()) {
         return ApiResponse.error(res, 'Reason is required', 400);
       }
-      const tz = req.user.org_timezone || 'UTC';
+      const tz = req.user.org_timezone || 'America/New_York';
       const today = getEffectiveWorkDate(tz, req.user.shift_start, req.user.shift_hours);
       // Update only the first session of the day
       await db.query(

@@ -171,11 +171,11 @@ const _isFuture = _fd && _fd > todayDate;
                 <span class="badge" style="font-size:0.65rem;border-radius:4px;padding:3px 8px;background:rgba(16,185,129,0.15);color:#10b981;">
                   <i class="bi bi-check-circle-fill"></i> <%= _isPast ? 'Done' : 'Done Today' %>
                 </span>
-                <% var _tz = typeof orgTimezone !== 'undefined' ? orgTimezone : 'UTC'; var _tfmt = { hour:'2-digit', minute:'2-digit', hour12:true, timeZone: _tz }; %>
+                <% var _tz = typeof orgTimezone !== 'undefined' ? orgTimezone : 'America/New_York'; var _tfmt = { hour:'2-digit', minute:'2-digit', hour12:true, timeZone: _tz }; %>
                 <% if (task.session_started_at || task.session_completed_at) { %>
                 <div style="font-size:0.6rem;color:var(--tf-text-muted);margin-top:2px;">
-                  <% if (task.session_started_at) { %><i class="bi bi-play-fill" style="color:#10b981;"></i> <%= new Date(task.session_started_at).toLocaleTimeString('en-IN', _tfmt) %><% } %>
-                  <% if (task.session_completed_at) { %> <i class="bi bi-stop-fill" style="color:#ef4444;"></i> <%= new Date(task.session_completed_at).toLocaleTimeString('en-IN', _tfmt) %><% } %>
+                  <% if (task.session_started_at) { %><i class="bi bi-play-fill" style="color:#10b981;"></i> <%= new Date(task.session_started_at).toLocaleTimeString('en-US', _tfmt) %><% } %>
+                  <% if (task.session_completed_at) { %> <i class="bi bi-stop-fill" style="color:#ef4444;"></i> <%= new Date(task.session_completed_at).toLocaleTimeString('en-US', _tfmt) %><% } %>
                 </div>
                 <% } %>
                 <% } else if (task.is_started_today) { %>
@@ -184,7 +184,7 @@ const _isFuture = _fd && _fd > todayDate;
                 </span>
                 <% if (task.session_started_at) { %>
                 <div style="font-size:0.6rem;color:var(--tf-text-muted);margin-top:2px;">
-                  <i class="bi bi-play-fill" style="color:#10b981;"></i> <%= new Date(task.session_started_at).toLocaleTimeString('en-IN', _tfmt) %>
+                  <i class="bi bi-play-fill" style="color:#10b981;"></i> <%= new Date(task.session_started_at).toLocaleTimeString('en-US', _tfmt) %>
                 </div>
                 <% } %>
                 <% } else { %>

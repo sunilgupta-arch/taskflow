@@ -7,8 +7,8 @@ const pool = mysql.createPool({
   user: process.env.DB_USER || 'root',
   password: process.env.DB_PASSWORD || '',
   database: process.env.DB_NAME || 'taskflow_db',
-  timezone: process.env.DB_TIMEZONE || '+00:00',
-  dateStrings: ['DATE'],  // Return DATE columns as strings to prevent timezone shifting
+  timezone: '+00:00',  // Driver-level offset (session tz is set below via SET time_zone)
+  dateStrings: ['DATE', 'TIMESTAMP'],  // Return as strings to avoid JS Date timezone shifting
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
@@ -16,10 +16,10 @@ const pool = mysql.createPool({
   keepAliveInitialDelay: 0
 });
 
-// Force UTC timezone on every pool connection so TIMESTAMP values are
-// returned as UTC regardless of the MySQL server's system timezone.
+// Set Eastern timezone on every pool connection so TIMESTAMP values are
+// returned as America/New_York regardless of the MySQL server's system timezone.
 pool.on('connection', function (connection) {
-  connection.query("SET time_zone = '+00:00'");
+  connection.query("SET time_zone = 'America/New_York'");
 });
 
 pool.getConnection()
