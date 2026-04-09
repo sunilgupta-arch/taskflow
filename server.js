@@ -32,6 +32,10 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser(process.env.COOKIE_SECRET));
 
+// SPA JSON override — returns JSON instead of EJS when X-SPA-Request header is present
+const spaJson = require('./middleware/spaJson');
+app.use(spaJson);
+
 // Static files
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
