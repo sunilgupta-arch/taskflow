@@ -40,7 +40,7 @@ class UserController {
         }
       }
 
-      const userId = await UserModel.create(req.body);
+      const userId = await UserModel.create({ ...req.body, changed_by: req.user.id });
       const user = await UserModel.findById(userId);
       return ApiResponse.success(res, user, 'User created successfully', 201);
     } catch (err) {
@@ -53,7 +53,7 @@ class UserController {
 
   static async update(req, res) {
     try {
-      await UserModel.update(req.params.id, req.body);
+      await UserModel.update(req.params.id, { ...req.body, changed_by: req.user.id });
       const user = await UserModel.findById(req.params.id);
       return ApiResponse.success(res, user, 'User updated successfully');
     } catch (err) {

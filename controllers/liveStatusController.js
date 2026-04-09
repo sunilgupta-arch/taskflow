@@ -1,5 +1,6 @@
 const db = require('../config/db');
 const { getToday, getNow, getDayOfWeek } = require('../utils/timezone');
+const ShiftHistory = require('../models/ShiftHistory');
 
 class LiveStatusController {
   static async show(req, res) {
@@ -64,14 +65,37 @@ class LiveStatusController {
         if (!attendanceMap.has(a.user_id)) attendanceMap.set(a.user_id, a);
       });
 
+      // Batch-fetch effective shifts for today from shift_history
+      const userIds = users.map(u => u.id);
+      let shiftMap = new Map();
+      if (userIds.length) {
+        const [shiftRows] = await db.query(
+          `SELECT sh.user_id, sh.shift_start, sh.shift_hours
+           FROM shift_history sh
+           INNER JOIN (
+             SELECT user_id, MAX(effective_date) as max_date
+             FROM shift_history
+             WHERE user_id IN (?) AND effective_date <= ?
+             GROUP BY user_id
+           ) latest ON sh.user_id = latest.user_id AND sh.effective_date = latest.max_date
+           WHERE sh.user_id IN (?)
+           ORDER BY sh.id DESC`,
+          [userIds, today, userIds]
+        );
+        // Keep only the latest row per user (in case of multiple entries on same effective_date)
+        shiftRows.forEach(r => {
+          if (!shiftMap.has(r.user_id)) shiftMap.set(r.user_id, r);
+        });
+      }
+
       // Classify each employee
       const employees = users.map(user => {
         const result = {
           id: user.id,
           name: user.name,
           avatar: user.avatar,
-          shiftStart: user.shift_start,
-          shiftHours: user.shift_hours,
+          shiftStart: (shiftMap.get(user.id) || user).shift_start,
+          shiftHours: (shiftMap.get(user.id) || user).shift_hours,
           status: '',
           statusType: '',
           taskName: null,
@@ -94,16 +118,19 @@ class LiveStatusController {
           return result;
         }
 
-        // (c) Compute shift boundaries
-        if (!user.shift_start || !user.shift_hours) {
+        // (c) Compute shift boundaries (use shift_history if available)
+        const effectiveShift = shiftMap.get(user.id) || { shift_start: user.shift_start, shift_hours: user.shift_hours };
+        const userShiftStart = effectiveShift.shift_start;
+        const userShiftHours = effectiveShift.shift_hours;
+        if (!userShiftStart || !userShiftHours) {
           result.status = 'No Shift Info';
           result.statusType = 'off';
           return result;
         }
 
-        const [sh, sm] = user.shift_start.split(':').map(Number);
+        const [sh, sm] = userShiftStart.split(':').map(Number);
         const shiftStartDec = sh + (sm || 0) / 60;
-        const shiftHours = parseFloat(user.shift_hours);
+        const shiftHours = parseFloat(userShiftHours);
         const shiftEndDec = shiftStartDec + shiftHours;
 
         let onShift = false;

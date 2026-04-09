@@ -2,6 +2,7 @@ const AuthService = require('../services/authService');
 const { ApiResponse } = require('../utils/response');
 const db = require('../config/db');
 const { getToday, getEffectiveWorkDate } = require('../utils/timezone');
+const ShiftHistory = require('../models/ShiftHistory');
 
 class AuthController {
   static showLogin(req, res) {
@@ -63,8 +64,10 @@ class AuthController {
       );
       if (!attendance) return ApiResponse.success(res, { needsReason: false });
 
-      const shiftStart = req.user.shift_start;
-      const shiftHours = parseFloat(req.user.shift_hours || 0);
+      // Use the shift that was effective on this date
+      const shift = await ShiftHistory.getShiftForDate(req.user.id, today);
+      const shiftStart = shift.shift_start;
+      const shiftHours = parseFloat(shift.shift_hours || 0);
       if (!shiftStart || !shiftHours) return ApiResponse.success(res, { needsReason: false });
 
       // Already provided reason

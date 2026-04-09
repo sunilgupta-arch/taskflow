@@ -4,6 +4,7 @@ const db = require('../config/db');
 const { ApiResponse } = require('../utils/response');
 const { getToday, getNow, isScheduledForDate } = require('../utils/timezone');
 const DashboardService = require('../services/dashboardService');
+const ShiftHistory = require('../models/ShiftHistory');
 
 class ReportController {
   static async completionReport(req, res) {
@@ -96,7 +97,9 @@ class ReportController {
 
       const [dailyLogs, weeklyStats, activeUsers, attendanceDays, leaveData, holidayData] = await Promise.all([
         db.query(
-          `SELECT al.*, u.name as user_name, u.email, u.shift_start, u.shift_hours,
+          `SELECT al.*, u.name as user_name, u.email,
+                  COALESCE(sh.shift_start, u.shift_start) as shift_start,
+                  COALESCE(sh.shift_hours, u.shift_hours) as shift_hours,
                   al.logout_reason, al.late_login_reason,
                   DATE_FORMAT(al.login_time, '%h:%i %p') as loginFormatted,
                   DATE_FORMAT(al.logout_time, '%h:%i %p') as logoutFormatted,
@@ -104,6 +107,15 @@ class ReportController {
            FROM attendance_logs al
            JOIN users u ON al.user_id = u.id
            JOIN roles r ON u.role_id = r.id
+           LEFT JOIN shift_history sh ON sh.user_id = u.id
+             AND sh.effective_date = (
+               SELECT MAX(sh2.effective_date) FROM shift_history sh2
+               WHERE sh2.user_id = u.id AND sh2.effective_date <= al.date
+             )
+             AND sh.id = (
+               SELECT MAX(sh3.id) FROM shift_history sh3
+               WHERE sh3.user_id = u.id AND sh3.effective_date = sh.effective_date
+             )
            WHERE al.date = ? AND r.name IN ('LOCAL_USER', 'LOCAL_MANAGER')
            ORDER BY u.name, al.login_time`, [selectedDate]
         ),
@@ -274,6 +286,8 @@ class ReportController {
       const endDate = `${month}-${String(lastDay).padStart(2, '0')}`;
 
       // Fetch user shift info, monthly logs, and today's log
+      // Use shift_history for today's effective shift, fall back to users table
+      const todayShift = await ShiftHistory.getShiftForDate(userId, today);
       const [[userInfo], [monthlyLogs], [todayLog]] = await Promise.all([
         db.query(
           `SELECT shift_start, shift_hours, weekly_off_day FROM users WHERE id = ?`, [userId]
@@ -300,7 +314,9 @@ class ReportController {
         )
       ]);
 
-      const shift = userInfo[0] || { shift_start: '10:00:00', shift_hours: 8.5, weekly_off_day: 'Sunday' };
+      const userRow = userInfo[0] || { shift_start: '10:00:00', shift_hours: 8.5, weekly_off_day: 'Sunday' };
+      // Use today's effective shift from history for display
+      const shift = { ...userRow, shift_start: todayShift.shift_start, shift_hours: todayShift.shift_hours };
       const ss = shift.shift_start ? shift.shift_start.substring(0, 5) : '10:00';
       const sh = parseFloat(shift.shift_hours || 8.5);
 

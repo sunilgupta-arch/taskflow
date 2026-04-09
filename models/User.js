@@ -1,5 +1,6 @@
 const db = require('../config/db');
 const bcrypt = require('bcryptjs');
+const ShiftHistory = require('./ShiftHistory');
 
 class UserModel {
   static async findById(id) {
@@ -26,19 +27,32 @@ class UserModel {
 
   static async create(data) {
     const hashed = await bcrypt.hash(data.password, 12);
+    const shiftStart = data.shift_start || '10:00:00';
+    const shiftHours = data.shift_hours || 8.5;
     const [result] = await db.query(
       `INSERT INTO users (organization_id, role_id, name, email, password, weekly_off_day, shift_start, shift_hours)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       [data.organization_id, data.role_id, data.name, data.email, hashed,
-       data.weekly_off_day || 'Sunday', data.shift_start || '10:00:00', data.shift_hours || 8.5]
+       data.weekly_off_day || 'Sunday', shiftStart, shiftHours]
     );
+
+    // Record initial shift in history
+    const today = new Date().toISOString().split('T')[0];
+    await ShiftHistory.record({
+      userId: result.insertId,
+      shiftStart,
+      shiftHours,
+      effectiveDate: today,
+      changedBy: data.changed_by || null
+    });
+
     return result.insertId;
   }
 
   static async update(id, data) {
     const fields = [];
     const values = [];
-    
+
     const allowedFields = ['name', 'email', 'organization_id', 'role_id', 'weekly_off_day', 'shift_start', 'shift_hours', 'leave_status', 'is_active', 'avatar'];
     allowedFields.forEach(f => {
       if (data[f] !== undefined) {
@@ -53,6 +67,29 @@ class UserModel {
     }
 
     if (!fields.length) return false;
+
+    // Detect shift changes and record in history
+    const shiftChanged = data.shift_start !== undefined || data.shift_hours !== undefined;
+    if (shiftChanged) {
+      const [current] = await db.query('SELECT shift_start, shift_hours FROM users WHERE id = ?', [id]);
+      if (current.length) {
+        const newShiftStart = data.shift_start !== undefined ? data.shift_start : current[0].shift_start;
+        const newShiftHours = data.shift_hours !== undefined ? data.shift_hours : current[0].shift_hours;
+        const oldStart = current[0].shift_start;
+        const oldHours = parseFloat(current[0].shift_hours);
+        if (newShiftStart !== oldStart || parseFloat(newShiftHours) !== oldHours) {
+          const today = new Date().toISOString().split('T')[0];
+          await ShiftHistory.record({
+            userId: id,
+            shiftStart: newShiftStart,
+            shiftHours: newShiftHours,
+            effectiveDate: today,
+            changedBy: data.changed_by || null
+          });
+        }
+      }
+    }
+
     values.push(id);
 
     const [result] = await db.query(
