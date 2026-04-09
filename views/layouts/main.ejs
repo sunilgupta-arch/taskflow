@@ -718,7 +718,7 @@
         <span>Client</span>
         <span id="clockClient" style="min-width:52px;">--:--:--</span>
       </span>
-      <span class="badge d-flex align-items-center gap-1" style="background:var(--tf-surface-2);color:var(--tf-text-muted);font-family:var(--tf-font-mono);font-size:0.65rem;" title="<%= !isClient ? 'Your' : 'Team' %> Time (<%= !isClient ? user.org_timezone : (typeof otherOrgTimezone !== 'undefined' ? otherOrgTimezone : 'America/New_York') %>)">
+      <span class="badge d-flex align-items-center gap-1" style="background:var(--tf-surface-2);color:var(--tf-text-muted);font-family:var(--tf-font-mono);font-size:0.65rem;" title="Team Time (Asia/Kolkata)">
         <i class="bi bi-people" style="font-size:0.6rem;"></i>
         <span>Team</span>
         <span id="clockTeam" style="min-width:52px;">--:--:--</span>
@@ -932,9 +932,7 @@ var USER_TIMEZONE = '<%= typeof user !== "undefined" && user.org_timezone ? user
   var clientTz = isClient
     ? '<%= user.org_timezone %>'
     : '<%= typeof otherOrgTimezone !== "undefined" ? otherOrgTimezone : "UTC" %>';
-  var teamTz = !isClient
-    ? '<%= user.org_timezone %>'
-    : '<%= typeof otherOrgTimezone !== "undefined" ? otherOrgTimezone : "UTC" %>';
+  var teamTz = 'Asia/Kolkata';
   var shiftStart = '<%= user.shift_start || "10:00:00" %>';
   var shiftHours = parseFloat('<%= user.shift_hours || 8.5 %>');
 
