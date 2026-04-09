@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<script>(function(){var t=localStorage.getItem('tf-theme')||'dark';document.documentElement.setAttribute('data-bs-theme',t);})()</script>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= typeof title !== 'undefined' ? title : 'Client Portal' %></title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <link rel="stylesheet" href="/portal/portal.css">
+  <%- style %>
+</head>
+<body>
+  <!-- Top Navigation -->
+  <nav class="portal-topnav">
+    <div class="topnav-left">
+      <span class="portal-brand">
+        <span class="brand-icon">C</span>
+        <span class="brand-text">Portal</span>
+      </span>
+    </div>
+    <div class="topnav-center">
+      <a href="/portal/chat" class="topnav-tab <%= section === 'chat' ? 'active' : '' %>">
+        <i class="bi bi-chat-dots-fill"></i>
+        <span>Chat</span>
+        <span class="badge bg-danger chat-unread-badge" style="display:none"></span>
+      </a>
+      <a href="/portal/tasks" class="topnav-tab <%= section === 'tasks' ? 'active' : '' %>">
+        <i class="bi bi-kanban-fill"></i>
+        <span>Tasks</span>
+      </a>
+      <% if (user.role_name === 'CLIENT_ADMIN') { %>
+        <a href="/portal/users" class="topnav-tab <%= section === 'users' ? 'active' : '' %>">
+          <i class="bi bi-people-fill"></i>
+          <span>Team</span>
+        </a>
+      <% } %>
+    </div>
+    <div class="topnav-right">
+      <a href="/tasks/board" target="_blank" class="topnav-action" title="Open TaskFlow">
+        <i class="bi bi-box-arrow-up-right"></i>
+      </a>
+      <button class="topnav-action" onclick="toggleTheme()" title="Toggle Theme" id="themeToggleBtn">
+        <i class="bi" id="themeIcon"></i>
+      </button>
+      <div class="dropdown">
+        <button class="topnav-user-btn" data-bs-toggle="dropdown">
+          <span class="user-avatar-sm"><%= user.name.charAt(0).toUpperCase() %></span>
+          <span class="user-name-text"><%= user.name %></span>
+          <i class="bi bi-chevron-down" style="font-size:0.65rem;opacity:0.6"></i>
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end">
+          <li>
+            <span class="dropdown-item-text">
+              <strong><%= user.name %></strong>
+              <div class="small text-muted"><%= user.role_name.replace('CLIENT_', '') %></div>
+            </span>
+          </li>
+          <li><hr class="dropdown-divider"></li>
+          <li>
+            <a class="dropdown-item" href="#" onclick="showChangePwModal()">
+              <i class="bi bi-key me-2"></i>Change Password
+            </a>
+          </li>
+          <li>
+            <a class="dropdown-item text-danger" href="#" onclick="portalLogout()">
+              <i class="bi bi-box-arrow-right me-2"></i>Logout
+            </a>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <div class="portal-main">
+    <%- body %>
+  </div>
+
+  <!-- Toast Container -->
+  <div id="portalToastContainer" class="portal-toast-container"></div>
+
+  <!-- Change Password Modal -->
+  <div class="modal fade" id="changePwModal" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h6 class="modal-title">Change Password</h6>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label small">New Password *</label>
+            <input type="password" class="form-control" id="changePwNew" placeholder="Min 6 characters">
+          </div>
+          <div class="mb-3">
+            <label class="form-label small">Confirm Password *</label>
+            <input type="password" class="form-control" id="changePwConfirm" placeholder="Confirm password">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-primary btn-sm" onclick="changePassword()">Update</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const PORTAL_USER = { id: <%= user.id %>, name: '<%= user.name %>', role: '<%= user.role_name %>' };
+    const portalSocket = io('/portal', { withCredentials: true });
+
+    portalSocket.on('connect', () => {
+      portalSocket.emit('portal:join');
+    });
+
+    function updateThemeIcon() {
+      const icon = document.getElementById('themeIcon');
+      const isDark = document.documentElement.getAttribute('data-bs-theme') === 'dark';
+      icon.className = isDark ? 'bi bi-sun-fill' : 'bi bi-moon-stars-fill';
+    }
+
+    function toggleTheme() {
+      const html = document.documentElement;
+      const current = html.getAttribute('data-bs-theme');
+      const next = current === 'dark' ? 'light' : 'dark';
+      html.setAttribute('data-bs-theme', next);
+      localStorage.setItem('tf-theme', next);
+      updateThemeIcon();
+    }
+
+    updateThemeIcon();
+
+    function showChangePwModal() {
+      document.getElementById('changePwNew').value = '';
+      document.getElementById('changePwConfirm').value = '';
+      new bootstrap.Modal(document.getElementById('changePwModal')).show();
+    }
+
+    function changePassword() {
+      const pw = document.getElementById('changePwNew').value;
+      const confirm = document.getElementById('changePwConfirm').value;
+      if (!pw || pw.length < 6) return alert('Password must be at least 6 characters');
+      if (pw !== confirm) return alert('Passwords do not match');
+
+      fetch('/portal/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ new_password: pw, confirm_password: confirm })
+      })
+        .then(r => r.json())
+        .then(res => {
+          if (res.success) {
+            bootstrap.Modal.getInstance(document.getElementById('changePwModal')).hide();
+            alert('Password changed successfully');
+          } else {
+            alert(res.message);
+          }
+        });
+    }
+
+    function portalLogout() {
+      fetch('/auth/logout', { method: 'POST', headers: { 'Content-Type': 'application/json' } })
+        .then(() => window.location.href = '/auth/login');
+    }
+
+    // DB stores timestamps in server timezone (Eastern = UTC-4)
+
+    function parseServerDate(dateStr) {
+      if (!dateStr) return new Date();
+      // If already has timezone info or is ISO format, parse directly
+      if (dateStr.includes('T') || dateStr.includes('Z') || dateStr.includes('+')) return new Date(dateStr);
+      // Append UTC offset for Eastern time (server stores in EDT/EST)
+      // Create the date in the server's timezone context
+      const d = new Date(dateStr.replace(' ', 'T') + '-04:00');
+      return isNaN(d.getTime()) ? new Date(dateStr) : d;
+    }
+
+    function timeAgo(dateStr) {
+      const now = new Date();
+      const d = parseServerDate(dateStr);
+      const diff = Math.floor((now - d) / 1000);
+      if (diff < 0) return 'just now';
+      if (diff < 60) return 'just now';
+      if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
+      if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
+      if (diff < 172800) return 'yesterday';
+      return d.toLocaleDateString();
+    }
+  </script>
+  <script src="/portal/portal.js"></script>
+  <%- script %>
+</body>
+</html>

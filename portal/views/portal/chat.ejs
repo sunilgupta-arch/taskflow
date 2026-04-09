@@ -1,0 +1,156 @@
+<div class="chat-container">
+  <!-- Left: Contact/Conversation List -->
+  <div class="chat-sidebar" id="chatSidebar">
+    <div class="chat-sidebar-header">
+      <input type="text" class="form-control form-control-sm" id="contactSearch" placeholder="Search contacts...">
+      <% if (['CLIENT_ADMIN', 'CLIENT_MANAGER'].includes(user.role_name)) { %>
+        <button class="btn btn-sm btn-outline-primary mt-2 w-100" onclick="showNewGroupModal()">
+          <i class="bi bi-people"></i> New Group
+        </button>
+      <% } %>
+    </div>
+    <div class="chat-sidebar-list" id="conversationList">
+      <!-- Populated by JS -->
+    </div>
+    <div class="chat-sidebar-contacts" id="contactsList" style="display:none">
+      <div class="contacts-header">
+        <button class="btn btn-sm btn-link" onclick="showConversations()"><i class="bi bi-arrow-left"></i> Back</button>
+        <span>New Chat</span>
+      </div>
+      <% contacts.forEach(c => { %>
+        <div class="contact-item" data-user-id="<%= c.id %>" onclick="startDirectChat(<%= c.id %>, '<%= c.name %>')">
+          <div class="contact-avatar"><%= c.name.charAt(0).toUpperCase() %></div>
+          <div class="contact-info">
+            <span class="contact-name"><%= c.name %></span>
+            <span class="contact-role"><%= c.role_name.replace('CLIENT_', '') %></span>
+          </div>
+        </div>
+      <% }) %>
+    </div>
+  </div>
+
+  <!-- Right: Chat Window -->
+  <div class="chat-main" id="chatMain">
+    <div class="chat-placeholder" id="chatPlaceholder">
+      <i class="bi bi-chat-dots-fill" style="font-size: 2.5rem; opacity: 0.15"></i>
+      <p style="color: var(--tf-text-muted); font-size: 0.85rem; margin-top: 12px;">Select a conversation or start a new chat</p>
+      <a href="#" onclick="showContacts(); return false;" style="font-size:13px; color:var(--tf-accent); text-decoration:none;">+ New Chat</a>
+    </div>
+    <div class="chat-window" id="chatWindow" style="display:none">
+      <div class="chat-window-header" id="chatWindowHeader">
+        <button class="btn btn-sm btn-link d-md-none me-2" onclick="showSidebar()"><i class="bi bi-arrow-left"></i></button>
+        <div class="chat-header-info" style="flex:1">
+          <span class="chat-header-name" id="chatHeaderName"></span>
+          <span class="chat-header-status" id="chatHeaderStatus"></span>
+        </div>
+        <div class="chat-header-actions">
+          <button class="topnav-action" onclick="toggleChatSearch()" title="Search"><i class="bi bi-search"></i></button>
+          <button class="topnav-action" id="groupInfoBtn" style="display:none" onclick="showGroupInfoModal()" title="Group Info"><i class="bi bi-people"></i></button>
+        </div>
+      </div>
+      <!-- Search bar (hidden by default) -->
+      <div class="chat-search-bar" id="chatSearchBar" style="display:none">
+        <input type="text" class="form-control form-control-sm" id="chatSearchInput" placeholder="Search in conversation..." onkeyup="if(event.key==='Enter') searchInChat()">
+        <button class="btn btn-sm btn-outline-secondary" onclick="searchInChat()"><i class="bi bi-search"></i></button>
+        <button class="btn btn-sm btn-link" onclick="closeChatSearch()"><i class="bi bi-x-lg"></i></button>
+      </div>
+      <div class="chat-messages" id="chatMessages">
+        <!-- Messages rendered here -->
+      </div>
+      <div class="chat-typing" id="chatTyping" style="display:none">
+        <span id="typingText"></span>
+      </div>
+      <div class="chat-input-area">
+        <input type="file" id="fileInput" style="display:none" onchange="sendFile()">
+        <textarea class="form-control" id="messageInput" placeholder="Type a message..." rows="2"></textarea>
+        <div class="chat-input-grid">
+          <button class="btn btn-outline-secondary" onclick="toggleEmojiPicker()" title="Emoji"><i class="bi bi-emoji-smile"></i></button>
+          <button class="btn btn-outline-secondary" onclick="document.getElementById('fileInput').click()" title="Attach File"><i class="bi bi-paperclip"></i></button>
+          <button class="btn btn-outline-secondary" title="Dictate (coming soon)"><i class="bi bi-mic"></i></button>
+          <button class="btn btn-primary" id="sendBtn" onclick="sendMessage()"><i class="bi bi-send"></i></button>
+        </div>
+      </div>
+      <!-- Emoji Picker -->
+      <div class="emoji-picker" id="emojiPicker" style="display:none"></div>
+    </div>
+  </div>
+</div>
+
+<!-- New Group Modal -->
+<div class="modal fade" id="newGroupModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h6 class="modal-title">Create Group Chat</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label class="form-label small">Group Name</label>
+          <input type="text" class="form-control form-control-sm" id="groupName" placeholder="Enter group name">
+        </div>
+        <div class="mb-3">
+          <label class="form-label small">Add Members</label>
+          <% contacts.forEach(c => { %>
+            <div class="form-check">
+              <input class="form-check-input group-member-check" type="checkbox" value="<%= c.id %>" id="member_<%= c.id %>">
+              <label class="form-check-label small" for="member_<%= c.id %>"><%= c.name %> (<%= c.role_name.replace('CLIENT_', '') %>)</label>
+            </div>
+          <% }) %>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-sm btn-primary" onclick="createGroup()">Create Group</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Group Info Modal -->
+<div class="modal fade" id="groupInfoModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h6 class="modal-title">Group Members</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div id="groupMembersList"></div>
+        <% if (['CLIENT_ADMIN', 'CLIENT_MANAGER'].includes(user.role_name)) { %>
+          <hr>
+          <label class="form-label small fw-bold">Add Member</label>
+          <div class="d-flex gap-2">
+            <select class="form-select form-select-sm" id="addMemberSelect">
+              <option value="">Select...</option>
+              <% contacts.forEach(c => { %>
+                <option value="<%= c.id %>"><%= c.name %></option>
+              <% }) %>
+            </select>
+            <button class="btn btn-sm btn-primary" onclick="addGroupMember()">Add</button>
+          </div>
+        <% } %>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Message Modal -->
+<div class="modal fade" id="editMsgModal" tabindex="-1">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h6 class="modal-title">Edit Message</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="editMsgId">
+        <textarea class="form-control" id="editMsgContent" rows="3"></textarea>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-sm btn-primary" onclick="saveEditMessage()">Save</button>
+      </div>
+    </div>
+  </div>
+</div>

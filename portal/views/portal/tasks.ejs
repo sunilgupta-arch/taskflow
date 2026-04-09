@@ -1,0 +1,114 @@
+<div class="tasks-container">
+  <!-- Tasks Header -->
+  <div class="tasks-header">
+    <div class="tasks-header-left">
+      <h5 class="mb-0">Tasks</h5>
+    </div>
+    <div class="tasks-header-right">
+      <select class="form-select form-select-sm" id="filterStatus" onchange="loadTasks()" style="width:auto">
+        <option value="">All Status</option>
+        <option value="open">Open</option>
+        <option value="in_progress">In Progress</option>
+        <option value="completed">Completed</option>
+        <option value="cancelled">Cancelled</option>
+      </select>
+      <select class="form-select form-select-sm" id="filterPriority" onchange="loadTasks()" style="width:auto">
+        <option value="">All Priority</option>
+        <option value="urgent">Urgent</option>
+        <option value="high">High</option>
+        <option value="medium">Medium</option>
+        <option value="low">Low</option>
+      </select>
+      <% if (['CLIENT_ADMIN', 'CLIENT_MANAGER'].includes(user.role_name)) { %>
+        <button class="btn btn-sm btn-primary" onclick="showCreateTaskModal()">
+          <i class="bi bi-plus-lg"></i> New Task
+        </button>
+      <% } %>
+    </div>
+  </div>
+
+  <!-- Tasks List -->
+  <div class="tasks-list" id="tasksList">
+    <!-- Populated by JS -->
+  </div>
+
+  <!-- Task Detail Panel (slides in) -->
+  <div class="task-detail-panel" id="taskDetailPanel" style="display:none">
+    <div class="task-detail-header">
+      <button class="btn btn-sm btn-link" onclick="closeTaskDetail()"><i class="bi bi-arrow-left"></i> Back</button>
+      <div class="task-detail-actions" id="taskDetailActions"></div>
+    </div>
+    <div class="task-detail-body" id="taskDetailBody">
+      <!-- Populated by JS -->
+    </div>
+    <div class="task-comments" id="taskComments">
+      <!-- Comments rendered here -->
+    </div>
+    <div class="chat-input-area">
+      <div id="taskFilePreview" style="display:none; position:absolute; top:-28px; left:16px;">
+        <span class="badge bg-secondary" id="taskFileName"></span>
+        <a href="#" onclick="clearTaskFile(); return false;" class="small text-danger ms-2">Remove</a>
+      </div>
+      <input type="file" id="taskFileInput" style="display:none" onchange="previewTaskFile()">
+      <textarea class="form-control" id="taskCommentInput" placeholder="Add a comment..." rows="3"></textarea>
+      <div class="chat-input-actions">
+        <button class="btn btn-outline-secondary" onclick="document.getElementById('taskFileInput').click()" title="Attach File">
+          <i class="bi bi-paperclip"></i>
+        </button>
+        <button class="btn btn-primary" onclick="addTaskComment()">
+          <i class="bi bi-send"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Create Task Modal -->
+<div class="modal fade" id="createTaskModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h6 class="modal-title">Create Task</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label class="form-label small">Title *</label>
+          <input type="text" class="form-control form-control-sm" id="taskTitle" placeholder="Task title">
+        </div>
+        <div class="mb-3">
+          <label class="form-label small">Description</label>
+          <textarea class="form-control form-control-sm" id="taskDescription" rows="3" placeholder="Task description (optional)"></textarea>
+        </div>
+        <div class="row">
+          <div class="col-6 mb-3">
+            <label class="form-label small">Priority</label>
+            <select class="form-select form-select-sm" id="taskPriority">
+              <option value="low">Low</option>
+              <option value="medium" selected>Medium</option>
+              <option value="high">High</option>
+              <option value="urgent">Urgent</option>
+            </select>
+          </div>
+          <div class="col-6 mb-3">
+            <label class="form-label small">Due Date</label>
+            <input type="date" class="form-control form-control-sm" id="taskDueDate">
+          </div>
+        </div>
+        <div class="mb-3">
+          <label class="form-label small">Assign To *</label>
+          <select class="form-select form-select-sm" id="taskAssignTo">
+            <option value="">Select person...</option>
+            <% assignableUsers.forEach(u => { %>
+              <option value="<%= u.id %>"><%= u.name %> (<%= u.role_name.replace('CLIENT_', '') %>)</option>
+            <% }) %>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-sm btn-primary" onclick="createTask()">Create Task</button>
+      </div>
+    </div>
+  </div>
+</div>

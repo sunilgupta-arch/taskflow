@@ -19,7 +19,7 @@ const PORT = process.env.PORT || 3000;
 // ============================================================
 // Ensure required directories exist
 // ============================================================
-['logs', 'uploads/tasks'].forEach(dir => {
+['logs', 'uploads/tasks', 'uploads/portal'].forEach(dir => {
   const fullPath = path.join(__dirname, dir);
   if (!fs.existsSync(fullPath)) fs.mkdirSync(fullPath, { recursive: true });
 });
@@ -38,13 +38,14 @@ app.use(spaJson);
 
 // Static files
 app.use(express.static(path.join(__dirname, 'public')));
+app.use('/portal', express.static(path.join(__dirname, 'portal/public')));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // ============================================================
 // View Engine - EJS
 // ============================================================
 app.set('view engine', 'ejs');
-app.set('views', path.join(__dirname, 'views'));
+app.set('views', [path.join(__dirname, 'views'), path.join(__dirname, 'portal/views')]);
 app.use(expressLayouts);
 app.set('layout', 'layouts/main');
 app.set('layout extractScripts', true);
@@ -59,9 +60,11 @@ const chatRoutes = require('./routes/chat');
 const driveRoutes = require('./routes/drive');
 const helpRoutes = require('./routes/help');
 const indexRoutes = require('./routes/index');
+const portalRoutes = require('./portal/routes/portal');
 
 app.get('/', (req, res) => res.redirect('/tasks/board'));
 app.use('/auth', authRoutes);
+app.use('/portal', portalRoutes);
 app.use('/tasks', taskRoutes);
 app.use('/chat', chatRoutes);
 app.use('/drive', driveRoutes);
@@ -99,6 +102,10 @@ app.use((err, req, res, next) => {
 
   const server = http.createServer(app);
   const io = initSocket(server);
+
+  // Initialize Portal Socket.IO namespace
+  const { initPortalSocket } = require('./portal/socket/portalSocket');
+  initPortalSocket(io);
 
   // Socket.IO authentication middleware
   io.use(async (socket, next) => {

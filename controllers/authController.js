@@ -26,8 +26,15 @@ class AuthController {
         maxAge: 12 * 60 * 60 * 1000 // 12 hours
       });
 
-      // CLIENT_USER and LOCAL_USER go to tasks list; admins/managers go to task board
-      const redirectUrl = ['LOCAL_USER', 'CLIENT_USER'].includes(user.role_name) ? '/tasks' : '/tasks/board';
+      // Client roles go to portal; LOCAL_USER goes to tasks list; local admins/managers go to task board
+      let redirectUrl;
+      if (user.role_name.startsWith('CLIENT_')) {
+        redirectUrl = '/portal';
+      } else if (user.role_name === 'LOCAL_USER') {
+        redirectUrl = '/tasks';
+      } else {
+        redirectUrl = '/tasks/board';
+      }
       return ApiResponse.success(res, { user, redirectUrl }, 'Login successful');
     } catch (err) {
       return res.status(401).json({ success: false, message: err.message });
