@@ -449,12 +449,21 @@ function renderTaskDetail(task, comments) {
           </a>`;
         }).join('');
       }
-      return `<div class="comment-item">
+      const isOwn = c.user_id === PORTAL_USER.id;
+      const editBtn = isOwn ? `<button class="comment-edit-btn" onclick="startEditPortalComment(${c.id}, this)" title="Edit"><i class="bi bi-pencil"></i></button>` : '';
+      return `<div class="comment-item" data-comment-id="${c.id}">
         <div class="comment-header">
           <span class="comment-author">${c.user_name}</span>
-          <span class="comment-time">${timeAgo(c.created_at)}</span>
+          <div>${editBtn}<span class="comment-time">${timeAgo(c.created_at)}</span></div>
         </div>
-        <div class="comment-body">${escapeHtml(c.content)}</div>
+        <div class="comment-body" id="portalCommentBody-${c.id}">${escapeHtml(c.content)}</div>
+        <div class="comment-edit-form" id="portalCommentEdit-${c.id}" style="display:none">
+          <textarea class="form-control form-control-sm" id="portalCommentEditInput-${c.id}" rows="2">${escapeHtml(c.content)}</textarea>
+          <div class="d-flex gap-1 mt-1">
+            <button class="btn btn-sm btn-primary" style="font-size:0.7rem;padding:2px 10px;" onclick="saveEditPortalComment(${c.id})">Save</button>
+            <button class="btn btn-sm btn-outline-secondary" style="font-size:0.7rem;padding:2px 10px;" onclick="cancelEditPortalComment(${c.id})">Cancel</button>
+          </div>
+        </div>
         ${attachHtml}
       </div>`;
     }).join('') : '<div class="text-muted small py-2">No comments yet</div>');
@@ -1661,6 +1670,40 @@ function stopDictation() {
   document.getElementById('dictateIcon').className = 'bi bi-mic';
   document.getElementById('dictateBtn').classList.remove('dictating');
   document.getElementById('dictateStatus').style.display = 'none';
+}
+
+// ── PORTAL COMMENT EDIT ────────────────────────────────────
+
+function startEditPortalComment(commentId) {
+  document.getElementById('portalCommentBody-' + commentId).style.display = 'none';
+  document.getElementById('portalCommentEdit-' + commentId).style.display = '';
+  document.getElementById('portalCommentEditInput-' + commentId).focus();
+}
+
+function cancelEditPortalComment(commentId) {
+  document.getElementById('portalCommentBody-' + commentId).style.display = '';
+  document.getElementById('portalCommentEdit-' + commentId).style.display = 'none';
+}
+
+function saveEditPortalComment(commentId) {
+  const input = document.getElementById('portalCommentEditInput-' + commentId);
+  const content = input.value.trim();
+  if (!content) return;
+
+  fetch('/portal/tasks/comments/' + commentId, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ content })
+  })
+    .then(r => r.json())
+    .then(res => {
+      if (res.success) {
+        document.getElementById('portalCommentBody-' + commentId).textContent = content;
+        cancelEditPortalComment(commentId);
+      } else {
+        alert(res.message);
+      }
+    });
 }
 
 // ── TASK DUE DATE REMINDERS ─────────────────────────────────

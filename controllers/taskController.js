@@ -399,6 +399,23 @@ class TaskController {
     }
   }
 
+  // PUT /tasks/comments/:commentId
+  static async editComment(req, res) {
+    try {
+      const { comment } = req.body;
+      if (!comment || !comment.trim()) return ApiResponse.error(res, 'Comment cannot be empty', 400);
+
+      const [[existing]] = await db.query('SELECT * FROM task_comments WHERE id = ?', [req.params.commentId]);
+      if (!existing) return ApiResponse.error(res, 'Comment not found', 404);
+      if (existing.user_id !== req.user.id) return ApiResponse.error(res, 'You can only edit your own comments', 403);
+
+      await db.query('UPDATE task_comments SET comment = ? WHERE id = ?', [comment.trim(), req.params.commentId]);
+      return ApiResponse.success(res, {}, 'Comment updated');
+    } catch (err) {
+      return ApiResponse.error(res, err.message, 400);
+    }
+  }
+
   // POST /tasks/assign
   static async assign(req, res) {
     try {

@@ -255,6 +255,25 @@ class PortalTaskController {
     }
   }
 
+  // Edit a comment
+  static async editComment(req, res) {
+    try {
+      const commentId = parseInt(req.params.commentId);
+      const { content } = req.body;
+      if (!content || !content.trim()) return ApiResponse.error(res, 'Content required', 400);
+
+      const db = require('../../config/db');
+      const [[existing]] = await db.query('SELECT * FROM portal_task_comments WHERE id = ?', [commentId]);
+      if (!existing) return ApiResponse.error(res, 'Comment not found', 404);
+      if (existing.user_id !== req.user.id) return ApiResponse.error(res, 'You can only edit your own comments', 403);
+
+      await db.query('UPDATE portal_task_comments SET content = ? WHERE id = ?', [content.trim(), commentId]);
+      return ApiResponse.success(res, {}, 'Comment updated');
+    } catch (err) {
+      return ApiResponse.error(res, 'Failed to update comment');
+    }
+  }
+
   // Serve task attachment
   static async serveAttachment(req, res) {
     try {

@@ -854,6 +854,27 @@ body {
 .comment-time { color: var(--tf-text-muted); }
 .comment-body { font-size: 0.85rem; color: var(--tf-text-secondary); line-height: 1.5; }
 
+.comment-edit-btn {
+  background: none;
+  border: none;
+  color: var(--tf-text-muted);
+  font-size: 0.7rem;
+  cursor: pointer;
+  padding: 0 4px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.comment-item:hover .comment-edit-btn { opacity: 0.6; }
+.comment-edit-btn:hover { opacity: 1 !important; color: var(--tf-accent); }
+
+.comment-edit-form textarea {
+  background: var(--tf-surface-2);
+  border-color: var(--tf-border);
+  color: var(--tf-text);
+  font-size: 0.82rem;
+}
+
 .comment-attachment {
   display: inline-flex;
   align-items: center;

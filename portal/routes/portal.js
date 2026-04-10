@@ -46,6 +46,7 @@ router.post('/tasks', PortalTaskController.create);
 router.get('/tasks/:id', PortalTaskController.getTask);
 router.put('/tasks/:id', PortalTaskController.update);
 router.post('/tasks/:id/comments', upload.single('file'), PortalTaskController.addComment);
+router.put('/tasks/comments/:commentId', PortalTaskController.editComment);
 router.get('/tasks/attachment/:attachmentId', PortalTaskController.serveAttachment);
 
 // ── Notes ────────────────────────────────────────────────

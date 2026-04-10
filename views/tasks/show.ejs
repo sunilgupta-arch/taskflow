@@ -132,11 +132,26 @@
                 color:<%= c.org_type === 'CLIENT' ? '#00d4ff' : '#a78bfa' %>;"><%= c.role_name %></span>
               <span style="font-size:0.65rem;color:var(--tf-text-muted);margin-left:auto;"><%= new Date(c.created_at).toLocaleString() %></span>
             </div>
-            <p style="font-size:0.85rem;margin:0.25rem 0 0.5rem;color:var(--tf-text);line-height:1.5;"><%= c.comment %></p>
-            <button class="btn-tf" style="font-size:0.6rem;padding:1px 6px;background:transparent;color:var(--tf-text-muted);border:1px solid var(--tf-border);"
-              onclick="toggleReply(<%= c.id %>)">
-              <i class="bi bi-reply me-1"></i>Reply
-            </button>
+            <p id="commentText-<%= c.id %>" style="font-size:0.85rem;margin:0.25rem 0 0.5rem;color:var(--tf-text);line-height:1.5;"><%= c.comment %></p>
+            <div id="editForm-<%= c.id %>" style="display:none;margin:0.25rem 0 0.5rem;">
+              <textarea class="tf-form-control" id="editInput-<%= c.id %>" rows="2" style="font-size:0.8rem;"><%= c.comment %></textarea>
+              <div class="d-flex gap-1 mt-1">
+                <button class="btn-tf btn-tf-primary" style="font-size:0.6rem;padding:2px 8px;" onclick="saveEditComment(<%= c.id %>)">Save</button>
+                <button class="btn-tf" style="font-size:0.6rem;padding:2px 8px;background:transparent;color:var(--tf-text-muted);border:1px solid var(--tf-border);" onclick="cancelEditComment(<%= c.id %>)">Cancel</button>
+              </div>
+            </div>
+            <div class="d-flex gap-1">
+              <button class="btn-tf" style="font-size:0.6rem;padding:1px 6px;background:transparent;color:var(--tf-text-muted);border:1px solid var(--tf-border);"
+                onclick="toggleReply(<%= c.id %>)">
+                <i class="bi bi-reply me-1"></i>Reply
+              </button>
+              <% if (c.user_id === user.id) { %>
+              <button class="btn-tf" style="font-size:0.6rem;padding:1px 6px;background:transparent;color:var(--tf-text-muted);border:1px solid var(--tf-border);"
+                onclick="startEditComment(<%= c.id %>)">
+                <i class="bi bi-pencil me-1"></i>Edit
+              </button>
+              <% } %>
+            </div>
 
             <!-- Reply form (hidden by default) -->
             <div id="replyForm-<%= c.id %>" style="display:none;margin-top:0.5rem;">
@@ -160,7 +175,20 @@
                     color:<%= r.org_type === 'CLIENT' ? '#00d4ff' : '#a78bfa' %>;"><%= r.role_name %></span>
                   <span style="font-size:0.6rem;color:var(--tf-text-muted);margin-left:auto;"><%= new Date(r.created_at).toLocaleString() %></span>
                 </div>
-                <p style="font-size:0.8rem;margin:0;color:var(--tf-text);line-height:1.4;"><%= r.comment %></p>
+                <p id="commentText-<%= r.id %>" style="font-size:0.8rem;margin:0;color:var(--tf-text);line-height:1.4;"><%= r.comment %></p>
+                <div id="editForm-<%= r.id %>" style="display:none;margin-top:0.25rem;">
+                  <textarea class="tf-form-control" id="editInput-<%= r.id %>" rows="1" style="font-size:0.75rem;"><%= r.comment %></textarea>
+                  <div class="d-flex gap-1 mt-1">
+                    <button class="btn-tf btn-tf-primary" style="font-size:0.55rem;padding:1px 6px;" onclick="saveEditComment(<%= r.id %>)">Save</button>
+                    <button class="btn-tf" style="font-size:0.55rem;padding:1px 6px;background:transparent;color:var(--tf-text-muted);border:1px solid var(--tf-border);" onclick="cancelEditComment(<%= r.id %>)">Cancel</button>
+                  </div>
+                </div>
+                <% if (r.user_id === user.id) { %>
+                <button class="btn-tf" style="font-size:0.55rem;padding:1px 4px;background:transparent;color:var(--tf-text-muted);border:1px solid var(--tf-border);margin-top:2px;"
+                  onclick="startEditComment(<%= r.id %>)">
+                  <i class="bi bi-pencil me-1"></i>Edit
+                </button>
+                <% } %>
               </div>
               <% }) %>
             </div>
@@ -427,6 +455,31 @@ async function handleUpload() {
     showToast('Upload failed', 'error');
   }
 }
+function startEditComment(commentId) {
+  document.getElementById('commentText-' + commentId).style.display = 'none';
+  document.getElementById('editForm-' + commentId).style.display = 'block';
+  document.getElementById('editInput-' + commentId).focus();
+}
+
+function cancelEditComment(commentId) {
+  document.getElementById('commentText-' + commentId).style.display = '';
+  document.getElementById('editForm-' + commentId).style.display = 'none';
+}
+
+async function saveEditComment(commentId) {
+  const input = document.getElementById('editInput-' + commentId);
+  const text = input.value.trim();
+  if (!text) return;
+  try {
+    await axios.put('/tasks/comments/' + commentId, { comment: text });
+    document.getElementById('commentText-' + commentId).textContent = text;
+    cancelEditComment(commentId);
+    showToast('Comment updated');
+  } catch (e) {
+    showToast(e.response?.data?.message || 'Failed to update', 'error');
+  }
+}
+
 function toggleReply(commentId) {
   const form = document.getElementById('replyForm-' + commentId);
   form.style.display = form.style.display === 'none' ? 'block' : 'none';
