@@ -18,7 +18,7 @@ class NoteModel {
     const fields = [];
     const values = [];
 
-    const allowed = ['title', 'content'];
+    const allowed = ['title', 'content', 'is_pinned'];
     allowed.forEach(f => {
       if (data[f] !== undefined) {
         fields.push(`${f} = ?`);
@@ -51,7 +51,7 @@ class NoteModel {
     const offset = (parseInt(page) - 1) * parseInt(limit);
 
     const [rows] = await db.query(
-      `SELECT * FROM notes ${whereClause} ORDER BY updated_at DESC LIMIT ? OFFSET ?`,
+      `SELECT * FROM notes ${whereClause} ORDER BY is_pinned DESC, updated_at DESC LIMIT ? OFFSET ?`,
       [...params, parseInt(limit), parseInt(offset)]
     );
 

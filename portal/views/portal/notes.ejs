@@ -26,6 +26,15 @@
           <button class="topnav-action" id="dictateBtn" onclick="toggleDictation()" title="Dictate">
             <i class="bi bi-mic" id="dictateIcon"></i>
           </button>
+          <button class="topnav-action" onclick="exportNoteText()" title="Download as Text">
+            <i class="bi bi-file-text"></i>
+          </button>
+          <button class="topnav-action" onclick="exportNotePDF()" title="Print / Save as PDF">
+            <i class="bi bi-printer"></i>
+          </button>
+          <button class="topnav-action" onclick="togglePinNote()" title="Pin/Unpin" id="pinNoteBtn">
+            <i class="bi bi-pin" id="pinNoteIcon"></i>
+          </button>
           <button class="topnav-action" onclick="saveNote()" title="Save">
             <i class="bi bi-check-lg"></i>
           </button>

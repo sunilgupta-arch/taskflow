@@ -113,9 +113,10 @@
       <input type="file" id="adminChatFile" style="display:none" onchange="sendAdminChatFile()">
       <div class="d-flex gap-1 align-items-end">
         <textarea class="form-control" id="adminChatInput" placeholder="Type a message..." rows="2"></textarea>
-        <div class="d-flex flex-column gap-1">
-          <button class="btn btn-outline-secondary btn-sm" onclick="document.getElementById('adminChatFile').click()" style="width:34px;height:34px;padding:0"><i class="bi bi-paperclip"></i></button>
-          <button class="btn btn-primary btn-sm" onclick="sendAdminChatMessage()" style="width:34px;height:34px;padding:0"><i class="bi bi-send"></i></button>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:3px;">
+          <button class="btn btn-outline-secondary btn-sm" onclick="document.getElementById('adminChatFile').click()" style="width:34px;height:34px;padding:0" title="Attach"><i class="bi bi-paperclip"></i></button>
+          <button class="btn btn-outline-secondary btn-sm" onclick="toggleFieldDictation('adminChatInput', this)" style="width:34px;height:34px;padding:0" title="Dictate"><i class="bi bi-mic"></i></button>
+          <button class="btn btn-primary btn-sm" onclick="sendAdminChatMessage()" style="width:34px;height:34px;padding:0;grid-column:span 2" title="Send"><i class="bi bi-send"></i></button>
         </div>
       </div>
     </div>

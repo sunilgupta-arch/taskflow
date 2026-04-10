@@ -1033,6 +1033,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Tasks page init
   if (document.getElementById('tasksList')) {
     loadTasks();
+    checkDueTodayReminders();
   }
 
   // Users page init
@@ -1423,8 +1424,9 @@ function renderNotesList(notes) {
     const active = n.id === currentNoteId ? 'active' : '';
     const preview = n.content ? n.content.substring(0, 60) + (n.content.length > 60 ? '...' : '') : 'No content';
     const date = timeAgo(n.updated_at);
+    const pinIcon = n.is_pinned ? '<i class="bi bi-pin-fill" style="color:var(--tf-warning);font-size:0.7rem;margin-right:4px"></i>' : '';
     return `<div class="note-item ${active}" onclick="openNote(${n.id})">
-      <div class="note-item-title">${escapeHtml(n.title)}</div>
+      <div class="note-item-title">${pinIcon}${escapeHtml(n.title)}</div>
       <div class="note-item-preview">${escapeHtml(preview)}</div>
       <div class="note-item-date">${date}</div>
     </div>`;
@@ -1470,6 +1472,8 @@ function openNote(noteId) {
       document.getElementById('noteTitle').value = note.title;
       document.getElementById('noteContent').value = note.content || '';
       document.getElementById('noteStatus').textContent = 'Last saved: ' + timeAgo(note.updated_at);
+      currentNotePinned = !!note.is_pinned;
+      updatePinIcon();
 
       // Highlight in sidebar
       document.querySelectorAll('.note-item').forEach(el => el.classList.remove('active'));
@@ -1532,6 +1536,60 @@ function deleteNote() {
         loadNotes();
       }
     });
+}
+
+function exportNoteText() {
+  const title = document.getElementById('noteTitle').value || 'note';
+  const content = document.getElementById('noteContent').value || '';
+  const blob = new Blob([title + '\n' + '='.repeat(title.length) + '\n\n' + content], { type: 'text/plain' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = title.replace(/[^a-zA-Z0-9 ]/g, '').trim().replace(/\s+/g, '_') + '.txt';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function exportNotePDF() {
+  const title = document.getElementById('noteTitle').value || 'Note';
+  const content = document.getElementById('noteContent').value || '';
+  const win = window.open('', '_blank');
+  win.document.write(`<!DOCTYPE html><html><head><title>${escapeHtml(title)}</title>
+    <style>body{font-family:Arial,sans-serif;max-width:700px;margin:40px auto;padding:20px;color:#222;}
+    h1{font-size:1.5rem;border-bottom:2px solid #333;padding-bottom:8px;}
+    pre{white-space:pre-wrap;font-family:inherit;font-size:0.95rem;line-height:1.7;}
+    .meta{font-size:0.75rem;color:#888;margin-bottom:20px;}</style></head>
+    <body><h1>${escapeHtml(title)}</h1>
+    <div class="meta">${new Date().toLocaleString()}</div>
+    <pre>${escapeHtml(content)}</pre></body></html>`);
+  win.document.close();
+  setTimeout(() => { win.print(); }, 500);
+}
+
+let currentNotePinned = false;
+
+function togglePinNote() {
+  if (!currentNoteId) return;
+  fetch(`/portal/notes/${currentNoteId}/pin`, { method: 'PATCH' })
+    .then(r => r.json())
+    .then(res => {
+      if (res.success) {
+        currentNotePinned = res.data.note.is_pinned;
+        updatePinIcon();
+        loadNotes();
+      }
+    });
+}
+
+function updatePinIcon() {
+  const icon = document.getElementById('pinNoteIcon');
+  const btn = document.getElementById('pinNoteBtn');
+  if (currentNotePinned) {
+    icon.className = 'bi bi-pin-fill';
+    btn.style.color = 'var(--tf-warning)';
+  } else {
+    icon.className = 'bi bi-pin';
+    btn.style.color = '';
+  }
 }
 
 // ── DICTATION (Speech-to-Text) ─────────────────────────────
@@ -1603,6 +1661,40 @@ function stopDictation() {
   document.getElementById('dictateIcon').className = 'bi bi-mic';
   document.getElementById('dictateBtn').classList.remove('dictating');
   document.getElementById('dictateStatus').style.display = 'none';
+}
+
+// ── TASK DUE DATE REMINDERS ─────────────────────────────────
+
+function checkDueTodayReminders() {
+  // Only show once per session
+  if (sessionStorage.getItem('portal_due_reminder_shown')) return;
+
+  fetch('/portal/tasks/list')
+    .then(r => r.json())
+    .then(res => {
+      if (!res.success) return;
+      const today = new Date().toDateString();
+      const dueTasks = res.data.tasks.filter(t => {
+        if (t.status === 'completed' || t.status === 'cancelled') return false;
+        if (!t.due_date) return false;
+        return new Date(t.due_date).toDateString() === today;
+      });
+
+      if (dueTasks.length > 0) {
+        sessionStorage.setItem('portal_due_reminder_shown', '1');
+        setTimeout(() => {
+          const names = dueTasks.map(t => t.title).slice(0, 3);
+          const more = dueTasks.length > 3 ? ` and ${dueTasks.length - 3} more` : '';
+          showPortalToast({
+            title: `${dueTasks.length} task${dueTasks.length > 1 ? 's' : ''} due today`,
+            sender: '',
+            priority: dueTasks.some(t => t.priority === 'urgent') ? 'urgent' : 'high',
+            customText: `<strong>${names.join('</strong>, <strong>')}</strong>${more}`,
+            customIcon: 'bi-calendar-event'
+          });
+        }, 3000);
+      }
+    });
 }
 
 // ── FIELD DICTATION (reusable for any input/textarea) ──────

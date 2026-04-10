@@ -51,11 +51,14 @@
       </div>
       <input type="file" id="taskFileInput" style="display:none" onchange="previewTaskFile()">
       <textarea class="form-control" id="taskCommentInput" placeholder="Add a comment..." rows="3"></textarea>
-      <div class="chat-input-actions">
+      <div class="chat-input-grid">
         <button class="btn btn-outline-secondary" onclick="document.getElementById('taskFileInput').click()" title="Attach File">
           <i class="bi bi-paperclip"></i>
         </button>
-        <button class="btn btn-primary" onclick="addTaskComment()">
+        <button class="btn btn-outline-secondary" onclick="toggleFieldDictation('taskCommentInput', this)" title="Dictate">
+          <i class="bi bi-mic"></i>
+        </button>
+        <button class="btn btn-primary" onclick="addTaskComment()" style="grid-column: span 2">
           <i class="bi bi-send"></i>
         </button>
       </div>

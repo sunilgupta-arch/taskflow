@@ -96,6 +96,18 @@ router.put('/notes/:id', async (req, res) => {
   }
 });
 
+router.patch('/notes/:id/pin', async (req, res) => {
+  try {
+    const note = await NoteModel.findById(req.params.id);
+    if (!note || note.user_id !== req.user.id) return NoteApiResponse.error(res, 'Not found', 404);
+    await NoteModel.update(req.params.id, { is_pinned: note.is_pinned ? 0 : 1 });
+    const updated = await NoteModel.findById(req.params.id);
+    return NoteApiResponse.success(res, { note: updated }, note.is_pinned ? 'Unpinned' : 'Pinned');
+  } catch (err) {
+    return NoteApiResponse.error(res, err.message, 400);
+  }
+});
+
 router.delete('/notes/:id', async (req, res) => {
   try {
     const note = await NoteModel.findById(req.params.id);
