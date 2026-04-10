@@ -19,7 +19,10 @@
         <option value="medium">Medium</option>
         <option value="low">Low</option>
       </select>
-      <% if (['CLIENT_ADMIN', 'CLIENT_MANAGER'].includes(user.role_name)) { %>
+      <select class="form-select form-select-sm" id="filterUser" onchange="applyUserFilter()" style="width:auto">
+        <option value="">All Users</option>
+      </select>
+      <% if (['CLIENT_ADMIN', 'CLIENT_TOP_MGMT', 'CLIENT_MGMT', 'CLIENT_MANAGER'].includes(user.role_name)) { %>
         <button class="btn btn-sm btn-primary" onclick="showCreateTaskModal()">
           <i class="bi bi-plus-lg"></i> New Task
         </button>
@@ -109,7 +112,7 @@
           <select class="form-select form-select-sm" id="taskAssignTo">
             <option value="">Select person...</option>
             <% assignableUsers.forEach(u => { %>
-              <option value="<%= u.id %>"><%= u.name %> (<%= u.role_name.replace('CLIENT_', '') %>)</option>
+              <option value="<%= u.id %>"><%= u.name %></option>
             <% }) %>
           </select>
         </div>

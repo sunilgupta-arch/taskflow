@@ -307,50 +307,83 @@ function showSidebar() {
 
 // ── TASKS ──────────────────────────────────────────────────
 
-function loadTasks() {
-  const status = document.getElementById('filterStatus')?.value || '';
-  const priority = document.getElementById('filterPriority')?.value || '';
+var _allTasks = [];
 
-  let url = '/portal/tasks/list?';
-  if (status) url += `status=${status}&`;
-  if (priority) url += `priority=${priority}&`;
+function loadTasks() {
+  var status = document.getElementById('filterStatus')?.value || '';
+  var priority = document.getElementById('filterPriority')?.value || '';
+
+  var url = '/portal/tasks/list?';
+  if (status) url += 'status=' + status + '&';
+  if (priority) url += 'priority=' + priority + '&';
 
   fetch(url)
-    .then(r => r.json())
-    .then(res => {
+    .then(function(r) { return r.json(); })
+    .then(function(res) {
       if (!res.success) return;
-      renderTasks(res.data.tasks);
+      _allTasks = res.data.tasks;
+      populateUserFilter(_allTasks);
+      applyUserFilter();
     });
 }
 
+function populateUserFilter(tasks) {
+  var select = document.getElementById('filterUser');
+  if (!select) return;
+  var prev = select.value;
+  var users = {};
+  tasks.forEach(function(t) {
+    if (t.assigned_to && t.assigned_to_name) users[t.assigned_to] = t.assigned_to_name;
+    if (t.assigned_by && t.assigned_by_name) users[t.assigned_by] = t.assigned_by_name;
+  });
+  var sorted = Object.entries(users).sort(function(a, b) { return a[1].localeCompare(b[1]); });
+  var html = '<option value="">All Users</option>';
+  sorted.forEach(function(pair) {
+    html += '<option value="' + pair[0] + '">' + escapeHtml(pair[1]) + '</option>';
+  });
+  select.innerHTML = html;
+  if (prev) select.value = prev;
+}
+
+function applyUserFilter() {
+  var userId = document.getElementById('filterUser')?.value || '';
+  var filtered = _allTasks;
+  if (userId) {
+    filtered = _allTasks.filter(function(t) {
+      return String(t.assigned_to) === userId || String(t.assigned_by) === userId;
+    });
+  }
+  renderTasks(filtered);
+}
+
 function renderTasks(tasks) {
-  const list = document.getElementById('tasksList');
+  var list = document.getElementById('tasksList');
   if (!list) return;
 
   if (!tasks.length) {
-    list.innerHTML = '<div class="text-center text-muted p-4">No tasks found</div>';
+    list.innerHTML = '<div class="text-center text-muted p-4" style="grid-column:1/-1">No tasks found</div>';
     return;
   }
 
-  list.innerHTML = tasks.map(t => {
-    const dueStr = t.due_date ? new Date(t.due_date).toLocaleDateString() : 'No due date';
-    const isOverdue = t.due_date && t.status !== 'completed' && t.status !== 'cancelled' && new Date(t.due_date) < new Date(new Date().toDateString());
-    const overdueClass = isOverdue ? ' task-overdue' : '';
-    const overdueIcon = isOverdue ? '<span class="overdue-badge"><i class="bi bi-exclamation-triangle-fill me-1"></i>OVERDUE</span>' : '';
-    return `<div class="task-card${overdueClass}" onclick="openTask(${t.id})">
-      <div class="task-card-header">
-        <span class="task-title">${escapeHtml(t.title)}</span>
-        <span class="priority-badge priority-${t.priority}">${t.priority}</span>
-      </div>
-      <div class="task-meta">
-        <span class="status-badge status-${t.status}">${t.status === 'completed' ? '<i class="bi bi-check-circle-fill me-1"></i>DONE' : t.status.replace('_', ' ')}</span>
-        ${overdueIcon}
-        <span><i class="bi bi-person"></i> ${t.assigned_to_name}</span>
-        <span><i class="bi bi-calendar"></i> ${dueStr}</span>
-        <span><i class="bi bi-chat-dots"></i> ${t.comment_count || 0}</span>
-        <span><i class="bi bi-person-up"></i> ${t.assigned_by_name}</span>
-      </div>
-    </div>`;
+  list.innerHTML = tasks.map(function(t) {
+    var dueStr = t.due_date ? new Date(t.due_date).toLocaleDateString() : 'No due date';
+    var isOverdue = t.due_date && t.status !== 'completed' && t.status !== 'cancelled' && new Date(t.due_date) < new Date(new Date().toDateString());
+    var overdueClass = isOverdue ? ' task-overdue' : '';
+    var overdueIcon = isOverdue ? '<span class="overdue-badge"><i class="bi bi-exclamation-triangle-fill me-1"></i>OVERDUE</span>' : '';
+    return '<div class="task-card' + overdueClass + '" onclick="openTask(' + t.id + ')">' +
+      '<div class="task-card-header">' +
+        '<span class="task-title">' + escapeHtml(t.title) + '</span>' +
+        '<span class="priority-badge priority-' + t.priority + '">' + t.priority + '</span>' +
+      '</div>' +
+      '<div class="task-meta">' +
+        '<span class="status-badge status-' + t.status + '">' + (t.status === 'completed' ? '<i class="bi bi-check-circle-fill me-1"></i>DONE' : t.status.replace('_', ' ')) + '</span>' +
+        overdueIcon +
+        '<span><i class="bi bi-person"></i> ' + t.assigned_to_name + '</span>' +
+        '<span><i class="bi bi-calendar"></i> ' + dueStr + '</span>' +
+        '<span><i class="bi bi-chat-dots"></i> ' + (t.comment_count || 0) + '</span>' +
+        '<span><i class="bi bi-person-up"></i> ' + t.assigned_by_name + '</span>' +
+      '</div>' +
+    '</div>';
   }).join('');
 }
 
@@ -408,7 +441,7 @@ function renderTaskDetail(task, comments) {
 
   // Status change dropdown for assignee/creator/admin
   let statusHtml = '';
-  if (task.assigned_to === PORTAL_USER.id || task.assigned_by === PORTAL_USER.id || PORTAL_USER.role === 'CLIENT_ADMIN') {
+  if (task.assigned_to === PORTAL_USER.id || task.assigned_by === PORTAL_USER.id || ['CLIENT_ADMIN', 'CLIENT_TOP_MGMT'].includes(PORTAL_USER.role)) {
     statusHtml = `<select class="form-select form-select-sm" style="width:auto" onchange="updateTaskStatus(${task.id}, this.value)">
       <option value="open" ${task.status === 'open' ? 'selected' : ''}>Open</option>
       <option value="in_progress" ${task.status === 'in_progress' ? 'selected' : ''}>In Progress</option>
@@ -554,39 +587,64 @@ function renderUsers(users) {
     return;
   }
 
-  list.innerHTML = users.map(u => {
-    const initial = u.name.charAt(0).toUpperCase();
-    const roleName = u.role_name.replace('CLIENT_', '').toLowerCase();
-    const roleClass = roleName === 'admin' ? 'admin' : roleName === 'manager' ? 'manager' : 'user';
-    const isAdmin = u.role_name === 'CLIENT_ADMIN';
-    const activeClass = u.is_active ? 'active' : 'inactive';
-    const activeText = u.is_active ? 'Active' : 'Inactive';
+  // Group users by role
+  const roleOrder = ['CLIENT_ADMIN', 'CLIENT_TOP_MGMT', 'CLIENT_MGMT', 'CLIENT_MANAGER', 'CLIENT_USER'];
+  const roleLabels = {
+    CLIENT_ADMIN: { title: 'Admin', icon: 'bi-shield-lock-fill', color: '#a78bfa' },
+    CLIENT_TOP_MGMT: { title: 'Top Management', icon: 'bi-star-fill', color: '#3b82f6' },
+    CLIENT_MGMT: { title: 'Management', icon: 'bi-briefcase-fill', color: '#22c55e' },
+    CLIENT_MANAGER: { title: 'Managers', icon: 'bi-person-badge-fill', color: '#eab308' },
+    CLIENT_USER: { title: 'Users', icon: 'bi-person-fill', color: '#94a3b8' }
+  };
 
-    return `<div class="user-card">
-      <div class="user-card-avatar">${initial}</div>
-      <div class="user-card-info">
-        <div class="user-card-name">${escapeHtml(u.name)}</div>
-        <div class="user-card-email">${escapeHtml(u.email)}</div>
-        <div class="user-card-meta">
-          <span class="role-badge ${roleClass}">${roleName}</span>
-          <span class="active-badge ${activeClass}">${activeText}</span>
-        </div>
-      </div>
-      <div class="user-card-actions">
-        ${!isAdmin ? `
-          <button class="btn btn-outline-secondary" title="Edit" onclick="showEditUserModal(${u.id}, '${escapeHtml(u.name).replace(/'/g, "\\'")}', '${escapeHtml(u.email).replace(/'/g, "\\'")}', ${u.role_id})">
-            <i class="bi bi-pencil"></i>
-          </button>
-          <button class="btn btn-outline-secondary" title="Reset Password" onclick="showResetPwModal(${u.id}, '${escapeHtml(u.name).replace(/'/g, "\\'")}')">
-            <i class="bi bi-key"></i>
-          </button>
-          <button class="btn ${u.is_active ? 'btn-outline-danger' : 'btn-outline-success'}" title="${u.is_active ? 'Deactivate' : 'Activate'}" onclick="toggleUserActive(${u.id})">
-            <i class="bi ${u.is_active ? 'bi-person-slash' : 'bi-person-check'}"></i>
-          </button>
-        ` : ''}
-      </div>
-    </div>`;
-  }).join('');
+  const grouped = {};
+  roleOrder.forEach(r => { grouped[r] = []; });
+  users.forEach(u => {
+    if (grouped[u.role_name]) grouped[u.role_name].push(u);
+  });
+
+  var html = '';
+  roleOrder.forEach(role => {
+    var group = grouped[role];
+    if (!group.length) return;
+    var info = roleLabels[role];
+
+    html += '<div class="user-role-section">';
+    html += '<div class="user-role-header">';
+    html += '<div class="user-role-header-left">';
+    html += '<i class="bi ' + info.icon + '" style="color:' + info.color + ';font-size:1rem"></i>';
+    html += '<span class="user-role-title">' + info.title + '</span>';
+    html += '<span class="user-role-count">' + group.length + '</span>';
+    html += '</div></div>';
+
+    html += '<div class="user-role-grid">';
+    group.forEach(function(u) {
+      var initial = u.name.charAt(0).toUpperCase();
+      var isAdmin = u.role_name === 'CLIENT_ADMIN';
+      var activeClass = u.is_active ? 'active' : 'inactive';
+      var activeText = u.is_active ? 'Active' : 'Inactive';
+      var safeName = escapeHtml(u.name).replace(/'/g, "\\'");
+      var safeEmail = escapeHtml(u.email).replace(/'/g, "\\'");
+
+      html += '<div class="user-card ' + (u.is_active ? '' : 'user-card-inactive') + '">';
+      html += '<div class="user-card-avatar" style="background:linear-gradient(135deg, ' + info.color + ', ' + info.color + '99)">' + initial + '</div>';
+      html += '<div class="user-card-info">';
+      html += '<div class="user-card-name">' + escapeHtml(u.name) + '</div>';
+      html += '<div class="user-card-email">' + escapeHtml(u.email) + '</div>';
+      html += '<div class="user-card-meta"><span class="active-badge ' + activeClass + '">' + activeText + '</span></div>';
+      html += '</div>';
+      html += '<div class="user-card-actions">';
+      if (!isAdmin) {
+        html += '<button class="btn btn-outline-secondary" title="Edit" onclick="showEditUserModal(' + u.id + ', \'' + safeName + '\', \'' + safeEmail + '\', ' + u.role_id + ')"><i class="bi bi-pencil"></i></button>';
+        html += '<button class="btn btn-outline-secondary" title="Reset Password" onclick="showResetPwModal(' + u.id + ', \'' + safeName + '\')"><i class="bi bi-key"></i></button>';
+        html += '<button class="btn ' + (u.is_active ? 'btn-outline-danger' : 'btn-outline-success') + '" title="' + (u.is_active ? 'Deactivate' : 'Activate') + '" onclick="toggleUserActive(' + u.id + ')"><i class="bi ' + (u.is_active ? 'bi-person-slash' : 'bi-person-check') + '"></i></button>';
+      }
+      html += '</div></div>';
+    });
+    html += '</div></div>';
+  });
+
+  list.innerHTML = html;
 }
 
 function showCreateUserModal() {
@@ -1957,7 +2015,7 @@ function showGroupInfoModal() {
       if (!res.success) return;
       const list = document.getElementById('groupMembersList');
       const conv = res.data.conversation;
-      const canManage = PORTAL_USER.role === 'CLIENT_ADMIN' || PORTAL_USER.role === 'CLIENT_MANAGER' || conv.created_by === PORTAL_USER.id;
+      const canManage = ['CLIENT_ADMIN', 'CLIENT_TOP_MGMT', 'CLIENT_MGMT', 'CLIENT_MANAGER'].includes(PORTAL_USER.role) || conv.created_by === PORTAL_USER.id;
 
       list.innerHTML = res.data.participants.map(p => {
         const isCreator = p.id === conv.created_by;
@@ -1968,7 +2026,7 @@ function showGroupInfoModal() {
           <div class="contact-avatar" style="width:32px;height:32px;font-size:0.75rem">${p.name.charAt(0).toUpperCase()}</div>
           <div style="flex:1">
             <div class="small fw-bold">${escapeHtml(p.name)}</div>
-            <div style="font-size:0.65rem;color:var(--tf-text-muted)">${p.role_name.replace('CLIENT_', '')} ${isCreator ? '(Creator)' : ''}</div>
+            <div style="font-size:0.65rem;color:var(--tf-text-muted)">${isCreator ? 'Creator' : ''}</div>
           </div>
           ${removeBtn}
         </div>`;

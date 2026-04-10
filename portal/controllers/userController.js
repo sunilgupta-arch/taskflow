@@ -7,7 +7,7 @@ class PortalUserController {
   // Render users page (admin only)
   static async index(req, res) {
     try {
-      const [roles] = await db.query("SELECT * FROM roles WHERE name IN ('CLIENT_MANAGER', 'CLIENT_USER')");
+      const [roles] = await db.query("SELECT * FROM roles WHERE name IN ('CLIENT_TOP_MGMT', 'CLIENT_MGMT', 'CLIENT_MANAGER', 'CLIENT_USER')");
       const [orgs] = await db.query("SELECT * FROM organizations WHERE org_type = 'CLIENT'");
       res.render('portal/users', {
         title: 'Team - Client Portal',
@@ -30,9 +30,9 @@ class PortalUserController {
                 r.name as role_name, r.id as role_id
          FROM users u
          JOIN roles r ON u.role_id = r.id
-         WHERE r.name IN ('CLIENT_ADMIN', 'CLIENT_MANAGER', 'CLIENT_USER')
+         WHERE r.name IN ('CLIENT_ADMIN', 'CLIENT_TOP_MGMT', 'CLIENT_MGMT', 'CLIENT_MANAGER', 'CLIENT_USER')
            AND u.email != 'system@taskflow.local'
-         ORDER BY FIELD(r.name, 'CLIENT_ADMIN', 'CLIENT_MANAGER', 'CLIENT_USER'), u.name`
+         ORDER BY FIELD(r.name, 'CLIENT_ADMIN', 'CLIENT_TOP_MGMT', 'CLIENT_MGMT', 'CLIENT_MANAGER', 'CLIENT_USER'), u.name`
       );
       return ApiResponse.success(res, { users });
     } catch (err) {
@@ -52,9 +52,9 @@ class PortalUserController {
         return ApiResponse.error(res, 'Password must be at least 6 characters', 400);
       }
 
-      // Ensure role is CLIENT_MANAGER or CLIENT_USER only
+      // Ensure valid client role (not admin)
       const [[role]] = await db.query('SELECT name FROM roles WHERE id = ?', [role_id]);
-      if (!role || !['CLIENT_MANAGER', 'CLIENT_USER'].includes(role.name)) {
+      if (!role || !['CLIENT_TOP_MGMT', 'CLIENT_MGMT', 'CLIENT_MANAGER', 'CLIENT_USER'].includes(role.name)) {
         return ApiResponse.error(res, 'Invalid role selected', 400);
       }
 
@@ -101,7 +101,7 @@ class PortalUserController {
       if (email) updates.email = email.trim().toLowerCase();
       if (role_id) {
         const [[role]] = await db.query('SELECT name FROM roles WHERE id = ?', [role_id]);
-        if (role && ['CLIENT_MANAGER', 'CLIENT_USER'].includes(role.name)) {
+        if (role && ['CLIENT_TOP_MGMT', 'CLIENT_MGMT', 'CLIENT_MANAGER', 'CLIENT_USER'].includes(role.name)) {
           updates.role_id = role_id;
         }
       }

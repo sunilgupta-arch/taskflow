@@ -8,7 +8,7 @@ class PortalChat {
       `SELECT u.id, u.name, u.email, r.name as role_name
        FROM users u
        JOIN roles r ON u.role_id = r.id
-       WHERE r.name IN ('CLIENT_ADMIN', 'CLIENT_MANAGER', 'CLIENT_USER')
+       WHERE r.name IN ('CLIENT_ADMIN', 'CLIENT_TOP_MGMT', 'CLIENT_MGMT', 'CLIENT_MANAGER', 'CLIENT_USER')
          AND u.is_active = 1 AND u.id != ? AND u.email != 'system@taskflow.local'
        ORDER BY u.name`,
       [excludeUserId]

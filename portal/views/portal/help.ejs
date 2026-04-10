@@ -1,0 +1,1126 @@
+<div class="help-container">
+  <div class="help-sidebar">
+    <div class="help-sidebar-header">
+      <h6 class="mb-0">Help & Training</h6>
+    </div>
+    <div class="help-nav" id="helpNav">
+      <div class="help-nav-section">Getting Started</div>
+      <a class="help-nav-item active" href="#" onclick="showHelpSection('overview')">Portal Overview</a>
+      <a class="help-nav-item" href="#" onclick="showHelpSection('first-login')">First Login Guide</a>
+      <a class="help-nav-item" href="#" onclick="showHelpSection('navigation')">Navigation Guide</a>
+
+      <div class="help-nav-section">Features</div>
+      <a class="help-nav-item" href="#" onclick="showHelpSection('chat')">Chat</a>
+      <a class="help-nav-item" href="#" onclick="showHelpSection('tasks')">Tasks</a>
+      <a class="help-nav-item" href="#" onclick="showHelpSection('notes')">Notes & Dictation</a>
+      <a class="help-nav-item" href="#" onclick="showHelpSection('admin-chat')">Admin Chat</a>
+      <% if (['CLIENT_ADMIN', 'CLIENT_TOP_MGMT'].includes(user.role_name)) { %>
+        <a class="help-nav-item" href="#" onclick="showHelpSection('team-india')">Team India</a>
+        <a class="help-nav-item" href="#" onclick="showHelpSection('bridge-chat')">Bridge Chat</a>
+      <% } %>
+      <a class="help-nav-item" href="#" onclick="showHelpSection('files')">Files & Attachments</a>
+
+      <% if (user.role_name === 'CLIENT_ADMIN') { %>
+        <div class="help-nav-section">Administration</div>
+        <a class="help-nav-item" href="#" onclick="showHelpSection('roles')">Roles & Hierarchy</a>
+        <a class="help-nav-item" href="#" onclick="showHelpSection('team-mgmt')">Team Management</a>
+        <a class="help-nav-item" href="#" onclick="showHelpSection('permissions')">Permissions Matrix</a>
+      <% } %>
+
+      <div class="help-nav-section">Account & Security</div>
+      <a class="help-nav-item" href="#" onclick="showHelpSection('security')">Security & Sessions</a>
+      <a class="help-nav-item" href="#" onclick="showHelpSection('settings')">Settings & Password</a>
+
+      <div class="help-nav-section">Support</div>
+      <a class="help-nav-item" href="#" onclick="showHelpSection('tips')">Tips & Shortcuts</a>
+      <a class="help-nav-item" href="#" onclick="showHelpSection('troubleshooting')">Troubleshooting</a>
+      <a class="help-nav-item" href="#" onclick="showHelpSection('faq')">FAQ</a>
+    </div>
+  </div>
+
+  <div class="help-content" id="helpContent">
+
+    <!-- ═══ OVERVIEW ═══ -->
+    <div class="help-section" id="section-overview">
+      <h4>Welcome to the Client Portal</h4>
+      <p class="help-lead">Your private communication and task management hub. Everything you need to collaborate with your team and monitor work — all in one place.</p>
+
+      <div class="help-cards">
+        <div class="help-card">
+          <div class="help-card-icon"><i class="bi bi-chat-dots-fill"></i></div>
+          <h6>Chat</h6>
+          <p>Private 1-to-1 and group conversations with your team. Share files, images, and stay connected in real-time.</p>
+        </div>
+        <div class="help-card">
+          <div class="help-card-icon"><i class="bi bi-kanban-fill"></i></div>
+          <h6>Tasks</h6>
+          <p>Create, assign, and track tasks with priority levels, due dates, and threaded correspondence.</p>
+        </div>
+        <div class="help-card">
+          <div class="help-card-icon"><i class="bi bi-journal-text"></i></div>
+          <h6>Notes</h6>
+          <p>Personal notepad with auto-save, search, pin, export, and voice dictation.</p>
+        </div>
+        <div class="help-card">
+          <div class="help-card-icon"><i class="bi bi-flag-fill"></i></div>
+          <h6>Team India</h6>
+          <p>Live employee status dashboard. See who's working, what they're doing, and chat with them directly.</p>
+        </div>
+        <div class="help-card">
+          <div class="help-card-icon"><i class="bi bi-headset"></i></div>
+          <h6>Admin Chat</h6>
+          <p>Direct line to the local admin. Always one click away from any page in the portal.</p>
+        </div>
+        <div class="help-card">
+          <div class="help-card-icon"><i class="bi bi-shield-lock-fill"></i></div>
+          <h6>Private & Secure</h6>
+          <p>The entire portal is invisible to the local team. Your conversations, tasks, and notes are completely private.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ FIRST LOGIN ═══ -->
+    <div class="help-section" id="section-first-login" style="display:none">
+      <h4>First Login Guide</h4>
+      <p class="help-lead">New to the portal? Here's everything you need to get started in 5 minutes.</p>
+
+      <div class="help-block">
+        <h6>Step 1: Log In</h6>
+        <ol>
+          <li>Open the portal URL in your browser (Chrome or Edge recommended)</li>
+          <li>Enter the <strong>email</strong> and <strong>password</strong> provided by your admin</li>
+          <li>Click <strong>Login</strong> — you'll land on the Chat page</li>
+        </ol>
+        <div class="help-callout info">
+          <i class="bi bi-info-circle-fill me-2"></i>
+          If you can't log in, contact your admin to verify your credentials or check if your account is active.
+        </div>
+      </div>
+
+      <div class="help-block">
+        <h6>Step 2: Change Your Password</h6>
+        <ol>
+          <li>Click your name in the <strong>top-right corner</strong></li>
+          <li>Select <strong>Change Password</strong></li>
+          <li>Set a new password (minimum 6 characters) and confirm it</li>
+        </ol>
+        <div class="help-callout warning">
+          <i class="bi bi-exclamation-triangle-fill me-2"></i>
+          We strongly recommend changing your default password immediately after your first login.
+        </div>
+      </div>
+
+      <div class="help-block">
+        <h6>Step 3: Choose Your Theme</h6>
+        <p>Click the <strong>sun/moon icon</strong> in the top-right to switch between dark and light mode. Your preference is saved automatically.</p>
+      </div>
+
+      <div class="help-block">
+        <h6>Step 4: Explore the Portal</h6>
+        <table class="help-table">
+          <tr><td><i class="bi bi-chat-dots me-2"></i><strong>Chat</strong></td><td>Start a conversation with a team member</td></tr>
+          <tr><td><i class="bi bi-kanban me-2"></i><strong>Tasks</strong></td><td>View tasks assigned to you, or create a new one</td></tr>
+          <tr><td><i class="bi bi-journal-text me-2"></i><strong>Notes</strong></td><td>Create a personal note — it auto-saves as you type</td></tr>
+          <tr><td><i class="bi bi-headset me-2"></i><strong>Admin Chat</strong></td><td>Click the headset button (top-right) to chat with local admin</td></tr>
+        </table>
+      </div>
+
+      <div class="help-block">
+        <h6>Step 5: Know Your Notifications</h6>
+        <ul>
+          <li>You'll hear a <strong>notification sound</strong> when you receive a new message or task</li>
+          <li><strong>Toast messages</strong> appear in the top-right — click them to navigate directly</li>
+          <li>Unread message badges show on the Chat tab and sidebar</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- ═══ NAVIGATION ═══ -->
+    <div class="help-section" id="section-navigation" style="display:none">
+      <h4>Navigation Guide</h4>
+      <p class="help-lead">The portal has a clean top navigation bar with all your tools.</p>
+
+      <div class="help-block">
+        <h6><i class="bi bi-layout-text-sidebar-reverse me-2"></i>Top Navigation</h6>
+        <table class="help-table">
+          <tr><td><strong>Chat</strong></td><td>All your conversations — 1-to-1 and group chats</td></tr>
+          <tr><td><strong>Tasks</strong></td><td>Task board — create, assign, track, and comment on tasks</td></tr>
+          <tr><td><strong>Notes</strong></td><td>Your personal notes with auto-save and dictation</td></tr>
+          <tr><td><strong>Team India</strong></td><td>Live employee status and bridge chat (Admin & Top Mgmt only)</td></tr>
+          <tr><td><strong>Team</strong></td><td>Manage portal users — add, edit, deactivate (Admin only)</td></tr>
+          <tr><td><strong>Help</strong></td><td>This help & training section</td></tr>
+        </table>
+      </div>
+
+      <div class="help-block">
+        <h6><i class="bi bi-gear me-2"></i>Top Right Actions</h6>
+        <table class="help-table">
+          <tr><td><i class="bi bi-headset me-2"></i><strong>Admin Chat Button</strong></td><td>Opens a direct chat with the local admin from any page</td></tr>
+          <tr><td><i class="bi bi-sun me-2"></i><strong>Theme Toggle</strong></td><td>Switch between dark and light mode (preference saved automatically)</td></tr>
+          <tr><td><i class="bi bi-person-circle me-2"></i><strong>Profile Menu</strong></td><td>Change password, view your email, logout</td></tr>
+        </table>
+      </div>
+
+      <div class="help-block">
+        <h6><i class="bi bi-bell me-2"></i>Notification Indicators</h6>
+        <table class="help-table">
+          <tr><td><strong>Chat badge</strong></td><td>Red number on Chat tab showing total unread messages</td></tr>
+          <tr><td><strong>Sidebar badge</strong></td><td>Individual unread count next to each conversation</td></tr>
+          <tr><td><strong>Toast popups</strong></td><td>Slide-in alerts in top-right for new messages, tasks, and status changes</td></tr>
+          <tr><td><strong>Sound alert</strong></td><td>Notification tone plays for new messages and task events</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- ═══ CHAT ═══ -->
+    <div class="help-section" id="section-chat" style="display:none">
+      <h4>Chat</h4>
+      <p class="help-lead">Real-time messaging with your team — private and secure.</p>
+
+      <div class="help-block">
+        <h6>Starting a Chat</h6>
+        <ol>
+          <li>Click <strong>+ New Chat</strong> or the contact list to start a 1-to-1 conversation</li>
+          <li>Click <strong>New Group</strong> to create a group chat (give it a name and select members)</li>
+          <li>Every conversation is private — only participants can see it</li>
+        </ol>
+        <div class="help-callout info">
+          <i class="bi bi-info-circle-fill me-2"></i>
+          <strong>Who can create groups?</strong> Admin, Top Management, Management, and Managers can create group chats. Users can only participate in groups they're added to.
+        </div>
+      </div>
+
+      <div class="help-block">
+        <h6>Messaging Features</h6>
+        <table class="help-table">
+          <tr><td><i class="bi bi-send me-2"></i><strong>Send Message</strong></td><td>Type and press Enter (or click send). Shift+Enter for new line.</td></tr>
+          <tr><td><i class="bi bi-paperclip me-2"></i><strong>Send Files</strong></td><td>Click paperclip to attach images, documents, or any file (max 100 MB per file)</td></tr>
+          <tr><td><i class="bi bi-emoji-smile me-2"></i><strong>Emojis</strong></td><td>Click smiley face to insert emojis. Click anywhere outside to close the picker.</td></tr>
+          <tr><td><i class="bi bi-mic me-2"></i><strong>Dictation</strong></td><td>Click microphone to speak your message (Chrome/Edge). Click again to stop.</td></tr>
+          <tr><td><i class="bi bi-search me-2"></i><strong>Search</strong></td><td>Click search icon in chat header to find messages within the conversation</td></tr>
+        </table>
+      </div>
+
+      <div class="help-block">
+        <h6>Editing & Deleting Messages</h6>
+        <table class="help-table">
+          <tr><td><i class="bi bi-pencil me-2"></i><strong>Edit Message</strong></td><td>Hover over your sent message, click the three-dot menu, select <strong>Edit</strong>. The message will show <em>(edited)</em> after saving.</td></tr>
+          <tr><td><i class="bi bi-trash me-2"></i><strong>Delete Message</strong></td><td>Hover over your sent message, click the three-dot menu, select <strong>Delete</strong>. The message will show <em>"This message was deleted"</em> for everyone.</td></tr>
+          <tr><td><i class="bi bi-file-earmark-x me-2"></i><strong>Delete File</strong></td><td>You can delete file/image messages the same way. The file is permanently removed from the server.</td></tr>
+        </table>
+        <div class="help-callout warning">
+          <i class="bi bi-exclamation-triangle-fill me-2"></i>
+          You can only edit or delete your own messages. Deleted messages and files cannot be recovered.
+        </div>
+      </div>
+
+      <div class="help-block">
+        <h6>Message Status Indicators</h6>
+        <table class="help-table">
+          <tr><td><i class="bi bi-check"></i> Single tick</td><td>Message sent to the server</td></tr>
+          <tr><td><i class="bi bi-check-all"></i> Double tick (grey)</td><td>Message delivered</td></tr>
+          <tr><td><i class="bi bi-check-all" style="color:#34b7f1"></i> Double tick (blue)</td><td>Message read by recipient</td></tr>
+          <tr><td><span class="online-dot-sm" style="display:inline-block"></span> Green dot</td><td>User is currently online in the portal</td></tr>
+          <tr><td><em>typing...</em></td><td>The other person is typing a message</td></tr>
+        </table>
+      </div>
+
+      <div class="help-block">
+        <h6>Group Chat Management</h6>
+        <ul>
+          <li>Click the <strong>people icon</strong> in chat header to see group members</li>
+          <li>Add new members from the modal — select from your team list</li>
+          <li>Remove a member by clicking the <strong>X</strong> next to their name</li>
+          <li>Only the group creator or authorized roles can manage members</li>
+          <li>When you add someone, they can see all messages from that point forward</li>
+        </ul>
+      </div>
+
+      <div class="help-block">
+        <h6>Date Separators & Scroll Loading</h6>
+        <ul>
+          <li>Messages are grouped by date with labels like <strong>Today</strong>, <strong>Yesterday</strong>, or the full date</li>
+          <li>Scroll up to automatically load older messages — no need to click anything</li>
+          <li>URLs pasted in messages automatically become clickable links</li>
+          <li>Image files show an inline preview thumbnail — click to view full size</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- ═══ TASKS ═══ -->
+    <div class="help-section" id="section-tasks" style="display:none">
+      <h4>Tasks</h4>
+      <p class="help-lead">Create, assign, and track work with full correspondence.</p>
+
+      <div class="help-block">
+        <h6>Creating a Task</h6>
+        <ol>
+          <li>Click <strong>New Task</strong> button</li>
+          <li>Fill in: Title (required), Description, Priority, Due Date, Assignee</li>
+          <li>Use the <strong>mic button</strong> to dictate title or description</li>
+          <li>Click <strong>Create Task</strong></li>
+        </ol>
+        <div class="help-callout info">
+          <i class="bi bi-info-circle-fill me-2"></i>
+          <strong>Who can you assign to?</strong> You can assign tasks to people at your level or below in the hierarchy — never upward. Users cannot create tasks.
+        </div>
+      </div>
+
+      <div class="help-block">
+        <h6>Priority Levels</h6>
+        <table class="help-table">
+          <tr><td><span class="priority-badge priority-urgent">URGENT</span></td><td>Immediate attention required — shows prominently in red</td></tr>
+          <tr><td><span class="priority-badge priority-high">HIGH</span></td><td>Important, should be done today</td></tr>
+          <tr><td><span class="priority-badge priority-medium">MEDIUM</span></td><td>Standard priority — default for most tasks</td></tr>
+          <tr><td><span class="priority-badge priority-low">LOW</span></td><td>Can wait, no rush</td></tr>
+        </table>
+      </div>
+
+      <div class="help-block">
+        <h6>Task Status Flow</h6>
+        <table class="help-table">
+          <tr><td><span class="status-badge status-open">OPEN</span></td><td>Newly created, not started yet</td></tr>
+          <tr><td><span class="status-badge status-in_progress">IN PROGRESS</span></td><td>Being actively worked on</td></tr>
+          <tr><td><span class="status-badge status-completed"><i class="bi bi-check-circle-fill me-1"></i>DONE</span></td><td>Completed — creator gets a success notification</td></tr>
+          <tr><td><span class="status-badge status-cancelled">CANCELLED</span></td><td>No longer needed</td></tr>
+        </table>
+        <div class="help-callout success">
+          <i class="bi bi-check-circle-fill me-2"></i>
+          When a task is marked <strong>Done</strong>, the task creator receives a toast notification with a celebration message and sound.
+        </div>
+      </div>
+
+      <div class="help-block">
+        <h6>Task Correspondence (Comments)</h6>
+        <ul>
+          <li>Click any task to open its detail panel on the right</li>
+          <li>Add comments in the correspondence area at the bottom</li>
+          <li>Attach files to comments using the <strong>paperclip</strong> button (max 100 MB)</li>
+          <li>Use the <strong>mic</strong> button to dictate comments</li>
+          <li>Use <strong>emojis</strong> in your comments</li>
+          <li><strong>Edit</strong> your own comments by hovering and clicking the pencil icon — edited comments show <em>(edited)</em></li>
+          <li>Both the task creator and assignee receive notifications for new comments</li>
+        </ul>
+      </div>
+
+      <div class="help-block">
+        <h6>Filtering Tasks</h6>
+        <p>Use the filter bar at the top to narrow down your task list:</p>
+        <table class="help-table">
+          <tr><td><strong>Status filter</strong></td><td>Show only Open, In Progress, Done, or Cancelled tasks</td></tr>
+          <tr><td><strong>Priority filter</strong></td><td>Show only Urgent, High, Medium, or Low tasks</td></tr>
+          <tr><td><strong>Search</strong></td><td>Type to search tasks by title</td></tr>
+        </table>
+      </div>
+
+      <div class="help-block">
+        <h6>Overdue Tasks</h6>
+        <p>Tasks past their due date show a red <strong>OVERDUE</strong> badge and a red left border. To resolve, either:</p>
+        <ul>
+          <li>Update the task status to <strong>Done</strong> or <strong>Cancelled</strong></li>
+          <li>Extend the due date to a future date</li>
+        </ul>
+      </div>
+
+      <div class="help-block">
+        <h6>Task Notifications</h6>
+        <table class="help-table">
+          <tr><td><i class="bi bi-bell me-2"></i><strong>New task assigned</strong></td><td>Toast notification with sound to the assignee</td></tr>
+          <tr><td><i class="bi bi-arrow-repeat me-2"></i><strong>Status changed</strong></td><td>Toast to both creator and assignee</td></tr>
+          <tr><td><i class="bi bi-chat-left-text me-2"></i><strong>New comment</strong></td><td>Toast to creator and assignee</td></tr>
+          <tr><td><i class="bi bi-clock me-2"></i><strong>Due today</strong></td><td>Reminder toast on page load</td></tr>
+          <tr><td><i class="bi bi-check-circle me-2"></i><strong>Task completed</strong></td><td>Success toast with celebration to creator</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- ═══ NOTES ═══ -->
+    <div class="help-section" id="section-notes" style="display:none">
+      <h4>Notes & Dictation</h4>
+      <p class="help-lead">Your personal notepad — auto-saves as you type. Only you can see your notes.</p>
+
+      <div class="help-block">
+        <h6>Using Notes</h6>
+        <table class="help-table">
+          <tr><td><i class="bi bi-plus-lg me-2"></i><strong>Create</strong></td><td>Click the + button. A new note opens with a date/time stamp as the title.</td></tr>
+          <tr><td><i class="bi bi-pencil me-2"></i><strong>Edit</strong></td><td>Just type — auto-saves 2 seconds after you stop typing. No save button needed.</td></tr>
+          <tr><td><i class="bi bi-search me-2"></i><strong>Search</strong></td><td>Type in the search bar to find notes by title or content.</td></tr>
+          <tr><td><i class="bi bi-pin-angle me-2"></i><strong>Pin</strong></td><td>Click the pin icon to keep important notes at the top of the list. Click again to unpin.</td></tr>
+          <tr><td><i class="bi bi-file-text me-2"></i><strong>Export as Text</strong></td><td>Click the file icon to download note as a .txt file to your computer.</td></tr>
+          <tr><td><i class="bi bi-printer me-2"></i><strong>Print / PDF</strong></td><td>Click the printer icon to open a print-friendly version. Use your browser's "Save as PDF" to make a PDF.</td></tr>
+          <tr><td><i class="bi bi-trash me-2"></i><strong>Delete</strong></td><td>Click the trash icon. You'll be asked to confirm before the note is permanently deleted.</td></tr>
+        </table>
+      </div>
+
+      <div class="help-block">
+        <h6>Voice Dictation</h6>
+        <p>Dictation is available everywhere in the portal — notes, chat, task creation, and task comments.</p>
+        <ol>
+          <li>Click the <strong>microphone icon</strong> <i class="bi bi-mic"></i> next to any text input</li>
+          <li>The button turns <strong style="color:var(--tf-danger)">red</strong> and pulses — you're being heard</li>
+          <li>Speak naturally — text appears in the field in real-time</li>
+          <li>Click the mic again (or it turns off automatically when you stop speaking)</li>
+        </ol>
+        <div class="help-callout info">
+          <i class="bi bi-info-circle-fill me-2"></i>
+          <strong>Browser Support:</strong> Dictation works best in <strong>Google Chrome</strong> and <strong>Microsoft Edge</strong>. Safari has limited support. Firefox does not support it yet. If the mic icon doesn't respond, check that your browser has microphone permission enabled.
+        </div>
+      </div>
+
+      <div class="help-block">
+        <h6>Tips for Notes</h6>
+        <ul>
+          <li>Notes are <strong>personal</strong> — no one else can see them, not even the admin</li>
+          <li>You can have unlimited notes</li>
+          <li>Pinned notes always appear at the top regardless of when they were last edited</li>
+          <li>The auto-save indicator appears briefly when your note is saved</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- ═══ ADMIN CHAT ═══ -->
+    <div class="help-section" id="section-admin-chat" style="display:none">
+      <h4>Admin Chat</h4>
+      <p class="help-lead">A dedicated direct line to the local admin — always one click away from any page.</p>
+
+      <div class="help-block">
+        <h6>What is Admin Chat?</h6>
+        <p>The Admin Chat is a special bridge chat that connects you directly with the local team's admin. Unlike portal chat (which is between portal users), this crosses the boundary and reaches the local team admin.</p>
+        <div class="help-callout info">
+          <i class="bi bi-info-circle-fill me-2"></i>
+          This is the <strong>only</strong> way to communicate with the local admin from the portal. The local admin sees your messages in a floating chat widget on their side.
+        </div>
+      </div>
+
+      <div class="help-block">
+        <h6>How to Use</h6>
+        <ol>
+          <li>Click the <strong><i class="bi bi-headset"></i> Admin Chat</strong> button in the top-right corner of any page</li>
+          <li>A chat panel slides open on the right side</li>
+          <li>Type your message and press Enter or click Send</li>
+          <li>You can also <strong>send files</strong> (paperclip icon) and use <strong>dictation</strong> (mic icon)</li>
+          <li>Click the <strong>X</strong> button or click outside to close the panel</li>
+        </ol>
+      </div>
+
+      <div class="help-block">
+        <h6>Features</h6>
+        <table class="help-table">
+          <tr><td><i class="bi bi-chat-text me-2"></i><strong>Text messages</strong></td><td>Full real-time messaging like any other chat</td></tr>
+          <tr><td><i class="bi bi-paperclip me-2"></i><strong>File sharing</strong></td><td>Send documents, images, or any file (max 100 MB)</td></tr>
+          <tr><td><i class="bi bi-mic me-2"></i><strong>Dictation</strong></td><td>Speak your message using the mic button</td></tr>
+          <tr><td><i class="bi bi-trash me-2"></i><strong>Delete messages</strong></td><td>Delete your own messages — file is removed from server too</td></tr>
+          <tr><td><i class="bi bi-bell me-2"></i><strong>Notifications</strong></td><td>Toast + sound when admin replies (unless the panel is open)</td></tr>
+        </table>
+      </div>
+
+      <div class="help-block">
+        <h6>Good to Know</h6>
+        <ul>
+          <li>Admin Chat is available from <strong>every page</strong> in the portal — chat, tasks, notes, team india, help, everywhere</li>
+          <li>Your conversation persists — close the panel and reopen it, your history is still there</li>
+          <li>The local admin sees all portal user conversations in a floating widget on their dashboard</li>
+          <li>If the admin is offline, your message is still delivered — they'll see it when they log in</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- ═══ TEAM INDIA ═══ -->
+    <div class="help-section" id="section-team-india" style="display:none">
+      <h4>Team India</h4>
+      <p class="help-lead">Live dashboard showing your India team's work status. Available to Admin and Top Management only.</p>
+
+      <div class="help-block">
+        <h6>Status Table</h6>
+        <p>Each row in the table represents one employee on the India team. The status badge tells you what they're doing right now:</p>
+        <table class="help-table">
+          <tr><td><span class="ts-badge ts-working">Working</span></td><td>Currently active on a task</td></tr>
+          <tr><td><span class="ts-badge ts-idle">Idle</span></td><td>Logged in but no active task</td></tr>
+          <tr><td><span class="ts-badge ts-absent">Not Logged In</span></td><td>Should be working but hasn't logged in</td></tr>
+          <tr><td><span class="ts-badge ts-extending">Extending Shift</span></td><td>Still working after their shift ended</td></tr>
+          <tr><td><span class="ts-badge ts-off">Off Shift</span></td><td>Not on duty right now</td></tr>
+          <tr><td><span class="ts-badge ts-off">Week Off</span></td><td>Scheduled day off</td></tr>
+          <tr><td><span class="ts-badge ts-leave">On Leave</span></td><td>Approved leave</td></tr>
+        </table>
+      </div>
+
+      <div class="help-block">
+        <h6>Employee Detail Panel</h6>
+        <ol>
+          <li>Click any employee row to open their detail panel on the right</li>
+          <li><strong>Today's Tasks</strong> tab shows their current tasks with status and priority</li>
+          <li><strong>Chat</strong> tab lets you message them directly via bridge chat</li>
+        </ol>
+      </div>
+
+      <div class="help-block">
+        <h6>Auto-Refresh</h6>
+        <p>The table refreshes every <strong>30 seconds</strong> automatically. You'll always see the latest status without reloading the page.</p>
+      </div>
+    </div>
+
+    <!-- ═══ BRIDGE CHAT ═══ -->
+    <div class="help-section" id="section-bridge-chat" style="display:none">
+      <h4>Bridge Chat</h4>
+      <p class="help-lead">Direct messaging between portal users and local team employees — bridging the two sides.</p>
+
+      <div class="help-block">
+        <h6>What is Bridge Chat?</h6>
+        <p>Bridge Chat is a special chat system that crosses the boundary between the Client Portal and the local TaskFlow. It allows you to message individual employees on the India team directly.</p>
+        <div class="help-callout info">
+          <i class="bi bi-info-circle-fill me-2"></i>
+          Bridge Chat is different from regular portal chat. Portal chat is between portal users only. Bridge chat connects you to the local team employees.
+        </div>
+      </div>
+
+      <div class="help-block">
+        <h6>How to Start a Bridge Chat</h6>
+        <ol>
+          <li>Go to <strong>Team India</strong> page</li>
+          <li>Click on any employee row to open their panel</li>
+          <li>Click the <strong>Chat</strong> tab inside the employee panel</li>
+          <li>Type your message and send — the employee sees it in a floating widget on their TaskFlow dashboard</li>
+        </ol>
+      </div>
+
+      <div class="help-block">
+        <h6>Bridge Chat Features</h6>
+        <table class="help-table">
+          <tr><td><i class="bi bi-chat-text me-2"></i><strong>Text messages</strong></td><td>Real-time messaging between portal and local team</td></tr>
+          <tr><td><i class="bi bi-paperclip me-2"></i><strong>File sharing</strong></td><td>Send documents, images, and files (max 100 MB)</td></tr>
+          <tr><td><i class="bi bi-mic me-2"></i><strong>Dictation</strong></td><td>Use voice input for messages</td></tr>
+          <tr><td><i class="bi bi-trash me-2"></i><strong>Delete messages</strong></td><td>Remove your own messages and files</td></tr>
+          <tr><td><i class="bi bi-bell me-2"></i><strong>Notifications</strong></td><td>Toast + sound when the employee replies</td></tr>
+        </table>
+      </div>
+
+      <div class="help-block">
+        <h6>Important Notes</h6>
+        <ul>
+          <li>Each conversation is between <strong>one portal user</strong> and <strong>one local employee</strong></li>
+          <li>The local employee sees your messages in a floating chat widget on their side</li>
+          <li>Messages are delivered even if the employee is offline — they'll see them when they log in</li>
+          <li>Bridge chat files are stored separately from portal chat files for security</li>
+          <li>The local team cannot initiate bridge chats — only portal users can start them</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- ═══ FILES & ATTACHMENTS ═══ -->
+    <div class="help-section" id="section-files" style="display:none">
+      <h4>Files & Attachments</h4>
+      <p class="help-lead">Everything you need to know about sharing files in the portal.</p>
+
+      <div class="help-block">
+        <h6>File Size Limit</h6>
+        <div class="help-callout info">
+          <i class="bi bi-info-circle-fill me-2"></i>
+          Maximum file size: <strong>100 MB</strong> per file. This applies to all file uploads — chat, task comments, admin chat, and bridge chat.
+        </div>
+      </div>
+
+      <div class="help-block">
+        <h6>Where Can You Send Files?</h6>
+        <table class="help-table">
+          <tr><td><i class="bi bi-chat-dots me-2"></i><strong>Portal Chat</strong></td><td>Click the paperclip icon in any conversation</td></tr>
+          <tr><td><i class="bi bi-kanban me-2"></i><strong>Task Comments</strong></td><td>Click the paperclip icon in the task correspondence area</td></tr>
+          <tr><td><i class="bi bi-headset me-2"></i><strong>Admin Chat</strong></td><td>Click the paperclip icon in the admin chat panel</td></tr>
+          <tr><td><i class="bi bi-flag me-2"></i><strong>Bridge Chat</strong></td><td>Click the paperclip icon in the Team India employee chat</td></tr>
+        </table>
+      </div>
+
+      <div class="help-block">
+        <h6>Supported File Types</h6>
+        <p>You can upload <strong>any file type</strong> — documents, spreadsheets, PDFs, images, archives, etc. The following have special handling:</p>
+        <table class="help-table">
+          <tr><td><strong>Images</strong> (JPG, PNG, GIF, WebP)</td><td>Show an inline preview thumbnail in chat. Click to view full size.</td></tr>
+          <tr><td><strong>Documents</strong> (PDF, DOC, XLS, etc.)</td><td>Show as a download link with file name and size.</td></tr>
+          <tr><td><strong>Other files</strong></td><td>Show as a downloadable attachment with file name and size.</td></tr>
+        </table>
+      </div>
+
+      <div class="help-block">
+        <h6>File Security</h6>
+        <ul>
+          <li>Files are stored securely on the server — not accessible via direct URL</li>
+          <li>Only participants of the conversation or task can download the file</li>
+          <li>Chat files, task files, admin chat files, and bridge chat files are all stored in <strong>separate directories</strong></li>
+          <li>When you <strong>delete a message</strong> that contains a file, the file is permanently removed from the server</li>
+        </ul>
+      </div>
+
+      <div class="help-block">
+        <h6>Downloading Files</h6>
+        <ul>
+          <li>Click the <strong>file name</strong> or <strong>download icon</strong> to save the file to your computer</li>
+          <li>For images, click the thumbnail to view full size, then right-click to save</li>
+          <li>File downloads are authenticated — you must be logged in to download</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- ═══ ROLES & HIERARCHY (Admin only) ═══ -->
+    <div class="help-section" id="section-roles" style="display:none">
+      <h4>Roles & Hierarchy</h4>
+      <p class="help-lead">Understanding the power structure in the Client Portal.</p>
+
+      <div class="help-block">
+        <h6>Role Hierarchy (Top to Bottom)</h6>
+        <div class="help-hierarchy">
+          <div class="help-hierarchy-item level-1">
+            <div class="help-hierarchy-badge admin">ADMIN</div>
+            <div>
+              <strong>Client Admin (Owner)</strong>
+              <p>Full control. Can do everything — manage users, see all tasks, access Team India, assign to anyone.</p>
+            </div>
+          </div>
+          <div class="help-hierarchy-item level-2">
+            <div class="help-hierarchy-badge top-mgmt">TOP MGMT</div>
+            <div>
+              <strong>Top Management (C-Suite)</strong>
+              <p>Can access Team India, see all tasks, create tasks, assign to Top Mgmt and below. Cannot manage users.</p>
+            </div>
+          </div>
+          <div class="help-hierarchy-item level-3">
+            <div class="help-hierarchy-badge mgmt">MGMT</div>
+            <div>
+              <strong>Management</strong>
+              <p>Can create tasks, assign to Mgmt, Manager, and User level. Cannot see Team India or all tasks — only their own.</p>
+            </div>
+          </div>
+          <div class="help-hierarchy-item level-4">
+            <div class="help-hierarchy-badge manager">MANAGER</div>
+            <div>
+              <strong>Manager</strong>
+              <p>Can create tasks, assign to Managers and Users. Cannot assign upward. Sees only their own tasks.</p>
+            </div>
+          </div>
+          <div class="help-hierarchy-item level-5">
+            <div class="help-hierarchy-badge user-role">USER</div>
+            <div>
+              <strong>User</strong>
+              <p>Can view and update assigned tasks, participate in chats. Cannot create tasks or groups.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="help-block">
+        <h6>Assignment Rules</h6>
+        <div class="help-callout info">
+          <i class="bi bi-info-circle-fill me-2"></i>
+          <strong>Golden Rule:</strong> You can assign tasks to people at your level or below — never upward.
+        </div>
+        <table class="help-table">
+          <thead><tr><th>Role</th><th>Can Assign To</th></tr></thead>
+          <tr><td>Admin</td><td>Everyone (Admin, Top Mgmt, Mgmt, Manager, User)</td></tr>
+          <tr><td>Top Mgmt</td><td>Top Mgmt, Mgmt, Manager, User</td></tr>
+          <tr><td>Mgmt</td><td>Mgmt, Manager, User</td></tr>
+          <tr><td>Manager</td><td>Manager, User</td></tr>
+          <tr><td>User</td><td>Cannot assign tasks</td></tr>
+        </table>
+      </div>
+
+      <div class="help-block">
+        <h6>Important Notes for Admin</h6>
+        <div class="help-callout warning">
+          <i class="bi bi-exclamation-triangle-fill me-2"></i>
+          <ul style="margin:0;padding-left:1rem;">
+            <li>Only you (Admin) can create, edit, deactivate, or reset passwords for portal users</li>
+            <li>Role labels are hidden from all users — no one sees anyone else's role in the UI</li>
+            <li>Team India is only visible to you and Top Management</li>
+            <li>You cannot create another Admin — there is only one Admin account</li>
+            <li>Deactivated users cannot log in but their data (messages, tasks, notes) is preserved</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ TEAM MANAGEMENT (Admin only) ═══ -->
+    <div class="help-section" id="section-team-mgmt" style="display:none">
+      <h4>Team Management</h4>
+      <p class="help-lead">Add, edit, and manage your portal team members.</p>
+
+      <div class="help-block">
+        <h6>Adding a New Member</h6>
+        <ol>
+          <li>Go to the <strong>Team</strong> tab in the navigation</li>
+          <li>Click <strong>Add Member</strong></li>
+          <li>Fill in: <strong>Name</strong>, <strong>Email</strong>, <strong>Password</strong> (min 6 characters), and <strong>Role</strong></li>
+          <li>Click <strong>Add Member</strong> to create the account</li>
+          <li>Share the login credentials (email + password) with the new user securely</li>
+        </ol>
+        <div class="help-callout info">
+          <i class="bi bi-info-circle-fill me-2"></i>
+          Available roles when creating a user: <strong>Top Management</strong>, <strong>Management</strong>, <strong>Manager</strong>, and <strong>User</strong>. You cannot create another Admin.
+        </div>
+      </div>
+
+      <div class="help-block">
+        <h6>Managing Members</h6>
+        <table class="help-table">
+          <tr><td><i class="bi bi-pencil me-2"></i><strong>Edit</strong></td><td>Change name, email, or role of an existing user</td></tr>
+          <tr><td><i class="bi bi-key me-2"></i><strong>Reset Password</strong></td><td>Set a new password for the user (min 6 characters)</td></tr>
+          <tr><td><i class="bi bi-person-slash me-2"></i><strong>Deactivate</strong></td><td>Block the user from logging in — all their data is preserved</td></tr>
+          <tr><td><i class="bi bi-person-check me-2"></i><strong>Activate</strong></td><td>Re-enable a deactivated user — they can log in again immediately</td></tr>
+        </table>
+      </div>
+
+      <div class="help-block">
+        <h6>Good to Know</h6>
+        <ul>
+          <li>Changing a user's role takes effect immediately — no need for them to re-login</li>
+          <li>Deactivated users appear greyed out in the team list</li>
+          <li>You cannot delete a user — only deactivate. This preserves all their history.</li>
+          <li>The email address must be unique — no two users can share the same email</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- ═══ PERMISSIONS MATRIX (Admin only) ═══ -->
+    <div class="help-section" id="section-permissions" style="display:none">
+      <h4>Permissions Matrix</h4>
+      <p class="help-lead">A complete reference of what each role can and cannot do.</p>
+
+      <div class="help-block">
+        <div style="overflow-x:auto">
+          <table class="help-table permissions-matrix">
+            <thead>
+              <tr>
+                <th>Feature</th>
+                <th>Admin</th>
+                <th>Top Mgmt</th>
+                <th>Mgmt</th>
+                <th>Manager</th>
+                <th>User</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>1-to-1 Chat</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td></tr>
+              <tr><td>Create Group Chat</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="no">No</td></tr>
+              <tr><td>Edit/Delete Own Messages</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td></tr>
+              <tr><td>Create Tasks</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="no">No</td></tr>
+              <tr><td>See All Tasks</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="no">Own only</td><td class="no">Own only</td><td class="no">Own only</td></tr>
+              <tr><td>Edit Own Comments</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td></tr>
+              <tr><td>Team India</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="no">No</td><td class="no">No</td><td class="no">No</td></tr>
+              <tr><td>Bridge Chat</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="no">No</td><td class="no">No</td><td class="no">No</td></tr>
+              <tr><td>Admin Chat</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td></tr>
+              <tr><td>Notes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td></tr>
+              <tr><td>Manage Users</td><td class="yes">Yes</td><td class="no">No</td><td class="no">No</td><td class="no">No</td><td class="no">No</td></tr>
+              <tr><td>Change Own Password</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td></tr>
+              <tr><td>Theme Preference</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ SECURITY & SESSIONS ═══ -->
+    <div class="help-section" id="section-security" style="display:none">
+      <h4>Security & Sessions</h4>
+      <p class="help-lead">How the portal keeps your data safe and private.</p>
+
+      <div class="help-block">
+        <h6>Portal Privacy</h6>
+        <div class="help-callout success">
+          <i class="bi bi-shield-check me-2"></i>
+          The Client Portal is <strong>completely invisible</strong> to the local team. They cannot see, access, or even know it exists. Your conversations, tasks, and notes are fully private.
+        </div>
+      </div>
+
+      <div class="help-block">
+        <h6>Password Requirements</h6>
+        <table class="help-table">
+          <tr><td><strong>Minimum length</strong></td><td>6 characters</td></tr>
+          <tr><td><strong>Special characters</strong></td><td>Not required, but recommended for stronger security</td></tr>
+          <tr><td><strong>Case sensitivity</strong></td><td>Passwords are case-sensitive (abc is different from ABC)</td></tr>
+        </table>
+        <div class="help-callout warning">
+          <i class="bi bi-exclamation-triangle-fill me-2"></i>
+          Choose a strong password. Avoid using common words, your name, or easily guessable information.
+        </div>
+      </div>
+
+      <div class="help-block">
+        <h6>Login & Sessions</h6>
+        <ul>
+          <li>Your login session is maintained via a secure authentication token</li>
+          <li>The session persists until you <strong>log out</strong> or the token expires</li>
+          <li>You can only be logged in on <strong>one browser tab</strong> at a time — opening the portal in a new tab shares the same session</li>
+          <li>If your session expires, you'll be redirected to the login page automatically</li>
+        </ul>
+      </div>
+
+      <div class="help-block">
+        <h6>Logging Out</h6>
+        <ol>
+          <li>Click your name in the <strong>top-right corner</strong></li>
+          <li>Select <strong>Logout</strong></li>
+          <li>You'll be taken back to the login page</li>
+        </ol>
+        <div class="help-callout info">
+          <i class="bi bi-info-circle-fill me-2"></i>
+          Always log out when using a shared or public computer. Your session token is stored in the browser.
+        </div>
+      </div>
+
+      <div class="help-block">
+        <h6>Data Separation</h6>
+        <ul>
+          <li><strong>Portal chat</strong> data is stored in separate database tables from the local team's chat</li>
+          <li><strong>Portal tasks</strong> are completely separate from the local team's tasks</li>
+          <li><strong>Notes</strong> are private to each individual user — even the admin cannot read your notes</li>
+          <li><strong>Files</strong> are stored in separate directories for portal, bridge, and task attachments</li>
+          <li><strong>Bridge chat</strong> is the only point of contact between portal and local — and it's controlled by you</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- ═══ SETTINGS ═══ -->
+    <div class="help-section" id="section-settings" style="display:none">
+      <h4>Settings & Password</h4>
+
+      <div class="help-block">
+        <h6>Change Your Password</h6>
+        <ol>
+          <li>Click your name in the top-right corner</li>
+          <li>Select <strong>Change Password</strong></li>
+          <li>Enter your new password (minimum 6 characters)</li>
+          <li>Confirm the new password in the second field</li>
+          <li>Click <strong>Update</strong></li>
+        </ol>
+        <div class="help-callout info">
+          <i class="bi bi-info-circle-fill me-2"></i>
+          Your new password takes effect immediately. You do not need to log out and back in.
+        </div>
+      </div>
+
+      <div class="help-block">
+        <h6>Switch Theme</h6>
+        <p>Click the <strong>sun/moon icon</strong> (<i class="bi bi-sun"></i> / <i class="bi bi-moon"></i>) in the top-right to toggle between dark and light mode.</p>
+        <ul>
+          <li>Your preference is saved automatically in your browser</li>
+          <li>The theme affects the entire portal — chat, tasks, notes, and all pages</li>
+          <li>Dark mode is easier on the eyes for extended use, especially at night</li>
+        </ul>
+      </div>
+
+      <div class="help-block">
+        <h6>Forgot Your Password?</h6>
+        <p>There is no self-service password reset. Contact your <strong>Admin</strong> and ask them to reset your password from the <strong>Team</strong> page.</p>
+      </div>
+    </div>
+
+    <!-- ═══ TIPS ═══ -->
+    <div class="help-section" id="section-tips" style="display:none">
+      <h4>Tips & Shortcuts</h4>
+
+      <div class="help-block">
+        <h6>Keyboard Shortcuts</h6>
+        <table class="help-table">
+          <tr><td><kbd>Enter</kbd></td><td>Send message in chat</td></tr>
+          <tr><td><kbd>Shift + Enter</kbd></td><td>New line in message (without sending)</td></tr>
+        </table>
+      </div>
+
+      <div class="help-block">
+        <h6>Chat Pro Tips</h6>
+        <ul>
+          <li><strong>Scroll up</strong> in any chat to load older messages automatically — no button needed</li>
+          <li><strong>Date separators</strong> — labels like "Today", "Yesterday", or "Apr 3, 2026" appear between message groups</li>
+          <li><strong>URLs are clickable</strong> — paste any link and it becomes clickable automatically</li>
+          <li><strong>Images preview inline</strong> — send an image and it shows as a thumbnail in the chat</li>
+          <li><strong>Search within chat</strong> — click the search icon in the chat header to find specific messages</li>
+          <li><strong>Edit typos fast</strong> — hover over your message, click three dots, edit and save</li>
+          <li><strong>Emoji picker closes</strong> — click anywhere outside the emoji panel to dismiss it</li>
+        </ul>
+      </div>
+
+      <div class="help-block">
+        <h6>Task Pro Tips</h6>
+        <ul>
+          <li><strong>Click a toast notification</strong> — task toasts take you directly to that task</li>
+          <li><strong>Filter by status</strong> — quickly see only open or in-progress tasks</li>
+          <li><strong>Check overdue tasks daily</strong> — tasks past their due date are highlighted in red</li>
+          <li><strong>Edit comments</strong> — hover over your comment and click the pencil to fix mistakes</li>
+          <li><strong>Dictate everything</strong> — the mic works in task title, description, and comments</li>
+        </ul>
+      </div>
+
+      <div class="help-block">
+        <h6>Notes Pro Tips</h6>
+        <ul>
+          <li><strong>Auto-save</strong> — just type, no need to press save. It saves 2 seconds after you stop</li>
+          <li><strong>Pin important notes</strong> — pinned notes always stay at the top of your list</li>
+          <li><strong>Export to PDF</strong> — click print icon, then use "Save as PDF" in your browser's print dialog</li>
+          <li><strong>Dictate notes</strong> — click the mic button and speak instead of typing</li>
+          <li><strong>Search notes</strong> — use the search bar to find notes by title or content</li>
+        </ul>
+      </div>
+
+      <div class="help-block">
+        <h6>General Pro Tips</h6>
+        <ul>
+          <li><strong>Use Chrome or Edge</strong> — dictation and all features work best on these browsers</li>
+          <li><strong>Dark mode at night</strong> — toggle the theme for comfortable viewing</li>
+          <li><strong>Admin Chat from anywhere</strong> — the headset button is always in the top-right, on every page</li>
+          <li><strong>Notification sounds</strong> — keep your volume up to never miss a message or task update</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- ═══ TROUBLESHOOTING ═══ -->
+    <div class="help-section" id="section-troubleshooting" style="display:none">
+      <h4>Troubleshooting</h4>
+      <p class="help-lead">Common issues and how to fix them.</p>
+
+      <div class="help-block">
+        <h6><i class="bi bi-mic-mute me-2"></i>Dictation Not Working</h6>
+        <div class="help-callout danger">
+          <i class="bi bi-exclamation-octagon-fill me-2"></i>
+          <strong>Problem:</strong> Clicking the mic button does nothing, or it immediately stops.
+        </div>
+        <table class="help-table">
+          <tr><td><strong>Check browser</strong></td><td>Dictation only works in <strong>Chrome</strong> and <strong>Edge</strong>. Firefox and Safari do not fully support it.</td></tr>
+          <tr><td><strong>Check microphone permission</strong></td><td>Click the lock/info icon in the browser address bar and make sure microphone is set to <strong>Allow</strong>.</td></tr>
+          <tr><td><strong>Check system microphone</strong></td><td>Ensure your microphone is connected and not muted in your computer's sound settings.</td></tr>
+          <tr><td><strong>HTTPS required</strong></td><td>Speech recognition requires a secure connection (HTTPS) or localhost. If on HTTP, it won't work.</td></tr>
+          <tr><td><strong>Try refreshing</strong></td><td>Sometimes a simple page refresh fixes the issue.</td></tr>
+        </table>
+      </div>
+
+      <div class="help-block">
+        <h6><i class="bi bi-chat-left-dots me-2"></i>Messages Not Appearing</h6>
+        <div class="help-callout danger">
+          <i class="bi bi-exclamation-octagon-fill me-2"></i>
+          <strong>Problem:</strong> You sent a message but it doesn't show up, or you're not receiving messages.
+        </div>
+        <table class="help-table">
+          <tr><td><strong>Check your connection</strong></td><td>Ensure you have a stable internet connection. The portal uses real-time WebSocket connections.</td></tr>
+          <tr><td><strong>Refresh the page</strong></td><td>Press <kbd>F5</kbd> or <kbd>Ctrl+R</kbd> to reload. This re-establishes the connection.</td></tr>
+          <tr><td><strong>Check if logged in</strong></td><td>If your session expired, you may need to log in again.</td></tr>
+          <tr><td><strong>Clear browser cache</strong></td><td>Press <kbd>Ctrl+Shift+Delete</kbd>, clear cached files, and reload.</td></tr>
+        </table>
+      </div>
+
+      <div class="help-block">
+        <h6><i class="bi bi-box-arrow-in-right me-2"></i>Can't Log In</h6>
+        <div class="help-callout danger">
+          <i class="bi bi-exclamation-octagon-fill me-2"></i>
+          <strong>Problem:</strong> Login fails with wrong credentials or an error message.
+        </div>
+        <table class="help-table">
+          <tr><td><strong>Check email & password</strong></td><td>Passwords are case-sensitive. Make sure Caps Lock is off.</td></tr>
+          <tr><td><strong>Account deactivated?</strong></td><td>Your admin may have deactivated your account. Contact them to check.</td></tr>
+          <tr><td><strong>Forgot password?</strong></td><td>There is no self-service reset. Ask your admin to reset it from the Team page.</td></tr>
+          <tr><td><strong>Browser issue</strong></td><td>Try a different browser or clear cookies for this site.</td></tr>
+        </table>
+      </div>
+
+      <div class="help-block">
+        <h6><i class="bi bi-file-earmark-x me-2"></i>File Upload Failed</h6>
+        <div class="help-callout danger">
+          <i class="bi bi-exclamation-octagon-fill me-2"></i>
+          <strong>Problem:</strong> File doesn't upload or you get an error.
+        </div>
+        <table class="help-table">
+          <tr><td><strong>Check file size</strong></td><td>Maximum file size is <strong>100 MB</strong>. Larger files will be rejected.</td></tr>
+          <tr><td><strong>Check connection</strong></td><td>Large files need a stable connection. If it drops mid-upload, the file won't be sent.</td></tr>
+          <tr><td><strong>Try again</strong></td><td>Sometimes a retry works if the server was temporarily busy.</td></tr>
+        </table>
+      </div>
+
+      <div class="help-block">
+        <h6><i class="bi bi-bell-slash me-2"></i>Not Receiving Notifications</h6>
+        <div class="help-callout danger">
+          <i class="bi bi-exclamation-octagon-fill me-2"></i>
+          <strong>Problem:</strong> Toast notifications or sounds are not appearing.
+        </div>
+        <table class="help-table">
+          <tr><td><strong>Check browser tab</strong></td><td>Notifications work when the portal tab is open. If you close it, notifications stop.</td></tr>
+          <tr><td><strong>Check system volume</strong></td><td>Notification sounds require your volume to be unmuted and turned up.</td></tr>
+          <tr><td><strong>Active chat suppression</strong></td><td>If you're already viewing a conversation, you won't get a toast for it — the message just appears in the chat.</td></tr>
+          <tr><td><strong>Refresh the page</strong></td><td>A page refresh re-establishes the real-time connection needed for notifications.</td></tr>
+        </table>
+      </div>
+
+      <div class="help-block">
+        <h6><i class="bi bi-emoji-frown me-2"></i>Emoji Picker Not Closing</h6>
+        <div class="help-callout danger">
+          <i class="bi bi-exclamation-octagon-fill me-2"></i>
+          <strong>Problem:</strong> The emoji panel stays open and won't dismiss.
+        </div>
+        <table class="help-table">
+          <tr><td><strong>Click outside</strong></td><td>Click anywhere outside the emoji panel to close it.</td></tr>
+          <tr><td><strong>Click emoji icon again</strong></td><td>Clicking the smiley face icon again will also close the panel.</td></tr>
+          <tr><td><strong>Press Escape</strong></td><td>Some browsers support pressing Escape to close popups.</td></tr>
+        </table>
+      </div>
+
+      <div class="help-block">
+        <h6><i class="bi bi-display me-2"></i>Page Looks Broken or Unstyled</h6>
+        <table class="help-table">
+          <tr><td><strong>Hard refresh</strong></td><td>Press <kbd>Ctrl+Shift+R</kbd> (or <kbd>Cmd+Shift+R</kbd> on Mac) to bypass browser cache.</td></tr>
+          <tr><td><strong>Clear cache</strong></td><td>Clear your browser's cached files and reload the page.</td></tr>
+          <tr><td><strong>Try another browser</strong></td><td>If the issue persists, try Chrome or Edge for best compatibility.</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- ═══ FAQ ═══ -->
+    <div class="help-section" id="section-faq" style="display:none">
+      <h4>Frequently Asked Questions</h4>
+
+      <div class="help-faq">
+
+        <div class="help-faq-item">
+          <div class="help-faq-q" onclick="this.parentElement.classList.toggle('open')">
+            <span>Can other people see my private chats?</span>
+            <i class="bi bi-chevron-down"></i>
+          </div>
+          <div class="help-faq-a">No. Every 1-to-1 conversation is completely sealed. Only you and the other person can see it. Group chats are only visible to their participants. Not even the admin can read your private conversations.</div>
+        </div>
+
+        <div class="help-faq-item">
+          <div class="help-faq-q" onclick="this.parentElement.classList.toggle('open')">
+            <span>Can the local team see this portal?</span>
+            <i class="bi bi-chevron-down"></i>
+          </div>
+          <div class="help-faq-a">No. The Client Portal is completely invisible to the local team. They have no access and no awareness of it. The only connection is through bridge chat (Team India) and admin chat, which are controlled from the portal side.</div>
+        </div>
+
+        <div class="help-faq-item">
+          <div class="help-faq-q" onclick="this.parentElement.classList.toggle('open')">
+            <span>Can I delete a message I sent by mistake?</span>
+            <i class="bi bi-chevron-down"></i>
+          </div>
+          <div class="help-faq-a">Yes. Hover over your sent message, click the three-dot menu, and select Delete. The message will show "This message was deleted" for both parties. If it was a file or image, the file is also permanently deleted from the server. This works for text messages, file messages, and image messages.</div>
+        </div>
+
+        <div class="help-faq-item">
+          <div class="help-faq-q" onclick="this.parentElement.classList.toggle('open')">
+            <span>Can I edit a message after sending it?</span>
+            <i class="bi bi-chevron-down"></i>
+          </div>
+          <div class="help-faq-a">Yes. Hover over your sent message, click the three-dot menu, and select Edit. Make your changes and save. The message will show "(edited)" next to the timestamp so others know it was modified. You can only edit your own messages.</div>
+        </div>
+
+        <div class="help-faq-item">
+          <div class="help-faq-q" onclick="this.parentElement.classList.toggle('open')">
+            <span>What is the maximum file size I can upload?</span>
+            <i class="bi bi-chevron-down"></i>
+          </div>
+          <div class="help-faq-a">The maximum file size is 100 MB per file. This applies everywhere — chat attachments, task comment files, admin chat, and bridge chat. There is no restriction on file types — you can send documents, images, spreadsheets, PDFs, archives, and more.</div>
+        </div>
+
+        <div class="help-faq-item">
+          <div class="help-faq-q" onclick="this.parentElement.classList.toggle('open')">
+            <span>Where are files and attachments stored?</span>
+            <i class="bi bi-chevron-down"></i>
+          </div>
+          <div class="help-faq-a">All files are stored securely on the server in separate directories — portal chat files, task comment files, bridge chat files, and admin chat files are each isolated. Only authenticated participants of the conversation or task can access the files. Files cannot be accessed via a direct URL.</div>
+        </div>
+
+        <div class="help-faq-item">
+          <div class="help-faq-q" onclick="this.parentElement.classList.toggle('open')">
+            <span>What happens when I deactivate a user?</span>
+            <i class="bi bi-chevron-down"></i>
+          </div>
+          <div class="help-faq-a">They cannot log in anymore, but all their data — messages, tasks, notes, and files — is preserved. You can reactivate them anytime and everything will be exactly as they left it. Deactivation is reversible and does not delete anything.</div>
+        </div>
+
+        <div class="help-faq-item">
+          <div class="help-faq-q" onclick="this.parentElement.classList.toggle('open')">
+            <span>Does dictation work on all browsers?</span>
+            <i class="bi bi-chevron-down"></i>
+          </div>
+          <div class="help-faq-a">Dictation (speech-to-text) works best in Google Chrome and Microsoft Edge. It uses the browser's built-in Web Speech API. Safari has limited support. Firefox does not support it. You also need to grant microphone permission when prompted by the browser.</div>
+        </div>
+
+        <div class="help-faq-item">
+          <div class="help-faq-q" onclick="this.parentElement.classList.toggle('open')">
+            <span>Can I see who's online right now?</span>
+            <i class="bi bi-chevron-down"></i>
+          </div>
+          <div class="help-faq-a">Yes. In the chat sidebar, a green dot next to a person's name means they're currently online in the portal. The chat header also shows "Online" or "Offline" when you open a conversation.</div>
+        </div>
+
+        <div class="help-faq-item">
+          <div class="help-faq-q" onclick="this.parentElement.classList.toggle('open')">
+            <span>I forgot my password. How do I reset it?</span>
+            <i class="bi bi-chevron-down"></i>
+          </div>
+          <div class="help-faq-a">There is no self-service password reset. Contact your admin and ask them to reset your password from the Team management page. They'll set a new temporary password that you can change after logging in.</div>
+        </div>
+
+        <div class="help-faq-item">
+          <div class="help-faq-q" onclick="this.parentElement.classList.toggle('open')">
+            <span>Can I use the portal on my phone?</span>
+            <i class="bi bi-chevron-down"></i>
+          </div>
+          <div class="help-faq-a">The portal is web-based and works on mobile browsers (Chrome on Android, Safari on iPhone). The layout adapts to smaller screens. However, for the best experience — especially with features like dictation and file uploads — we recommend using a desktop or laptop.</div>
+        </div>
+
+        <div class="help-faq-item">
+          <div class="help-faq-q" onclick="this.parentElement.classList.toggle('open')">
+            <span>What happens to my notes if my account is deactivated?</span>
+            <i class="bi bi-chevron-down"></i>
+          </div>
+          <div class="help-faq-a">All your notes are preserved. When your account is reactivated, all your notes will be there exactly as you left them. Notes are private — no one (not even the admin) can access your notes.</div>
+        </div>
+
+        <div class="help-faq-item">
+          <div class="help-faq-q" onclick="this.parentElement.classList.toggle('open')">
+            <span>What is the difference between Admin Chat and Bridge Chat?</span>
+            <i class="bi bi-chevron-down"></i>
+          </div>
+          <div class="help-faq-a">Admin Chat is a direct line to the local team's admin — available to everyone from any page via the headset button. Bridge Chat is for messaging individual local team employees, available only from the Team India page (Admin and Top Mgmt only). Both cross the portal-local boundary, but serve different purposes.</div>
+        </div>
+
+        <div class="help-faq-item">
+          <div class="help-faq-q" onclick="this.parentElement.classList.toggle('open')">
+            <span>Can I see other people's roles in the portal?</span>
+            <i class="bi bi-chevron-down"></i>
+          </div>
+          <div class="help-faq-a">No. Role labels are hidden throughout the portal. You won't see anyone's role next to their name. This is by design — the hierarchy exists for permission management, but the experience feels equal for all users.</div>
+        </div>
+
+        <div class="help-faq-item">
+          <div class="help-faq-q" onclick="this.parentElement.classList.toggle('open')">
+            <span>Why can't I create tasks or groups?</span>
+            <i class="bi bi-chevron-down"></i>
+          </div>
+          <div class="help-faq-a">If you don't see the "New Task" or "New Group" button, your account has the User role. Users can participate in chats and update assigned tasks, but cannot create new tasks or group chats. Contact your admin if you need elevated permissions.</div>
+        </div>
+
+        <div class="help-faq-item">
+          <div class="help-faq-q" onclick="this.parentElement.classList.toggle('open')">
+            <span>Why can't I see Team India?</span>
+            <i class="bi bi-chevron-down"></i>
+          </div>
+          <div class="help-faq-a">The Team India page is only visible to Admin and Top Management roles. If you don't see it in the navigation, your role doesn't have access to this feature. Contact your admin if you need access.</div>
+        </div>
+
+        <div class="help-faq-item">
+          <div class="help-faq-q" onclick="this.parentElement.classList.toggle('open')">
+            <span>Do notification sounds play when the tab is in the background?</span>
+            <i class="bi bi-chevron-down"></i>
+          </div>
+          <div class="help-faq-a">Notification sounds and toasts work when the portal tab is open (even in the background). However, if you close the tab entirely, notifications will not play. Keep the portal tab open to stay informed of new messages and task updates.</div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+function showHelpSection(id) {
+  document.querySelectorAll('.help-section').forEach(s => s.style.display = 'none');
+  document.querySelectorAll('.help-nav-item').forEach(a => a.classList.remove('active'));
+  const section = document.getElementById('section-' + id);
+  if (section) section.style.display = '';
+  event.target.classList.add('active');
+}
+</script>

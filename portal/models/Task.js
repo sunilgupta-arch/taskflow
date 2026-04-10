@@ -173,7 +173,7 @@ class PortalTask {
 
   // Check if user can view a task (must be creator or assignee)
   static async canAccess(taskId, userId, roleName) {
-    if (roleName === 'CLIENT_ADMIN') return true;
+    if (['CLIENT_ADMIN', 'CLIENT_TOP_MGMT'].includes(roleName)) return true;
     const [rows] = await db.query(
       'SELECT id FROM portal_tasks WHERE id = ? AND (assigned_by = ? OR assigned_to = ?)',
       [taskId, userId, userId]
@@ -182,10 +182,15 @@ class PortalTask {
   }
 
   // Get assignable users based on role hierarchy
+  // ADMIN → everyone | TOP_MGMT → all except admin | MGMT → mgmt+manager+user | MANAGER → manager+user
   static async getAssignableUsers(currentUserId, currentRole) {
     let roleFilter;
     if (currentRole === 'CLIENT_ADMIN') {
-      roleFilter = "r.name IN ('CLIENT_ADMIN', 'CLIENT_MANAGER', 'CLIENT_USER')";
+      roleFilter = "r.name IN ('CLIENT_ADMIN', 'CLIENT_TOP_MGMT', 'CLIENT_MGMT', 'CLIENT_MANAGER', 'CLIENT_USER')";
+    } else if (currentRole === 'CLIENT_TOP_MGMT') {
+      roleFilter = "r.name IN ('CLIENT_TOP_MGMT', 'CLIENT_MGMT', 'CLIENT_MANAGER', 'CLIENT_USER')";
+    } else if (currentRole === 'CLIENT_MGMT') {
+      roleFilter = "r.name IN ('CLIENT_MGMT', 'CLIENT_MANAGER', 'CLIENT_USER')";
     } else if (currentRole === 'CLIENT_MANAGER') {
       roleFilter = "r.name IN ('CLIENT_MANAGER', 'CLIENT_USER')";
     } else {

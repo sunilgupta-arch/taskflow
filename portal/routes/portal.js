@@ -49,6 +49,15 @@ router.post('/tasks/:id/comments', upload.single('file'), PortalTaskController.a
 router.put('/tasks/comments/:commentId', PortalTaskController.editComment);
 router.get('/tasks/attachment/:attachmentId', PortalTaskController.serveAttachment);
 
+// ── Help & Training ──────────────────────────────────────
+router.get('/help', (req, res) => {
+  res.render('portal/help', {
+    title: 'Help & Training - Client Portal',
+    layout: 'portal/layout',
+    section: 'help'
+  });
+});
+
 // ── Notes ────────────────────────────────────────────────
 const NoteModel = require('../../models/Note');
 const { ApiResponse: NoteApiResponse } = require('../../utils/response');
@@ -121,9 +130,9 @@ router.delete('/notes/:id', async (req, res) => {
 });
 
 // ── Team India (Live Status) ─────────────────────────────
-router.get('/team-status', requireRoles('CLIENT_ADMIN', 'CLIENT_MANAGER'), PortalTeamStatusController.index);
-router.get('/team-status/data', requireRoles('CLIENT_ADMIN', 'CLIENT_MANAGER'), PortalTeamStatusController.getData);
-router.get('/team-status/employee-tasks/:userId', requireRoles('CLIENT_ADMIN', 'CLIENT_MANAGER'), PortalTeamStatusController.getEmployeeTasks);
+router.get('/team-status', requireRoles('CLIENT_ADMIN', 'CLIENT_TOP_MGMT'), PortalTeamStatusController.index);
+router.get('/team-status/data', requireRoles('CLIENT_ADMIN', 'CLIENT_TOP_MGMT'), PortalTeamStatusController.getData);
+router.get('/team-status/employee-tasks/:userId', requireRoles('CLIENT_ADMIN', 'CLIENT_TOP_MGMT'), PortalTeamStatusController.getEmployeeTasks);
 
 // ── Bridge Chat (Client <-> Local) ───────────────────────
 const BridgeChatController = require('../../controllers/bridgeChatController');

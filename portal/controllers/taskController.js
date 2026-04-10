@@ -30,7 +30,7 @@ class PortalTaskController {
       if (priority) filters.priority = priority;
 
       let tasks;
-      if (req.user.role_name === 'CLIENT_ADMIN') {
+      if (['CLIENT_ADMIN', 'CLIENT_TOP_MGMT'].includes(req.user.role_name)) {
         tasks = await PortalTask.getAllTasks(filters);
       } else {
         tasks = await PortalTask.getTasksForUser(req.user.id, filters);
@@ -46,8 +46,8 @@ class PortalTaskController {
   // Create task
   static async create(req, res) {
     try {
-      // Only admin and managers can create
-      if (!['CLIENT_ADMIN', 'CLIENT_MANAGER'].includes(req.user.role_name)) {
+      // Only admin, top_mgmt, mgmt, and managers can create
+      if (!['CLIENT_ADMIN', 'CLIENT_TOP_MGMT', 'CLIENT_MGMT', 'CLIENT_MANAGER'].includes(req.user.role_name)) {
         return ApiResponse.error(res, 'You cannot create tasks', 403);
       }
 
@@ -60,8 +60,8 @@ class PortalTaskController {
         return ApiResponse.error(res, 'Assignee is required', 400);
       }
 
-      // Managers cannot assign to admin
-      if (req.user.role_name === 'CLIENT_MANAGER') {
+      // Hierarchy check: can only assign to same level or below
+      if (!['CLIENT_ADMIN'].includes(req.user.role_name)) {
         const assignableUsers = await PortalTask.getAssignableUsers(req.user.id, req.user.role_name);
         const canAssign = assignableUsers.some(u => u.id === parseInt(assigned_to));
         if (!canAssign) {

@@ -13,63 +13,65 @@
   <%- style %>
 </head>
 <body>
-  <!-- Top Navigation -->
-  <nav class="portal-topnav">
-    <div class="topnav-left">
-      <span class="portal-brand">
+  <!-- Activity Bar (VS Code style) -->
+  <nav class="portal-activity-bar">
+    <div class="activity-bar-top">
+      <div class="activity-bar-brand">
         <span class="brand-icon">C</span>
-        <span class="brand-text">Portal</span>
-      </span>
-    </div>
-    <div class="topnav-center">
-      <a href="/portal/chat" class="topnav-tab <%= section === 'chat' ? 'active' : '' %>">
+      </div>
+      <a href="/portal/chat" class="activity-bar-item <%= section === 'chat' ? 'active' : '' %>">
         <i class="bi bi-chat-dots-fill"></i>
-        <span>Chat</span>
-        <span class="badge bg-danger chat-unread-badge" style="display:none"></span>
+        <span class="ab-tooltip">Chat</span>
+        <span class="activity-bar-badge chat-unread-badge" style="display:none"></span>
       </a>
-      <a href="/portal/tasks" class="topnav-tab <%= section === 'tasks' ? 'active' : '' %>">
+      <a href="/portal/tasks" class="activity-bar-item <%= section === 'tasks' ? 'active' : '' %>">
         <i class="bi bi-kanban-fill"></i>
-        <span>Tasks</span>
+        <span class="ab-tooltip">Tasks</span>
       </a>
-      <a href="/portal/notes" class="topnav-tab <%= section === 'notes' ? 'active' : '' %>">
+      <a href="/portal/notes" class="activity-bar-item <%= section === 'notes' ? 'active' : '' %>">
         <i class="bi bi-journal-text"></i>
-        <span>Notes</span>
+        <span class="ab-tooltip">Notes</span>
       </a>
-      <% if (['CLIENT_ADMIN', 'CLIENT_MANAGER'].includes(user.role_name)) { %>
-        <a href="/portal/team-status" class="topnav-tab <%= section === 'team-status' ? 'active' : '' %>">
+      <% if (['CLIENT_ADMIN', 'CLIENT_TOP_MGMT'].includes(user.role_name)) { %>
+        <a href="/portal/team-status" class="activity-bar-item <%= section === 'team-status' ? 'active' : '' %>">
           <i class="bi bi-flag-fill"></i>
-          <span>Team India</span>
+          <span class="ab-tooltip">Team India</span>
         </a>
       <% } %>
       <% if (user.role_name === 'CLIENT_ADMIN') { %>
-        <a href="/portal/users" class="topnav-tab <%= section === 'users' ? 'active' : '' %>">
+        <a href="/portal/users" class="activity-bar-item <%= section === 'users' ? 'active' : '' %>">
           <i class="bi bi-people-fill"></i>
-          <span>Team</span>
+          <span class="ab-tooltip">Users Management</span>
         </a>
       <% } %>
+      <a href="/portal/help" class="activity-bar-item <%= section === 'help' ? 'active' : '' %>">
+        <i class="bi bi-question-circle"></i>
+        <span class="ab-tooltip">Help</span>
+      </a>
     </div>
-    <div class="topnav-right">
+    <div class="activity-bar-bottom">
+      <div class="activity-bar-separator"></div>
       <% if (localAdmin) { %>
-        <button class="admin-chat-btn" onclick="toggleAdminChat()" title="Chat with <%= localAdmin.name %>">
+        <button class="activity-bar-item" onclick="toggleAdminChat()">
           <i class="bi bi-headset"></i>
-          <span class="admin-chat-label"><%= localAdmin.name %></span>
-          <span class="admin-chat-badge" id="adminChatBadge" style="display:none"></span>
+          <span class="ab-tooltip">Chat with <%= localAdmin.name %></span>
+          <span class="activity-bar-badge" id="adminChatBadge" style="display:none"></span>
         </button>
       <% } %>
-      <button class="topnav-action" onclick="toggleTheme()" title="Toggle Theme" id="themeToggleBtn">
+      <button class="activity-bar-item" onclick="toggleTheme()" id="themeToggleBtn">
         <i class="bi" id="themeIcon"></i>
+        <span class="ab-tooltip">Toggle Theme</span>
       </button>
       <div class="dropdown">
-        <button class="topnav-user-btn" data-bs-toggle="dropdown">
-          <span class="user-avatar-sm"><%= user.name.charAt(0).toUpperCase() %></span>
-          <span class="user-name-text"><%= user.name %></span>
-          <i class="bi bi-chevron-down" style="font-size:0.65rem;opacity:0.6"></i>
+        <button class="activity-bar-item" data-bs-toggle="dropdown" data-bs-display="static">
+          <span class="activity-bar-avatar"><%= user.name.charAt(0).toUpperCase() %></span>
+          <span class="ab-tooltip"><%= user.name %></span>
         </button>
-        <ul class="dropdown-menu dropdown-menu-end">
+        <ul class="dropdown-menu">
           <li>
             <span class="dropdown-item-text">
               <strong><%= user.name %></strong>
-              <div class="small text-muted"><%= user.role_name.replace('CLIENT_', '') %></div>
+              <div class="small text-muted"><%= user.email %></div>
             </span>
           </li>
           <li><hr class="dropdown-divider"></li>

@@ -3,7 +3,7 @@
   <div class="chat-sidebar" id="chatSidebar">
     <div class="chat-sidebar-header">
       <input type="text" class="form-control form-control-sm" id="contactSearch" placeholder="Search contacts...">
-      <% if (['CLIENT_ADMIN', 'CLIENT_MANAGER'].includes(user.role_name)) { %>
+      <% if (['CLIENT_ADMIN', 'CLIENT_TOP_MGMT', 'CLIENT_MGMT', 'CLIENT_MANAGER'].includes(user.role_name)) { %>
         <button class="btn btn-sm btn-outline-primary mt-2 w-100" onclick="showNewGroupModal()">
           <i class="bi bi-people"></i> New Group
         </button>
@@ -22,7 +22,7 @@
           <div class="contact-avatar"><%= c.name.charAt(0).toUpperCase() %></div>
           <div class="contact-info">
             <span class="contact-name"><%= c.name %></span>
-            <span class="contact-role"><%= c.role_name.replace('CLIENT_', '') %></span>
+            <span class="contact-role"></span>
           </div>
         </div>
       <% }) %>
@@ -97,7 +97,7 @@
           <% contacts.forEach(c => { %>
             <div class="form-check">
               <input class="form-check-input group-member-check" type="checkbox" value="<%= c.id %>" id="member_<%= c.id %>">
-              <label class="form-check-label small" for="member_<%= c.id %>"><%= c.name %> (<%= c.role_name.replace('CLIENT_', '') %>)</label>
+              <label class="form-check-label small" for="member_<%= c.id %>"><%= c.name %></label>
             </div>
           <% }) %>
         </div>
@@ -120,7 +120,7 @@
       </div>
       <div class="modal-body">
         <div id="groupMembersList"></div>
-        <% if (['CLIENT_ADMIN', 'CLIENT_MANAGER'].includes(user.role_name)) { %>
+        <% if (['CLIENT_ADMIN', 'CLIENT_TOP_MGMT', 'CLIENT_MGMT', 'CLIENT_MANAGER'].includes(user.role_name)) { %>
           <hr>
           <label class="form-label small fw-bold">Add Member</label>
           <div class="d-flex gap-2">

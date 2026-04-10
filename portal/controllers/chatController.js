@@ -50,7 +50,7 @@ class PortalChatController {
 
       if (type === 'group') {
         // Only admin and managers can create groups
-        if (!['CLIENT_ADMIN', 'CLIENT_MANAGER'].includes(req.user.role_name)) {
+        if (!['CLIENT_ADMIN', 'CLIENT_TOP_MGMT', 'CLIENT_MGMT', 'CLIENT_MANAGER'].includes(req.user.role_name)) {
           return ApiResponse.error(res, 'You cannot create group conversations', 403);
         }
         if (!participant_ids || participant_ids.length < 1) {
@@ -320,7 +320,7 @@ class PortalChatController {
       if (!conv || conv.type !== 'group') return ApiResponse.error(res, 'Not a group conversation', 400);
 
       // Only creator or admin/manager can add
-      if (conv.created_by !== req.user.id && !['CLIENT_ADMIN', 'CLIENT_MANAGER'].includes(req.user.role_name)) {
+      if (conv.created_by !== req.user.id && !['CLIENT_ADMIN', 'CLIENT_TOP_MGMT', 'CLIENT_MGMT', 'CLIENT_MANAGER'].includes(req.user.role_name)) {
         return ApiResponse.error(res, 'Access denied', 403);
       }
 
@@ -341,7 +341,7 @@ class PortalChatController {
       const conv = await PortalChat.getConversation(conversationId);
       if (!conv || conv.type !== 'group') return ApiResponse.error(res, 'Not a group', 400);
 
-      if (conv.created_by !== req.user.id && !['CLIENT_ADMIN', 'CLIENT_MANAGER'].includes(req.user.role_name)) {
+      if (conv.created_by !== req.user.id && !['CLIENT_ADMIN', 'CLIENT_TOP_MGMT', 'CLIENT_MGMT', 'CLIENT_MANAGER'].includes(req.user.role_name)) {
         return ApiResponse.error(res, 'Access denied', 403);
       }
 

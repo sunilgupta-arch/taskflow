@@ -1327,7 +1327,7 @@ function autoLogoutWithReason(reason) {
 
   var SHIFT_START = '<%= user.shift_start || "10:00:00" %>';
   var SHIFT_HOURS = parseFloat('<%= user.shift_hours || 8.5 %>');
-  var WARNING_BEFORE_MS = 5 * 60 * 1000; // Show warning 5 min before shift end
+  var WARNING_AFTER_MS = 15 * 60 * 1000; // Show warning 15 min after shift end
   var EXTENSION_MS = 2 * 60 * 60 * 1000; // 2 hour extension
 
   function getTzTime() {
@@ -1377,23 +1377,23 @@ function autoLogoutWithReason(reason) {
     return;
   }
 
-  if (msUntilShiftEnd <= 0) {
-    // Shift already ended and user never clicked Continue — logout now
+  if (msUntilShiftEnd <= -(WARNING_AFTER_MS + WARNING_AFTER_MS)) {
+    // More than 30 min past shift end and user never extended — logout now
     localStorage.removeItem('tf_login_at');
     autoLogoutWithReason('Auto Logout');
     return;
   }
 
-  // Schedule the warning modal 5 minutes before shift end
-  var msUntilWarning = msUntilShiftEnd - WARNING_BEFORE_MS;
+  // Schedule the warning modal 15 minutes after shift end
+  var msUntilWarning = msUntilShiftEnd + WARNING_AFTER_MS;
 
   function showShiftWarning() {
     var modal = document.getElementById('shiftEndModal');
     if (!modal) return;
     modal.style.display = 'flex';
 
-    // Start countdown from 5 minutes (or remaining time if less)
-    var remaining = Math.min(WARNING_BEFORE_MS / 1000, msUntilShiftEnd / 1000);
+    // Countdown for 15 minutes before auto-logout
+    var remaining = Math.floor(WARNING_AFTER_MS / 1000);
     var countdownEl = document.getElementById('shiftEndCountdown');
     var countdownInterval = setInterval(function() {
       remaining--;
@@ -1449,7 +1449,7 @@ function autoLogoutWithReason(reason) {
   }
 
   if (msUntilWarning <= 0) {
-    // Less than 5 min left — show warning immediately
+    // Already past 15 min after shift end — show warning immediately
     showShiftWarning();
   } else {
     setTimeout(showShiftWarning, msUntilWarning);
@@ -1713,10 +1713,10 @@ async function submitChangePassword() {
     <div style="width:64px;height:64px;border-radius:50%;background:rgba(239,68,68,0.15);display:flex;align-items:center;justify-content:center;margin:0 auto 1.25rem;">
       <i class="bi bi-clock-history" style="font-size:1.75rem;color:#ef4444;"></i>
     </div>
-    <h5 style="font-family:var(--tf-font-mono);font-weight:700;margin-bottom:0.5rem;">SHIFT ENDING SOON</h5>
-    <p style="font-size:0.85rem;color:var(--tf-text-muted);margin-bottom:0.25rem;">Your shift ends in</p>
-    <div id="shiftEndCountdown" style="font-family:var(--tf-font-mono);font-size:2.5rem;font-weight:700;color:#ef4444;margin:0.75rem 0;">5:00</div>
-    <p style="font-size:0.8rem;color:var(--tf-text-muted);margin-bottom:1.5rem;">You will be automatically logged out when the timer reaches zero.</p>
+    <h5 style="font-family:var(--tf-font-mono);font-weight:700;margin-bottom:0.5rem;">SHIFT HAS ENDED</h5>
+    <p style="font-size:0.85rem;color:var(--tf-text-muted);margin-bottom:0.25rem;">Auto-logout in</p>
+    <div id="shiftEndCountdown" style="font-family:var(--tf-font-mono);font-size:2.5rem;font-weight:700;color:#ef4444;margin:0.75rem 0;">15:00</div>
+    <p style="font-size:0.8rem;color:var(--tf-text-muted);margin-bottom:1.5rem;">Your shift ended 15 minutes ago. You will be automatically logged out when the timer reaches zero.</p>
     <div style="display:flex;gap:0.75rem;justify-content:center;">
       <button class="btn-tf btn-tf-danger" onclick="shiftEndLogoutNow()" style="padding:0.6rem 1.25rem;font-size:0.85rem;">
         <i class="bi bi-box-arrow-right me-1"></i> Logout Now
