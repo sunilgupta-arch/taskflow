@@ -31,6 +31,12 @@
         <i class="bi bi-kanban-fill"></i>
         <span>Tasks</span>
       </a>
+      <% if (['CLIENT_ADMIN', 'CLIENT_MANAGER'].includes(user.role_name)) { %>
+        <a href="/portal/team-status" class="topnav-tab <%= section === 'team-status' ? 'active' : '' %>">
+          <i class="bi bi-flag-fill"></i>
+          <span>Team India</span>
+        </a>
+      <% } %>
       <% if (user.role_name === 'CLIENT_ADMIN') { %>
         <a href="/portal/users" class="topnav-tab <%= section === 'users' ? 'active' : '' %>">
           <i class="bi bi-people-fill"></i>
@@ -39,9 +45,13 @@
       <% } %>
     </div>
     <div class="topnav-right">
-      <a href="/tasks/board" target="_blank" class="topnav-action" title="Open TaskFlow">
-        <i class="bi bi-box-arrow-up-right"></i>
-      </a>
+      <% if (localAdmin) { %>
+        <button class="admin-chat-btn" onclick="toggleAdminChat()" title="Chat with <%= localAdmin.name %>">
+          <i class="bi bi-headset"></i>
+          <span class="admin-chat-label"><%= localAdmin.name %></span>
+          <span class="admin-chat-badge" id="adminChatBadge" style="display:none"></span>
+        </button>
+      <% } %>
       <button class="topnav-action" onclick="toggleTheme()" title="Toggle Theme" id="themeToggleBtn">
         <i class="bi" id="themeIcon"></i>
       </button>
@@ -79,6 +89,35 @@
     <%- body %>
   </div>
 
+  <!-- Admin Chat Floating Panel -->
+  <% if (localAdmin) { %>
+  <div class="admin-chat-panel" id="adminChatPanel" style="display:none">
+    <div class="admin-chat-header">
+      <div class="d-flex align-items-center gap-2">
+        <div class="admin-chat-avatar"><i class="bi bi-headset"></i></div>
+        <div>
+          <div class="fw-bold" style="font-size:0.85rem"><%= localAdmin.name %></div>
+          <div class="small text-muted">Admin</div>
+        </div>
+      </div>
+      <button class="btn btn-sm btn-link p-0" onclick="toggleAdminChat()"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <div class="admin-chat-messages" id="adminChatMessages">
+      <div class="text-center text-muted py-4 small">Start a conversation...</div>
+    </div>
+    <div class="admin-chat-input">
+      <input type="file" id="adminChatFile" style="display:none" onchange="sendAdminChatFile()">
+      <div class="d-flex gap-1 align-items-end">
+        <textarea class="form-control" id="adminChatInput" placeholder="Type a message..." rows="2"></textarea>
+        <div class="d-flex flex-column gap-1">
+          <button class="btn btn-outline-secondary btn-sm" onclick="document.getElementById('adminChatFile').click()" style="width:34px;height:34px;padding:0"><i class="bi bi-paperclip"></i></button>
+          <button class="btn btn-primary btn-sm" onclick="sendAdminChatMessage()" style="width:34px;height:34px;padding:0"><i class="bi bi-send"></i></button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <% } %>
+
   <!-- Toast Container -->
   <div id="portalToastContainer" class="portal-toast-container"></div>
 
@@ -113,9 +152,37 @@
   <script>
     const PORTAL_USER = { id: <%= user.id %>, name: '<%= user.name %>', role: '<%= user.role_name %>' };
     const portalSocket = io('/portal', { withCredentials: true });
+    const mainSocket = io('/', { withCredentials: true });
 
     portalSocket.on('connect', () => {
       portalSocket.emit('portal:join');
+    });
+
+    // Bridge chat messages come via main namespace
+    mainSocket.on('bridge:message', (msg) => {
+      if (msg.conversation_id === bridgeConvId) {
+        renderBridgeMessages([msg], false);
+        if (document.getElementById('panelChat')?.style.display !== 'none') {
+          fetch(`/portal/bridge/conversations/${bridgeConvId}/read`, { method: 'POST' });
+        }
+      }
+      if (msg.sender_id !== PORTAL_USER.id) {
+        playNotificationSound();
+      }
+    });
+
+    // Bridge message delete (Team India panel)
+    mainSocket.on('bridge:message:delete', (data) => {
+      if (data.conversation_id === bridgeConvId) {
+        var bubble = document.querySelector('[data-bridge-msg-id="' + data.id + '"]');
+        if (bubble) {
+          bubble.classList.add('deleted');
+          var contentEl = bubble.querySelector('.msg-content');
+          if (contentEl) contentEl.innerHTML = '<i class="bi bi-ban me-1"></i><em>This message was deleted</em>';
+          var delBtn = bubble.querySelector('.bridge-msg-delete');
+          if (delBtn) delBtn.remove();
+        }
+      }
     });
 
     function updateThemeIcon() {
@@ -162,6 +229,180 @@
           }
         });
     }
+
+    // ── Admin Chat ───────────────────────────────────────────
+    <% if (localAdmin) { %>
+    var adminChatConvId = null;
+    var LOCAL_ADMIN_ID = <%= localAdmin.id %>;
+
+    function toggleAdminChat() {
+      var panel = document.getElementById('adminChatPanel');
+      if (panel.style.display === 'none') {
+        panel.style.display = 'flex';
+        initAdminChat();
+      } else {
+        panel.style.display = 'none';
+      }
+    }
+
+    function initAdminChat() {
+      fetch('/portal/bridge/conversations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ local_user_id: LOCAL_ADMIN_ID })
+      })
+        .then(r => r.json())
+        .then(res => {
+          if (res.success) {
+            adminChatConvId = res.data.conversation.id;
+            loadAdminChatMessages();
+            fetch('/portal/bridge/conversations/' + adminChatConvId + '/read', { method: 'POST' });
+            updateAdminChatBadge();
+          }
+        });
+    }
+
+    function loadAdminChatMessages() {
+      if (!adminChatConvId) return;
+      fetch('/portal/bridge/conversations/' + adminChatConvId + '/messages')
+        .then(r => r.json())
+        .then(res => {
+          if (!res.success) return;
+          renderAdminChatMessages(res.data.messages);
+        });
+    }
+
+    function renderAdminChatMessages(messages) {
+      var container = document.getElementById('adminChatMessages');
+      if (!messages.length) {
+        container.innerHTML = '<div class="text-center text-muted py-4 small">Start a conversation...</div>';
+        return;
+      }
+      container.innerHTML = messages.map(function(m) {
+        var isSent = m.sender_id === PORTAL_USER.id;
+        var cls = isSent ? 'sent' : 'received';
+        var time = parseServerDate(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        var content = '';
+        if (m.is_deleted) {
+          content = '<i class="bi bi-ban me-1"></i><em>This message was deleted</em>';
+        } else if (m.type === 'file' && m.attachment) {
+          var fname = m.attachment.file_name;
+          var short = fname.length > 25 ? fname.substring(0, 22) + '...' : fname;
+          content = '<a class="msg-file" href="/portal/bridge/attachment/' + m.id + '" target="_blank"><i class="bi bi-file-earmark"></i> <span>' + short + '</span></a>';
+        } else {
+          content = escapeHtml(m.content);
+        }
+        var deleteBtn = isSent && !m.is_deleted ? '<span class="bridge-msg-delete" onclick="event.stopPropagation(); deleteAdminChatMsg(' + m.id + ')" title="Delete"><i class="bi bi-trash"></i></span>' : '';
+        return '<div class="msg-bubble ' + cls + (m.is_deleted ? ' deleted' : '') + '" data-bridge-msg-id="' + m.id + '">' + deleteBtn + '<div class="msg-content">' + content + '</div><div class="msg-footer"><span class="msg-time">' + time + '</span></div></div>';
+      }).join('');
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function deleteAdminChatMsg(msgId) {
+      if (!confirm('Delete this message?')) return;
+      fetch('/portal/bridge/messages/' + msgId, { method: 'DELETE' })
+        .then(r => r.json())
+        .then(res => {
+          if (!res.success) alert(res.message);
+        });
+    }
+
+    function sendAdminChatMessage() {
+      if (!adminChatConvId) return;
+      var input = document.getElementById('adminChatInput');
+      var content = input.value.trim();
+      if (!content) return;
+      fetch('/portal/bridge/conversations/' + adminChatConvId + '/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: content })
+      }).then(function() { input.value = ''; });
+    }
+
+    function sendAdminChatFile() {
+      if (!adminChatConvId) return;
+      var fileInput = document.getElementById('adminChatFile');
+      if (!fileInput.files.length) return;
+      var fd = new FormData();
+      fd.append('file', fileInput.files[0]);
+      fetch('/portal/bridge/conversations/' + adminChatConvId + '/file', {
+        method: 'POST',
+        body: fd
+      }).then(function() { fileInput.value = ''; });
+    }
+
+    function updateAdminChatBadge() {
+      fetch('/portal/bridge/unread-count')
+        .then(r => r.json())
+        .then(res => {
+          if (!res.success) return;
+          var badge = document.getElementById('adminChatBadge');
+          if (res.data.total > 0) {
+            badge.textContent = res.data.total;
+            badge.style.display = '';
+          } else {
+            badge.style.display = 'none';
+          }
+        });
+    }
+
+    // Enter to send
+    document.getElementById('adminChatInput')?.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendAdminChatMessage();
+      }
+    });
+
+    // Listen for bridge messages
+    mainSocket.on('bridge:message', function(msg) {
+      if (adminChatConvId && msg.conversation_id === adminChatConvId) {
+        // Append message
+        var container = document.getElementById('adminChatMessages');
+        if (container.querySelector('.text-center')) container.innerHTML = '';
+        var isSent = msg.sender_id === PORTAL_USER.id;
+        var cls = isSent ? 'sent' : 'received';
+        var time = parseServerDate(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        var content = '';
+        if (msg.type === 'file' && msg.attachment) {
+          content = '<a class="msg-file" href="/portal/bridge/attachment/' + msg.id + '" target="_blank"><i class="bi bi-file-earmark"></i> <span>' + (msg.attachment.file_name || 'File') + '</span></a>';
+        } else {
+          content = escapeHtml(msg.content);
+        }
+        container.insertAdjacentHTML('beforeend', '<div class="msg-bubble ' + cls + '"><div class="msg-content">' + content + '</div><div class="msg-footer"><span class="msg-time">' + time + '</span></div></div>');
+        container.scrollTop = container.scrollHeight;
+
+        // Mark as read if panel is open
+        if (document.getElementById('adminChatPanel').style.display !== 'none') {
+          fetch('/portal/bridge/conversations/' + adminChatConvId + '/read', { method: 'POST' });
+        }
+      }
+
+      // Sound + badge for messages from others
+      if (msg.sender_id !== PORTAL_USER.id) {
+        playNotificationSound();
+        updateAdminChatBadge();
+      }
+    });
+
+    // Handle bridge message delete
+    mainSocket.on('bridge:message:delete', function(data) {
+      if (adminChatConvId && data.conversation_id === adminChatConvId) {
+        var bubble = document.querySelector('[data-bridge-msg-id="' + data.id + '"]');
+        if (bubble) {
+          bubble.classList.add('deleted');
+          var contentEl = bubble.querySelector('.msg-content');
+          if (contentEl) contentEl.innerHTML = '<i class="bi bi-ban me-1"></i><em>This message was deleted</em>';
+          var delBtn = bubble.querySelector('.bridge-msg-delete');
+          if (delBtn) delBtn.remove();
+        }
+      }
+    });
+
+    // Initial badge check + periodic refresh
+    updateAdminChatBadge();
+    setInterval(updateAdminChatBadge, 30000);
+    <% } %>
 
     function portalLogout() {
       fetch('/auth/logout', { method: 'POST', headers: { 'Content-Type': 'application/json' } })

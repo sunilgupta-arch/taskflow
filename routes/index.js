@@ -85,6 +85,18 @@ router.get('/backups/drive-list', authenticate, requireRoles('LOCAL_ADMIN'), Bac
 router.post('/backups/restore-drive', authenticate, requireRoles('LOCAL_ADMIN'), BackupController.restoreFromDrive);
 router.delete('/backups/:id', authenticate, requireRoles('LOCAL_ADMIN'), BackupController.destroy);
 
+// Bridge Chat (for LOCAL users — floating widget)
+const BridgeChatController = require('../controllers/bridgeChatController');
+const bridgeUpload = require('multer')({ storage: require('multer').memoryStorage(), limits: { fileSize: 100 * 1024 * 1024 } });
+router.get('/bridge/conversations', authenticate, BridgeChatController.getMyConversations);
+router.get('/bridge/conversations/:id/messages', authenticate, BridgeChatController.getMessages);
+router.post('/bridge/conversations/:id/messages', authenticate, BridgeChatController.sendMessage);
+router.post('/bridge/conversations/:id/file', authenticate, bridgeUpload.single('file'), BridgeChatController.sendFile);
+router.post('/bridge/conversations/:id/read', authenticate, BridgeChatController.markAsRead);
+router.delete('/bridge/messages/:messageId', authenticate, BridgeChatController.deleteMessage);
+router.get('/bridge/attachment/:messageId', authenticate, BridgeChatController.serveAttachment);
+router.get('/bridge/unread-count', authenticate, BridgeChatController.unreadCount);
+
 // Announcements / Info Board
 router.get('/announcements', authenticate, requireRoles('LOCAL_ADMIN', 'LOCAL_MANAGER', 'LOCAL_USER', 'CLIENT_ADMIN', 'CLIENT_MANAGER'), AnnouncementController.index);
 router.post('/announcements', authenticate, requireRoles('LOCAL_ADMIN', 'CLIENT_ADMIN', 'CLIENT_MANAGER'), AnnouncementController.create);

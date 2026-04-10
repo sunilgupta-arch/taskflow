@@ -1314,13 +1314,15 @@ body {
 }
 
 .msg-bubble.deleted {
-  opacity: 0.6;
+  opacity: 0.85;
+  background: var(--tf-surface-2) !important;
+  border: 1px dashed var(--tf-border) !important;
+  color: var(--tf-text-muted) !important;
 }
 
 .msg-bubble.deleted .msg-content {
-  font-style: italic;
+  font-size: 0.78rem;
   color: var(--tf-text-muted);
-  font-size: 0.8rem;
 }
 
 /* ── Emoji Picker ───────────────────────────────────────── */
@@ -1372,6 +1374,511 @@ body {
   border-radius: 10px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+}
+
+/* ── Team Status ────────────────────────────────────────── */
+.team-status-container {
+  height: 100%;
+  display: flex;
+  overflow: hidden;
+}
+
+.team-status-left {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+}
+
+.team-status-header {
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--tf-border);
+  background: var(--tf-surface);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.team-status-header h5 {
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.team-status-counts {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.status-count-pill {
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.status-count-pill i { font-size: 0.45rem; }
+
+.status-count-pill.working { background: rgba(34,197,94,0.1); color: var(--tf-success); }
+.status-count-pill.idle { background: rgba(234,179,8,0.1); color: var(--tf-warning); }
+.status-count-pill.absent { background: rgba(239,68,68,0.1); color: var(--tf-danger); }
+.status-count-pill.off { background: rgba(100,116,139,0.1); color: var(--tf-text-muted); }
+
+.team-status-table-wrap {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0;
+}
+
+.team-status-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.team-status-table thead {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+.team-status-table th {
+  background: var(--tf-surface-2);
+  font-family: var(--portal-font-mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--tf-text-muted);
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--tf-border);
+  white-space: nowrap;
+}
+
+.team-status-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--tf-border);
+  vertical-align: middle;
+}
+
+.team-status-table tr:hover {
+  background: var(--tf-surface-2);
+}
+
+.ts-name {
+  font-weight: 600;
+}
+
+.ts-task {
+  color: var(--tf-text-secondary);
+  max-width: 200px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ts-badge {
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 4px;
+  font-family: var(--portal-font-mono);
+  white-space: nowrap;
+}
+
+.ts-badge.ts-working { background: rgba(34,197,94,0.15); color: var(--tf-success); }
+.ts-badge.ts-extending { background: rgba(59,130,246,0.15); color: var(--tf-accent); }
+.ts-badge.ts-idle { background: rgba(234,179,8,0.15); color: var(--tf-warning); }
+.ts-badge.ts-absent { background: rgba(239,68,68,0.15); color: var(--tf-danger); }
+.ts-badge.ts-stale { background: rgba(239,68,68,0.1); color: var(--tf-danger); }
+.ts-badge.ts-off { background: rgba(100,116,139,0.1); color: var(--tf-text-muted); }
+.ts-badge.ts-leave { background: rgba(100,116,139,0.1); color: var(--tf-text-muted); }
+
+.team-status-table code {
+  font-family: var(--portal-font-mono);
+  font-size: 0.85rem;
+  color: var(--tf-text-secondary);
+}
+
+/* Team Panel (right side) */
+.team-status-panel {
+  width: 400px;
+  min-width: 400px;
+  border-left: 1px solid var(--tf-border);
+  background: var(--tf-surface);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.team-panel-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--tf-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.team-panel-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.team-panel-avatar {
+  width: 38px; height: 38px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--tf-accent), var(--tf-accent-2));
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: #fff;
+}
+
+.team-panel-name { font-weight: 600; font-size: 0.9rem; }
+.team-panel-status { margin-top: 2px; }
+
+.team-panel-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--tf-border);
+}
+
+.team-panel-tab {
+  flex: 1;
+  padding: 10px;
+  border: none;
+  background: none;
+  color: var(--tf-text-muted);
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  border-bottom: 2px solid transparent;
+}
+
+.team-panel-tab:hover { color: var(--tf-text); }
+
+.team-panel-tab.active {
+  color: var(--tf-accent);
+  border-bottom-color: var(--tf-accent);
+}
+
+.team-panel-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Tasks in panel */
+.team-panel-task-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+}
+
+.panel-task-item {
+  padding: 10px 12px;
+  border: 1px solid var(--tf-border);
+  border-radius: 8px;
+  margin-bottom: 6px;
+  background: var(--tf-surface-2);
+}
+
+.panel-task-item.panel-status-done {
+  border-left: 3px solid var(--tf-success);
+  opacity: 0.7;
+}
+
+.panel-task-item.panel-status-working {
+  border-left: 3px solid var(--tf-accent);
+  background: var(--tf-accent-light);
+}
+
+.panel-task-item.panel-status-pending {
+  border-left: 3px solid var(--tf-text-muted);
+}
+
+.panel-task-title {
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.panel-task-meta {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 6px;
+}
+
+.panel-task-status {
+  font-size: 0.65rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+.panel-task-status.panel-status-done {
+  background: rgba(34,197,94,0.12);
+  color: var(--tf-success);
+}
+
+.panel-task-status.panel-status-working {
+  background: rgba(59,130,246,0.12);
+  color: var(--tf-accent);
+}
+
+.panel-task-status.panel-status-pending {
+  background: rgba(100,116,139,0.1);
+  color: var(--tf-text-muted);
+}
+
+.panel-task-type {
+  font-size: 0.65rem;
+  color: var(--tf-text-muted);
+}
+
+/* Bridge chat in panel */
+.bridge-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.bridge-input-area {
+  padding: 10px 12px;
+  border-top: 1px solid var(--tf-border);
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.bridge-input-area textarea {
+  flex: 1;
+  resize: none;
+  min-height: 44px;
+  max-height: 80px;
+  background: var(--tf-surface-2);
+  border: 1px solid var(--tf-border);
+  color: var(--tf-text);
+  font-size: 0.85rem;
+  padding: 8px 10px;
+  border-radius: 10px;
+  font-family: var(--portal-font);
+}
+
+.bridge-input-area textarea:focus {
+  outline: none;
+  border-color: var(--tf-accent);
+}
+
+.bridge-input-area .chat-input-grid {
+  grid-template-columns: 1fr;
+  gap: 4px;
+}
+
+.bridge-input-area .btn {
+  width: 36px; height: 36px;
+  font-size: 0.85rem;
+}
+
+/* Bridge message delete button */
+.bridge-msg-delete {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  font-size: 0.65rem;
+  opacity: 0;
+  cursor: pointer;
+  color: var(--tf-danger);
+  padding: 2px 4px;
+  border-radius: 4px;
+  transition: opacity 0.15s;
+}
+
+.msg-bubble:hover .bridge-msg-delete {
+  opacity: 0.6;
+}
+
+.bridge-msg-delete:hover {
+  opacity: 1 !important;
+}
+
+@media (max-width: 900px) {
+  .team-status-panel {
+    position: absolute;
+    top: 0; right: 0; bottom: 0;
+    width: 100%;
+    min-width: 100%;
+    z-index: 10;
+  }
+}
+
+/* ── Admin Chat Button & Panel ───────────────────────────── */
+.admin-chat-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  background: linear-gradient(135deg, var(--tf-accent), var(--tf-accent-2));
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 500;
+  cursor: pointer;
+  position: relative;
+  transition: opacity 0.15s;
+  margin-right: 4px;
+}
+
+.admin-chat-btn:hover { opacity: 0.9; }
+
+.admin-chat-btn i { font-size: 0.9rem; }
+
+.admin-chat-label {
+  max-width: 100px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.admin-chat-badge {
+  position: absolute;
+  top: -4px; right: -4px;
+  background: var(--tf-danger);
+  color: #fff;
+  font-size: 0.5rem;
+  font-weight: 700;
+  padding: 2px 5px;
+  border-radius: 10px;
+  min-width: 16px;
+  text-align: center;
+}
+
+.admin-chat-panel {
+  position: fixed;
+  bottom: 16px;
+  right: 16px;
+  width: 380px;
+  height: 500px;
+  background: var(--tf-surface);
+  border: 1px solid var(--tf-border);
+  border-radius: 14px;
+  box-shadow: var(--tf-shadow-lg);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  z-index: 9999;
+}
+
+.admin-chat-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--tf-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--tf-surface);
+}
+
+.admin-chat-avatar {
+  width: 36px; height: 36px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--tf-accent), var(--tf-accent-2));
+  display: flex; align-items: center; justify-content: center;
+  color: #fff;
+  font-size: 1rem;
+}
+
+.admin-chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.admin-chat-messages .msg-bubble {
+  max-width: 80%;
+  padding: 8px 12px;
+  font-size: 0.82rem;
+  border-radius: 14px;
+}
+
+.admin-chat-messages .msg-bubble.sent {
+  align-self: flex-end;
+  background: var(--tf-accent);
+  color: #fff;
+  border-bottom-right-radius: 4px;
+}
+
+.admin-chat-messages .msg-bubble.received {
+  align-self: flex-start;
+  background: var(--tf-surface-2);
+  border: 1px solid var(--tf-border);
+  border-bottom-left-radius: 4px;
+}
+
+.admin-chat-messages .msg-footer {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 3px;
+}
+
+.admin-chat-messages .msg-time {
+  font-size: 0.55rem;
+  opacity: 0.6;
+}
+
+.admin-chat-messages .msg-file {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+  color: inherit;
+  font-size: 0.78rem;
+}
+
+.admin-chat-input {
+  padding: 10px 12px;
+  border-top: 1px solid var(--tf-border);
+}
+
+.admin-chat-input textarea {
+  resize: none;
+  min-height: 48px;
+  max-height: 90px;
+  background: var(--tf-surface-2);
+  border: 1px solid var(--tf-border);
+  color: var(--tf-text);
+  font-size: 0.85rem;
+  padding: 8px 10px;
+  border-radius: 10px;
+  font-family: var(--portal-font);
+  flex: 1;
+}
+
+.admin-chat-input textarea:focus {
+  outline: none;
+  border-color: var(--tf-accent);
+}
+
+@media (max-width: 768px) {
+  .admin-chat-panel {
+    width: calc(100% - 32px);
+    height: 60vh;
+  }
+  .admin-chat-label { display: none; }
 }
 
 /* ── Utilities ──────────────────────────────────────────── */

@@ -214,7 +214,7 @@ function renderMessages(messages, replace = true) {
     }
 
     // Action menu trigger for own non-deleted text messages
-    const actionBtn = isSent && !m.is_deleted && m.type === 'text'
+    const actionBtn = isSent && !m.is_deleted
       ? `<span class="msg-action-trigger" onclick="event.stopPropagation(); showMsgActions(${m.id})"><i class="bi bi-three-dots-vertical"></i></span>`
       : '';
 
@@ -910,6 +910,16 @@ portalSocket.on('portal:task:status', (data) => {
 
 portalSocket.on('portal:task:comment', (data) => {
   if (data.task_id === currentTaskId) openTask(currentTaskId);
+
+  playNotificationSound();
+  showPortalToast({
+    title: data.task_title || 'Task',
+    sender: data.commenter_name,
+    priority: data.task_priority || 'medium',
+    taskId: data.task_id,
+    customText: `New comment from <strong>${escapeHtml(data.commenter_name || '')}</strong>`,
+    customIcon: 'bi-chat-left-text-fill'
+  });
 });
 
 // ── INIT ───────────────────────────────────────────────────
@@ -968,6 +978,23 @@ document.addEventListener('DOMContentLoaded', () => {
     loadUsers();
   }
 
+  // Team Status page init
+  if (document.getElementById('statusTableBody')) {
+    loadTeamStatus();
+    teamStatusInterval = setInterval(loadTeamStatus, 30000);
+
+    // Bridge chat Enter to send
+    const bridgeInput = document.getElementById('bridgeMessageInput');
+    if (bridgeInput) {
+      bridgeInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          sendBridgeMessage();
+        }
+      });
+    }
+  }
+
   // Always update unread badge
   updateUnreadBadge();
   setInterval(updateUnreadBadge, 30000);
@@ -1009,6 +1036,261 @@ function showPortalToast({ title, sender, priority, taskId, customText, customIc
   });
 
   container.appendChild(toast);
+}
+
+// ── TEAM STATUS ────────────────────────────────────────────
+
+let teamStatusInterval = null;
+
+function loadTeamStatus() {
+  fetch('/portal/team-status/data')
+    .then(r => r.json())
+    .then(res => {
+      if (!res.success) return;
+      renderTeamStatus(res.data.employees, res.data.counts);
+    });
+}
+
+let selectedEmployee = null;
+let bridgeConvId = null;
+
+function renderTeamStatus(employees, counts) {
+  // Counts
+  const countsEl = document.getElementById('statusCounts');
+  if (countsEl) {
+    countsEl.innerHTML = `
+      <span class="status-count-pill working"><i class="bi bi-circle-fill"></i> ${counts.working} Working</span>
+      <span class="status-count-pill idle"><i class="bi bi-circle-fill"></i> ${counts.idle} Idle</span>
+      <span class="status-count-pill absent"><i class="bi bi-circle-fill"></i> ${counts.absent} Absent</span>
+      <span class="status-count-pill off"><i class="bi bi-circle-fill"></i> ${counts.off} Off</span>
+    `;
+  }
+
+  // Table
+  const tbody = document.getElementById('statusTableBody');
+  if (!tbody) return;
+
+  if (!employees.length) {
+    tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">No employees found</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = employees.map(e => {
+    const shiftStr = e.shiftStart ? e.shiftStart.substring(0, 5) : '--';
+    const statusClass = `ts-${e.statusType}`;
+
+    let elapsed = '--';
+    if (e.startedAt) {
+      const started = parseServerDate(e.startedAt);
+      const diffSec = Math.floor((new Date() - started) / 1000);
+      if (diffSec >= 0) {
+        const h = Math.floor(diffSec / 3600);
+        const m = Math.floor((diffSec % 3600) / 60);
+        elapsed = h > 0 ? `${h}h ${m}m` : `${m}m`;
+      }
+    }
+
+    const startedStr = e.startedAt ? parseServerDate(e.startedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--';
+
+    return `<tr class="${statusClass}" style="cursor:pointer" onclick="openEmployeePanel(${e.id}, '${escapeHtml(e.name).replace(/'/g, "\\'")}', '${e.status}', '${e.statusType}')">
+      <td class="ts-name">${escapeHtml(e.name)}</td>
+      <td><code>${shiftStr}</code></td>
+      <td><span class="ts-badge ${statusClass}">${e.status}</span></td>
+      <td class="ts-task">${e.taskName ? escapeHtml(e.taskName) : '--'}</td>
+      <td>${startedStr}</td>
+      <td>${elapsed}</td>
+    </tr>`;
+  }).join('');
+}
+
+function openEmployeePanel(userId, name, status, statusType) {
+  selectedEmployee = { id: userId, name };
+  bridgeConvId = null;
+
+  document.getElementById('panelAvatar').textContent = name.charAt(0).toUpperCase();
+  document.getElementById('panelName').textContent = name;
+  document.getElementById('panelStatus').innerHTML = `<span class="ts-badge ts-${statusType}">${status}</span>`;
+  document.getElementById('teamPanel').style.display = 'flex';
+
+  switchPanelTab('tasks');
+  loadEmployeeTasks(userId);
+
+  // Pre-create bridge conversation
+  fetch('/portal/bridge/conversations', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ local_user_id: userId })
+  })
+    .then(r => r.json())
+    .then(res => {
+      if (res.success) {
+        bridgeConvId = res.data.conversation.id;
+      }
+    });
+}
+
+function closeTeamPanel() {
+  document.getElementById('teamPanel').style.display = 'none';
+  selectedEmployee = null;
+  bridgeConvId = null;
+}
+
+function switchPanelTab(tab) {
+  document.getElementById('tabTasks').classList.toggle('active', tab === 'tasks');
+  document.getElementById('tabChat').classList.toggle('active', tab === 'chat');
+  document.getElementById('panelTasks').style.display = tab === 'tasks' ? '' : 'none';
+  document.getElementById('panelChat').style.display = tab === 'chat' ? '' : 'none';
+
+  if (tab === 'chat' && bridgeConvId) {
+    loadBridgeMessages();
+    fetch(`/portal/bridge/conversations/${bridgeConvId}/read`, { method: 'POST' });
+  }
+}
+
+function loadEmployeeTasks(userId) {
+  // Fetch tasks assigned to this local user from TaskFlow
+  fetch(`/portal/team-status/employee-tasks/${userId}`)
+    .then(r => r.json())
+    .then(res => {
+      if (!res.success) return;
+      const list = document.getElementById('panelTaskList');
+      const tasks = res.data.tasks;
+
+      if (!tasks.length) {
+        list.innerHTML = '<div class="text-center text-muted py-4 small">No tasks for today</div>';
+        return;
+      }
+
+      list.innerHTML = tasks.map(t => {
+        let statusClass, statusText, statusIcon;
+        if (t.status === 'completed') {
+          statusClass = 'panel-status-done';
+          statusText = 'Done';
+          statusIcon = 'bi-check-circle-fill';
+        } else if (t.status === 'in_progress') {
+          statusClass = 'panel-status-working';
+          statusText = 'Currently Working';
+          statusIcon = 'bi-play-circle-fill';
+        } else if (t.status === 'active' || t.status === 'pending') {
+          statusClass = 'panel-status-pending';
+          statusText = 'To Be Started';
+          statusIcon = 'bi-clock';
+        } else {
+          statusClass = 'panel-status-pending';
+          statusText = t.status;
+          statusIcon = 'bi-dash-circle';
+        }
+        return `<div class="panel-task-item ${statusClass}">
+          <div class="panel-task-title">${escapeHtml(t.title)}</div>
+          <div class="panel-task-meta">
+            <span class="panel-task-status ${statusClass}"><i class="bi ${statusIcon} me-1"></i>${statusText}</span>
+            <span class="panel-task-type">${t.type === 'recurring' ? 'Recurring' : 'Ad-hoc'}</span>
+          </div>
+        </div>`;
+      }).join('');
+    });
+}
+
+// ── BRIDGE CHAT ────────────────────────────────────────────
+
+function loadBridgeMessages() {
+  if (!bridgeConvId) return;
+
+  fetch(`/portal/bridge/conversations/${bridgeConvId}/messages`)
+    .then(r => r.json())
+    .then(res => {
+      if (!res.success) return;
+      renderBridgeMessages(res.data.messages, true);
+    });
+}
+
+function renderBridgeMessages(messages, replace) {
+  const container = document.getElementById('bridgeMessages');
+  if (!messages.length && replace) {
+    container.innerHTML = '<div class="text-center text-muted py-4 small">Start a conversation...</div>';
+    return;
+  }
+
+  const html = messages.map(m => {
+    const isSent = m.sender_id === PORTAL_USER.id;
+    const bubbleClass = isSent ? 'sent' : 'received';
+    const time = parseServerDate(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+    let content = '';
+    if (m.is_deleted) {
+      content = '<i class="bi bi-ban me-1"></i><em>This message was deleted</em>';
+    } else if (m.type === 'file' && m.attachment) {
+      const fname = m.attachment.file_name;
+      const shortName = fname.length > 25 ? fname.substring(0, 22) + '...' : fname;
+      content = `<a class="msg-file" href="/portal/bridge/attachment/${m.id}" target="_blank">
+        <i class="bi bi-file-earmark"></i> <span>${escapeHtml(shortName)}</span>
+      </a>`;
+    } else {
+      content = escapeHtml(m.content);
+    }
+
+    const deleteBtn = isSent && !m.is_deleted ? `<span class="bridge-msg-delete" onclick="event.stopPropagation(); deleteBridgeMsg(${m.id})" title="Delete"><i class="bi bi-trash"></i></span>` : '';
+
+    return `<div class="msg-bubble ${bubbleClass}${m.is_deleted ? ' deleted' : ''}" data-bridge-msg-id="${m.id}">
+      ${deleteBtn}
+      <div class="msg-content">${content}</div>
+      <div class="msg-footer"><span class="msg-time">${time}</span></div>
+    </div>`;
+  }).join('');
+
+  if (replace) {
+    container.innerHTML = html;
+  } else {
+    container.insertAdjacentHTML('beforeend', html);
+  }
+  container.scrollTop = container.scrollHeight;
+}
+
+function sendBridgeMessage() {
+  if (!bridgeConvId) return;
+  const input = document.getElementById('bridgeMessageInput');
+  const content = input.value.trim();
+  if (!content) return;
+
+  fetch(`/portal/bridge/conversations/${bridgeConvId}/messages`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ content })
+  })
+    .then(r => r.json())
+    .then(res => {
+      if (res.success) {
+        input.value = '';
+      }
+    });
+}
+
+function sendBridgeFile() {
+  if (!bridgeConvId) return;
+  const fileInput = document.getElementById('bridgeFileInput');
+  if (!fileInput.files.length) return;
+
+  const formData = new FormData();
+  formData.append('file', fileInput.files[0]);
+
+  fetch(`/portal/bridge/conversations/${bridgeConvId}/file`, {
+    method: 'POST',
+    body: formData
+  })
+    .then(r => r.json())
+    .then(res => {
+      if (!res.success) alert('Failed to send file');
+      fileInput.value = '';
+    });
+}
+
+function deleteBridgeMsg(msgId) {
+  if (!confirm('Delete this message?')) return;
+  fetch('/portal/bridge/messages/' + msgId, { method: 'DELETE' })
+    .then(r => r.json())
+    .then(res => {
+      if (!res.success) alert(res.message);
+    });
 }
 
 // ── NOTIFICATION SOUND ─────────────────────────────────────

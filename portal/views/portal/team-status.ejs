@@ -1,0 +1,76 @@
+<div class="team-status-container">
+  <!-- Left: Employee Table -->
+  <div class="team-status-left" id="teamStatusLeft">
+    <div class="team-status-header">
+      <div>
+        <h5 class="mb-0">Team India</h5>
+        <span class="text-muted small">Live employee status</span>
+      </div>
+      <div class="team-status-counts" id="statusCounts"></div>
+    </div>
+    <div class="team-status-table-wrap">
+      <table class="team-status-table">
+        <thead>
+          <tr>
+            <th>Employee</th>
+            <th>Shift</th>
+            <th>Status</th>
+            <th>Current Task</th>
+            <th>Started At</th>
+            <th>Elapsed</th>
+          </tr>
+        </thead>
+        <tbody id="statusTableBody">
+          <tr><td colspan="6" class="text-center text-muted py-4">Loading...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Right: Employee Detail Panel -->
+  <div class="team-status-panel" id="teamPanel" style="display:none">
+    <div class="team-panel-header">
+      <div class="team-panel-user">
+        <div class="team-panel-avatar" id="panelAvatar"></div>
+        <div>
+          <div class="team-panel-name" id="panelName"></div>
+          <div class="team-panel-status" id="panelStatus"></div>
+        </div>
+      </div>
+      <button class="topnav-action" onclick="closeTeamPanel()"><i class="bi bi-x-lg"></i></button>
+    </div>
+
+    <!-- Tabs: Tasks / Chat -->
+    <div class="team-panel-tabs">
+      <button class="team-panel-tab active" id="tabTasks" onclick="switchPanelTab('tasks')">
+        <i class="bi bi-list-task me-1"></i>Today's Tasks
+      </button>
+      <button class="team-panel-tab" id="tabChat" onclick="switchPanelTab('chat')">
+        <i class="bi bi-chat-dots me-1"></i>Chat
+        <span class="badge bg-danger bridge-unread-badge" style="display:none;font-size:0.55rem;margin-left:4px"></span>
+      </button>
+    </div>
+
+    <!-- Tasks Tab -->
+    <div class="team-panel-content" id="panelTasks">
+      <div class="team-panel-task-list" id="panelTaskList">
+        <div class="text-center text-muted py-4 small">Loading tasks...</div>
+      </div>
+    </div>
+
+    <!-- Chat Tab -->
+    <div class="team-panel-content" id="panelChat" style="display:none">
+      <div class="bridge-messages" id="bridgeMessages">
+        <div class="text-center text-muted py-4 small">Start a conversation...</div>
+      </div>
+      <div class="bridge-input-area">
+        <input type="file" id="bridgeFileInput" style="display:none" onchange="sendBridgeFile()">
+        <textarea class="form-control" id="bridgeMessageInput" placeholder="Type a message..." rows="2"></textarea>
+        <div class="chat-input-grid">
+          <button class="btn btn-outline-secondary" onclick="document.getElementById('bridgeFileInput').click()" title="Attach"><i class="bi bi-paperclip"></i></button>
+          <button class="btn btn-primary" onclick="sendBridgeMessage()"><i class="bi bi-send"></i></button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

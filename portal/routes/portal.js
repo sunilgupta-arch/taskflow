@@ -6,6 +6,7 @@ const portalOnly = require('../middleware/portalOnly');
 const PortalChatController = require('../controllers/chatController');
 const PortalTaskController = require('../controllers/taskController');
 const PortalUserController = require('../controllers/userController');
+const PortalTeamStatusController = require('../controllers/teamStatusController');
 const { requireRoles } = require('../../middleware/authorize');
 
 // Multer: memory storage for portal file uploads, 100MB max
@@ -46,6 +47,22 @@ router.get('/tasks/:id', PortalTaskController.getTask);
 router.put('/tasks/:id', PortalTaskController.update);
 router.post('/tasks/:id/comments', upload.single('file'), PortalTaskController.addComment);
 router.get('/tasks/attachment/:attachmentId', PortalTaskController.serveAttachment);
+
+// ── Team India (Live Status) ─────────────────────────────
+router.get('/team-status', requireRoles('CLIENT_ADMIN', 'CLIENT_MANAGER'), PortalTeamStatusController.index);
+router.get('/team-status/data', requireRoles('CLIENT_ADMIN', 'CLIENT_MANAGER'), PortalTeamStatusController.getData);
+router.get('/team-status/employee-tasks/:userId', requireRoles('CLIENT_ADMIN', 'CLIENT_MANAGER'), PortalTeamStatusController.getEmployeeTasks);
+
+// ── Bridge Chat (Client <-> Local) ───────────────────────
+const BridgeChatController = require('../../controllers/bridgeChatController');
+router.post('/bridge/conversations', BridgeChatController.getOrCreateConversation);
+router.get('/bridge/conversations/:id/messages', BridgeChatController.getMessages);
+router.post('/bridge/conversations/:id/messages', BridgeChatController.sendMessage);
+router.post('/bridge/conversations/:id/file', upload.single('file'), BridgeChatController.sendFile);
+router.post('/bridge/conversations/:id/read', BridgeChatController.markAsRead);
+router.delete('/bridge/messages/:messageId', BridgeChatController.deleteMessage);
+router.get('/bridge/attachment/:messageId', BridgeChatController.serveAttachment);
+router.get('/bridge/unread-count', BridgeChatController.unreadCount);
 
 // ── Change Password (all portal users) ───────────────────
 router.post('/change-password', (req, res) => {

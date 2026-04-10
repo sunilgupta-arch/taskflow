@@ -134,7 +134,7 @@ class PortalChat {
     const [rows] = await db.query(query, params);
 
     // Load attachments for file messages
-    const fileMessages = rows.filter(m => m.type === 'file');
+    const fileMessages = rows.filter(m => m.type === 'file' && !m.is_deleted);
     if (fileMessages.length) {
       const msgIds = fileMessages.map(m => m.id);
       const [attachments] = await db.query(
@@ -295,13 +295,27 @@ class PortalChat {
     return { id: messageId, content: newContent, conversation_id: rows[0].conversation_id };
   }
 
-  // Delete a message (soft delete, only sender)
+  // Delete a message (soft delete, only sender) + remove file from disk
   static async deleteMessage(messageId, senderId) {
     const [rows] = await db.query(
       'SELECT * FROM portal_messages WHERE id = ? AND sender_id = ? AND is_deleted = 0',
       [messageId, senderId]
     );
     if (!rows.length) return null;
+
+    // If file message, delete file from disk and remove attachment record
+    if (rows[0].type === 'file') {
+      const [attachments] = await db.query(
+        'SELECT file_path FROM portal_attachments WHERE message_id = ?', [messageId]
+      );
+      const path = require('path');
+      const fs = require('fs');
+      for (const a of attachments) {
+        const filePath = path.join(__dirname, '../../uploads', a.file_path);
+        if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+      }
+      await db.query('DELETE FROM portal_attachments WHERE message_id = ?', [messageId]);
+    }
 
     await db.query(
       'UPDATE portal_messages SET is_deleted = 1, content = NULL WHERE id = ?',

@@ -351,6 +351,228 @@
       border: 1px solid;
     }
 
+    /* Bridge Chat Floating Widget */
+    .bridge-widget {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      z-index: 9998;
+    }
+
+    .bridge-fab {
+      width: 50px; height: 50px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--tf-accent), #7c3aed);
+      border: none;
+      color: #fff;
+      font-size: 1.2rem;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+      position: relative;
+      transition: transform 0.2s;
+    }
+
+    .bridge-fab:hover { transform: scale(1.1); }
+
+    .bridge-fab-badge {
+      position: absolute;
+      top: -2px; right: -2px;
+      background: var(--tf-danger);
+      color: #fff;
+      font-size: 0.55rem;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 10px;
+      min-width: 18px;
+      text-align: center;
+    }
+
+    .bridge-panel {
+      position: absolute;
+      bottom: 60px; right: 0;
+      width: 370px;
+      height: 500px;
+      background: var(--tf-surface);
+      border: 1px solid var(--tf-border);
+      border-radius: 14px;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .bridge-panel-header {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--tf-border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .bridge-conv-list {
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    .bridge-conv-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      cursor: pointer;
+      transition: background 0.15s;
+      border-bottom: 1px solid var(--tf-border);
+    }
+
+    .bridge-conv-item:hover { background: var(--tf-surface-2); }
+
+    .bridge-conv-avatar {
+      width: 36px; height: 36px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, var(--tf-accent), #7c3aed);
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 0.8rem; color: #fff;
+      flex-shrink: 0;
+    }
+
+    .bridge-conv-info { flex: 1; min-width: 0; }
+    .bridge-conv-name { font-size: 0.82rem; font-weight: 600; display: block; }
+    .bridge-conv-last { font-size: 0.7rem; color: var(--tf-text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    .bridge-conv-unread {
+      background: var(--tf-accent);
+      color: #fff;
+      font-size: 0.55rem;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 10px;
+    }
+
+    .bridge-chat-view {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .bridge-chat-header {
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--tf-border);
+      display: flex;
+      align-items: center;
+    }
+
+    .bridge-chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .bridge-chat-messages .msg-bubble {
+      max-width: 80%;
+      padding: 8px 12px;
+      font-size: 0.8rem;
+      border-radius: 14px;
+      line-height: 1.4;
+      word-wrap: break-word;
+      position: relative;
+    }
+
+    .bridge-chat-messages .msg-bubble.sent {
+      align-self: flex-end;
+      background: #2563eb;
+      color: #fff;
+      border-bottom-right-radius: 4px;
+    }
+
+    .bridge-chat-messages .msg-bubble.received {
+      align-self: flex-start;
+      background: var(--tf-surface-2);
+      border: 1px solid var(--tf-border);
+      color: var(--tf-text);
+      border-bottom-left-radius: 4px;
+    }
+
+    .bridge-chat-messages .msg-sender-name {
+      font-size: 0.65rem;
+      font-weight: 600;
+      color: #a78bfa;
+      margin-bottom: 2px;
+    }
+
+    .bridge-chat-messages .msg-bubble.sent .msg-footer { color: rgba(255,255,255,0.6); }
+    .bridge-chat-messages .msg-bubble.received .msg-footer { color: var(--tf-text-muted); }
+    .bridge-chat-messages .msg-time { font-size: 0.55rem; }
+
+    .bridge-chat-input {
+      padding: 10px 12px;
+      border-top: 1px solid var(--tf-border);
+    }
+
+    .bridge-chat-input textarea {
+      flex: 1;
+      resize: none;
+      min-height: 52px;
+      max-height: 90px;
+      font-size: 0.85rem;
+      padding: 8px 10px;
+      border-radius: 10px;
+      background: var(--tf-surface-2);
+      border: 1px solid var(--tf-border);
+      color: var(--tf-text);
+      font-family: inherit;
+    }
+
+    .bridge-chat-input textarea:focus {
+      outline: none;
+      border-color: var(--tf-accent);
+    }
+
+    .bridge-chat-input-btns {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      justify-content: flex-end;
+    }
+
+    .bridge-chat-input-btns .btn {
+      width: 36px; height: 36px;
+      padding: 0;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 8px;
+      font-size: 0.85rem;
+    }
+
+    .bridge-msg-delete {
+      position: absolute;
+      top: 3px;
+      right: 5px;
+      font-size: 0.6rem;
+      opacity: 0;
+      cursor: pointer;
+      color: var(--tf-danger);
+      padding: 2px;
+      transition: opacity 0.15s;
+    }
+
+    .bridge-chat-messages .msg-bubble { position: relative; }
+    .bridge-chat-messages .msg-bubble:hover .bridge-msg-delete { opacity: 0.6; }
+    .bridge-chat-messages .bridge-msg-delete:hover { opacity: 1 !important; }
+    .bridge-chat-messages .msg-bubble.deleted {
+      opacity: 0.85;
+      background: var(--tf-surface-2) !important;
+      border: 1px dashed var(--tf-border) !important;
+      color: var(--tf-text-muted) !important;
+    }
+    .bridge-chat-messages .msg-bubble.deleted .msg-content {
+      font-size: 0.75rem;
+      color: var(--tf-text-muted);
+    }
+
     /* Toast */
     #toast-container {
       position: fixed;
@@ -806,6 +1028,44 @@
 
 <!-- Toast Container -->
 <div id="toast-container"></div>
+
+<!-- Bridge Chat Floating Widget (LOCAL users only) -->
+<% if (typeof user !== 'undefined' && user.role_name && user.role_name.startsWith('LOCAL_')) { %>
+<div id="bridgeWidget" class="bridge-widget">
+  <button class="bridge-fab" id="bridgeFab" onclick="toggleBridgeWidget()">
+    <i class="bi bi-chat-dots-fill"></i>
+    <span class="bridge-fab-badge" id="bridgeFabBadge" style="display:none"></span>
+  </button>
+  <div class="bridge-panel" id="bridgePanel" style="display:none">
+    <div class="bridge-panel-header">
+      <span class="fw-bold" style="font-size:0.85rem" id="bridgePanelTitle">Client Messages</span>
+      <button class="btn btn-sm btn-link p-0" onclick="toggleBridgeWidget()"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <!-- Conversation list view -->
+    <div class="bridge-conv-list" id="bridgeConvList">
+      <div class="text-center text-muted py-3 small">No messages yet</div>
+    </div>
+    <!-- Chat view (hidden initially) -->
+    <div class="bridge-chat-view" id="bridgeChatView" style="display:none">
+      <div class="bridge-chat-header">
+        <button class="btn btn-sm btn-link p-0 me-2" onclick="backToBridgeList()"><i class="bi bi-arrow-left"></i></button>
+        <span class="fw-bold" style="font-size:0.85rem" id="bridgeChatName"></span>
+      </div>
+      <div class="bridge-chat-messages" id="bridgeChatMessages"></div>
+      <div class="bridge-chat-input">
+        <input type="file" id="bridgeWidgetFile" style="display:none" onchange="sendBridgeWidgetFile()">
+        <div class="d-flex gap-2 align-items-stretch">
+          <textarea class="form-control" id="bridgeWidgetInput" placeholder="Type a message..." rows="2"></textarea>
+          <div class="bridge-chat-input-btns">
+            <button class="btn btn-outline-secondary" onclick="document.getElementById('bridgeWidgetFile').click()" title="Attach"><i class="bi bi-paperclip"></i></button>
+            <button class="btn btn-primary" onclick="sendBridgeWidgetMessage()"><i class="bi bi-send"></i></button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<% } %>
 
 <!-- Scripts -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
@@ -1672,6 +1932,228 @@ function submitLogoutWithReason() {
 </script>
 
 <!-- Idle auto-logout removed — users are no longer logged out for inactivity -->
+
+<% if (typeof user !== 'undefined' && user.role_name && user.role_name.startsWith('LOCAL_')) { %>
+<script>
+// ── Bridge Chat Floating Widget ────────────────────────────
+var bridgeWidgetConvId = null;
+var bridgeWidgetUserId = <%= user.id %>;
+
+function toggleBridgeWidget() {
+  var panel = document.getElementById('bridgePanel');
+  if (panel.style.display === 'none') {
+    panel.style.display = 'flex';
+    loadBridgeConvList();
+  } else {
+    panel.style.display = 'none';
+  }
+}
+
+function loadBridgeConvList() {
+  document.getElementById('bridgeConvList').style.display = '';
+  document.getElementById('bridgeChatView').style.display = 'none';
+  document.getElementById('bridgePanelTitle').textContent = 'Client Messages';
+
+  $.get('/bridge/conversations', function(res) {
+    if (!res.success) return;
+    var list = document.getElementById('bridgeConvList');
+    var convs = res.data.conversations;
+    if (!convs.length) {
+      list.innerHTML = '<div class="text-center text-muted py-3 small">No messages yet</div>';
+      return;
+    }
+    list.innerHTML = convs.map(function(c) {
+      var unread = c.unread_count > 0 ? '<span class="bridge-conv-unread">' + c.unread_count + '</span>' : '';
+      return '<div class="bridge-conv-item" onclick="openBridgeChat(' + c.id + ', \'' + c.client_user_name.replace(/'/g, "\\'") + '\')">' +
+        '<div class="bridge-conv-avatar">' + c.client_user_name.charAt(0).toUpperCase() + '</div>' +
+        '<div class="bridge-conv-info"><span class="bridge-conv-name">' + c.client_user_name + '</span>' +
+        '<span class="bridge-conv-last">' + (c.last_message || '') + '</span></div>' +
+        unread + '</div>';
+    }).join('');
+  });
+}
+
+function openBridgeChat(convId, name) {
+  bridgeWidgetConvId = convId;
+  document.getElementById('bridgeConvList').style.display = 'none';
+  document.getElementById('bridgeChatView').style.display = 'flex';
+  document.getElementById('bridgeChatName').textContent = name;
+
+  $.get('/bridge/conversations/' + convId + '/messages', function(res) {
+    if (!res.success) return;
+    renderBridgeWidgetMessages(res.data.messages);
+  });
+
+  $.post('/bridge/conversations/' + convId + '/read');
+}
+
+function renderBridgeWidgetMessages(messages) {
+  var container = document.getElementById('bridgeChatMessages');
+  if (!messages.length) {
+    container.innerHTML = '<div class="text-center text-muted py-3 small">No messages yet</div>';
+    return;
+  }
+  container.innerHTML = messages.map(function(m) {
+    var isSent = m.sender_id === bridgeWidgetUserId;
+    var cls = isSent ? 'sent' : 'received';
+    var time = new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    var content = '';
+    if (m.is_deleted) {
+      content = '<i class="bi bi-ban me-1"></i><em>This message was deleted</em>';
+    } else if (m.type === 'file' && m.attachment) {
+      content = '<a class="msg-file" href="/bridge/attachment/' + m.id + '" target="_blank" style="color:inherit;text-decoration:none;font-size:0.75rem"><i class="bi bi-file-earmark me-1"></i>' + m.attachment.file_name + '</a>';
+    } else {
+      var div = document.createElement('div'); div.textContent = m.content; content = div.innerHTML;
+    }
+    var deleteBtn = isSent && !m.is_deleted ? '<span class="bridge-msg-delete" onclick="event.stopPropagation(); deleteBridgeWidgetMsg(' + m.id + ')" title="Delete"><i class="bi bi-trash"></i></span>' : '';
+    var senderName = !isSent && m.sender_name ? '<div class="msg-sender-name">' + m.sender_name + '</div>' : '';
+    return '<div class="msg-bubble ' + cls + (m.is_deleted ? ' deleted' : '') + '" data-bridge-msg-id="' + m.id + '">' + deleteBtn + senderName + '<div class="msg-content">' + content + '</div><div class="msg-footer"><span class="msg-time">' + time + '</span></div></div>';
+  }).join('');
+  container.scrollTop = container.scrollHeight;
+}
+
+function deleteBridgeWidgetMsg(msgId) {
+  if (!confirm('Delete this message?')) return;
+  $.ajax({ url: '/bridge/messages/' + msgId, method: 'DELETE' });
+}
+
+function backToBridgeList() {
+  bridgeWidgetConvId = null;
+  loadBridgeConvList();
+}
+
+function sendBridgeWidgetMessage() {
+  if (!bridgeWidgetConvId) return;
+  var input = document.getElementById('bridgeWidgetInput');
+  var content = input.value.trim();
+  if (!content) return;
+
+  $.ajax({
+    url: '/bridge/conversations/' + bridgeWidgetConvId + '/messages',
+    method: 'POST',
+    contentType: 'application/json',
+    data: JSON.stringify({ content: content }),
+    success: function() { input.value = ''; }
+  });
+}
+
+function sendBridgeWidgetFile() {
+  if (!bridgeWidgetConvId) return;
+  var fileInput = document.getElementById('bridgeWidgetFile');
+  if (!fileInput.files.length) return;
+  var fd = new FormData();
+  fd.append('file', fileInput.files[0]);
+  $.ajax({
+    url: '/bridge/conversations/' + bridgeWidgetConvId + '/file',
+    method: 'POST',
+    data: fd,
+    processData: false,
+    contentType: false,
+    success: function() { fileInput.value = ''; }
+  });
+}
+
+// Enter to send in widget
+$(document).on('keydown', '#bridgeWidgetInput', function(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendBridgeWidgetMessage();
+  }
+});
+
+// Listen for bridge messages via main socket
+if (typeof io !== 'undefined') {
+  var bridgeSocket = io('/', { withCredentials: true });
+  bridgeSocket.on('bridge:message', function(msg) {
+    // If widget chat is open for this conversation, append the new message
+    if (msg.conversation_id === bridgeWidgetConvId) {
+      var container = document.getElementById('bridgeChatMessages');
+      // Clear placeholder if present
+      if (container.querySelector('.text-center')) container.innerHTML = '';
+      var isSent = msg.sender_id === bridgeWidgetUserId;
+      var cls = isSent ? 'sent' : 'received';
+      var time = new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      var content = '';
+      if (msg.is_deleted) {
+        content = '<i class="bi bi-ban me-1"></i><em>This message was deleted</em>';
+      } else if (msg.type === 'file' && msg.attachment) {
+        content = '<a class="msg-file" href="/bridge/attachment/' + msg.id + '" target="_blank" style="color:inherit;text-decoration:none;font-size:0.75rem"><i class="bi bi-file-earmark me-1"></i>' + msg.attachment.file_name + '</a>';
+      } else {
+        var div = document.createElement('div'); div.textContent = msg.content; content = div.innerHTML;
+      }
+      var senderLabel = !isSent && msg.sender_name ? '<div class="msg-sender-name">' + msg.sender_name + '</div>' : '';
+      var deleteBtn = isSent && !msg.is_deleted ? '<span class="bridge-msg-delete" onclick="event.stopPropagation(); deleteBridgeWidgetMsg(' + msg.id + ')" title="Delete"><i class="bi bi-trash"></i></span>' : '';
+      container.insertAdjacentHTML('beforeend', '<div class="msg-bubble ' + cls + '" data-bridge-msg-id="' + msg.id + '">' + deleteBtn + senderLabel + '<div class="msg-content">' + content + '</div><div class="msg-footer"><span class="msg-time">' + time + '</span></div></div>');
+      container.scrollTop = container.scrollHeight;
+
+      $.post('/bridge/conversations/' + bridgeWidgetConvId + '/read');
+    }
+
+    // Play sound + update badge for messages from others
+    if (msg.sender_id !== bridgeWidgetUserId) {
+      var panel = document.getElementById('bridgePanel');
+      var chatIsOpen = panel.style.display !== 'none' && msg.conversation_id === bridgeWidgetConvId;
+
+      if (!chatIsOpen) {
+        updateBridgeFabBadge();
+
+        // Show toast only when chat is not open
+        var senderName = msg.sender_name || (msg.conversation ? msg.conversation.client_user_name : 'Client');
+        showToast('Message from <strong>' + senderName + '</strong>: ' + (msg.content || 'File').substring(0, 50), 'info');
+      }
+
+      // Always play sound
+      try {
+        var ctx = new (window.AudioContext || window.webkitAudioContext)();
+        var o = ctx.createOscillator(); var g = ctx.createGain();
+        o.connect(g); g.connect(ctx.destination);
+        o.type = 'sine'; o.frequency.setValueAtTime(880, ctx.currentTime);
+        o.frequency.setValueAtTime(1046, ctx.currentTime + 0.1);
+        g.gain.setValueAtTime(0.15, ctx.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+        o.start(ctx.currentTime); o.stop(ctx.currentTime + 0.3);
+      } catch(e) {}
+    }
+
+    // Refresh conversation list if visible
+    if (document.getElementById('bridgeConvList').style.display !== 'none') {
+      loadBridgeConvList();
+    }
+  });
+
+  // Update FAB badge on load
+  function updateBridgeFabBadge() {
+    $.get('/bridge/unread-count', function(res) {
+      if (!res.success) return;
+      var badge = document.getElementById('bridgeFabBadge');
+      if (res.data.total > 0) {
+        badge.textContent = res.data.total;
+        badge.style.display = '';
+      } else {
+        badge.style.display = 'none';
+      }
+    });
+  }
+
+  // Bridge message delete
+  bridgeSocket.on('bridge:message:delete', function(data) {
+    if (data.conversation_id === bridgeWidgetConvId) {
+      var bubble = document.querySelector('.bridge-chat-messages [data-bridge-msg-id="' + data.id + '"]');
+      if (bubble) {
+        bubble.classList.add('deleted');
+        var contentEl = bubble.querySelector('.msg-content');
+        if (contentEl) contentEl.innerHTML = '<i class="bi bi-ban me-1"></i><em>This message was deleted</em>';
+        var delBtn = bubble.querySelector('.bridge-msg-delete');
+        if (delBtn) delBtn.remove();
+      }
+    }
+  });
+
+  updateBridgeFabBadge();
+  setInterval(updateBridgeFabBadge, 30000);
+}
+</script>
+<% } %>
 
 <%- script %>
 

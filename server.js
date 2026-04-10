@@ -19,7 +19,7 @@ const PORT = process.env.PORT || 3000;
 // ============================================================
 // Ensure required directories exist
 // ============================================================
-['logs', 'uploads/tasks', 'uploads/portal'].forEach(dir => {
+['logs', 'uploads/tasks', 'uploads/portal', 'uploads/bridge'].forEach(dir => {
   const fullPath = path.join(__dirname, dir);
   if (!fs.existsSync(fullPath)) fs.mkdirSync(fullPath, { recursive: true });
 });

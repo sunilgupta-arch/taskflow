@@ -237,7 +237,13 @@ class PortalTaskController {
         const portalNs = io.of('/portal');
         [task.assigned_by, task.assigned_to].forEach(uid => {
           if (uid !== req.user.id) {
-            portalNs.to(`portal:user:${uid}`).emit('portal:task:comment', { task_id: taskId, comment });
+            portalNs.to(`portal:user:${uid}`).emit('portal:task:comment', {
+              task_id: taskId,
+              task_title: task.title,
+              task_priority: task.priority,
+              commenter_name: req.user.name,
+              comment
+            });
           }
         });
       } catch (_) {}
