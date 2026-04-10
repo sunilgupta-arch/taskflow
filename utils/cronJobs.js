@@ -142,13 +142,23 @@ const taskReminderJob = cron.schedule('*/15 * * * *', async () => {
         continue;
       }
 
-      // Build the reminder message
-      let msg = `You have ${pendingTasks.length} incomplete task${pendingTasks.length > 1 ? 's' : ''} for today (${userWorkDate}):\n\n`;
+      // Build the reminder message with a human touch
+      const firstName = user.name.split(' ')[0];
+      const greetings = [
+        `Hey ${firstName}! Quick heads up — you still have ${pendingTasks.length} task${pendingTasks.length > 1 ? 's' : ''} left for today:`,
+        `Hi ${firstName}! Just checking in — there ${pendingTasks.length > 1 ? 'are' : 'is'} ${pendingTasks.length} task${pendingTasks.length > 1 ? 's' : ''} waiting for you:`,
+        `${firstName}, friendly reminder! You've got ${pendingTasks.length} task${pendingTasks.length > 1 ? 's' : ''} to wrap up before the day ends:`
+      ];
+      let msg = greetings[Math.floor(Math.random() * greetings.length)] + '\n\n';
       pendingTasks.forEach((t, i) => {
-        const typeLabel = t.type === 'recurring' ? `${t.recurrence_pattern || 'recurring'}` : 'one-time';
-        msg += `${i + 1}. ${t.title} (${typeLabel})\n`;
+        msg += `  ${i + 1}. ${t.title}\n`;
       });
-      msg += `\nYour shift ends in ~2 hours. Please complete them before signing off.`;
+      const closers = [
+        `\nYour shift wraps up in about 2 hours. You've got plenty of time — finish strong! 💪`,
+        `\nAbout 2 hours left on your shift. Take them one at a time — you've got this! 🎯`,
+        `\nThe clock's ticking, but no pressure — just focus and knock them out one by one! ⏰`
+      ];
+      msg += closers[Math.floor(Math.random() * closers.length)];
 
       // Send system message
       await ChatModel.sendSystemMessage(user.id, msg);
@@ -308,9 +318,12 @@ const deadlineAlertJob = cron.schedule('*/15 * * * *', async () => {
         }
 
         const minsLeft = deadlineMin - nowMin;
-        await ChatModel.sendSystemMessage(t.assigned_to,
-          `⏰ Deadline approaching: "${t.title}"\nDue in ${minsLeft} minutes. Please complete it before the deadline.`
-        );
+        const deadlineMsgs = [
+          `⏰ Hey ${t.user_name ? t.user_name.split(' ')[0] : 'there'}! "${t.title}" is due in about ${minsLeft} minutes. If you haven't started yet, now's the time — you can still make it!`,
+          `⏰ Quick reminder — "${t.title}" has a deadline coming up in ${minsLeft} minutes. Wrap it up when you can — we believe in you!`,
+          `⏰ Heads up! "${t.title}" is due in ${minsLeft} minutes. Don't worry, there's still time. Focus and get it done! 💪`
+        ];
+        await ChatModel.sendSystemMessage(t.assigned_to, deadlineMsgs[Math.floor(Math.random() * deadlineMsgs.length)]);
         deadlineAlertSent[key] = true;
         console.log(`[CRON] Deadline alert sent to ${t.user_name} for "${t.title}"`);
       }
@@ -385,9 +398,20 @@ const overdueAlertJob = cron.schedule('*/15 * * * *', async () => {
 
       if (allMissed.length === 0) continue;
 
-      let msg = `⚠️ You missed ${allMissed.length} task${allMissed.length > 1 ? 's' : ''} yesterday (${yesterday}):\n\n`;
-      allMissed.forEach((t, i) => { msg += `${i + 1}. ${t.title}\n`; });
-      msg += `\nPlease check with your manager if these need to be completed today.`;
+      const missedName = user.name.split(' ')[0];
+      const missedOpeners = [
+        `Good morning, ${missedName}! Just wanted to let you know — ${allMissed.length} task${allMissed.length > 1 ? 's were' : ' was'} left incomplete from yesterday:`,
+        `Hey ${missedName}, hope you're doing well! A quick note — these ${allMissed.length > 1 ? 'tasks were' : 'task was'} pending from yesterday:`,
+        `Hi ${missedName}! Before you dive into today, here ${allMissed.length > 1 ? 'are' : 'is'} ${allMissed.length} task${allMissed.length > 1 ? 's' : ''} from yesterday that ${allMissed.length > 1 ? 'need' : 'needs'} attention:`
+      ];
+      let msg = missedOpeners[Math.floor(Math.random() * missedOpeners.length)] + '\n\n';
+      allMissed.forEach((t, i) => { msg += `  ${i + 1}. ${t.title}\n`; });
+      const missedClosers = [
+        `\nNo worries — things happen! Check with your manager if any of these still need to be done today. Fresh start! 🌅`,
+        `\nDon't stress about it — just flag them with your manager and tackle what's needed today. You've got this! 💪`,
+        `\nYesterday is done, today is new! Just loop in your manager about these and you're all set. 👍`
+      ];
+      msg += missedClosers[Math.floor(Math.random() * missedClosers.length)];
 
       await ChatModel.sendSystemMessage(user.id, msg);
       console.log(`[CRON] Overdue alert sent to ${user.name} (${allMissed.length} tasks)`);
@@ -468,14 +492,28 @@ const dailySummaryJob = cron.schedule('*/15 * * * *', async () => {
       );
       const activeTime = timeData?.total_time ? timeData.total_time.substring(0, 5) + 'h' : '0h';
 
-      let emoji = pct === 100 ? '🎉' : pct >= 75 ? '👍' : pct >= 50 ? '📊' : '⚠️';
+      const summaryName = user.name.split(' ')[0];
 
-      let msg = `${emoji} Daily Summary — ${userWorkDate}\n\n`;
-      msg += `Tasks: ${done}/${total} completed (${pct}%)\n`;
-      msg += `Active Time: ${activeTime}\n`;
-      if (pct === 100) msg += `\nPerfect day! All tasks completed. Great work!`;
-      else if (done === 0 && total > 0) msg += `\nNo tasks completed today. Please check with your manager.`;
-      else msg += `\n${total - done} task${total - done > 1 ? 's' : ''} remaining.`;
+      let msg = `📊 Hey ${summaryName}, here's how your day went!\n\n`;
+      msg += `✅ Tasks completed: ${done} out of ${total} (${pct}%)\n`;
+      msg += `⏱️ Time active: ${activeTime}\n`;
+
+      if (pct === 100) {
+        const perfectMsgs = [
+          `\n🎉 Perfect score! Every single task done. That's dedication, ${summaryName}. Rest well tonight — you've absolutely earned it!`,
+          `\n🎉 Clean sweep, ${summaryName}! All ${total} tasks completed. You should feel proud — days like these define great work!`,
+          `\n🎉 100%! Nothing left undone. ${summaryName}, you made today count. Enjoy your evening!`
+        ];
+        msg += perfectMsgs[Math.floor(Math.random() * perfectMsgs.length)];
+      } else if (pct >= 75) {
+        msg += `\n👏 Really solid day, ${summaryName}! Just ${total - done} left — you've done the heavy lifting already. Pick them up tomorrow!`;
+      } else if (pct >= 50) {
+        msg += `\n👍 Halfway there, ${summaryName}! ${done} tasks done is still good progress. Tomorrow's another chance to push further!`;
+      } else if (done > 0) {
+        msg += `\n💪 Every task counts, ${summaryName}. You got ${done} done today — build on this momentum tomorrow!`;
+      } else {
+        msg += `\n🌙 Tough day? That's okay, ${summaryName}. We all have them. Come back fresh tomorrow and give it your best!`;
+      }
 
       await ChatModel.sendSystemMessage(user.id, msg);
       dailySummarySent[key] = true;
@@ -538,16 +576,25 @@ const weeklyDigestHandler = async () => {
         [user.id, weekAgo + ' 00:00:00', today + ' 23:59:59']
       );
 
-      let msg = `📈 Weekly Performance Digest (${weekAgo} to ${today})\n\n`;
-      msg += `Tasks completed: ${totalDone}\n`;
-      msg += `Days present: ${daysPresent}/7\n`;
-      msg += `Total active time: ${totalHours}\n`;
-      msg += `Late logins: ${lateCount.cnt || 0}\n`;
-      if (rewards.total > 0) msg += `Rewards earned: ${rewards.total} pts\n`;
-      msg += `\n`;
-      if (lateCount.cnt === 0 && daysPresent >= 5) msg += `Great punctuality this week! 🎯`;
-      else if (totalDone > 20) msg += `Impressive output! Keep it up! 💪`;
-      else msg += `Keep pushing — every task counts! 🚀`;
+      const weekName = user.name.split(' ')[0];
+      let msg = `📈 Happy Monday, ${weekName}! Here's your week in review:\n\n`;
+      msg += `✅ Tasks completed: ${totalDone}\n`;
+      msg += `📅 Days present: ${daysPresent}/7\n`;
+      msg += `⏱️ Total active time: ${totalHours}\n`;
+      if (lateCount.cnt > 0) msg += `⏰ Late logins: ${lateCount.cnt}\n`;
+      if (rewards.total > 0) msg += `🏆 Rewards earned: ${rewards.total} pts\n`;
+
+      if (lateCount.cnt === 0 && daysPresent >= 5 && totalDone > 15) {
+        msg += `\n🌟 What a week, ${weekName}! Punctual, present, and productive. You're setting the standard for the team!`;
+      } else if (lateCount.cnt === 0 && daysPresent >= 5) {
+        msg += `\n🎯 Great punctuality this week, ${weekName}! On time every day — that consistency really matters.`;
+      } else if (totalDone > 20) {
+        msg += `\n💪 ${totalDone} tasks! That's impressive output, ${weekName}. Your hard work doesn't go unnoticed!`;
+      } else if (totalDone > 10) {
+        msg += `\n👍 Solid week, ${weekName}! ${totalDone} tasks completed. Keep building on this momentum!`;
+      } else {
+        msg += `\n🚀 New week, new opportunities, ${weekName}! Let's aim higher this week — you have it in you!`;
+      }
 
       await ChatModel.sendSystemMessage(user.id, msg);
       console.log(`[CRON] Weekly digest sent to ${user.name}`);

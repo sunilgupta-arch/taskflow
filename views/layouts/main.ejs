@@ -562,6 +562,44 @@
     .bridge-chat-messages .msg-bubble { position: relative; }
     .bridge-chat-messages .msg-bubble:hover .bridge-msg-delete { opacity: 0.6; }
     .bridge-chat-messages .bridge-msg-delete:hover { opacity: 1 !important; }
+
+    .bridge-chat-messages .msg-date-divider {
+      text-align: center;
+      margin: 8px 0;
+      font-size: 0.55rem;
+      color: var(--tf-text-muted);
+      font-family: var(--tf-font-mono);
+      position: relative;
+    }
+    .bridge-chat-messages .msg-date-divider span {
+      background: var(--tf-surface);
+      padding: 2px 10px;
+      border: 1px solid var(--tf-border);
+      border-radius: 20px;
+      position: relative;
+      z-index: 1;
+    }
+    .bridge-chat-messages .msg-date-divider::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 0; right: 0;
+      height: 1px;
+      background: var(--tf-border);
+    }
+
+    .bridge-chat-messages .msg-image-link { display: block; text-decoration: none; }
+    .bridge-chat-messages .msg-image-preview {
+      max-width: 100%;
+      max-height: 180px;
+      border-radius: 8px;
+      display: block;
+      object-fit: cover;
+      cursor: pointer;
+    }
+    .bridge-chat-messages .msg-file { display: flex; align-items: center; gap: 6px; color: inherit; text-decoration: none; font-size: 0.75rem; }
+    .bridge-chat-messages .msg-file-name { display: block; font-size: 0.75rem; }
+    .bridge-chat-messages .msg-file-size { display: block; font-size: 0.6rem; opacity: 0.6; }
     .bridge-chat-messages .msg-bubble.deleted {
       opacity: 0.85;
       background: var(--tf-surface-2) !important;
@@ -674,6 +712,16 @@
     .tf-toast-progress-bar.success { background: #10b981; }
     .tf-toast-progress-bar.error { background: #ef4444; }
     .tf-toast-progress-bar.info { background: #00d4ff; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @keyframes scaleIn {
+      from { transform: scale(0.9); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
 
     @keyframes toastSlideIn {
       from { transform: translateX(120px) scale(0.95); opacity: 0; }
@@ -911,8 +959,8 @@
     <div class="user-info">
       <div class="user-avatar"><%= user.name.charAt(0).toUpperCase() %></div>
       <div>
-        <div class="user-name"><%= user.name %></div>
-        <div class="user-role"><%= user.role_name %></div>
+        <div class="user-name" data-user-name="<%= user.name %>"><%= user.name %></div>
+        <div class="user-role" data-user-role="<%= user.role_name %>"><%= user.role_name %></div>
       </div>
       <div class="ms-auto d-flex gap-2">
         <a href="#" onclick="openChangePasswordModal();return false;" title="Change Password" style="color:var(--tf-text-muted);">
@@ -1773,6 +1821,9 @@ async function submitChangePassword() {
         <input type="radio" name="late_reason" value="Approved Late Start" style="accent-color:var(--tf-accent);"> Approved Late Start
       </label>
       <label class="late-reason-opt" style="display:flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid var(--tf-border);border-radius:8px;cursor:pointer;font-size:0.8rem;transition:all 0.15s;">
+        <input type="radio" name="late_reason" value="Forgot To Login" style="accent-color:var(--tf-accent);"> Forgot To Login
+      </label>
+      <label class="late-reason-opt" style="display:flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid var(--tf-border);border-radius:8px;cursor:pointer;font-size:0.8rem;transition:all 0.15s;">
         <input type="radio" name="late_reason" value="Other" id="lateReasonOther" style="accent-color:var(--tf-accent);"> Other
       </label>
     </div>
@@ -1931,6 +1982,9 @@ function submitLogoutWithReason() {
 }
 </script>
 
+<!-- Motivation System -->
+<script src="/js/motivation.js"></script>
+
 <!-- Idle auto-logout removed — users are no longer logged out for inactivity -->
 
 <% if (typeof user !== 'undefined' && user.role_name && user.role_name.startsWith('LOCAL_')) { %>
@@ -1987,13 +2041,43 @@ function openBridgeChat(convId, name) {
   $.post('/bridge/conversations/' + convId + '/read');
 }
 
+var BRIDGE_IMAGE_EXTS = ['jpg','jpeg','png','gif','webp','bmp','svg'];
+function bridgeRenderFile(attachment, msgId) {
+  var fname = attachment.file_name;
+  var ext = fname.split('.').pop().toLowerCase();
+  var url = '/bridge/attachment/' + msgId;
+  if (BRIDGE_IMAGE_EXTS.indexOf(ext) !== -1) {
+    return '<a href="' + url + '" target="_blank" class="msg-image-link"><img src="' + url + '" class="msg-image-preview" alt="' + fname + '" loading="lazy"></a>';
+  }
+  var short = fname.length > 25 ? fname.substring(0, 22) + '...' : fname;
+  var size = attachment.file_size ? (attachment.file_size < 1048576 ? (attachment.file_size/1024).toFixed(1)+' KB' : (attachment.file_size/1048576).toFixed(1)+' MB') : '';
+  return '<a class="msg-file" href="' + url + '" target="_blank"><i class="bi bi-file-earmark"></i><div><span class="msg-file-name">' + short + '</span>' + (size ? '<span class="msg-file-size">' + size + '</span>' : '') + '</div></a>';
+}
+
+function bridgeDateLabel(dateStr) {
+  var d = new Date(dateStr);
+  var today = new Date();
+  var yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  if (d.toDateString() === today.toDateString()) return 'Today';
+  if (d.toDateString() === yesterday.toDateString()) return 'Yesterday';
+  return d.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' });
+}
+
 function renderBridgeWidgetMessages(messages) {
   var container = document.getElementById('bridgeChatMessages');
   if (!messages.length) {
     container.innerHTML = '<div class="text-center text-muted py-3 small">No messages yet</div>';
     return;
   }
+  var lastDate = '';
   container.innerHTML = messages.map(function(m) {
+    var msgDate = bridgeDateLabel(m.created_at);
+    var dateDivider = '';
+    if (msgDate !== lastDate) {
+      dateDivider = '<div class="msg-date-divider"><span>' + msgDate + '</span></div>';
+      lastDate = msgDate;
+    }
     var isSent = m.sender_id === bridgeWidgetUserId;
     var cls = isSent ? 'sent' : 'received';
     var time = new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -2001,13 +2085,13 @@ function renderBridgeWidgetMessages(messages) {
     if (m.is_deleted) {
       content = '<i class="bi bi-ban me-1"></i><em>This message was deleted</em>';
     } else if (m.type === 'file' && m.attachment) {
-      content = '<a class="msg-file" href="/bridge/attachment/' + m.id + '" target="_blank" style="color:inherit;text-decoration:none;font-size:0.75rem"><i class="bi bi-file-earmark me-1"></i>' + m.attachment.file_name + '</a>';
+      content = bridgeRenderFile(m.attachment, m.id);
     } else {
       var div = document.createElement('div'); div.textContent = m.content; content = div.innerHTML;
     }
     var deleteBtn = isSent && !m.is_deleted ? '<span class="bridge-msg-delete" onclick="event.stopPropagation(); deleteBridgeWidgetMsg(' + m.id + ')" title="Delete"><i class="bi bi-trash"></i></span>' : '';
     var senderName = !isSent && m.sender_name ? '<div class="msg-sender-name">' + m.sender_name + '</div>' : '';
-    return '<div class="msg-bubble ' + cls + (m.is_deleted ? ' deleted' : '') + '" data-bridge-msg-id="' + m.id + '">' + deleteBtn + senderName + '<div class="msg-content">' + content + '</div><div class="msg-footer"><span class="msg-time">' + time + '</span></div></div>';
+    return dateDivider + '<div class="msg-bubble ' + cls + (m.is_deleted ? ' deleted' : '') + '" data-bridge-msg-id="' + m.id + '">' + deleteBtn + senderName + '<div class="msg-content">' + content + '</div><div class="msg-footer"><span class="msg-time">' + time + '</span></div></div>';
   }).join('');
   container.scrollTop = container.scrollHeight;
 }
@@ -2077,7 +2161,7 @@ if (typeof io !== 'undefined') {
       if (msg.is_deleted) {
         content = '<i class="bi bi-ban me-1"></i><em>This message was deleted</em>';
       } else if (msg.type === 'file' && msg.attachment) {
-        content = '<a class="msg-file" href="/bridge/attachment/' + msg.id + '" target="_blank" style="color:inherit;text-decoration:none;font-size:0.75rem"><i class="bi bi-file-earmark me-1"></i>' + msg.attachment.file_name + '</a>';
+        content = bridgeRenderFile(msg.attachment, msg.id);
       } else {
         var div = document.createElement('div'); div.textContent = msg.content; content = div.innerHTML;
       }

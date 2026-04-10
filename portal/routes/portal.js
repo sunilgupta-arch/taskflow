@@ -48,6 +48,65 @@ router.put('/tasks/:id', PortalTaskController.update);
 router.post('/tasks/:id/comments', upload.single('file'), PortalTaskController.addComment);
 router.get('/tasks/attachment/:attachmentId', PortalTaskController.serveAttachment);
 
+// ── Notes ────────────────────────────────────────────────
+const NoteModel = require('../../models/Note');
+const { ApiResponse: NoteApiResponse } = require('../../utils/response');
+
+router.get('/notes', (req, res) => {
+  res.render('portal/notes', {
+    title: 'Notes - Client Portal',
+    layout: 'portal/layout',
+    section: 'notes'
+  });
+});
+
+router.get('/notes/list', async (req, res) => {
+  try {
+    const { search } = req.query;
+    const { rows } = await NoteModel.getAll({ user_id: req.user.id, search, page: 1, limit: 100 });
+    return NoteApiResponse.success(res, { notes: rows });
+  } catch (err) {
+    return NoteApiResponse.error(res, 'Failed to load notes');
+  }
+});
+
+router.post('/notes', async (req, res) => {
+  try {
+    const { title, content } = req.body;
+    if (!title || !title.trim()) return NoteApiResponse.error(res, 'Title is required', 400);
+    const noteId = await NoteModel.create({ user_id: req.user.id, title: title.trim(), content: content?.trim() || null });
+    const note = await NoteModel.findById(noteId);
+    return NoteApiResponse.success(res, { note }, 'Note created', 201);
+  } catch (err) {
+    return NoteApiResponse.error(res, err.message, 400);
+  }
+});
+
+router.put('/notes/:id', async (req, res) => {
+  try {
+    const note = await NoteModel.findById(req.params.id);
+    if (!note || note.user_id !== req.user.id) return NoteApiResponse.error(res, 'Not found', 404);
+    const { title, content } = req.body;
+    if (!title || !title.trim()) return NoteApiResponse.error(res, 'Title is required', 400);
+    await NoteModel.update(req.params.id, { title: title.trim(), content: content?.trim() || null });
+    const updated = await NoteModel.findById(req.params.id);
+    return NoteApiResponse.success(res, { note: updated }, 'Note saved');
+  } catch (err) {
+    return NoteApiResponse.error(res, err.message, 400);
+  }
+});
+
+router.delete('/notes/:id', async (req, res) => {
+  try {
+    const note = await NoteModel.findById(req.params.id);
+    if (!note || note.user_id !== req.user.id) return NoteApiResponse.error(res, 'Not found', 404);
+    await NoteModel.delete(req.params.id);
+    return NoteApiResponse.success(res, {}, 'Note deleted');
+  } catch (err) {
+    return NoteApiResponse.error(res, err.message, 400);
+  }
+});
+
 // ── Team India (Live Status) ─────────────────────────────
 router.get('/team-status', requireRoles('CLIENT_ADMIN', 'CLIENT_MANAGER'), PortalTeamStatusController.index);
 router.get('/team-status/data', requireRoles('CLIENT_ADMIN', 'CLIENT_MANAGER'), PortalTeamStatusController.getData);

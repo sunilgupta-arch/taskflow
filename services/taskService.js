@@ -5,23 +5,31 @@ const db = require('../config/db');
 const { getToday, getEffectiveWorkDate, getEffectiveWorkDateWithSession } = require('../utils/timezone');
 const ChatModel = require('../models/Chat');
 
+// Helper: pick a random message from an array
+function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+// Helper: get user first name by ID
+async function getUserName(userId) {
+  const [[u]] = await db.query('SELECT name FROM users WHERE id = ?', [userId]);
+  return u ? u.name.split(' ')[0] : 'there';
+}
+
+async function getUserFullName(userId) {
+  const [[u]] = await db.query('SELECT name FROM users WHERE id = ?', [userId]);
+  return u ? u.name : 'Someone';
+}
+
 // Helper: send system notification (non-blocking)
 async function notifyUser(userId, message) {
   try { await ChatModel.sendSystemMessage(userId, message); } catch (e) {}
-}
-
-// Helper: get user name by ID
-async function getUserName(userId) {
-  const [[u]] = await db.query('SELECT name FROM users WHERE id = ?', [userId]);
-  return u ? u.name : 'Someone';
 }
 
 // Helper: check if user completed ALL tasks today and notify streak
 async function checkStreakAndNotify(userId, timezone) {
   try {
     const today = getToday(timezone);
+    const name = await getUserName(userId);
 
-    // Count total vs done for today
     const [[rTotal]] = await db.query(
       'SELECT COUNT(*) as cnt FROM tasks WHERE is_deleted = 0 AND assigned_to = ? AND type = "recurring" AND status = "active"',
       [userId]
@@ -43,7 +51,6 @@ async function checkStreakAndNotify(userId, timezone) {
     const done = (rDone.cnt || 0) + (oDone.cnt || 0);
 
     if (total > 0 && done >= total) {
-      // All tasks done today! Check consecutive days streak
       let streak = 1;
       for (let i = 1; i <= 30; i++) {
         const prevDate = new Date(new Date(today + 'T12:00:00').getTime() - i * 86400000).toISOString().split('T')[0];
@@ -56,13 +63,17 @@ async function checkStreakAndNotify(userId, timezone) {
       }
 
       if (streak >= 3) {
-        await ChatModel.sendSystemMessage(userId,
-          `🔥 ${streak}-day streak! You've completed all your tasks on time for ${streak} consecutive days. Keep it going!`
-        );
+        await ChatModel.sendSystemMessage(userId, pick([
+          `🔥 ${name}, you're on fire! ${streak} days in a row with all tasks done. That's the kind of consistency that sets you apart!`,
+          `🔥 ${streak}-day streak, ${name}! You haven't missed a beat. Your dedication is truly inspiring — keep this going!`,
+          `🔥 What a run, ${name}! ${streak} consecutive days of completing everything. The team notices your hard work!`
+        ]));
       } else {
-        await ChatModel.sendSystemMessage(userId,
-          `🎉 All tasks done for today! Great job — you've completed all ${total} tasks.`
-        );
+        await ChatModel.sendSystemMessage(userId, pick([
+          `🎉 ${name}, you did it! All ${total} tasks wrapped up for today. That's a clean sweep — enjoy this feeling, you earned it!`,
+          `🎉 Everything's done, ${name}! ${total} tasks completed today. Take a deep breath — you've been amazing!`,
+          `🎉 All ${total} tasks checked off, ${name}! There's nothing quite like the feeling of a fully completed day. Proud of you!`
+        ]));
       }
     }
   } catch (e) { /* non-critical */ }
@@ -132,9 +143,15 @@ class TaskService {
         await TaskModel.create({ ...baseData, assigned_to: assignees[i], group_id: firstTaskId });
       }
       // Notify all assignees
-      const creatorName = await getUserName(creator.id);
+      const creatorName = await getUserFullName(creator.id);
+      const typeLabel = data.type === 'recurring' ? `recurring (${data.recurrence_pattern || 'daily'})` : 'one-time';
       for (const uid of assignees) {
-        notifyUser(parseInt(uid), `📋 New task assigned to you: "${data.title}"\nAssigned by: ${creatorName}\nType: ${data.type === 'recurring' ? 'Recurring (' + (data.recurrence_pattern || 'daily') + ')' : 'One-time'}${data.reward_amount ? '\nReward: ' + data.reward_amount + ' pts' : ''}`);
+        const assigneeName = await getUserName(parseInt(uid));
+        notifyUser(parseInt(uid), pick([
+          `Hey ${assigneeName}! 📋 ${creatorName} just assigned you a new task: "${data.title}"\n\nIt's a ${typeLabel} task.${data.reward_amount ? ' There\'s a ' + data.reward_amount + ' pts reward waiting for you!' : ''} You've got this!`,
+          `Hi ${assigneeName}! 📋 New task from ${creatorName}: "${data.title}"\n\nType: ${typeLabel}${data.reward_amount ? ' | Reward: ' + data.reward_amount + ' pts' : ''}\n\nTake a look when you get a chance — we know you'll handle it well!`,
+          `Heads up, ${assigneeName}! 📋 "${data.title}" has been assigned to you by ${creatorName}.\n\nThis is a ${typeLabel} task.${data.reward_amount ? ' Complete it to earn ' + data.reward_amount + ' pts!' : ''} Let's make it happen!`
+        ]));
       }
       return TaskModel.findById(firstTaskId);
     }
@@ -147,8 +164,14 @@ class TaskService {
 
     // Notify assignee
     if (assignees.length === 1) {
-      const creatorName = await getUserName(creator.id);
-      notifyUser(parseInt(assignees[0]), `📋 New task assigned to you: "${data.title}"\nAssigned by: ${creatorName}\nType: ${data.type === 'recurring' ? 'Recurring (' + (data.recurrence_pattern || 'daily') + ')' : 'One-time'}${data.reward_amount ? '\nReward: ' + data.reward_amount + ' pts' : ''}`);
+      const creatorName = await getUserFullName(creator.id);
+      const assigneeName = await getUserName(parseInt(assignees[0]));
+      const typeLabel = data.type === 'recurring' ? `recurring (${data.recurrence_pattern || 'daily'})` : 'one-time';
+      notifyUser(parseInt(assignees[0]), pick([
+        `Hey ${assigneeName}! 📋 ${creatorName} just assigned you a new task: "${data.title}"\n\nIt's a ${typeLabel} task.${data.reward_amount ? ' There\'s a ' + data.reward_amount + ' pts reward waiting for you!' : ''} You've got this!`,
+        `Hi ${assigneeName}! 📋 New task from ${creatorName}: "${data.title}"\n\nType: ${typeLabel}${data.reward_amount ? ' | Reward: ' + data.reward_amount + ' pts' : ''}\n\nTake a look when you get a chance — we know you'll handle it well!`,
+        `Heads up, ${assigneeName}! 📋 "${data.title}" has been assigned to you by ${creatorName}.\n\nThis is a ${typeLabel} task.${data.reward_amount ? ' Complete it to earn ' + data.reward_amount + ' pts!' : ''} Let's make it happen!`
+      ]));
     }
     return TaskModel.findById(taskId);
   }
@@ -174,7 +197,12 @@ class TaskService {
 
     await TaskModel.update(taskId, { assigned_to: assigneeId, status: 'in_progress' });
     // Notify new assignee
-    notifyUser(assigneeId, `📋 Task reassigned to you: "${task.title}"\nThis task was reassigned to you by your manager.`);
+    const reassigneeName = await getUserName(assigneeId);
+    notifyUser(assigneeId, pick([
+      `Hey ${reassigneeName}! 🔄 "${task.title}" has been reassigned to you. Your manager chose you for this — that means they trust you to get it done!`,
+      `Hi ${reassigneeName}! 🔄 New task on your plate: "${task.title}" (reassigned). Take a look and let your manager know if you need any help!`,
+      `Heads up, ${reassigneeName}! 🔄 "${task.title}" just landed in your queue. It's been reassigned to you — we know you'll handle it great!`
+    ]));
     return true;
   }
 
@@ -465,13 +493,21 @@ class TaskService {
         [task.group_id]
       );
       // Notify all assignees
-      groupTasks.forEach(t => {
-        notifyUser(t.assigned_to, `🚫 Task deactivated: "${task.title}"\nThis recurring task has been deactivated and will no longer appear in your task list.`);
-      });
+      for (const t of groupTasks) {
+        const dName = await getUserName(t.assigned_to);
+        notifyUser(t.assigned_to, pick([
+          `Hey ${dName}, just letting you know — "${task.title}" has been deactivated. You won't see it in your task list anymore. One less thing to worry about! ✅`,
+          `Hi ${dName}! 📌 "${task.title}" has been taken off your plate — it's been deactivated. Focus on what's left and keep doing great!`
+        ]));
+      }
     } else {
       await TaskModel.update(taskId, { status: 'deactivated' });
       if (task.assigned_to) {
-        notifyUser(task.assigned_to, `🚫 Task deactivated: "${task.title}"\nThis task has been deactivated and will no longer appear in your task list.`);
+        const dName2 = await getUserName(task.assigned_to);
+        notifyUser(task.assigned_to, pick([
+          `Hey ${dName2}, just a heads up — "${task.title}" has been deactivated. You won't see it anymore. One less thing on your list! ✅`,
+          `Hi ${dName2}! 📌 "${task.title}" has been taken off your plate. Focus your energy on the remaining tasks — you're doing great!`
+        ]));
       }
     }
   }

@@ -161,43 +161,64 @@ function openConversation(convId, name, type, peerId) {
     });
 }
 
+let loadingOlderMessages = false;
+let noMoreMessages = false;
+
 function loadMessages(convId, beforeId) {
   let url = `/portal/chat/conversations/${convId}/messages`;
   if (beforeId) url += `?before=${beforeId}`;
+
+  if (!beforeId) {
+    noMoreMessages = false;
+    loadingOlderMessages = false;
+  } else {
+    loadingOlderMessages = true;
+  }
 
   fetch(url)
     .then(r => r.json())
     .then(res => {
       if (!res.success) return;
-      renderMessages(res.data.messages, !beforeId);
+      if (beforeId && res.data.messages.length === 0) {
+        noMoreMessages = true;
+      }
+      renderMessages(res.data.messages, beforeId ? 'prepend' : 'replace');
+      loadingOlderMessages = false;
     });
 }
 
-function renderMessages(messages, replace = true) {
+// mode: 'replace' (full load), 'append' (new message), 'prepend' (older messages)
+function renderMessages(messages, replaceOrMode = true) {
+  const mode = replaceOrMode === true ? 'replace' : replaceOrMode === false ? 'append' : replaceOrMode;
   const container = document.getElementById('chatMessages');
+
+  let lastDateLabel = '';
+  // For append mode, get the last date already in container
+  if (mode === 'append') {
+    const dividers = container.querySelectorAll('.msg-date-divider');
+    if (dividers.length) lastDateLabel = dividers[dividers.length - 1].textContent.trim();
+  }
+
   const html = messages.map(m => {
+    const msgDate = formatDateLabel(m.created_at);
+    let dateDivider = '';
+    if (msgDate !== lastDateLabel) {
+      dateDivider = `<div class="msg-date-divider" data-date="${msgDate}"><span>${msgDate}</span></div>`;
+      lastDateLabel = msgDate;
+    }
     const isSent = m.sender_id === PORTAL_USER.id;
     const bubbleClass = isSent ? 'sent' : 'received';
     const time = parseServerDate(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
     let content = '';
     if (m.type === 'file' && m.attachment) {
-      const fname = m.attachment.file_name;
-      const ext = fname.split('.').pop().toLowerCase();
-      const shortName = fname.length > 30 ? fname.substring(0, 27) + '...' + ext : fname;
-      const iconMap = { jpg: 'bi-file-image', jpeg: 'bi-file-image', png: 'bi-file-image', gif: 'bi-file-image', webp: 'bi-file-image', pdf: 'bi-file-pdf', doc: 'bi-file-word', docx: 'bi-file-word', xls: 'bi-file-excel', xlsx: 'bi-file-excel', zip: 'bi-file-zip', rar: 'bi-file-zip', mp4: 'bi-file-play', mp3: 'bi-file-music' };
-      const icon = iconMap[ext] || 'bi-file-earmark';
-      const size = m.attachment.file_size ? formatFileSize(m.attachment.file_size) : '';
-      content = `<a class="msg-file" href="/portal/chat/attachment/${m.id}" target="_blank">
-        <i class="bi ${icon}"></i>
-        <div><span class="msg-file-name">${escapeHtml(shortName)}</span>${size ? `<span class="msg-file-size">${size}</span>` : ''}</div>
-      </a>`;
+      content = renderFileContent(m.attachment, m.id, '/portal/chat/attachment');
     } else if (m.type === 'system') {
       return `<div class="text-center small text-muted my-2">${m.content}</div>`;
     } else if (m.is_deleted) {
       content = '<i class="bi bi-ban me-1"></i>This message was deleted';
     } else {
-      content = escapeHtml(m.content);
+      content = linkify(escapeHtml(m.content));
     }
 
     const sender = !isSent ? `<div class="msg-sender">${m.sender_name}</div>` : '';
@@ -218,7 +239,7 @@ function renderMessages(messages, replace = true) {
       ? `<span class="msg-action-trigger" onclick="event.stopPropagation(); showMsgActions(${m.id})"><i class="bi bi-three-dots-vertical"></i></span>`
       : '';
 
-    return `<div class="msg-bubble ${bubbleClass}${m.is_deleted ? ' deleted' : ''}" data-msg-id="${m.id}">
+    return `${dateDivider}<div class="msg-bubble ${bubbleClass}${m.is_deleted ? ' deleted' : ''}" data-msg-id="${m.id}">
       ${actionBtn}
       ${sender}
       <div class="msg-content">${content}</div>
@@ -230,9 +251,13 @@ function renderMessages(messages, replace = true) {
     </div>`;
   }).join('');
 
-  if (replace) {
+  if (mode === 'replace') {
     container.innerHTML = html;
     container.scrollTop = container.scrollHeight;
+  } else if (mode === 'prepend') {
+    const oldHeight = container.scrollHeight;
+    container.insertAdjacentHTML('afterbegin', html);
+    container.scrollTop = container.scrollHeight - oldHeight;
   } else {
     container.insertAdjacentHTML('beforeend', html);
     container.scrollTop = container.scrollHeight;
@@ -955,6 +980,43 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
 
+    // Scroll to load older messages + floating date pill
+    const chatMsgs = document.getElementById('chatMessages');
+    const datePill = document.getElementById('chatDatePill');
+    let datePillTimer = null;
+
+    if (chatMsgs) {
+      chatMsgs.addEventListener('scroll', () => {
+        // Load older messages
+        if (chatMsgs.scrollTop < 50 && !loadingOlderMessages && !noMoreMessages && currentConversationId) {
+          const firstMsg = chatMsgs.querySelector('[data-msg-id]');
+          if (firstMsg) {
+            const oldestId = parseInt(firstMsg.getAttribute('data-msg-id'));
+            loadMessages(currentConversationId, oldestId);
+          }
+        }
+
+        // Floating date pill
+        if (datePill) {
+          const dividers = chatMsgs.querySelectorAll('.msg-date-divider');
+          let currentDate = '';
+          dividers.forEach(div => {
+            if (div.offsetTop <= chatMsgs.scrollTop + 40) {
+              currentDate = div.textContent.trim();
+            }
+          });
+          if (currentDate && chatMsgs.scrollTop > 20) {
+            datePill.textContent = currentDate;
+            datePill.classList.add('visible');
+            clearTimeout(datePillTimer);
+            datePillTimer = setTimeout(() => datePill.classList.remove('visible'), 1500);
+          } else {
+            datePill.classList.remove('visible');
+          }
+        }
+      });
+    }
+
     // Contact search
     const searchInput = document.getElementById('contactSearch');
     if (searchInput) {
@@ -993,6 +1055,33 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       });
     }
+  }
+
+  // Notes page init
+  if (document.getElementById('notesList')) {
+    loadNotes();
+
+    // Auto-save every 5 seconds of inactivity
+    const noteContent = document.getElementById('noteContent');
+    const noteTitle = document.getElementById('noteTitle');
+    if (noteContent) {
+      noteContent.addEventListener('input', () => {
+        clearTimeout(noteAutoSaveTimer);
+        noteAutoSaveTimer = setTimeout(saveNoteQuiet, 2000);
+        document.getElementById('noteStatus').textContent = 'Unsaved changes...';
+      });
+    }
+    if (noteTitle) {
+      noteTitle.addEventListener('input', () => {
+        clearTimeout(noteAutoSaveTimer);
+        noteAutoSaveTimer = setTimeout(saveNoteQuiet, 2000);
+      });
+    }
+
+    // Save on page leave
+    window.addEventListener('beforeunload', () => {
+      if (currentNoteId) saveNoteQuiet();
+    });
   }
 
   // Always update unread badge
@@ -1211,7 +1300,20 @@ function renderBridgeMessages(messages, replace) {
     return;
   }
 
+  let lastBridgeDate = '';
+  if (!replace) {
+    const dividers = container.querySelectorAll('.msg-date-divider');
+    if (dividers.length) lastBridgeDate = dividers[dividers.length - 1].textContent.trim();
+  }
+
   const html = messages.map(m => {
+    const msgDate = formatDateLabel(m.created_at);
+    let dateDivider = '';
+    if (msgDate !== lastBridgeDate) {
+      dateDivider = `<div class="msg-date-divider"><span>${msgDate}</span></div>`;
+      lastBridgeDate = msgDate;
+    }
+
     const isSent = m.sender_id === PORTAL_USER.id;
     const bubbleClass = isSent ? 'sent' : 'received';
     const time = parseServerDate(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -1220,18 +1322,14 @@ function renderBridgeMessages(messages, replace) {
     if (m.is_deleted) {
       content = '<i class="bi bi-ban me-1"></i><em>This message was deleted</em>';
     } else if (m.type === 'file' && m.attachment) {
-      const fname = m.attachment.file_name;
-      const shortName = fname.length > 25 ? fname.substring(0, 22) + '...' : fname;
-      content = `<a class="msg-file" href="/portal/bridge/attachment/${m.id}" target="_blank">
-        <i class="bi bi-file-earmark"></i> <span>${escapeHtml(shortName)}</span>
-      </a>`;
+      content = renderFileContent(m.attachment, m.id, '/portal/bridge/attachment');
     } else {
-      content = escapeHtml(m.content);
+      content = linkify(escapeHtml(m.content));
     }
 
     const deleteBtn = isSent && !m.is_deleted ? `<span class="bridge-msg-delete" onclick="event.stopPropagation(); deleteBridgeMsg(${m.id})" title="Delete"><i class="bi bi-trash"></i></span>` : '';
 
-    return `<div class="msg-bubble ${bubbleClass}${m.is_deleted ? ' deleted' : ''}" data-bridge-msg-id="${m.id}">
+    return `${dateDivider}<div class="msg-bubble ${bubbleClass}${m.is_deleted ? ' deleted' : ''}" data-bridge-msg-id="${m.id}">
       ${deleteBtn}
       <div class="msg-content">${content}</div>
       <div class="msg-footer"><span class="msg-time">${time}</span></div>
@@ -1291,6 +1389,290 @@ function deleteBridgeMsg(msgId) {
     .then(res => {
       if (!res.success) alert(res.message);
     });
+}
+
+// ── NOTES ──────────────────────────────────────────────────
+
+let currentNoteId = null;
+let noteAutoSaveTimer = null;
+let recognition = null;
+let isDictating = false;
+
+function loadNotes() {
+  const search = document.getElementById('noteSearch')?.value || '';
+  const url = search ? `/portal/notes/list?search=${encodeURIComponent(search)}` : '/portal/notes/list';
+
+  fetch(url)
+    .then(r => r.json())
+    .then(res => {
+      if (!res.success) return;
+      renderNotesList(res.data.notes);
+    });
+}
+
+function renderNotesList(notes) {
+  const list = document.getElementById('notesList');
+  if (!list) return;
+
+  if (!notes.length) {
+    list.innerHTML = '<div class="text-center text-muted py-4 small">No notes yet</div>';
+    return;
+  }
+
+  list.innerHTML = notes.map(n => {
+    const active = n.id === currentNoteId ? 'active' : '';
+    const preview = n.content ? n.content.substring(0, 60) + (n.content.length > 60 ? '...' : '') : 'No content';
+    const date = timeAgo(n.updated_at);
+    return `<div class="note-item ${active}" onclick="openNote(${n.id})">
+      <div class="note-item-title">${escapeHtml(n.title)}</div>
+      <div class="note-item-preview">${escapeHtml(preview)}</div>
+      <div class="note-item-date">${date}</div>
+    </div>`;
+  }).join('');
+}
+
+function searchNotes() {
+  clearTimeout(noteAutoSaveTimer);
+  loadNotes();
+}
+
+function createNewNote() {
+  fetch('/portal/notes', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title: new Date().toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }), content: '' })
+  })
+    .then(r => r.json())
+    .then(res => {
+      if (res.success) {
+        loadNotes();
+        openNote(res.data.note.id);
+      }
+    });
+}
+
+function openNote(noteId) {
+  // Auto-save current note before switching
+  if (currentNoteId && currentNoteId !== noteId) {
+    saveNoteQuiet();
+  }
+
+  currentNoteId = noteId;
+  document.getElementById('notesPlaceholder').style.display = 'none';
+  document.getElementById('notesActive').style.display = 'flex';
+
+  fetch(`/portal/notes/list`)
+    .then(r => r.json())
+    .then(res => {
+      if (!res.success) return;
+      const note = res.data.notes.find(n => n.id === noteId);
+      if (!note) return;
+      document.getElementById('noteTitle').value = note.title;
+      document.getElementById('noteContent').value = note.content || '';
+      document.getElementById('noteStatus').textContent = 'Last saved: ' + timeAgo(note.updated_at);
+
+      // Highlight in sidebar
+      document.querySelectorAll('.note-item').forEach(el => el.classList.remove('active'));
+      loadNotes();
+    });
+}
+
+function saveNote() {
+  if (!currentNoteId) return;
+  const title = document.getElementById('noteTitle').value.trim();
+  const content = document.getElementById('noteContent').value.trim();
+  if (!title) return alert('Title is required');
+
+  fetch(`/portal/notes/${currentNoteId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title, content })
+  })
+    .then(r => r.json())
+    .then(res => {
+      if (res.success) {
+        document.getElementById('noteStatus').textContent = 'Saved just now';
+        loadNotes();
+      }
+    });
+}
+
+function saveNoteQuiet() {
+  if (!currentNoteId) return;
+  const title = document.getElementById('noteTitle')?.value?.trim();
+  const content = document.getElementById('noteContent')?.value?.trim();
+  if (!title) return;
+
+  fetch(`/portal/notes/${currentNoteId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title, content })
+  })
+    .then(r => r.json())
+    .then(res => {
+      if (res.success) {
+        const statusEl = document.getElementById('noteStatus');
+        if (statusEl) statusEl.textContent = 'Auto-saved';
+        loadNotes();
+      }
+    })
+    .catch(() => {});
+}
+
+function deleteNote() {
+  if (!currentNoteId || !confirm('Delete this note?')) return;
+
+  fetch(`/portal/notes/${currentNoteId}`, { method: 'DELETE' })
+    .then(r => r.json())
+    .then(res => {
+      if (res.success) {
+        currentNoteId = null;
+        document.getElementById('notesPlaceholder').style.display = 'flex';
+        document.getElementById('notesActive').style.display = 'none';
+        loadNotes();
+      }
+    });
+}
+
+// ── DICTATION (Speech-to-Text) ─────────────────────────────
+
+function toggleDictation() {
+  if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+    alert('Speech recognition is not supported in your browser. Try Chrome.');
+    return;
+  }
+
+  if (isDictating) {
+    stopDictation();
+  } else {
+    startDictation();
+  }
+}
+
+function startDictation() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  recognition = new SpeechRecognition();
+  recognition.continuous = true;
+  recognition.interimResults = true;
+  recognition.lang = 'en-US';
+
+  const content = document.getElementById('noteContent');
+  const startPos = content.selectionStart;
+  let finalTranscript = '';
+
+  recognition.onresult = function(event) {
+    let interim = '';
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      if (event.results[i].isFinal) {
+        finalTranscript += event.results[i][0].transcript + ' ';
+      } else {
+        interim += event.results[i][0].transcript;
+      }
+    }
+
+    // Insert at cursor position
+    const before = content.value.substring(0, startPos);
+    const after = content.value.substring(startPos);
+    content.value = before + finalTranscript + interim + after;
+  };
+
+  recognition.onerror = function() {
+    stopDictation();
+  };
+
+  recognition.onend = function() {
+    // If still dictating, restart (continuous mode can stop)
+    if (isDictating) {
+      try { recognition.start(); } catch (e) { stopDictation(); }
+    }
+  };
+
+  recognition.start();
+  isDictating = true;
+  document.getElementById('dictateIcon').className = 'bi bi-mic-fill text-danger';
+  document.getElementById('dictateBtn').classList.add('dictating');
+  document.getElementById('dictateStatus').style.display = '';
+}
+
+function stopDictation() {
+  if (recognition) {
+    isDictating = false;
+    try { recognition.stop(); } catch (e) {}
+    recognition = null;
+  }
+  document.getElementById('dictateIcon').className = 'bi bi-mic';
+  document.getElementById('dictateBtn').classList.remove('dictating');
+  document.getElementById('dictateStatus').style.display = 'none';
+}
+
+// ── FIELD DICTATION (reusable for any input/textarea) ──────
+
+let fieldRecognition = null;
+let fieldDictatingBtn = null;
+
+function toggleFieldDictation(fieldId, btn) {
+  if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+    alert('Speech recognition is not supported in your browser. Try Chrome.');
+    return;
+  }
+
+  // If already dictating this field, stop
+  if (fieldDictatingBtn === btn && fieldRecognition) {
+    stopFieldDictation();
+    return;
+  }
+
+  // Stop any other active dictation
+  if (fieldRecognition) stopFieldDictation();
+
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  fieldRecognition = new SpeechRecognition();
+  fieldRecognition.continuous = true;
+  fieldRecognition.interimResults = true;
+  fieldRecognition.lang = 'en-US';
+
+  const field = document.getElementById(fieldId);
+  const startValue = field.value;
+  const startPos = field.selectionStart || field.value.length;
+  let finalTranscript = '';
+
+  fieldRecognition.onresult = function(event) {
+    let interim = '';
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      if (event.results[i].isFinal) {
+        finalTranscript += event.results[i][0].transcript + ' ';
+      } else {
+        interim += event.results[i][0].transcript;
+      }
+    }
+    const before = startValue.substring(0, startPos);
+    const after = startValue.substring(startPos);
+    field.value = before + (before && !before.endsWith(' ') ? ' ' : '') + finalTranscript + interim + after;
+  };
+
+  fieldRecognition.onerror = function() { stopFieldDictation(); };
+  fieldRecognition.onend = function() {
+    if (fieldDictatingBtn === btn) {
+      try { fieldRecognition.start(); } catch (e) { stopFieldDictation(); }
+    }
+  };
+
+  fieldRecognition.start();
+  fieldDictatingBtn = btn;
+  btn.classList.add('dictating');
+  btn.querySelector('i').className = 'bi bi-mic-fill text-danger';
+}
+
+function stopFieldDictation() {
+  if (fieldRecognition) {
+    try { fieldRecognition.stop(); } catch (e) {}
+    fieldRecognition = null;
+  }
+  if (fieldDictatingBtn) {
+    fieldDictatingBtn.classList.remove('dictating');
+    fieldDictatingBtn.querySelector('i').className = 'bi bi-mic';
+    fieldDictatingBtn = null;
+  }
 }
 
 // ── NOTIFICATION SOUND ─────────────────────────────────────
@@ -1538,10 +1920,53 @@ function insertEmoji(emoji) {
 
 // ── UTILS ──────────────────────────────────────────────────
 
+const IMAGE_EXTS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'];
+
+function renderFileContent(attachment, msgId, baseUrl) {
+  const fname = attachment.file_name;
+  const ext = fname.split('.').pop().toLowerCase();
+  const shortName = fname.length > 30 ? fname.substring(0, 27) + '...' : fname;
+  const size = attachment.file_size ? formatFileSize(attachment.file_size) : '';
+  const url = `${baseUrl}/${msgId}`;
+
+  if (IMAGE_EXTS.includes(ext)) {
+    return `<a href="${url}" target="_blank" class="msg-image-link">
+      <img src="${url}" class="msg-image-preview" alt="${escapeHtml(fname)}" loading="lazy">
+    </a>`;
+  }
+
+  const iconMap = { pdf: 'bi-file-pdf', doc: 'bi-file-word', docx: 'bi-file-word', xls: 'bi-file-excel', xlsx: 'bi-file-excel', zip: 'bi-file-zip', rar: 'bi-file-zip', mp4: 'bi-file-play', mp3: 'bi-file-music' };
+  const icon = iconMap[ext] || 'bi-file-earmark';
+  return `<a class="msg-file" href="${url}" target="_blank">
+    <i class="bi ${icon}"></i>
+    <div><span class="msg-file-name">${escapeHtml(shortName)}</span>${size ? `<span class="msg-file-size">${size}</span>` : ''}</div>
+  </a>`;
+}
+
 function escapeHtml(text) {
   const div = document.createElement('div');
   div.textContent = text;
   return div.innerHTML;
+}
+
+function formatDateLabel(dateStr) {
+  const d = parseServerDate(dateStr);
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+
+  const dStr = d.toDateString();
+  if (dStr === today.toDateString()) return 'Today';
+  if (dStr === yesterday.toDateString()) return 'Yesterday';
+  return d.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function linkify(text) {
+  const urlPattern = /(\b(?:https?:\/\/|www\.)[^\s<]+)/gi;
+  return text.replace(urlPattern, function(url) {
+    const href = url.startsWith('http') ? url : 'https://' + url;
+    return '<a href="' + href + '" target="_blank" rel="noopener" class="msg-link">' + url + '</a>';
+  });
 }
 
 function formatFileSize(bytes) {

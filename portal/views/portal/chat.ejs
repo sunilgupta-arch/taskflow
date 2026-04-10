@@ -54,8 +54,11 @@
         <button class="btn btn-sm btn-outline-secondary" onclick="searchInChat()"><i class="bi bi-search"></i></button>
         <button class="btn btn-sm btn-link" onclick="closeChatSearch()"><i class="bi bi-x-lg"></i></button>
       </div>
-      <div class="chat-messages" id="chatMessages">
-        <!-- Messages rendered here -->
+      <div style="position:relative;flex:1;overflow:hidden;display:flex;flex-direction:column;">
+        <div class="chat-date-pill" id="chatDatePill"></div>
+        <div class="chat-messages" id="chatMessages">
+          <!-- Messages rendered here -->
+        </div>
       </div>
       <div class="chat-typing" id="chatTyping" style="display:none">
         <span id="typingText"></span>
@@ -66,7 +69,7 @@
         <div class="chat-input-grid">
           <button class="btn btn-outline-secondary" onclick="toggleEmojiPicker()" title="Emoji"><i class="bi bi-emoji-smile"></i></button>
           <button class="btn btn-outline-secondary" onclick="document.getElementById('fileInput').click()" title="Attach File"><i class="bi bi-paperclip"></i></button>
-          <button class="btn btn-outline-secondary" title="Dictate (coming soon)"><i class="bi bi-mic"></i></button>
+          <button class="btn btn-outline-secondary" onclick="toggleFieldDictation('messageInput', this)" title="Dictate"><i class="bi bi-mic"></i></button>
           <button class="btn btn-primary" id="sendBtn" onclick="sendMessage()"><i class="bi bi-send"></i></button>
         </div>
       </div>

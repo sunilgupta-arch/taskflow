@@ -557,6 +557,34 @@ body {
   margin-top: 1px;
 }
 
+/* Image preview in chat */
+.msg-image-link {
+  display: block;
+  text-decoration: none;
+}
+
+.msg-image-preview {
+  max-width: 100%;
+  max-height: 250px;
+  border-radius: 8px;
+  display: block;
+  object-fit: cover;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.msg-image-preview:hover {
+  opacity: 0.9;
+}
+
+.msg-bubble.sent .msg-image-preview {
+  border-bottom-right-radius: 4px;
+}
+
+.msg-bubble.received .msg-image-preview {
+  border-bottom-left-radius: 4px;
+}
+
 .chat-typing {
   padding: 6px 20px;
   font-size: 0.75rem;
@@ -1882,6 +1910,277 @@ body {
 }
 
 /* ── Utilities ──────────────────────────────────────────── */
+/* ── Notes Layout ───────────────────────────────────────── */
+.notes-container {
+  height: 100%;
+  display: flex;
+  overflow: hidden;
+}
+
+.notes-sidebar {
+  width: 300px;
+  min-width: 300px;
+  background: var(--tf-surface);
+  border-right: 1px solid var(--tf-border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.notes-sidebar-header {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--tf-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.notes-sidebar-header h6 {
+  font-weight: 700;
+}
+
+.notes-search {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--tf-border);
+}
+
+.notes-list {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.note-item {
+  padding: 12px 16px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--tf-border);
+  border-left: 3px solid transparent;
+  transition: all 0.15s;
+}
+
+.note-item:hover {
+  background: var(--tf-surface-2);
+}
+
+.note-item.active {
+  background: var(--tf-accent-light);
+  border-left-color: var(--tf-accent);
+}
+
+.note-item-title {
+  font-weight: 600;
+  font-size: 0.85rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.note-item-preview {
+  font-size: 0.72rem;
+  color: var(--tf-text-muted);
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.note-item-date {
+  font-size: 0.6rem;
+  color: var(--tf-text-muted);
+  margin-top: 4px;
+}
+
+/* Notes Editor */
+.notes-editor {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--tf-bg);
+}
+
+.notes-editor-placeholder {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.notes-editor-active {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.notes-editor-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--tf-border);
+  background: var(--tf-surface);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.notes-title-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--tf-text);
+  font-size: 1.1rem;
+  font-weight: 700;
+  outline: none;
+  font-family: var(--portal-font);
+}
+
+.notes-title-input::placeholder {
+  color: var(--tf-text-muted);
+}
+
+.notes-editor-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.notes-editor-body {
+  flex: 1;
+  overflow: hidden;
+  padding: 16px;
+}
+
+.notes-content-input {
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  border: none;
+  color: var(--tf-text);
+  font-size: 0.9rem;
+  line-height: 1.7;
+  resize: none;
+  outline: none;
+  font-family: var(--portal-font);
+}
+
+.notes-content-input::placeholder {
+  color: var(--tf-text-muted);
+}
+
+.notes-editor-footer {
+  padding: 8px 16px;
+  border-top: 1px solid var(--tf-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Dictation styles */
+.dictating {
+  animation: dictatePulse 1.5s infinite;
+}
+
+@keyframes dictatePulse {
+  0%, 100% { background: transparent; }
+  50% { background: rgba(239,68,68,0.15); }
+}
+
+.dictate-pulse {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--tf-danger);
+  margin-right: 4px;
+  animation: dictateDot 1s infinite;
+}
+
+.dictate-field-btn {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
+@keyframes dictateDot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+@media (max-width: 768px) {
+  .notes-sidebar {
+    width: 100%;
+    min-width: 100%;
+  }
+}
+
+/* ── Date Separators & Floating Pill ─────────────────────── */
+.msg-date-divider {
+  text-align: center;
+  margin: 12px 0;
+  font-size: 0.65rem;
+  color: var(--tf-text-muted);
+  font-family: var(--portal-font-mono);
+  letter-spacing: 0.5px;
+  position: relative;
+}
+
+.msg-date-divider span {
+  background: var(--tf-surface);
+  padding: 3px 12px;
+  border: 1px solid var(--tf-border);
+  border-radius: 20px;
+  position: relative;
+  z-index: 1;
+}
+
+.msg-date-divider::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--tf-border);
+}
+
+.chat-date-pill {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+  background: var(--tf-surface);
+  border: 1px solid var(--tf-border);
+  padding: 3px 14px;
+  border-radius: 20px;
+  font-size: 0.6rem;
+  font-family: var(--portal-font-mono);
+  color: var(--tf-text-muted);
+  letter-spacing: 0.5px;
+  box-shadow: var(--tf-shadow);
+  opacity: 0;
+  transition: opacity 0.2s;
+  pointer-events: none;
+}
+
+.chat-date-pill.visible {
+  opacity: 1;
+}
+
+/* ── Links in messages ──────────────────────────────────── */
+.msg-link {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  word-break: break-all;
+}
+
+.msg-bubble.sent .msg-link { color: #fff; }
+.msg-bubble.received .msg-link { color: var(--tf-accent); }
+
 .text-accent { color: var(--tf-accent) !important; }
 .text-success { color: var(--tf-success) !important; }
 .text-warning { color: var(--tf-warning) !important; }
