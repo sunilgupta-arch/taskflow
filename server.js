@@ -265,6 +265,29 @@ app.use((err, req, res, next) => {
         }
       }
     });
+
+    // Bridge chat: typing indicator relay
+    socket.on('bridge:typing', (data) => {
+      if (data.conversation_id) {
+        const BridgeChat = require('./models/BridgeChat');
+        BridgeChat.getConversation(data.conversation_id).then(conv => {
+          if (!conv) return;
+          const otherId = conv.client_user_id === user.id ? conv.local_user_id : conv.client_user_id;
+          io.to(`user:${otherId}`).emit('bridge:typing', { conversation_id: data.conversation_id, user_id: user.id });
+        }).catch(() => {});
+      }
+    });
+
+    socket.on('bridge:typing:stop', (data) => {
+      if (data.conversation_id) {
+        const BridgeChat = require('./models/BridgeChat');
+        BridgeChat.getConversation(data.conversation_id).then(conv => {
+          if (!conv) return;
+          const otherId = conv.client_user_id === user.id ? conv.local_user_id : conv.client_user_id;
+          io.to(`user:${otherId}`).emit('bridge:typing:stop', { conversation_id: data.conversation_id, user_id: user.id });
+        }).catch(() => {});
+      }
+    });
   });
 
   server.listen(PORT, () => {

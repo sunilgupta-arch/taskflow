@@ -214,11 +214,12 @@ class BridgeChatController {
     }
   }
 
-  // Get unread count
+  // Get unread count (total + per-user breakdown)
   static async unreadCount(req, res) {
     try {
       const total = await BridgeChat.getUnreadCount(req.user.id);
-      return ApiResponse.success(res, { total });
+      const by_user = await BridgeChat.getUnreadCountByUser(req.user.id);
+      return ApiResponse.success(res, { total, by_user });
     } catch (err) {
       return ApiResponse.error(res, 'Failed to get count');
     }

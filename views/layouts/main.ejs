@@ -508,6 +508,20 @@
     .bridge-chat-messages .msg-bubble.received .msg-footer { color: var(--tf-text-muted); }
     .bridge-chat-messages .msg-time { font-size: 0.55rem; }
 
+    .msg-ticks { font-size: 0.75rem; opacity: 0.5; line-height: 1; }
+    .msg-ticks.read { color: #34b7f1; opacity: 1; }
+    .msg-bubble.sent .msg-ticks.read { color: #34b7f1; }
+
+    .bridge-typing { display: inline-flex; align-items: center; height: 14px; }
+    .typing-dots { display: inline-flex; align-items: center; gap: 3px; }
+    .typing-dots span { width: 5px; height: 5px; border-radius: 50%; background: #22c55e; animation: typingBounce 1.4s infinite ease-in-out; }
+    .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes typingBounce {
+      0%, 60%, 100% { opacity: 0.3; transform: scale(0.8); }
+      30% { opacity: 1; transform: scale(1.2); }
+    }
+
     .bridge-chat-input {
       padding: 10px 12px;
       border-top: 1px solid var(--tf-border);
@@ -1097,7 +1111,10 @@
     <div class="bridge-chat-view" id="bridgeChatView" style="display:none">
       <div class="bridge-chat-header">
         <button class="btn btn-sm btn-link p-0 me-2" onclick="backToBridgeList()"><i class="bi bi-arrow-left"></i></button>
-        <span class="fw-bold" style="font-size:0.85rem" id="bridgeChatName"></span>
+        <div>
+          <span class="fw-bold" style="font-size:0.85rem" id="bridgeChatName"></span>
+          <div class="small text-muted" id="bridgeWidgetTypingStatus" style="font-size:0.65rem;min-height:14px"></div>
+        </div>
       </div>
       <div class="bridge-chat-messages" id="bridgeChatMessages"></div>
       <div class="bridge-chat-input">
@@ -2091,7 +2108,13 @@ function renderBridgeWidgetMessages(messages) {
     }
     var deleteBtn = isSent && !m.is_deleted ? '<span class="bridge-msg-delete" onclick="event.stopPropagation(); deleteBridgeWidgetMsg(' + m.id + ')" title="Delete"><i class="bi bi-trash"></i></span>' : '';
     var senderName = !isSent && m.sender_name ? '<div class="msg-sender-name">' + m.sender_name + '</div>' : '';
-    return dateDivider + '<div class="msg-bubble ' + cls + (m.is_deleted ? ' deleted' : '') + '" data-bridge-msg-id="' + m.id + '">' + deleteBtn + senderName + '<div class="msg-content">' + content + '</div><div class="msg-footer"><span class="msg-time">' + time + '</span></div></div>';
+    var ticks = '';
+    if (isSent && !m.is_deleted) {
+      ticks = m.is_read
+        ? '<span class="msg-ticks read"><i class="bi bi-check-all"></i></span>'
+        : '<span class="msg-ticks"><i class="bi bi-check-all"></i></span>';
+    }
+    return dateDivider + '<div class="msg-bubble ' + cls + (m.is_deleted ? ' deleted' : '') + '" data-bridge-msg-id="' + m.id + '">' + deleteBtn + senderName + '<div class="msg-content">' + content + '</div><div class="msg-footer"><span class="msg-time">' + time + '</span>' + ticks + '</div></div>';
   }).join('');
   container.scrollTop = container.scrollHeight;
 }
@@ -2167,7 +2190,8 @@ if (typeof io !== 'undefined') {
       }
       var senderLabel = !isSent && msg.sender_name ? '<div class="msg-sender-name">' + msg.sender_name + '</div>' : '';
       var deleteBtn = isSent && !msg.is_deleted ? '<span class="bridge-msg-delete" onclick="event.stopPropagation(); deleteBridgeWidgetMsg(' + msg.id + ')" title="Delete"><i class="bi bi-trash"></i></span>' : '';
-      container.insertAdjacentHTML('beforeend', '<div class="msg-bubble ' + cls + '" data-bridge-msg-id="' + msg.id + '">' + deleteBtn + senderLabel + '<div class="msg-content">' + content + '</div><div class="msg-footer"><span class="msg-time">' + time + '</span></div></div>');
+      var ticks = isSent ? '<span class="msg-ticks"><i class="bi bi-check-all"></i></span>' : '';
+      container.insertAdjacentHTML('beforeend', '<div class="msg-bubble ' + cls + '" data-bridge-msg-id="' + msg.id + '">' + deleteBtn + senderLabel + '<div class="msg-content">' + content + '</div><div class="msg-footer"><span class="msg-time">' + time + '</span>' + ticks + '</div></div>');
       container.scrollTop = container.scrollHeight;
 
       $.post('/bridge/conversations/' + bridgeWidgetConvId + '/read');
@@ -2232,6 +2256,52 @@ if (typeof io !== 'undefined') {
       }
     }
   });
+
+  // Read receipt — turn ticks blue
+  bridgeSocket.on('bridge:read', function(data) {
+    if (data.conversation_id === bridgeWidgetConvId) {
+      document.querySelectorAll('.bridge-chat-messages .msg-bubble.sent .msg-ticks:not(.read)').forEach(function(el) {
+        el.classList.add('read');
+      });
+    }
+  });
+
+  // Typing indicator
+  var _bwTypingTimer = null;
+  bridgeSocket.on('bridge:typing', function(data) {
+    if (data.conversation_id !== bridgeWidgetConvId) return;
+    var el = document.getElementById('bridgeWidgetTypingStatus');
+    if (el) el.innerHTML = '<span class="bridge-typing"><span class="typing-dots"><span></span><span></span><span></span></span></span>';
+    clearTimeout(_bwTypingTimer);
+    _bwTypingTimer = setTimeout(function() {
+      if (el) el.textContent = '';
+    }, 3000);
+  });
+
+  bridgeSocket.on('bridge:typing:stop', function(data) {
+    if (data.conversation_id !== bridgeWidgetConvId) return;
+    clearTimeout(_bwTypingTimer);
+    var el = document.getElementById('bridgeWidgetTypingStatus');
+    if (el) el.textContent = '';
+  });
+
+  // Emit typing when LOCAL user types
+  (function() {
+    var input = document.getElementById('bridgeWidgetInput');
+    if (!input) return;
+    var typingTimeout = null;
+    input.addEventListener('keydown', function() {
+      if (!bridgeWidgetConvId) return;
+      bridgeSocket.emit('bridge:typing', { conversation_id: bridgeWidgetConvId });
+      clearTimeout(typingTimeout);
+      typingTimeout = setTimeout(function() {
+        bridgeSocket.emit('bridge:typing:stop', { conversation_id: bridgeWidgetConvId });
+      }, 2000);
+    });
+  })();
+
+  // Append ticks on new sent messages in widget
+  var _origAppendBridge = null;
 
   updateBridgeFabBadge();
   setInterval(updateBridgeFabBadge, 30000);

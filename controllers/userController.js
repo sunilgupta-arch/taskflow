@@ -13,13 +13,21 @@ class UserController {
       const [roles] = await db.query('SELECT * FROM roles');
       const [orgs] = await db.query('SELECT * FROM organizations');
 
+      // Get current delegated support user (for LOCAL_ADMIN)
+      let delegatedSupportId = null;
+      if (req.user.role_name === 'LOCAL_ADMIN') {
+        const [[localOrg]] = await db.query("SELECT delegated_support_id FROM organizations WHERE org_type = 'LOCAL' LIMIT 1");
+        delegatedSupportId = localOrg?.delegated_support_id || null;
+      }
+
       res.render('users/index', {
         title: 'User Management',
         users: rows,
         roles,
         orgs,
         pagination: getPaginationMeta(total, page, limit),
-        filters: { org_type, role_id, search }
+        filters: { org_type, role_id, search },
+        delegatedSupportId
       });
     } catch (err) {
       res.status(500).render('error', { title: 'Error', message: err.message, code: 500, layout: false });

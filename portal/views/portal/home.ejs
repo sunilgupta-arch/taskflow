@@ -1,0 +1,153 @@
+<div class="portal-home">
+  <div class="home-center">
+    <div class="home-greeting">
+      <h2>Welcome, <%= user.name.split(' ')[0] %></h2>
+      <p class="text-muted">CFC Portal &mdash; What would you like to do?</p>
+    </div>
+    <div class="home-grid">
+      <a href="/portal/chat" class="home-tile">
+        <div class="home-tile-icon" style="--tile-color: #3b82f6"><i class="bi bi-chat-dots-fill"></i></div>
+        <div class="home-tile-label">Chat</div>
+        <div class="home-tile-desc">Messages & conversations</div>
+      </a>
+      <a href="/portal/tasks" class="home-tile">
+        <div class="home-tile-icon" style="--tile-color: #8b5cf6"><i class="bi bi-kanban-fill"></i></div>
+        <div class="home-tile-label">Tasks</div>
+        <div class="home-tile-desc">Track work & progress</div>
+      </a>
+      <a href="/portal/notes" class="home-tile">
+        <div class="home-tile-icon" style="--tile-color: #f59e0b"><i class="bi bi-journal-text"></i></div>
+        <div class="home-tile-label">Notes</div>
+        <div class="home-tile-desc">Personal notes & docs</div>
+      </a>
+      <% if (['CLIENT_ADMIN', 'CLIENT_TOP_MGMT'].includes(user.role_name)) { %>
+      <a href="/portal/team-status" class="home-tile">
+        <div class="home-tile-icon" style="--tile-color: #22c55e"><i class="bi bi-flag-fill"></i></div>
+        <div class="home-tile-label">Team India</div>
+        <div class="home-tile-desc">Live team status</div>
+      </a>
+      <% } %>
+      <% if (user.role_name === 'CLIENT_ADMIN') { %>
+      <a href="/portal/users" class="home-tile">
+        <div class="home-tile-icon" style="--tile-color: #06b6d4"><i class="bi bi-people-fill"></i></div>
+        <div class="home-tile-label">Users</div>
+        <div class="home-tile-desc">Manage portal users</div>
+      </a>
+      <% } %>
+      <a href="/portal/help" class="home-tile">
+        <div class="home-tile-icon" style="--tile-color: #ec4899"><i class="bi bi-question-circle-fill"></i></div>
+        <div class="home-tile-label">Help</div>
+        <div class="home-tile-desc">Guides & training</div>
+      </a>
+      <% if (localAdmin) { %>
+      <a href="#" onclick="event.preventDefault(); toggleSupportChat('admin');" class="home-tile">
+        <div class="home-tile-icon" style="--tile-color: #f97316"><i class="bi bi-headset"></i></div>
+        <div class="home-tile-label"><%= localAdmin.name.split(' ')[0] %></div>
+        <div class="home-tile-desc">Primary Support</div>
+      </a>
+      <% } %>
+      <% if (delegateSupport) { %>
+      <a href="#" onclick="event.preventDefault(); toggleSupportChat('delegate');" class="home-tile">
+        <div class="home-tile-icon" style="--tile-color: #22c55e"><i class="bi bi-person-badge-fill"></i></div>
+        <div class="home-tile-label"><%= delegateSupport.name.split(' ')[0] %></div>
+        <div class="home-tile-desc">Secondary Support</div>
+      </a>
+      <% } %>
+    </div>
+  </div>
+</div>
+
+<style>
+.portal-home {
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  overflow: auto;
+}
+
+.home-center {
+  text-align: center;
+  max-width: 680px;
+  width: 100%;
+}
+
+.home-greeting h2 {
+  font-weight: 700;
+  font-size: 1.6rem;
+  margin-bottom: 4px;
+}
+
+.home-greeting p {
+  font-size: 0.9rem;
+  margin-bottom: 36px;
+}
+
+.home-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 16px;
+  justify-items: center;
+}
+
+.home-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: 160px;
+  padding: 28px 16px 22px;
+  border-radius: 16px;
+  background: var(--tf-surface);
+  border: 1px solid var(--tf-border);
+  text-decoration: none;
+  color: var(--tf-text);
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.home-tile:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--tf-shadow-lg);
+  border-color: var(--tf-accent);
+  color: var(--tf-text);
+}
+
+.home-tile-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--tile-color) 15%, transparent);
+  color: var(--tile-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.6rem;
+  margin-bottom: 12px;
+  transition: transform 0.2s;
+}
+
+.home-tile:hover .home-tile-icon {
+  transform: scale(1.1);
+}
+
+.home-tile-label {
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin-bottom: 2px;
+}
+
+.home-tile-desc {
+  font-size: 0.72rem;
+  color: var(--tf-text-muted);
+}
+
+@media (max-width: 480px) {
+  .home-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .home-tile { padding: 20px 12px 16px; }
+  .home-tile-icon { width: 48px; height: 48px; font-size: 1.3rem; }
+  .home-greeting h2 { font-size: 1.3rem; }
+}
+</style>

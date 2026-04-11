@@ -44,7 +44,7 @@
         </div>
       </div>
       <div class="notes-editor-body">
-        <textarea class="notes-content-input" id="noteContent" placeholder="Start typing your note... or click the mic to dictate"></textarea>
+        <div id="noteContent"></div>
       </div>
       <div class="notes-editor-footer">
         <span class="small text-muted" id="noteStatus"></span>
@@ -55,3 +55,39 @@
     </div>
   </div>
 </div>
+
+<link href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js"></script>
+<script>
+var quillEditor = null;
+
+function initQuillEditor() {
+  if (quillEditor) return;
+  quillEditor = new Quill('#noteContent', {
+    theme: 'snow',
+    placeholder: 'Start typing your note...',
+    modules: {
+      toolbar: [
+        [{ 'header': [1, 2, 3, false] }],
+        ['bold', 'italic', 'underline', 'strike'],
+        [{ 'color': [] }, { 'background': [] }],
+        [{ 'size': ['small', false, 'large', 'huge'] }],
+        [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+        [{ 'indent': '-1' }, { 'indent': '+1' }],
+        [{ 'align': [] }],
+        ['blockquote', 'code-block'],
+        ['link'],
+        ['clean']
+      ]
+    }
+  });
+
+  // Auto-save on text change
+  quillEditor.on('text-change', function() {
+    clearTimeout(noteAutoSaveTimer);
+    noteAutoSaveTimer = setTimeout(saveNoteQuiet, 2000);
+    var statusEl = document.getElementById('noteStatus');
+    if (statusEl) statusEl.textContent = 'Unsaved changes...';
+  });
+}
+</script>

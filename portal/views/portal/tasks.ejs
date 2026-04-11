@@ -22,6 +22,9 @@
       <select class="form-select form-select-sm" id="filterUser" onchange="applyUserFilter()" style="width:auto">
         <option value="">All Users</option>
       </select>
+      <button class="btn btn-sm btn-outline-secondary" id="archiveToggleBtn" onclick="toggleArchiveView()">
+        <i class="bi bi-archive me-1"></i><span>Archived</span>
+      </button>
       <% if (['CLIENT_ADMIN', 'CLIENT_TOP_MGMT', 'CLIENT_MGMT', 'CLIENT_MANAGER'].includes(user.role_name)) { %>
         <button class="btn btn-sm btn-primary" onclick="showCreateTaskModal()">
           <i class="bi bi-plus-lg"></i> New Task

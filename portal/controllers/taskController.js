@@ -24,22 +24,58 @@ class PortalTaskController {
   // List tasks (API)
   static async list(req, res) {
     try {
-      const { status, priority } = req.query;
+      const { status, priority, archived, search, page, limit } = req.query;
       const filters = {};
       if (status) filters.status = status;
       if (priority) filters.priority = priority;
-
-      let tasks;
-      if (['CLIENT_ADMIN', 'CLIENT_TOP_MGMT'].includes(req.user.role_name)) {
-        tasks = await PortalTask.getAllTasks(filters);
-      } else {
-        tasks = await PortalTask.getTasksForUser(req.user.id, filters);
+      if (archived) filters.archived = archived;
+      if (search) filters.search = search;
+      if (limit) {
+        filters.limit = parseInt(limit) || 100;
+        filters.offset = ((parseInt(page) || 1) - 1) * filters.limit;
       }
 
-      return ApiResponse.success(res, { tasks });
+      let result;
+      if (['CLIENT_ADMIN', 'CLIENT_TOP_MGMT'].includes(req.user.role_name)) {
+        result = await PortalTask.getAllTasks(filters);
+      } else {
+        result = await PortalTask.getTasksForUser(req.user.id, filters);
+      }
+
+      // If paginated, result is { rows, total }; otherwise it's an array
+      if (filters.limit && result.rows) {
+        return ApiResponse.success(res, {
+          tasks: result.rows,
+          total: result.total,
+          page: parseInt(page) || 1,
+          limit: filters.limit,
+          totalPages: Math.ceil(result.total / filters.limit)
+        });
+      }
+
+      return ApiResponse.success(res, { tasks: result });
     } catch (err) {
       console.error('Portal list tasks error:', err);
       return ApiResponse.error(res, 'Failed to load tasks');
+    }
+  }
+
+  // Archive / Unarchive task
+  static async toggleArchive(req, res) {
+    try {
+      const taskId = parseInt(req.params.id);
+      const task = await PortalTask.getById(taskId);
+      if (!task) return ApiResponse.error(res, 'Task not found', 404);
+
+      const canAccess = await PortalTask.canAccess(taskId, req.user.id, req.user.role_name);
+      if (!canAccess) return ApiResponse.error(res, 'Access denied', 403);
+
+      await PortalTask.toggleArchive(taskId);
+      const updated = await PortalTask.getById(taskId);
+      return ApiResponse.success(res, { task: updated }, updated.is_archived ? 'Task archived' : 'Task unarchived');
+    } catch (err) {
+      console.error('Portal toggle archive error:', err);
+      return ApiResponse.error(res, 'Failed to update archive status');
     }
   }
 

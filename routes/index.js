@@ -85,6 +85,33 @@ router.get('/backups/drive-list', authenticate, requireRoles('LOCAL_ADMIN'), Bac
 router.post('/backups/restore-drive', authenticate, requireRoles('LOCAL_ADMIN'), BackupController.restoreFromDrive);
 router.delete('/backups/:id', authenticate, requireRoles('LOCAL_ADMIN'), BackupController.destroy);
 
+// Delegated Support (LOCAL_ADMIN sets a secondary support person for client portal)
+router.post('/users/delegate-support', authenticate, requireRoles('LOCAL_ADMIN'), async (req, res) => {
+  const { ApiResponse } = require('../utils/response');
+  const db = require('../config/db');
+  const { user_id } = req.body;
+  try {
+    await db.query("UPDATE organizations SET delegated_support_id = ? WHERE org_type = 'LOCAL'", [user_id || null]);
+    // Clear the cached delegate in portal middleware
+    const portalOnly = require('../portal/middleware/portalOnly');
+    if (portalOnly.clearDelegateCache) portalOnly.clearDelegateCache();
+    return ApiResponse.success(res, {}, user_id ? 'Support delegate set' : 'Support delegate removed');
+  } catch (err) {
+    return ApiResponse.error(res, 'Failed to update delegate');
+  }
+});
+
+router.get('/users/delegate-support', authenticate, requireRoles('LOCAL_ADMIN'), async (req, res) => {
+  const { ApiResponse } = require('../utils/response');
+  const db = require('../config/db');
+  try {
+    const [[org]] = await db.query("SELECT delegated_support_id FROM organizations WHERE org_type = 'LOCAL' LIMIT 1");
+    return ApiResponse.success(res, { delegated_support_id: org?.delegated_support_id || null });
+  } catch (err) {
+    return ApiResponse.error(res, 'Failed to fetch delegate');
+  }
+});
+
 // Bridge Chat (for LOCAL users — floating widget)
 const BridgeChatController = require('../controllers/bridgeChatController');
 const bridgeUpload = require('multer')({ storage: require('multer').memoryStorage(), limits: { fileSize: 100 * 1024 * 1024 } });

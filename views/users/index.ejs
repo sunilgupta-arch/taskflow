@@ -14,6 +14,31 @@
   </button>
 </div>
 
+<% if (user.role_name === 'LOCAL_ADMIN') { %>
+<!-- Delegate Support Card -->
+<div class="tf-card mb-3">
+  <div class="card-header"><i class="bi bi-person-badge me-2"></i>CLIENT PORTAL SUPPORT DELEGATION</div>
+  <div class="p-3">
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+      <div>
+        <div class="small text-muted mb-1">The client portal shows support contacts for direct chat. You are the <strong>Primary</strong> support. Optionally delegate a <strong>Secondary</strong> support person.</div>
+      </div>
+      <div class="d-flex align-items-center gap-2">
+        <select class="tf-select" id="delegateSupportSelect" style="min-width:200px;">
+          <option value="">-- No secondary support --</option>
+          <% users.filter(u => u.org_type === 'LOCAL' && u.role_name !== 'LOCAL_ADMIN' && u.is_active).forEach(u => { %>
+            <option value="<%= u.id %>" <%= delegatedSupportId === u.id ? 'selected' : '' %>><%= u.name %> (<%= u.role_name.replace('LOCAL_', '') %>)</option>
+          <% }) %>
+        </select>
+        <button class="btn-tf btn-tf-primary" onclick="saveDelegateSupport()" style="white-space:nowrap">
+          <i class="bi bi-check-lg me-1"></i>Save
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+<% } %>
+
 <!-- Users Table -->
 <div class="tf-card">
   <div class="card-header"><i class="bi bi-people me-2"></i>USERS (<%= pagination.total %>)</div>
@@ -340,6 +365,18 @@ async function submitResetPassword() {
     closeResetModal();
   } catch (e) {
     showToast(e.response?.data?.message || 'Error resetting password', 'error');
+  }
+}
+
+async function saveDelegateSupport() {
+  var sel = document.getElementById('delegateSupportSelect');
+  if (!sel) return;
+  var userId = sel.value ? parseInt(sel.value) : null;
+  try {
+    await axios.post('/users/delegate-support', { user_id: userId });
+    showToast(userId ? 'Secondary support delegate saved' : 'Secondary support removed');
+  } catch (e) {
+    showToast('Failed to update delegate', 'error');
   }
 }
 </script>

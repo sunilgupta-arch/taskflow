@@ -135,6 +135,22 @@ class BridgeChat {
     return rows[0].total;
   }
 
+  // Get unread count grouped by the other user (for per-contact badges)
+  static async getUnreadCountByUser(userId) {
+    const [rows] = await db.query(
+      `SELECT m.sender_id, COUNT(*) as cnt
+       FROM bridge_messages m
+       JOIN bridge_conversations bc ON bc.id = m.conversation_id
+       WHERE m.is_read = 0 AND m.sender_id != ?
+         AND (bc.client_user_id = ? OR bc.local_user_id = ?)
+       GROUP BY m.sender_id`,
+      [userId, userId, userId]
+    );
+    const byUser = {};
+    rows.forEach(r => { byUser[r.sender_id] = r.cnt; });
+    return byUser;
+  }
+
   // Get all bridge conversations for a local user (for floating widget)
   static async getConversationsForLocalUser(userId) {
     const [rows] = await db.query(

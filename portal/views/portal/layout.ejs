@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en" data-bs-theme="dark">
-<script>(function(){var t=localStorage.getItem('tf-theme')||'dark';document.documentElement.setAttribute('data-bs-theme',t);})()</script>
+<script>(function(){var t=localStorage.getItem('tf-theme')||'dark';document.documentElement.setAttribute('data-bs-theme',t);if(localStorage.getItem('portal-sidebar-expanded')==='1')document.documentElement.classList.add('sidebar-expanded');})()</script>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -13,58 +13,82 @@
   <%- style %>
 </head>
 <body>
-  <!-- Activity Bar (VS Code style) -->
-  <nav class="portal-activity-bar">
+  <!-- Activity Bar (VS Code style, expand/collapse) -->
+  <nav class="portal-activity-bar" id="portalActivityBar">
     <div class="activity-bar-top">
-      <div class="activity-bar-brand">
+      <a href="/portal" class="activity-bar-brand" title="CFC Portal Home">
         <span class="brand-icon">C</span>
-      </div>
+        <span class="ab-brand-name">CFC Portal</span>
+      </a>
+      <button class="ab-toggle" onclick="toggleSidebarExpand()" title="Expand / Collapse">
+        <i class="bi bi-chevron-right"></i>
+      </button>
       <a href="/portal/chat" class="activity-bar-item <%= section === 'chat' ? 'active' : '' %>">
         <i class="bi bi-chat-dots-fill"></i>
+        <span class="ab-label">Chat</span>
         <span class="ab-tooltip">Chat</span>
         <span class="activity-bar-badge chat-unread-badge" style="display:none"></span>
       </a>
       <a href="/portal/tasks" class="activity-bar-item <%= section === 'tasks' ? 'active' : '' %>">
         <i class="bi bi-kanban-fill"></i>
+        <span class="ab-label">Tasks</span>
         <span class="ab-tooltip">Tasks</span>
       </a>
       <a href="/portal/notes" class="activity-bar-item <%= section === 'notes' ? 'active' : '' %>">
         <i class="bi bi-journal-text"></i>
+        <span class="ab-label">Notes</span>
         <span class="ab-tooltip">Notes</span>
       </a>
       <% if (['CLIENT_ADMIN', 'CLIENT_TOP_MGMT'].includes(user.role_name)) { %>
         <a href="/portal/team-status" class="activity-bar-item <%= section === 'team-status' ? 'active' : '' %>">
           <i class="bi bi-flag-fill"></i>
+          <span class="ab-label">Team India</span>
           <span class="ab-tooltip">Team India</span>
         </a>
       <% } %>
       <% if (user.role_name === 'CLIENT_ADMIN') { %>
         <a href="/portal/users" class="activity-bar-item <%= section === 'users' ? 'active' : '' %>">
           <i class="bi bi-people-fill"></i>
+          <span class="ab-label">Users</span>
           <span class="ab-tooltip">Users Management</span>
         </a>
       <% } %>
       <a href="/portal/help" class="activity-bar-item <%= section === 'help' ? 'active' : '' %>">
         <i class="bi bi-question-circle"></i>
+        <span class="ab-label">Help</span>
         <span class="ab-tooltip">Help</span>
       </a>
     </div>
     <div class="activity-bar-bottom">
-      <div class="activity-bar-separator"></div>
+      <% if (localAdmin || delegateSupport) { %>
+        <div class="activity-bar-separator"></div>
+        <div class="ab-section-label">Support</div>
+      <% } %>
       <% if (localAdmin) { %>
-        <button class="activity-bar-item" onclick="toggleAdminChat()">
+        <button class="activity-bar-item" onclick="toggleSupportChat('admin')">
           <i class="bi bi-headset"></i>
-          <span class="ab-tooltip">Chat with <%= localAdmin.name %></span>
+          <span class="ab-label"><span class="ab-label-name"><%= localAdmin.name.split(' ')[0] %></span><span class="ab-label-role">Primary</span></span>
+          <span class="ab-tooltip"><%= localAdmin.name %> (Primary Support)</span>
           <span class="activity-bar-badge" id="adminChatBadge" style="display:none"></span>
+        </button>
+      <% } %>
+      <% if (delegateSupport) { %>
+        <button class="activity-bar-item" onclick="toggleSupportChat('delegate')">
+          <i class="bi bi-person-badge"></i>
+          <span class="ab-label"><span class="ab-label-name"><%= delegateSupport.name.split(' ')[0] %></span><span class="ab-label-role">Secondary</span></span>
+          <span class="ab-tooltip"><%= delegateSupport.name %> (Secondary Support)</span>
+          <span class="activity-bar-badge" id="delegateChatBadge" style="display:none"></span>
         </button>
       <% } %>
       <button class="activity-bar-item" onclick="toggleTheme()" id="themeToggleBtn">
         <i class="bi" id="themeIcon"></i>
+        <span class="ab-label">Theme</span>
         <span class="ab-tooltip">Toggle Theme</span>
       </button>
       <div class="dropdown">
         <button class="activity-bar-item" data-bs-toggle="dropdown" data-bs-display="static">
           <span class="activity-bar-avatar"><%= user.name.charAt(0).toUpperCase() %></span>
+          <span class="ab-label"><%= user.name.split(' ')[0] %></span>
           <span class="ab-tooltip"><%= user.name %></span>
         </button>
         <ul class="dropdown-menu">
@@ -95,7 +119,7 @@
     <%- body %>
   </div>
 
-  <!-- Admin Chat Floating Panel -->
+  <!-- Admin Chat Floating Panel (Primary Support) -->
   <% if (localAdmin) { %>
   <div class="admin-chat-panel" id="adminChatPanel" style="display:none">
     <div class="admin-chat-header">
@@ -103,22 +127,52 @@
         <div class="admin-chat-avatar"><i class="bi bi-headset"></i></div>
         <div>
           <div class="fw-bold" style="font-size:0.85rem"><%= localAdmin.name %></div>
-          <div class="small text-muted">Admin</div>
+          <div class="small text-muted" id="adminSupportStatus">Primary Support</div>
         </div>
       </div>
-      <button class="btn btn-sm btn-link p-0" onclick="toggleAdminChat()"><i class="bi bi-x-lg"></i></button>
+      <button class="btn btn-sm btn-link p-0" onclick="toggleSupportChat('admin')"><i class="bi bi-x-lg"></i></button>
     </div>
     <div class="admin-chat-messages" id="adminChatMessages">
       <div class="text-center text-muted py-4 small">Start a conversation...</div>
     </div>
     <div class="admin-chat-input">
       <input type="file" id="adminChatFile" style="display:none" onchange="sendAdminChatFile()">
-      <div class="d-flex gap-1 align-items-end">
+      <div class="d-flex gap-1">
         <textarea class="form-control" id="adminChatInput" placeholder="Type a message..." rows="2"></textarea>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:3px;">
           <button class="btn btn-outline-secondary btn-sm" onclick="document.getElementById('adminChatFile').click()" style="width:34px;height:34px;padding:0" title="Attach"><i class="bi bi-paperclip"></i></button>
           <button class="btn btn-outline-secondary btn-sm" onclick="toggleFieldDictation('adminChatInput', this)" style="width:34px;height:34px;padding:0" title="Dictate"><i class="bi bi-mic"></i></button>
           <button class="btn btn-primary btn-sm" onclick="sendAdminChatMessage()" style="width:34px;height:34px;padding:0;grid-column:span 2" title="Send"><i class="bi bi-send"></i></button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <% } %>
+
+  <!-- Delegate Chat Floating Panel (Secondary Support) -->
+  <% if (delegateSupport) { %>
+  <div class="admin-chat-panel" id="delegateChatPanel" style="display:none">
+    <div class="admin-chat-header">
+      <div class="d-flex align-items-center gap-2">
+        <div class="admin-chat-avatar" style="background:linear-gradient(135deg, var(--tf-success), #16a34a)"><i class="bi bi-person-badge"></i></div>
+        <div>
+          <div class="fw-bold" style="font-size:0.85rem"><%= delegateSupport.name %></div>
+          <div class="small text-muted" id="delegateSupportStatus">Secondary Support</div>
+        </div>
+      </div>
+      <button class="btn btn-sm btn-link p-0" onclick="toggleSupportChat('delegate')"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <div class="admin-chat-messages" id="delegateChatMessages">
+      <div class="text-center text-muted py-4 small">Start a conversation...</div>
+    </div>
+    <div class="admin-chat-input">
+      <input type="file" id="delegateChatFile" style="display:none" onchange="sendDelegateChatFile()">
+      <div class="d-flex gap-1">
+        <textarea class="form-control" id="delegateChatInput" placeholder="Type a message..." rows="2"></textarea>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:3px;">
+          <button class="btn btn-outline-secondary btn-sm" onclick="document.getElementById('delegateChatFile').click()" style="width:34px;height:34px;padding:0" title="Attach"><i class="bi bi-paperclip"></i></button>
+          <button class="btn btn-outline-secondary btn-sm" onclick="toggleFieldDictation('delegateChatInput', this)" style="width:34px;height:34px;padding:0" title="Dictate"><i class="bi bi-mic"></i></button>
+          <button class="btn btn-primary btn-sm" onclick="sendDelegateChatMessage()" style="width:34px;height:34px;padding:0;grid-column:span 2" title="Send"><i class="bi bi-send"></i></button>
         </div>
       </div>
     </div>
@@ -209,6 +263,25 @@
 
     updateThemeIcon();
 
+    // ── Sidebar Expand / Collapse ────────────────────────────
+    function toggleSidebarExpand() {
+      var bar = document.getElementById('portalActivityBar');
+      var expanded = bar.classList.toggle('expanded');
+      document.documentElement.classList.toggle('sidebar-expanded', expanded);
+      localStorage.setItem('portal-sidebar-expanded', expanded ? '1' : '0');
+    }
+
+    // Sync nav class with html class (already applied before render)
+    (function() {
+      if (document.documentElement.classList.contains('sidebar-expanded')) {
+        document.getElementById('portalActivityBar').classList.add('expanded');
+      }
+      // Enable transitions now that initial state is set
+      requestAnimationFrame(function() {
+        document.documentElement.classList.add('sidebar-ready');
+      });
+    })();
+
     function showChangePwModal() {
       document.getElementById('changePwNew').value = '';
       document.getElementById('changePwConfirm').value = '';
@@ -237,21 +310,34 @@
         });
     }
 
-    // ── Admin Chat ───────────────────────────────────────────
-    <% if (localAdmin) { %>
+    // ── Support Chat (Primary + Delegate) ──────────────────
     var adminChatConvId = null;
-    var LOCAL_ADMIN_ID = <%= localAdmin.id %>;
+    var delegateChatConvId = null;
+    <% if (localAdmin) { %>var LOCAL_ADMIN_ID = <%= localAdmin.id %>;<% } %>
+    <% if (delegateSupport) { %>var DELEGATE_ID = <%= delegateSupport.id %>;<% } %>
 
-    function toggleAdminChat() {
-      var panel = document.getElementById('adminChatPanel');
+    function toggleSupportChat(type) {
+      var panelId = type === 'admin' ? 'adminChatPanel' : 'delegateChatPanel';
+      var panel = document.getElementById(panelId);
+      if (!panel) return;
+      // Close the other panel if open
+      var otherId = type === 'admin' ? 'delegateChatPanel' : 'adminChatPanel';
+      var other = document.getElementById(otherId);
+      if (other && other.style.display !== 'none') other.style.display = 'none';
+
       if (panel.style.display === 'none') {
         panel.style.display = 'flex';
-        initAdminChat();
+        if (type === 'admin') initAdminChat();
+        else initDelegateChat();
       } else {
         panel.style.display = 'none';
       }
     }
 
+    // Keep old function name for backward compat (home page tile)
+    function toggleAdminChat() { toggleSupportChat('admin'); }
+
+    <% if (localAdmin) { %>
     function initAdminChat() {
       fetch('/portal/bridge/conversations', {
         method: 'POST',
@@ -262,36 +348,59 @@
         .then(res => {
           if (res.success) {
             adminChatConvId = res.data.conversation.id;
-            loadAdminChatMessages();
+            loadSupportMessages('admin');
             fetch('/portal/bridge/conversations/' + adminChatConvId + '/read', { method: 'POST' });
-            updateAdminChatBadge();
+            updateSupportBadges();
           }
         });
     }
+    <% } %>
 
-    function loadAdminChatMessages() {
-      if (!adminChatConvId) return;
-      fetch('/portal/bridge/conversations/' + adminChatConvId + '/messages')
+    <% if (delegateSupport) { %>
+    function initDelegateChat() {
+      fetch('/portal/bridge/conversations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ local_user_id: DELEGATE_ID })
+      })
+        .then(r => r.json())
+        .then(res => {
+          if (res.success) {
+            delegateChatConvId = res.data.conversation.id;
+            loadSupportMessages('delegate');
+            fetch('/portal/bridge/conversations/' + delegateChatConvId + '/read', { method: 'POST' });
+            updateSupportBadges();
+          }
+        });
+    }
+    <% } %>
+
+    function loadSupportMessages(type) {
+      var convId = type === 'admin' ? adminChatConvId : delegateChatConvId;
+      if (!convId) return;
+      fetch('/portal/bridge/conversations/' + convId + '/messages')
         .then(r => r.json())
         .then(res => {
           if (!res.success) return;
-          renderAdminChatMessages(res.data.messages);
+          renderSupportMessages(type, res.data.messages);
         });
     }
 
-    function renderAdminChatMessages(messages) {
-      var container = document.getElementById('adminChatMessages');
+    function renderSupportMessages(type, messages) {
+      var containerId = type === 'admin' ? 'adminChatMessages' : 'delegateChatMessages';
+      var container = document.getElementById(containerId);
+      if (!container) return;
       if (!messages.length) {
         container.innerHTML = '<div class="text-center text-muted py-4 small">Start a conversation...</div>';
         return;
       }
-      var lastAdminDate = '';
+      var lastDate = '';
       container.innerHTML = messages.map(function(m) {
         var msgDate = formatDateLabel(m.created_at);
         var dateDivider = '';
-        if (msgDate !== lastAdminDate) {
+        if (msgDate !== lastDate) {
           dateDivider = '<div class="msg-date-divider"><span>' + msgDate + '</span></div>';
-          lastAdminDate = msgDate;
+          lastDate = msgDate;
         }
         var isSent = m.sender_id === PORTAL_USER.id;
         var cls = isSent ? 'sent' : 'received';
@@ -304,19 +413,23 @@
         } else {
           content = linkify(escapeHtml(m.content));
         }
-        var deleteBtn = isSent && !m.is_deleted ? '<span class="bridge-msg-delete" onclick="event.stopPropagation(); deleteAdminChatMsg(' + m.id + ')" title="Delete"><i class="bi bi-trash"></i></span>' : '';
-        return dateDivider + '<div class="msg-bubble ' + cls + (m.is_deleted ? ' deleted' : '') + '" data-bridge-msg-id="' + m.id + '">' + deleteBtn + '<div class="msg-content">' + content + '</div><div class="msg-footer"><span class="msg-time">' + time + '</span></div></div>';
+        var ticks = '';
+        if (isSent && !m.is_deleted) {
+          ticks = m.is_read
+            ? '<span class="msg-ticks read"><i class="bi bi-check-all"></i></span>'
+            : '<span class="msg-ticks"><i class="bi bi-check-all"></i></span>';
+        }
+        var deleteBtn = isSent && !m.is_deleted ? '<span class="bridge-msg-delete" onclick="event.stopPropagation(); deleteSupportMsg(\'' + type + '\', ' + m.id + ')" title="Delete"><i class="bi bi-trash"></i></span>' : '';
+        return dateDivider + '<div class="msg-bubble ' + cls + (m.is_deleted ? ' deleted' : '') + '" data-bridge-msg-id="' + m.id + '">' + deleteBtn + '<div class="msg-content">' + content + '</div><div class="msg-footer"><span class="msg-time">' + time + '</span>' + ticks + '</div></div>';
       }).join('');
       container.scrollTop = container.scrollHeight;
     }
 
-    function deleteAdminChatMsg(msgId) {
+    function deleteSupportMsg(type, msgId) {
       if (!confirm('Delete this message?')) return;
       fetch('/portal/bridge/messages/' + msgId, { method: 'DELETE' })
         .then(r => r.json())
-        .then(res => {
-          if (!res.success) alert(res.message);
-        });
+        .then(res => { if (!res.success) alert(res.message); });
     }
 
     function sendAdminChatMessage() {
@@ -338,83 +451,178 @@
       var fd = new FormData();
       fd.append('file', fileInput.files[0]);
       fetch('/portal/bridge/conversations/' + adminChatConvId + '/file', {
-        method: 'POST',
-        body: fd
+        method: 'POST', body: fd
       }).then(function() { fileInput.value = ''; });
     }
 
-    function updateAdminChatBadge() {
+    function sendDelegateChatMessage() {
+      if (!delegateChatConvId) return;
+      var input = document.getElementById('delegateChatInput');
+      var content = input.value.trim();
+      if (!content) return;
+      fetch('/portal/bridge/conversations/' + delegateChatConvId + '/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: content })
+      }).then(function() { input.value = ''; });
+    }
+
+    function sendDelegateChatFile() {
+      if (!delegateChatConvId) return;
+      var fileInput = document.getElementById('delegateChatFile');
+      if (!fileInput.files.length) return;
+      var fd = new FormData();
+      fd.append('file', fileInput.files[0]);
+      fetch('/portal/bridge/conversations/' + delegateChatConvId + '/file', {
+        method: 'POST', body: fd
+      }).then(function() { fileInput.value = ''; });
+    }
+
+    function updateSupportBadges() {
       fetch('/portal/bridge/unread-count')
         .then(r => r.json())
         .then(res => {
           if (!res.success) return;
-          var badge = document.getElementById('adminChatBadge');
-          if (res.data.total > 0) {
-            badge.textContent = res.data.total;
-            badge.style.display = '';
-          } else {
-            badge.style.display = 'none';
+          // Admin badge
+          var adminBadge = document.getElementById('adminChatBadge');
+          if (adminBadge) {
+            var adminCount = res.data.by_user && res.data.by_user[LOCAL_ADMIN_ID] || 0;
+            if (adminCount > 0) { adminBadge.textContent = adminCount; adminBadge.style.display = ''; }
+            else { adminBadge.style.display = 'none'; }
+          }
+          // Delegate badge
+          var delBadge = document.getElementById('delegateChatBadge');
+          if (delBadge && typeof DELEGATE_ID !== 'undefined') {
+            var delCount = res.data.by_user && res.data.by_user[DELEGATE_ID] || 0;
+            if (delCount > 0) { delBadge.textContent = delCount; delBadge.style.display = ''; }
+            else { delBadge.style.display = 'none'; }
           }
         });
     }
 
     // Enter to send
     document.getElementById('adminChatInput')?.addEventListener('keydown', function(e) {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        sendAdminChatMessage();
-      }
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendAdminChatMessage(); }
+    });
+    document.getElementById('delegateChatInput')?.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendDelegateChatMessage(); }
     });
 
-    // Listen for bridge messages
+    // Listen for bridge messages (both admin + delegate)
     mainSocket.on('bridge:message', function(msg) {
+      // Admin chat
       if (adminChatConvId && msg.conversation_id === adminChatConvId) {
-        // Append message
         var container = document.getElementById('adminChatMessages');
-        if (container.querySelector('.text-center')) container.innerHTML = '';
-        var isSent = msg.sender_id === PORTAL_USER.id;
-        var cls = isSent ? 'sent' : 'received';
-        var time = parseServerDate(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        var content = '';
-        if (msg.type === 'file' && msg.attachment) {
-          content = renderFileContent(msg.attachment, msg.id, '/portal/bridge/attachment');
-        } else {
-          content = linkify(escapeHtml(msg.content));
-        }
-        container.insertAdjacentHTML('beforeend', '<div class="msg-bubble ' + cls + '"><div class="msg-content">' + content + '</div><div class="msg-footer"><span class="msg-time">' + time + '</span></div></div>');
-        container.scrollTop = container.scrollHeight;
-
-        // Mark as read if panel is open
+        if (container && container.querySelector('.text-center')) container.innerHTML = '';
+        if (container) appendSupportMsg(container, msg);
         if (document.getElementById('adminChatPanel').style.display !== 'none') {
           fetch('/portal/bridge/conversations/' + adminChatConvId + '/read', { method: 'POST' });
         }
       }
-
-      // Sound + badge for messages from others
+      // Delegate chat
+      if (delegateChatConvId && msg.conversation_id === delegateChatConvId) {
+        var container2 = document.getElementById('delegateChatMessages');
+        if (container2 && container2.querySelector('.text-center')) container2.innerHTML = '';
+        if (container2) appendSupportMsg(container2, msg);
+        if (document.getElementById('delegateChatPanel')?.style.display !== 'none') {
+          fetch('/portal/bridge/conversations/' + delegateChatConvId + '/read', { method: 'POST' });
+        }
+      }
       if (msg.sender_id !== PORTAL_USER.id) {
         playNotificationSound();
-        updateAdminChatBadge();
+        updateSupportBadges();
       }
     });
 
-    // Handle bridge message delete
+    function appendSupportMsg(container, msg) {
+      var isSent = msg.sender_id === PORTAL_USER.id;
+      var cls = isSent ? 'sent' : 'received';
+      var time = parseServerDate(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      var content = '';
+      if (msg.type === 'file' && msg.attachment) {
+        content = renderFileContent(msg.attachment, msg.id, '/portal/bridge/attachment');
+      } else {
+        content = linkify(escapeHtml(msg.content));
+      }
+      var ticks = isSent ? '<span class="msg-ticks"><i class="bi bi-check-all"></i></span>' : '';
+      container.insertAdjacentHTML('beforeend', '<div class="msg-bubble ' + cls + '" data-bridge-msg-id="' + (msg.id || '') + '"><div class="msg-content">' + content + '</div><div class="msg-footer"><span class="msg-time">' + time + '</span>' + ticks + '</div></div>');
+      container.scrollTop = container.scrollHeight;
+    }
+
+    // Read receipt — turn ticks blue
+    mainSocket.on('bridge:read', function(data) {
+      var convId = data.conversation_id;
+      var containerId = null;
+      if (convId === adminChatConvId) containerId = 'adminChatMessages';
+      else if (convId === delegateChatConvId) containerId = 'delegateChatMessages';
+      if (!containerId) return;
+      var container = document.getElementById(containerId);
+      if (!container) return;
+      container.querySelectorAll('.msg-bubble.sent .msg-ticks:not(.read)').forEach(function(el) {
+        el.classList.add('read');
+      });
+    });
+
+    // Typing indicator
+    var _bridgeTypingTimers = {};
+
+    mainSocket.on('bridge:typing', function(data) {
+      var statusEl = null;
+      if (data.conversation_id === adminChatConvId) statusEl = document.getElementById('adminSupportStatus');
+      else if (data.conversation_id === delegateChatConvId) statusEl = document.getElementById('delegateSupportStatus');
+      if (!statusEl) return;
+      statusEl.innerHTML = '<span class="bridge-typing"><span class="typing-dots"><span></span><span></span><span></span></span></span>';
+      clearTimeout(_bridgeTypingTimers[data.conversation_id]);
+      _bridgeTypingTimers[data.conversation_id] = setTimeout(function() {
+        if (data.conversation_id === adminChatConvId && statusEl) statusEl.textContent = 'Primary Support';
+        else if (statusEl) statusEl.textContent = 'Secondary Support';
+      }, 3000);
+    });
+
+    mainSocket.on('bridge:typing:stop', function(data) {
+      var statusEl = null;
+      if (data.conversation_id === adminChatConvId) statusEl = document.getElementById('adminSupportStatus');
+      else if (data.conversation_id === delegateChatConvId) statusEl = document.getElementById('delegateSupportStatus');
+      if (!statusEl) return;
+      clearTimeout(_bridgeTypingTimers[data.conversation_id]);
+      if (data.conversation_id === adminChatConvId) statusEl.textContent = 'Primary Support';
+      else statusEl.textContent = 'Secondary Support';
+    });
+
+    // Emit typing when user types in the input
+    function setupBridgeTyping(inputId, getConvId) {
+      var el = document.getElementById(inputId);
+      if (!el) return;
+      var typingTimeout = null;
+      el.addEventListener('keydown', function() {
+        var convId = getConvId();
+        if (!convId) return;
+        mainSocket.emit('bridge:typing', { conversation_id: convId });
+        clearTimeout(typingTimeout);
+        typingTimeout = setTimeout(function() {
+          mainSocket.emit('bridge:typing:stop', { conversation_id: convId });
+        }, 2000);
+      });
+    }
+
+    setupBridgeTyping('adminChatInput', function() { return adminChatConvId; });
+    setupBridgeTyping('delegateChatInput', function() { return delegateChatConvId; });
+
+    // Handle bridge message delete (both panels)
     mainSocket.on('bridge:message:delete', function(data) {
-      if (adminChatConvId && data.conversation_id === adminChatConvId) {
-        var bubble = document.querySelector('[data-bridge-msg-id="' + data.id + '"]');
-        if (bubble) {
-          bubble.classList.add('deleted');
-          var contentEl = bubble.querySelector('.msg-content');
-          if (contentEl) contentEl.innerHTML = '<i class="bi bi-ban me-1"></i><em>This message was deleted</em>';
-          var delBtn = bubble.querySelector('.bridge-msg-delete');
-          if (delBtn) delBtn.remove();
-        }
+      var bubble = document.querySelector('[data-bridge-msg-id="' + data.id + '"]');
+      if (bubble) {
+        bubble.classList.add('deleted');
+        var contentEl = bubble.querySelector('.msg-content');
+        if (contentEl) contentEl.innerHTML = '<i class="bi bi-ban me-1"></i><em>This message was deleted</em>';
+        var delBtn = bubble.querySelector('.bridge-msg-delete');
+        if (delBtn) delBtn.remove();
       }
     });
 
     // Initial badge check + periodic refresh
-    updateAdminChatBadge();
-    setInterval(updateAdminChatBadge, 30000);
-    <% } %>
+    updateSupportBadges();
+    setInterval(updateSupportBadges, 30000);
 
     function portalLogout() {
       fetch('/auth/logout', { method: 'POST', headers: { 'Content-Type': 'application/json' } })

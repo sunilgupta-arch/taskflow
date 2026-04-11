@@ -19,8 +19,14 @@ const upload = multer({
 router.use(authenticate);
 router.use(portalOnly);
 
-// ── Portal landing (redirect to chat) ────────────────────
-router.get('/', (req, res) => res.redirect('/portal/chat'));
+// ── Portal Home (landing page) ───────────────────────────
+router.get('/', (req, res) => {
+  res.render('portal/home', {
+    title: 'CFC Portal',
+    layout: 'portal/layout',
+    section: 'home'
+  });
+});
 
 // ── Chat Pages & API ─────────────────────────────────────
 router.get('/chat', PortalChatController.index);
@@ -45,6 +51,7 @@ router.get('/tasks/list', PortalTaskController.list);
 router.post('/tasks', PortalTaskController.create);
 router.get('/tasks/:id', PortalTaskController.getTask);
 router.put('/tasks/:id', PortalTaskController.update);
+router.patch('/tasks/:id/archive', PortalTaskController.toggleArchive);
 router.post('/tasks/:id/comments', upload.single('file'), PortalTaskController.addComment);
 router.put('/tasks/comments/:commentId', PortalTaskController.editComment);
 router.get('/tasks/attachment/:attachmentId', PortalTaskController.serveAttachment);

@@ -114,12 +114,26 @@ class PortalChatController {
         type: 'text'
       });
 
-      // Emit via Socket.IO
+      // Emit via Socket.IO to conv room + all participant personal rooms
       const { getIO } = require('../../config/socket');
       try {
         const io = getIO();
         const portalNs = io.of('/portal');
+        // Emit to conv room (for users who have it open)
         portalNs.to(`portal:conv:${conversationId}`).emit('portal:message', message);
+        // Also emit to each participant's personal room (for notifications)
+        const participants = await PortalChat.getParticipants(conversationId);
+        const conv = await PortalChat.getConversation(conversationId);
+        participants.forEach(p => {
+          if (p.id !== req.user.id) {
+            portalNs.to(`portal:user:${p.id}`).emit('portal:notify', {
+              ...message,
+              conversation_id: conversationId,
+              sender_name: req.user.name,
+              conversation_name: conv?.type === 'group' ? conv.name : null
+            });
+          }
+        });
       } catch (_) {}
 
       return ApiResponse.success(res, { message }, 'Message sent');
@@ -173,12 +187,24 @@ class PortalChatController {
       const messages = await PortalChat.getMessages(conversationId, 1);
       const fullMessage = messages[messages.length - 1];
 
-      // Emit via Socket.IO
+      // Emit via Socket.IO to conv room + all participant personal rooms
       const { getIO } = require('../../config/socket');
       try {
         const io = getIO();
         const portalNs = io.of('/portal');
         portalNs.to(`portal:conv:${conversationId}`).emit('portal:message', fullMessage);
+        const participants = await PortalChat.getParticipants(conversationId);
+        const conv = await PortalChat.getConversation(conversationId);
+        participants.forEach(p => {
+          if (p.id !== req.user.id) {
+            portalNs.to(`portal:user:${p.id}`).emit('portal:notify', {
+              ...fullMessage,
+              conversation_id: conversationId,
+              sender_name: req.user.name,
+              conversation_name: conv?.type === 'group' ? conv.name : null
+            });
+          }
+        });
       } catch (_) {}
 
       return ApiResponse.success(res, { message: fullMessage }, 'File sent');

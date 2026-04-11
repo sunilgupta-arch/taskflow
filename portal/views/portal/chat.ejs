@@ -3,11 +3,16 @@
   <div class="chat-sidebar" id="chatSidebar">
     <div class="chat-sidebar-header">
       <input type="text" class="form-control form-control-sm" id="contactSearch" placeholder="Search contacts...">
-      <% if (['CLIENT_ADMIN', 'CLIENT_TOP_MGMT', 'CLIENT_MGMT', 'CLIENT_MANAGER'].includes(user.role_name)) { %>
-        <button class="btn btn-sm btn-outline-primary mt-2 w-100" onclick="showNewGroupModal()">
-          <i class="bi bi-people"></i> New Group
+      <div class="d-flex gap-2 mt-2">
+        <button class="btn btn-sm btn-outline-primary flex-fill" onclick="showContacts()">
+          <i class="bi bi-plus-lg me-1"></i>New Chat
         </button>
-      <% } %>
+        <% if (['CLIENT_ADMIN', 'CLIENT_TOP_MGMT', 'CLIENT_MGMT', 'CLIENT_MANAGER'].includes(user.role_name)) { %>
+          <button class="btn btn-sm btn-outline-secondary flex-fill" onclick="showNewGroupModal()">
+            <i class="bi bi-people me-1"></i>New Group
+          </button>
+        <% } %>
+      </div>
     </div>
     <div class="chat-sidebar-list" id="conversationList">
       <!-- Populated by JS -->

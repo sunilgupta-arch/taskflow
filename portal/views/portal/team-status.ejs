@@ -6,12 +6,18 @@
         <h5 class="mb-0">Team India</h5>
         <span class="text-muted small">Live employee status</span>
       </div>
-      <div class="team-status-counts" id="statusCounts"></div>
+      <div class="d-flex align-items-center gap-3">
+        <button class="btn btn-sm btn-outline-secondary ts-expand-all-btn" id="tsExpandAllBtn" onclick="toggleAllAccordions()" title="Expand All">
+          <i class="bi bi-chevron-expand me-1"></i><span>Expand All</span>
+        </button>
+        <div class="team-status-counts" id="statusCounts"></div>
+      </div>
     </div>
     <div class="team-status-table-wrap">
       <table class="team-status-table">
         <thead>
           <tr>
+            <th style="width:36px"></th>
             <th>Employee</th>
             <th>Shift</th>
             <th>Status</th>
@@ -21,7 +27,7 @@
           </tr>
         </thead>
         <tbody id="statusTableBody">
-          <tr><td colspan="6" class="text-center text-muted py-4">Loading...</td></tr>
+          <tr><td colspan="7" class="text-center text-muted py-4">Loading...</td></tr>
         </tbody>
       </table>
     </div>

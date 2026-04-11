@@ -34,13 +34,14 @@ function renderConversations(conversations) {
     const time = c.last_message_at ? timeAgo(c.last_message_at) : '';
     const unread = c.unread_count > 0 ? `<span class="conv-unread">${c.unread_count}</span>` : '';
     const activeClass = c.id === currentConversationId ? 'active' : '';
-    const isOnline = c.type === 'direct' && c.other_user && onlineUserIds.has(c.other_user.id);
-    const onlineDot = isOnline ? '<span class="online-dot"></span>' : '';
+    const isDirect = c.type === 'direct' && c.other_user;
+    const isOnline = isDirect && onlineUserIds.has(c.other_user.id);
+    const statusDot = isDirect ? '<span class="' + (isOnline ? 'online-dot' : 'offline-dot') + '"></span>' : '';
 
     return `<div class="conv-item ${activeClass}" onclick="openConversation(${c.id}, '${name.replace(/'/g, "\\'")}', '${c.type}', ${c.type === 'direct' && c.other_user ? c.other_user.id : 'null'})">
       <div class="conv-avatar-wrap">
         <div class="conv-avatar">${c.type === 'group' ? '<i class="bi bi-people-fill" style="font-size:0.8rem"></i>' : initial}</div>
-        ${onlineDot}
+        ${statusDot}
       </div>
       <div class="conv-info">
         <span class="conv-name">${name}</span>
@@ -57,13 +58,16 @@ function renderConversations(conversations) {
 function showContacts() {
   document.getElementById('conversationList').style.display = 'none';
   document.getElementById('contactsList').style.display = 'block';
-  document.querySelector('.chat-sidebar-header').style.display = 'none';
+  // Clear search when switching views
+  var searchInput = document.getElementById('contactSearch');
+  if (searchInput) { searchInput.value = ''; searchInput.dispatchEvent(new Event('input')); }
 }
 
 function showConversations() {
   document.getElementById('conversationList').style.display = 'block';
   document.getElementById('contactsList').style.display = 'none';
-  document.querySelector('.chat-sidebar-header').style.display = 'block';
+  var searchInput = document.getElementById('contactSearch');
+  if (searchInput) { searchInput.value = ''; searchInput.dispatchEvent(new Event('input')); }
 }
 
 function startDirectChat(userId, userName) {
@@ -308,8 +312,17 @@ function showSidebar() {
 // ── TASKS ──────────────────────────────────────────────────
 
 var _allTasks = [];
+var _showArchived = false;
+var _archivePage = 1;
+var _archiveSearch = '';
+var _archiveSearchTimer = null;
 
 function loadTasks() {
+  if (_showArchived) {
+    loadArchivedTasks();
+    return;
+  }
+
   var status = document.getElementById('filterStatus')?.value || '';
   var priority = document.getElementById('filterPriority')?.value || '';
 
@@ -324,6 +337,124 @@ function loadTasks() {
       _allTasks = res.data.tasks;
       populateUserFilter(_allTasks);
       applyUserFilter();
+    });
+}
+
+function loadArchivedTasks() {
+  var url = '/portal/tasks/list?archived=1&limit=100&page=' + _archivePage;
+  if (_archiveSearch) url += '&search=' + encodeURIComponent(_archiveSearch);
+
+  fetch(url)
+    .then(function(r) { return r.json(); })
+    .then(function(res) {
+      if (!res.success) return;
+      renderArchivedTable(res.data.tasks, res.data.total, res.data.page, res.data.totalPages);
+    });
+}
+
+function toggleArchiveView() {
+  _showArchived = !_showArchived;
+  _archivePage = 1;
+  _archiveSearch = '';
+
+  var btn = document.getElementById('archiveToggleBtn');
+  var filtersRow = document.querySelectorAll('#filterStatus, #filterPriority, #filterUser');
+  if (btn) {
+    if (_showArchived) {
+      btn.classList.remove('btn-outline-secondary');
+      btn.classList.add('btn-secondary');
+      btn.querySelector('span').textContent = 'Active Tasks';
+      btn.querySelector('i').className = 'bi bi-list-task me-1';
+      filtersRow.forEach(function(el) { el.style.display = 'none'; });
+    } else {
+      btn.classList.remove('btn-secondary');
+      btn.classList.add('btn-outline-secondary');
+      btn.querySelector('span').textContent = 'Archived';
+      btn.querySelector('i').className = 'bi bi-archive me-1';
+      filtersRow.forEach(function(el) { el.style.display = ''; });
+    }
+  }
+  closeTaskDetail();
+  loadTasks();
+}
+
+function renderArchivedTable(tasks, total, page, totalPages) {
+  var list = document.getElementById('tasksList');
+  if (!list) return;
+
+  // Search bar
+  var html = '<div class="archived-header">';
+  html += '<div class="archived-search-wrap"><i class="bi bi-search"></i><input type="text" class="form-control form-control-sm" id="archiveSearchInput" placeholder="Search archived tasks..." value="' + escapeHtml(_archiveSearch) + '"></div>';
+  html += '<span class="archived-count">' + total + ' archived task' + (total !== 1 ? 's' : '') + '</span>';
+  html += '</div>';
+
+  if (!tasks.length) {
+    html += '<div class="text-center text-muted p-4">No archived tasks found</div>';
+    list.innerHTML = html;
+    setupArchiveSearch();
+    return;
+  }
+
+  // Table
+  html += '<div class="archived-table-wrap"><table class="archived-table">';
+  html += '<thead><tr><th>Title</th><th>Status</th><th>Priority</th><th>Assigned To</th><th>Created By</th><th>Due Date</th><th>Archived</th><th></th></tr></thead>';
+  html += '<tbody>';
+  tasks.forEach(function(t) {
+    var dueStr = t.due_date ? new Date(t.due_date).toLocaleDateString() : '--';
+    var archivedDate = t.updated_at ? new Date(t.updated_at).toLocaleDateString() : '--';
+    html += '<tr onclick="openTask(' + t.id + ')" style="cursor:pointer">';
+    html += '<td class="archived-title">' + escapeHtml(t.title) + '</td>';
+    html += '<td><span class="status-badge status-' + t.status + '">' + (t.status === 'completed' ? 'Done' : t.status.replace('_', ' ')) + '</span></td>';
+    html += '<td><span class="priority-badge priority-' + t.priority + '">' + t.priority + '</span></td>';
+    html += '<td>' + escapeHtml(t.assigned_to_name) + '</td>';
+    html += '<td>' + escapeHtml(t.assigned_by_name) + '</td>';
+    html += '<td>' + dueStr + '</td>';
+    html += '<td>' + archivedDate + '</td>';
+    html += '<td><button class="task-archive-btn unarchive" onclick="event.stopPropagation(); archiveTask(' + t.id + ')" title="Unarchive"><i class="bi bi-arrow-counterclockwise"></i></button></td>';
+    html += '</tr>';
+  });
+  html += '</tbody></table></div>';
+
+  // Pagination
+  if (totalPages > 1) {
+    html += '<div class="archived-pagination">';
+    html += '<button class="btn btn-sm btn-outline-secondary" ' + (page <= 1 ? 'disabled' : '') + ' onclick="goArchivePage(' + (page - 1) + ')"><i class="bi bi-chevron-left"></i></button>';
+    html += '<span class="archived-page-info">Page ' + page + ' of ' + totalPages + '</span>';
+    html += '<button class="btn btn-sm btn-outline-secondary" ' + (page >= totalPages ? 'disabled' : '') + ' onclick="goArchivePage(' + (page + 1) + ')"><i class="bi bi-chevron-right"></i></button>';
+    html += '</div>';
+  }
+
+  list.innerHTML = html;
+  setupArchiveSearch();
+}
+
+function setupArchiveSearch() {
+  var input = document.getElementById('archiveSearchInput');
+  if (!input) return;
+  input.addEventListener('input', function() {
+    clearTimeout(_archiveSearchTimer);
+    var val = input.value.trim();
+    _archiveSearchTimer = setTimeout(function() {
+      _archiveSearch = val;
+      _archivePage = 1;
+      loadArchivedTasks();
+    }, 400);
+  });
+  input.focus();
+}
+
+function goArchivePage(page) {
+  _archivePage = page;
+  loadArchivedTasks();
+}
+
+function archiveTask(taskId) {
+  fetch('/portal/tasks/' + taskId + '/archive', { method: 'PATCH' })
+    .then(function(r) { return r.json(); })
+    .then(function(res) {
+      if (!res.success) return;
+      closeTaskDetail();
+      loadTasks();
     });
 }
 
@@ -370,13 +501,25 @@ function renderTasks(tasks) {
     var isOverdue = t.due_date && t.status !== 'completed' && t.status !== 'cancelled' && new Date(t.due_date) < new Date(new Date().toDateString());
     var overdueClass = isOverdue ? ' task-overdue' : '';
     var overdueIcon = isOverdue ? '<span class="overdue-badge"><i class="bi bi-exclamation-triangle-fill me-1"></i>OVERDUE</span>' : '';
-    return '<div class="task-card' + overdueClass + '" onclick="openTask(' + t.id + ')">' +
+    var archiveBtn = '';
+    if (!_showArchived && (t.status === 'completed' || t.status === 'cancelled')) {
+      archiveBtn = '<button class="task-archive-btn" onclick="event.stopPropagation(); archiveTask(' + t.id + ')" title="Archive"><i class="bi bi-archive"></i></button>';
+    }
+    if (_showArchived) {
+      archiveBtn = '<button class="task-archive-btn unarchive" onclick="event.stopPropagation(); archiveTask(' + t.id + ')" title="Unarchive"><i class="bi bi-arrow-counterclockwise"></i></button>';
+    }
+    var archivedBadge = t.is_archived ? '<span class="status-badge status-archived"><i class="bi bi-archive me-1"></i>Archived</span>' : '';
+    return '<div class="task-card' + overdueClass + (t.is_archived ? ' task-archived' : '') + '" onclick="openTask(' + t.id + ')">' +
       '<div class="task-card-header">' +
         '<span class="task-title">' + escapeHtml(t.title) + '</span>' +
-        '<span class="priority-badge priority-' + t.priority + '">' + t.priority + '</span>' +
+        '<div class="d-flex align-items-center gap-1">' +
+          '<span class="priority-badge priority-' + t.priority + '">' + t.priority + '</span>' +
+          archiveBtn +
+        '</div>' +
       '</div>' +
       '<div class="task-meta">' +
         '<span class="status-badge status-' + t.status + '">' + (t.status === 'completed' ? '<i class="bi bi-check-circle-fill me-1"></i>DONE' : t.status.replace('_', ' ')) + '</span>' +
+        archivedBadge +
         overdueIcon +
         '<span><i class="bi bi-person"></i> ' + t.assigned_to_name + '</span>' +
         '<span><i class="bi bi-calendar"></i> ' + dueStr + '</span>' +
@@ -449,7 +592,13 @@ function renderTaskDetail(task, comments) {
       <option value="cancelled" ${task.status === 'cancelled' ? 'selected' : ''}>Cancelled</option>
     </select>`;
   }
-  actionsEl.innerHTML = statusHtml;
+  var archiveBtnHtml = '';
+  if (task.is_archived) {
+    archiveBtnHtml = '<button class="btn btn-sm btn-outline-secondary" onclick="archiveTask(' + task.id + ')"><i class="bi bi-arrow-counterclockwise me-1"></i>Unarchive</button>';
+  } else if (task.status === 'completed' || task.status === 'cancelled') {
+    archiveBtnHtml = '<button class="btn btn-sm btn-outline-secondary" onclick="archiveTask(' + task.id + ')"><i class="bi bi-archive me-1"></i>Archive</button>';
+  }
+  actionsEl.innerHTML = statusHtml + archiveBtnHtml;
 
   const dueStr = task.due_date ? new Date(task.due_date).toLocaleDateString() : 'No due date';
 
@@ -775,13 +924,40 @@ portalSocket.on('portal:message', (msg) => {
       });
   }
 
-  // Play sound for messages from others
   if (msg.sender_id !== PORTAL_USER.id) {
+    _lastNotifiedMsgId = msg.id;
     playNotificationSound();
   }
 
   loadConversations();
   updateUnreadBadge();
+});
+
+// Notification for messages (arrives even if conv is not open)
+var _lastNotifiedMsgId = null;
+portalSocket.on('portal:notify', (msg) => {
+  if (msg.sender_id === PORTAL_USER.id) return;
+  // Don't show toast if user is already viewing this conversation
+  if (msg.conversation_id === currentConversationId) return;
+  // Prevent duplicate if portal:message already handled this msg
+  if (msg.id && msg.id === _lastNotifiedMsgId) return;
+  _lastNotifiedMsgId = msg.id;
+
+  playNotificationSound();
+  loadConversations();
+  updateUnreadBadge();
+
+  var senderName = msg.sender_name || 'Someone';
+  var preview = msg.type === 'file' ? 'Sent a file' : (msg.content || '').substring(0, 80);
+  var convName = msg.conversation_name || senderName;
+
+  showChatToast({
+    senderName: senderName,
+    preview: preview,
+    conversationName: convName,
+    conversationId: msg.conversation_id,
+    isGroup: !!msg.conversation_name
+  });
 });
 
 // Edit/delete message live updates
@@ -913,22 +1089,32 @@ portalSocket.on('portal:presence', (data) => {
 
 function updateContactOnlineStatus() {
   document.querySelectorAll('.contact-item').forEach(el => {
-    const dot = el.querySelector('.online-dot');
-    const userId = parseInt(el.getAttribute('data-user-id'));
-    if (userId && onlineUserIds.has(userId)) {
-      if (!dot) {
-        const wrap = el.querySelector('.contact-avatar');
-        if (wrap) {
-          const parent = wrap.parentElement;
-          wrap.remove();
-          const wrapDiv = document.createElement('div');
-          wrapDiv.className = 'conv-avatar-wrap';
-          wrapDiv.appendChild(wrap);
-          const dotEl = document.createElement('span');
-          dotEl.className = 'online-dot';
-          wrapDiv.appendChild(dotEl);
-          parent.insertBefore(wrapDiv, parent.firstChild);
-        }
+    var userId = parseInt(el.getAttribute('data-user-id'));
+    if (!userId) return;
+    var isOnline = onlineUserIds.has(userId);
+    var dotClass = isOnline ? 'online-dot' : 'offline-dot';
+    var wrap = el.querySelector('.conv-avatar-wrap');
+    if (wrap) {
+      var existingDot = wrap.querySelector('.online-dot, .offline-dot');
+      if (existingDot) {
+        existingDot.className = dotClass;
+      } else {
+        var dotEl = document.createElement('span');
+        dotEl.className = dotClass;
+        wrap.appendChild(dotEl);
+      }
+    } else {
+      var avatar = el.querySelector('.contact-avatar');
+      if (avatar) {
+        var parent = avatar.parentElement;
+        avatar.remove();
+        var wrapDiv = document.createElement('div');
+        wrapDiv.className = 'conv-avatar-wrap';
+        wrapDiv.appendChild(avatar);
+        var dotEl = document.createElement('span');
+        dotEl.className = dotClass;
+        wrapDiv.appendChild(dotEl);
+        parent.insertBefore(wrapDiv, parent.firstChild);
       }
     }
   });
@@ -1089,8 +1275,14 @@ document.addEventListener('DOMContentLoaded', () => {
     if (searchInput) {
       searchInput.addEventListener('input', () => {
         const q = searchInput.value.toLowerCase();
+        // Filter conversations
         document.querySelectorAll('.conv-item').forEach(el => {
-          const name = el.querySelector('.conv-name').textContent.toLowerCase();
+          const name = el.querySelector('.conv-name')?.textContent.toLowerCase() || '';
+          el.style.display = name.includes(q) ? '' : 'none';
+        });
+        // Filter contacts (if contacts list is visible)
+        document.querySelectorAll('.contact-item').forEach(el => {
+          const name = el.querySelector('.contact-name')?.textContent.toLowerCase() || '';
           el.style.display = name.includes(q) ? '' : 'none';
         });
       });
@@ -1128,17 +1320,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // Notes page init
   if (document.getElementById('notesList')) {
     loadNotes();
+    if (typeof initQuillEditor === 'function') initQuillEditor();
 
-    // Auto-save every 5 seconds of inactivity
-    const noteContent = document.getElementById('noteContent');
-    const noteTitle = document.getElementById('noteTitle');
-    if (noteContent) {
-      noteContent.addEventListener('input', () => {
-        clearTimeout(noteAutoSaveTimer);
-        noteAutoSaveTimer = setTimeout(saveNoteQuiet, 2000);
-        document.getElementById('noteStatus').textContent = 'Unsaved changes...';
-      });
-    }
+    var noteTitle = document.getElementById('noteTitle');
     if (noteTitle) {
       noteTitle.addEventListener('input', () => {
         clearTimeout(noteAutoSaveTimer);
@@ -1195,11 +1379,70 @@ function showPortalToast({ title, sender, priority, taskId, customText, customIc
   container.appendChild(toast);
 }
 
+// ── Chat Toast Notification (WhatsApp-style) ──────────────
+
+function showChatToast({ senderName, preview, conversationName, conversationId, isGroup }) {
+  var container = document.getElementById('portalToastContainer');
+  if (!container) return;
+
+  var toast = document.createElement('div');
+  toast.className = 'portal-toast chat-toast';
+
+  var initial = senderName.charAt(0).toUpperCase();
+  var titleText = isGroup ? conversationName : senderName;
+  var subText = isGroup ? ('<strong>' + escapeHtml(senderName) + ':</strong> ' + escapeHtml(preview)) : escapeHtml(preview);
+
+  toast.innerHTML =
+    '<div class="chat-toast-avatar">' + initial + '</div>' +
+    '<div class="toast-body">' +
+      '<div class="toast-title">' + escapeHtml(titleText) + '</div>' +
+      '<div class="toast-text">' + subText + '</div>' +
+    '</div>' +
+    '<button class="toast-close" onclick="event.stopPropagation(); this.parentElement.classList.add(\'removing\'); setTimeout(function(){ this.parentElement.remove(); }.bind(this), 250);">&times;</button>';
+
+  toast.addEventListener('click', function() {
+    if (window.location.pathname !== '/portal/chat') {
+      window.location.href = '/portal/chat';
+    } else {
+      // Open the conversation directly
+      openConversationById(conversationId);
+    }
+    toast.classList.add('removing');
+    setTimeout(function() { toast.remove(); }, 250);
+  });
+
+  container.appendChild(toast);
+
+  // Auto-dismiss after 5 seconds
+  setTimeout(function() {
+    if (toast.parentElement) {
+      toast.classList.add('removing');
+      setTimeout(function() { toast.remove(); }, 250);
+    }
+  }, 5000);
+}
+
+function openConversationById(convId) {
+  // Fetch conversation details then open it
+  fetch('/portal/chat/conversations')
+    .then(function(r) { return r.json(); })
+    .then(function(res) {
+      if (!res.success) return;
+      var conv = res.data.conversations.find(function(c) { return c.id === convId; });
+      if (conv) {
+        var name = conv.type === 'direct' ? (conv.other_user?.name || 'Unknown') : conv.name;
+        var peerId = conv.type === 'direct' && conv.other_user ? conv.other_user.id : null;
+        openConversation(convId, name, conv.type, peerId);
+      }
+    });
+}
+
 // ── TEAM STATUS ────────────────────────────────────────────
 
 let teamStatusInterval = null;
 
 function loadTeamStatus() {
+  tsAccordionCache = {};
   fetch('/portal/team-status/data')
     .then(r => r.json())
     .then(res => {
@@ -1211,53 +1454,192 @@ function loadTeamStatus() {
 let selectedEmployee = null;
 let bridgeConvId = null;
 
+// Track accordion state
+var tsAccordionCache = {};
+var tsAllExpanded = false;
+
 function renderTeamStatus(employees, counts) {
   // Counts
-  const countsEl = document.getElementById('statusCounts');
+  var countsEl = document.getElementById('statusCounts');
   if (countsEl) {
-    countsEl.innerHTML = `
-      <span class="status-count-pill working"><i class="bi bi-circle-fill"></i> ${counts.working} Working</span>
-      <span class="status-count-pill idle"><i class="bi bi-circle-fill"></i> ${counts.idle} Idle</span>
-      <span class="status-count-pill absent"><i class="bi bi-circle-fill"></i> ${counts.absent} Absent</span>
-      <span class="status-count-pill off"><i class="bi bi-circle-fill"></i> ${counts.off} Off</span>
-    `;
+    countsEl.innerHTML =
+      '<span class="status-count-pill working"><i class="bi bi-circle-fill"></i> ' + counts.working + ' Working</span>' +
+      '<span class="status-count-pill idle"><i class="bi bi-circle-fill"></i> ' + counts.idle + ' Idle</span>' +
+      '<span class="status-count-pill absent"><i class="bi bi-circle-fill"></i> ' + counts.absent + ' Absent</span>' +
+      '<span class="status-count-pill off"><i class="bi bi-circle-fill"></i> ' + counts.off + ' Off</span>';
   }
 
   // Table
-  const tbody = document.getElementById('statusTableBody');
+  var tbody = document.getElementById('statusTableBody');
   if (!tbody) return;
 
   if (!employees.length) {
-    tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">No employees found</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4">No employees found</td></tr>';
     return;
   }
 
-  tbody.innerHTML = employees.map(e => {
-    const shiftStr = e.shiftStart ? e.shiftStart.substring(0, 5) : '--';
-    const statusClass = `ts-${e.statusType}`;
+  // Remember which rows were expanded
+  var prevExpanded = {};
+  document.querySelectorAll('.ts-accordion-row.open').forEach(function(r) {
+    prevExpanded[r.dataset.userId] = true;
+  });
 
-    let elapsed = '--';
+  var html = '';
+  employees.forEach(function(e) {
+    var shiftStr = e.shiftStart ? e.shiftStart.substring(0, 5) : '--';
+    var statusClass = 'ts-' + e.statusType;
+    var elapsed = '--';
     if (e.startedAt) {
-      const started = parseServerDate(e.startedAt);
-      const diffSec = Math.floor((new Date() - started) / 1000);
+      var started = parseServerDate(e.startedAt);
+      var diffSec = Math.floor((new Date() - started) / 1000);
       if (diffSec >= 0) {
-        const h = Math.floor(diffSec / 3600);
-        const m = Math.floor((diffSec % 3600) / 60);
-        elapsed = h > 0 ? `${h}h ${m}m` : `${m}m`;
+        var h = Math.floor(diffSec / 3600);
+        var m = Math.floor((diffSec % 3600) / 60);
+        elapsed = h > 0 ? h + 'h ' + m + 'm' : m + 'm';
       }
     }
+    var startedStr = e.startedAt ? parseServerDate(e.startedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--';
+    var safeName = escapeHtml(e.name).replace(/'/g, "\\'");
+    var wasOpen = prevExpanded[e.id] || false;
 
-    const startedStr = e.startedAt ? parseServerDate(e.startedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--';
+    // Main row
+    html += '<tr class="ts-main-row ' + statusClass + (wasOpen ? ' expanded' : '') + '" data-user-id="' + e.id + '">';
+    html += '<td class="ts-chevron-cell" onclick="toggleAccordion(' + e.id + ', event)"><i class="bi bi-chevron-right ts-chevron' + (wasOpen ? ' open' : '') + '"></i></td>';
+    html += '<td class="ts-name" style="cursor:pointer" onclick="openEmployeePanel(' + e.id + ', \'' + safeName + '\', \'' + e.status + '\', \'' + e.statusType + '\')">' + escapeHtml(e.name) + '</td>';
+    html += '<td><code>' + shiftStr + '</code></td>';
+    html += '<td><span class="ts-badge ' + statusClass + '">' + e.status + '</span></td>';
+    html += '<td class="ts-task">' + (e.taskName ? escapeHtml(e.taskName) : '--') + '</td>';
+    html += '<td>' + startedStr + '</td>';
+    html += '<td>' + elapsed + '</td>';
+    html += '</tr>';
 
-    return `<tr class="${statusClass}" style="cursor:pointer" onclick="openEmployeePanel(${e.id}, '${escapeHtml(e.name).replace(/'/g, "\\'")}', '${e.status}', '${e.statusType}')">
-      <td class="ts-name">${escapeHtml(e.name)}</td>
-      <td><code>${shiftStr}</code></td>
-      <td><span class="ts-badge ${statusClass}">${e.status}</span></td>
-      <td class="ts-task">${e.taskName ? escapeHtml(e.taskName) : '--'}</td>
-      <td>${startedStr}</td>
-      <td>${elapsed}</td>
-    </tr>`;
-  }).join('');
+    // Accordion detail row
+    html += '<tr class="ts-accordion-row' + (wasOpen ? ' open' : '') + '" data-user-id="' + e.id + '">';
+    html += '<td colspan="7" class="ts-accordion-cell"><div class="ts-accordion-body" id="tsAccordion_' + e.id + '">';
+    if (wasOpen && tsAccordionCache[e.id]) {
+      html += tsAccordionCache[e.id];
+    } else if (wasOpen) {
+      html += '<div class="text-center text-muted py-2 small">Loading tasks...</div>';
+    }
+    html += '</div></td></tr>';
+  });
+
+  tbody.innerHTML = html;
+
+  // Re-fetch tasks for rows that were open
+  Object.keys(prevExpanded).forEach(function(uid) {
+    fetchAccordionTasks(parseInt(uid));
+  });
+}
+
+function toggleAccordion(userId, event) {
+  if (event) event.stopPropagation();
+  var mainRow = document.querySelector('.ts-main-row[data-user-id="' + userId + '"]');
+  var detailRow = document.querySelector('.ts-accordion-row[data-user-id="' + userId + '"]');
+  if (!mainRow || !detailRow) return;
+
+  var isOpen = detailRow.classList.contains('open');
+  if (isOpen) {
+    mainRow.classList.remove('expanded');
+    detailRow.classList.remove('open');
+    mainRow.querySelector('.ts-chevron').classList.remove('open');
+  } else {
+    mainRow.classList.add('expanded');
+    detailRow.classList.add('open');
+    mainRow.querySelector('.ts-chevron').classList.add('open');
+    // Fetch tasks if not cached
+    if (!tsAccordionCache[userId]) {
+      document.getElementById('tsAccordion_' + userId).innerHTML = '<div class="text-center text-muted py-2 small">Loading tasks...</div>';
+      fetchAccordionTasks(userId);
+    } else {
+      document.getElementById('tsAccordion_' + userId).innerHTML = tsAccordionCache[userId];
+    }
+  }
+  updateExpandAllBtn();
+}
+
+function fetchAccordionTasks(userId) {
+  fetch('/portal/team-status/employee-tasks/' + userId)
+    .then(function(r) { return r.json(); })
+    .then(function(res) {
+      if (!res.success) return;
+      var tasks = res.data.tasks;
+      var container = document.getElementById('tsAccordion_' + userId);
+      if (!container) return;
+
+      if (!tasks.length) {
+        var empty = '<div class="text-center text-muted py-2 small">No tasks for today</div>';
+        tsAccordionCache[userId] = empty;
+        container.innerHTML = empty;
+        return;
+      }
+
+      var html = '<div class="ts-inline-tasks">';
+      tasks.forEach(function(t) {
+        var sc, st, si;
+        if (t.status === 'completed') { sc = 'done'; st = 'Done'; si = 'bi-check-circle-fill'; }
+        else if (t.status === 'in_progress') { sc = 'working'; st = 'In Progress'; si = 'bi-play-circle-fill'; }
+        else { sc = 'pending'; st = 'Pending'; si = 'bi-clock'; }
+        html += '<div class="ts-inline-task ts-itask-' + sc + '">';
+        html += '<i class="bi ' + si + ' ts-itask-icon"></i>';
+        html += '<span class="ts-itask-title">' + escapeHtml(t.title) + '</span>';
+        html += '<span class="ts-itask-badge ts-itask-' + sc + '">' + st + '</span>';
+        html += '<span class="ts-itask-type">' + (t.type === 'recurring' ? 'Recurring' : 'Ad-hoc') + '</span>';
+        html += '</div>';
+      });
+      html += '</div>';
+      tsAccordionCache[userId] = html;
+      container.innerHTML = html;
+    });
+}
+
+function toggleAllAccordions() {
+  var allRows = document.querySelectorAll('.ts-accordion-row');
+  if (!allRows.length) return;
+
+  // Check if any are open
+  var anyOpen = document.querySelector('.ts-accordion-row.open');
+  tsAllExpanded = !anyOpen;
+
+  allRows.forEach(function(row) {
+    var uid = row.dataset.userId;
+    var mainRow = document.querySelector('.ts-main-row[data-user-id="' + uid + '"]');
+    if (tsAllExpanded) {
+      row.classList.add('open');
+      if (mainRow) {
+        mainRow.classList.add('expanded');
+        mainRow.querySelector('.ts-chevron').classList.add('open');
+      }
+      if (!tsAccordionCache[uid]) {
+        var container = document.getElementById('tsAccordion_' + uid);
+        if (container) container.innerHTML = '<div class="text-center text-muted py-2 small">Loading tasks...</div>';
+        fetchAccordionTasks(parseInt(uid));
+      } else {
+        var container = document.getElementById('tsAccordion_' + uid);
+        if (container) container.innerHTML = tsAccordionCache[uid];
+      }
+    } else {
+      row.classList.remove('open');
+      if (mainRow) {
+        mainRow.classList.remove('expanded');
+        mainRow.querySelector('.ts-chevron').classList.remove('open');
+      }
+    }
+  });
+  updateExpandAllBtn();
+}
+
+function updateExpandAllBtn() {
+  var btn = document.getElementById('tsExpandAllBtn');
+  if (!btn) return;
+  var anyOpen = document.querySelector('.ts-accordion-row.open');
+  if (anyOpen) {
+    btn.querySelector('i').className = 'bi bi-chevron-contract me-1';
+    btn.querySelector('span').textContent = 'Collapse All';
+  } else {
+    btn.querySelector('i').className = 'bi bi-chevron-expand me-1';
+    btn.querySelector('span').textContent = 'Expand All';
+  }
 }
 
 function openEmployeePanel(userId, name, status, statusType) {
@@ -1489,7 +1871,8 @@ function renderNotesList(notes) {
 
   list.innerHTML = notes.map(n => {
     const active = n.id === currentNoteId ? 'active' : '';
-    const preview = n.content ? n.content.substring(0, 60) + (n.content.length > 60 ? '...' : '') : 'No content';
+    var rawText = n.content ? n.content.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim() : '';
+    const preview = rawText ? rawText.substring(0, 60) + (rawText.length > 60 ? '...' : '') : 'No content';
     const date = timeAgo(n.updated_at);
     const pinIcon = n.is_pinned ? '<i class="bi bi-pin-fill" style="color:var(--tf-warning);font-size:0.7rem;margin-right:4px"></i>' : '';
     return `<div class="note-item ${active}" onclick="openNote(${n.id})">
@@ -1537,7 +1920,9 @@ function openNote(noteId) {
       const note = res.data.notes.find(n => n.id === noteId);
       if (!note) return;
       document.getElementById('noteTitle').value = note.title;
-      document.getElementById('noteContent').value = note.content || '';
+      if (typeof quillEditor !== 'undefined' && quillEditor) {
+        quillEditor.root.innerHTML = note.content || '';
+      }
       document.getElementById('noteStatus').textContent = 'Last saved: ' + timeAgo(note.updated_at);
       currentNotePinned = !!note.is_pinned;
       updatePinIcon();
@@ -1548,19 +1933,28 @@ function openNote(noteId) {
     });
 }
 
+function getEditorContent() {
+  if (typeof quillEditor !== 'undefined' && quillEditor) {
+    var html = quillEditor.root.innerHTML;
+    // Return empty string if editor is blank
+    return html === '<p><br></p>' ? '' : html;
+  }
+  return '';
+}
+
 function saveNote() {
   if (!currentNoteId) return;
-  const title = document.getElementById('noteTitle').value.trim();
-  const content = document.getElementById('noteContent').value.trim();
+  var title = document.getElementById('noteTitle').value.trim();
+  var content = getEditorContent();
   if (!title) return alert('Title is required');
 
-  fetch(`/portal/notes/${currentNoteId}`, {
+  fetch('/portal/notes/' + currentNoteId, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ title, content })
+    body: JSON.stringify({ title: title, content: content })
   })
-    .then(r => r.json())
-    .then(res => {
+    .then(function(r) { return r.json(); })
+    .then(function(res) {
       if (res.success) {
         document.getElementById('noteStatus').textContent = 'Saved just now';
         loadNotes();
@@ -1570,24 +1964,24 @@ function saveNote() {
 
 function saveNoteQuiet() {
   if (!currentNoteId) return;
-  const title = document.getElementById('noteTitle')?.value?.trim();
-  const content = document.getElementById('noteContent')?.value?.trim();
+  var title = document.getElementById('noteTitle')?.value?.trim();
+  var content = getEditorContent();
   if (!title) return;
 
-  fetch(`/portal/notes/${currentNoteId}`, {
+  fetch('/portal/notes/' + currentNoteId, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ title, content })
+    body: JSON.stringify({ title: title, content: content })
   })
-    .then(r => r.json())
-    .then(res => {
+    .then(function(r) { return r.json(); })
+    .then(function(res) {
       if (res.success) {
-        const statusEl = document.getElementById('noteStatus');
+        var statusEl = document.getElementById('noteStatus');
         if (statusEl) statusEl.textContent = 'Auto-saved';
         loadNotes();
       }
     })
-    .catch(() => {});
+    .catch(function() {});
 }
 
 function deleteNote() {
@@ -1606,10 +2000,10 @@ function deleteNote() {
 }
 
 function exportNoteText() {
-  const title = document.getElementById('noteTitle').value || 'note';
-  const content = document.getElementById('noteContent').value || '';
-  const blob = new Blob([title + '\n' + '='.repeat(title.length) + '\n\n' + content], { type: 'text/plain' });
-  const a = document.createElement('a');
+  var title = document.getElementById('noteTitle').value || 'note';
+  var plainText = (typeof quillEditor !== 'undefined' && quillEditor) ? quillEditor.getText() : '';
+  var blob = new Blob([title + '\n' + '='.repeat(title.length) + '\n\n' + plainText], { type: 'text/plain' });
+  var a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = title.replace(/[^a-zA-Z0-9 ]/g, '').trim().replace(/\s+/g, '_') + '.txt';
   a.click();
@@ -1617,19 +2011,19 @@ function exportNoteText() {
 }
 
 function exportNotePDF() {
-  const title = document.getElementById('noteTitle').value || 'Note';
-  const content = document.getElementById('noteContent').value || '';
-  const win = window.open('', '_blank');
-  win.document.write(`<!DOCTYPE html><html><head><title>${escapeHtml(title)}</title>
-    <style>body{font-family:Arial,sans-serif;max-width:700px;margin:40px auto;padding:20px;color:#222;}
-    h1{font-size:1.5rem;border-bottom:2px solid #333;padding-bottom:8px;}
-    pre{white-space:pre-wrap;font-family:inherit;font-size:0.95rem;line-height:1.7;}
-    .meta{font-size:0.75rem;color:#888;margin-bottom:20px;}</style></head>
-    <body><h1>${escapeHtml(title)}</h1>
-    <div class="meta">${new Date().toLocaleString()}</div>
-    <pre>${escapeHtml(content)}</pre></body></html>`);
+  var title = document.getElementById('noteTitle').value || 'Note';
+  var htmlContent = getEditorContent();
+  var win = window.open('', '_blank');
+  win.document.write('<!DOCTYPE html><html><head><title>' + escapeHtml(title) + '</title>' +
+    '<style>body{font-family:Arial,sans-serif;max-width:700px;margin:40px auto;padding:20px;color:#222;}' +
+    'h1{font-size:1.5rem;border-bottom:2px solid #333;padding-bottom:8px;}' +
+    '.content{font-size:0.95rem;line-height:1.7;}' +
+    '.meta{font-size:0.75rem;color:#888;margin-bottom:20px;}</style></head>' +
+    '<body><h1>' + escapeHtml(title) + '</h1>' +
+    '<div class="meta">' + new Date().toLocaleString() + '</div>' +
+    '<div class="content">' + htmlContent + '</div></body></html>');
   win.document.close();
-  setTimeout(() => { win.print(); }, 500);
+  setTimeout(function() { win.print(); }, 500);
 }
 
 let currentNotePinned = false;
@@ -1675,30 +2069,24 @@ function toggleDictation() {
 }
 
 function startDictation() {
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   recognition = new SpeechRecognition();
   recognition.continuous = true;
-  recognition.interimResults = true;
+  recognition.interimResults = false;
   recognition.lang = 'en-US';
 
-  const content = document.getElementById('noteContent');
-  const startPos = content.selectionStart;
-  let finalTranscript = '';
-
   recognition.onresult = function(event) {
-    let interim = '';
-    for (let i = event.resultIndex; i < event.results.length; i++) {
+    for (var i = event.resultIndex; i < event.results.length; i++) {
       if (event.results[i].isFinal) {
-        finalTranscript += event.results[i][0].transcript + ' ';
-      } else {
-        interim += event.results[i][0].transcript;
+        var text = event.results[i][0].transcript + ' ';
+        if (typeof quillEditor !== 'undefined' && quillEditor) {
+          var range = quillEditor.getSelection(true);
+          var pos = range ? range.index : quillEditor.getLength();
+          quillEditor.insertText(pos, text);
+          quillEditor.setSelection(pos + text.length);
+        }
       }
     }
-
-    // Insert at cursor position
-    const before = content.value.substring(0, startPos);
-    const after = content.value.substring(startPos);
-    content.value = before + finalTranscript + interim + after;
   };
 
   recognition.onerror = function() {
@@ -1706,7 +2094,6 @@ function startDictation() {
   };
 
   recognition.onend = function() {
-    // If still dictating, restart (continuous mode can stop)
     if (isDictating) {
       try { recognition.start(); } catch (e) { stopDictation(); }
     }

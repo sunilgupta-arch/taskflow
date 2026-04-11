@@ -29,9 +29,33 @@ class PortalTask {
     return rows[0] || null;
   }
 
+  // Build WHERE clause for shared filter logic
+  static _buildFilters(filters, params) {
+    let where = '';
+    if (filters.archived === '1') {
+      where += ' AND t.is_archived = 1';
+    } else {
+      where += ' AND t.is_archived = 0';
+    }
+    if (filters.status) {
+      where += ' AND t.status = ?';
+      params.push(filters.status);
+    }
+    if (filters.priority) {
+      where += ' AND t.priority = ?';
+      params.push(filters.priority);
+    }
+    if (filters.search) {
+      where += ' AND (t.title LIKE ? OR creator.name LIKE ? OR assignee.name LIKE ?)';
+      var s = '%' + filters.search + '%';
+      params.push(s, s, s);
+    }
+    return where;
+  }
+
   // Get tasks for a user (assigned to them or created by them)
   static async getTasksForUser(userId, filters = {}) {
-    let query = `SELECT t.*,
+    var baseSelect = `SELECT t.*,
                    creator.name as assigned_by_name, cr.name as assigned_by_role,
                    assignee.name as assigned_to_name, ar.name as assigned_to_role,
                    (SELECT COUNT(*) FROM portal_task_comments tc WHERE tc.task_id = t.id) as comment_count
@@ -42,17 +66,29 @@ class PortalTask {
                  JOIN roles ar ON assignee.role_id = ar.id
                  WHERE (t.assigned_to = ? OR t.assigned_by = ?)`;
     const params = [userId, userId];
+    const where = PortalTask._buildFilters(filters, params);
 
-    if (filters.status) {
-      query += ' AND t.status = ?';
-      params.push(filters.status);
-    }
-    if (filters.priority) {
-      query += ' AND t.priority = ?';
-      params.push(filters.priority);
-    }
+    var query = baseSelect + where + ' ORDER BY t.created_at DESC';
 
-    query += ' ORDER BY t.created_at DESC';
+    if (filters.limit) {
+      var limit = parseInt(filters.limit) || 100;
+      var offset = parseInt(filters.offset) || 0;
+      query += ' LIMIT ? OFFSET ?';
+      params.push(limit, offset);
+
+      // Get total count for pagination
+      const countParams = [userId, userId];
+      const countWhere = PortalTask._buildFilters(filters, countParams);
+      const [[{ total }]] = await db.query(
+        `SELECT COUNT(*) as total FROM portal_tasks t
+         JOIN users creator ON creator.id = t.assigned_by
+         JOIN users assignee ON assignee.id = t.assigned_to
+         WHERE (t.assigned_to = ? OR t.assigned_by = ?)` + countWhere,
+        countParams
+      );
+      const [rows] = await db.query(query, params);
+      return { rows, total };
+    }
 
     const [rows] = await db.query(query, params);
     return rows;
@@ -60,7 +96,7 @@ class PortalTask {
 
   // Get all tasks (for admin view)
   static async getAllTasks(filters = {}) {
-    let query = `SELECT t.*,
+    var baseSelect = `SELECT t.*,
                    creator.name as assigned_by_name, cr.name as assigned_by_role,
                    assignee.name as assigned_to_name, ar.name as assigned_to_role,
                    (SELECT COUNT(*) FROM portal_task_comments tc WHERE tc.task_id = t.id) as comment_count
@@ -71,20 +107,36 @@ class PortalTask {
                  JOIN roles ar ON assignee.role_id = ar.id
                  WHERE 1=1`;
     const params = [];
+    const where = PortalTask._buildFilters(filters, params);
 
-    if (filters.status) {
-      query += ' AND t.status = ?';
-      params.push(filters.status);
-    }
-    if (filters.priority) {
-      query += ' AND t.priority = ?';
-      params.push(filters.priority);
-    }
+    var query = baseSelect + where + ' ORDER BY t.created_at DESC';
 
-    query += ' ORDER BY t.created_at DESC';
+    if (filters.limit) {
+      var limit = parseInt(filters.limit) || 100;
+      var offset = parseInt(filters.offset) || 0;
+      query += ' LIMIT ? OFFSET ?';
+      params.push(limit, offset);
+
+      const countParams = [];
+      const countWhere = PortalTask._buildFilters(filters, countParams);
+      const [[{ total }]] = await db.query(
+        `SELECT COUNT(*) as total FROM portal_tasks t
+         JOIN users creator ON creator.id = t.assigned_by
+         JOIN users assignee ON assignee.id = t.assigned_to
+         WHERE 1=1` + countWhere,
+        countParams
+      );
+      const [rows] = await db.query(query, params);
+      return { rows, total };
+    }
 
     const [rows] = await db.query(query, params);
     return rows;
+  }
+
+  // Toggle archive status
+  static async toggleArchive(taskId) {
+    await db.query('UPDATE portal_tasks SET is_archived = NOT is_archived WHERE id = ?', [taskId]);
   }
 
   // Update task status
