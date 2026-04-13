@@ -28,6 +28,474 @@ router.get('/', (req, res) => {
   });
 });
 
+// ── Home Briefing API ───────────────────────────────────
+router.get('/briefing', async (req, res) => {
+  const { ApiResponse } = require('../../utils/response');
+  const db = require('../../config/db');
+  try {
+    const userId = req.user.id;
+    const roleName = req.user.role_name;
+    const isAdmin = ['CLIENT_ADMIN', 'CLIENT_TOP_MGMT'].includes(roleName);
+    const today = new Date().toISOString().split('T')[0];
+
+    // Tasks due today (assigned to user or created by user; admin sees all)
+    let dueTodayQuery, dueTodayParams;
+    if (isAdmin) {
+      dueTodayQuery = `SELECT t.*, creator.name as assigned_by_name, assignee.name as assigned_to_name
+        FROM portal_tasks t
+        JOIN users creator ON creator.id = t.assigned_by
+        JOIN users assignee ON assignee.id = t.assigned_to
+        WHERE t.due_date = ? AND t.is_archived = 0 AND t.status != 'completed' AND t.status != 'cancelled'
+        ORDER BY FIELD(t.priority, 'urgent', 'high', 'medium', 'low'), t.created_at DESC`;
+      dueTodayParams = [today];
+    } else {
+      dueTodayQuery = `SELECT t.*, creator.name as assigned_by_name, assignee.name as assigned_to_name
+        FROM portal_tasks t
+        JOIN users creator ON creator.id = t.assigned_by
+        JOIN users assignee ON assignee.id = t.assigned_to
+        WHERE t.due_date = ? AND t.is_archived = 0 AND t.status != 'completed' AND t.status != 'cancelled'
+          AND (t.assigned_to = ? OR t.assigned_by = ?)
+        ORDER BY FIELD(t.priority, 'urgent', 'high', 'medium', 'low'), t.created_at DESC`;
+      dueTodayParams = [today, userId, userId];
+    }
+    const [dueToday] = await db.query(dueTodayQuery, dueTodayParams);
+
+    // Overdue tasks
+    let overdueQuery, overdueParams;
+    if (isAdmin) {
+      overdueQuery = `SELECT t.*, creator.name as assigned_by_name, assignee.name as assigned_to_name
+        FROM portal_tasks t
+        JOIN users creator ON creator.id = t.assigned_by
+        JOIN users assignee ON assignee.id = t.assigned_to
+        WHERE t.due_date < ? AND t.is_archived = 0 AND t.status != 'completed' AND t.status != 'cancelled'
+        ORDER BY t.due_date ASC`;
+      overdueParams = [today];
+    } else {
+      overdueQuery = `SELECT t.*, creator.name as assigned_by_name, assignee.name as assigned_to_name
+        FROM portal_tasks t
+        JOIN users creator ON creator.id = t.assigned_by
+        JOIN users assignee ON assignee.id = t.assigned_to
+        WHERE t.due_date < ? AND t.is_archived = 0 AND t.status != 'completed' AND t.status != 'cancelled'
+          AND (t.assigned_to = ? OR t.assigned_by = ?)
+        ORDER BY t.due_date ASC`;
+      overdueParams = [today, userId, userId];
+    }
+    const [overdue] = await db.query(overdueQuery, overdueParams);
+
+    // In-progress tasks (no due date filter — any open work)
+    let inProgressQuery, inProgressParams;
+    if (isAdmin) {
+      inProgressQuery = `SELECT COUNT(*) as cnt FROM portal_tasks WHERE status = 'in_progress' AND is_archived = 0`;
+      inProgressParams = [];
+    } else {
+      inProgressQuery = `SELECT COUNT(*) as cnt FROM portal_tasks WHERE status = 'in_progress' AND is_archived = 0 AND (assigned_to = ? OR assigned_by = ?)`;
+      inProgressParams = [userId, userId];
+    }
+    const [[{ cnt: inProgressCount }]] = await db.query(inProgressQuery, inProgressParams);
+
+    // Open tasks count
+    let openQuery, openParams;
+    if (isAdmin) {
+      openQuery = `SELECT COUNT(*) as cnt FROM portal_tasks WHERE status = 'open' AND is_archived = 0`;
+      openParams = [];
+    } else {
+      openQuery = `SELECT COUNT(*) as cnt FROM portal_tasks WHERE status = 'open' AND is_archived = 0 AND (assigned_to = ? OR assigned_by = ?)`;
+      openParams = [userId, userId];
+    }
+    const [[{ cnt: openCount }]] = await db.query(openQuery, openParams);
+
+    // Unread chat messages count
+    const PortalChat = require('../models/Chat');
+    const unreadCount = await PortalChat.getTotalUnreadCount(userId);
+
+    // Recent activity — last 10 task status changes / comments from today
+    let activityQuery, activityParams;
+    if (isAdmin) {
+      activityQuery = `(SELECT 'comment' as type, tc.created_at, u.name as user_name, t.title as task_title, tc.content as detail, t.id as task_id
+         FROM portal_task_comments tc
+         JOIN users u ON u.id = tc.user_id
+         JOIN portal_tasks t ON t.id = tc.task_id
+         WHERE DATE(tc.created_at) = ?
+         ORDER BY tc.created_at DESC LIMIT 10)
+       ORDER BY created_at DESC LIMIT 10`;
+      activityParams = [today];
+    } else {
+      activityQuery = `(SELECT 'comment' as type, tc.created_at, u.name as user_name, t.title as task_title, tc.content as detail, t.id as task_id
+         FROM portal_task_comments tc
+         JOIN users u ON u.id = tc.user_id
+         JOIN portal_tasks t ON t.id = tc.task_id
+         WHERE DATE(tc.created_at) = ? AND (t.assigned_to = ? OR t.assigned_by = ?)
+         ORDER BY tc.created_at DESC LIMIT 10)
+       ORDER BY created_at DESC LIMIT 10`;
+      activityParams = [today, userId, userId];
+    }
+    const [activity] = await db.query(activityQuery, activityParams);
+
+    return ApiResponse.success(res, {
+      dueToday,
+      overdue,
+      inProgressCount,
+      openCount,
+      unreadCount,
+      activity
+    });
+  } catch (err) {
+    console.error('Portal briefing error:', err);
+    return ApiResponse.error(res, 'Failed to load briefing');
+  }
+});
+
+// ── Reminders API ───────────────────────────────────────
+const PortalReminder = require('../models/Reminder');
+const { ApiResponse: ReminderApiResponse } = require('../../utils/response');
+
+router.get('/reminders', async (req, res) => {
+  try {
+    const includeDone = req.query.done === '1';
+    const reminders = await PortalReminder.getForUser(req.user.id, { includeDone });
+    return ReminderApiResponse.success(res, { reminders });
+  } catch (err) {
+    return ReminderApiResponse.error(res, 'Failed to load reminders');
+  }
+});
+
+router.post('/reminders', async (req, res) => {
+  try {
+    const { title, note, remind_at } = req.body;
+    if (!title || !title.trim()) return ReminderApiResponse.error(res, 'Title is required', 400);
+    if (!remind_at) return ReminderApiResponse.error(res, 'Reminder date/time is required', 400);
+    const id = await PortalReminder.create({ user_id: req.user.id, title: title.trim(), note: note?.trim() || null, remind_at });
+    const reminder = await PortalReminder.findById(id);
+    return ReminderApiResponse.success(res, { reminder }, 'Reminder created', 201);
+  } catch (err) {
+    return ReminderApiResponse.error(res, err.message, 400);
+  }
+});
+
+router.put('/reminders/:id', async (req, res) => {
+  try {
+    const reminder = await PortalReminder.findById(req.params.id);
+    if (!reminder || reminder.user_id !== req.user.id) return ReminderApiResponse.error(res, 'Not found', 404);
+    const { title, note, remind_at } = req.body;
+    if (title !== undefined && !title.trim()) return ReminderApiResponse.error(res, 'Title is required', 400);
+    const updates = {};
+    if (title) updates.title = title.trim();
+    if (note !== undefined) updates.note = note?.trim() || null;
+    if (remind_at) { updates.remind_at = remind_at; updates.notified = 0; }
+    await PortalReminder.update(req.params.id, updates);
+    const updated = await PortalReminder.findById(req.params.id);
+    return ReminderApiResponse.success(res, { reminder: updated }, 'Reminder updated');
+  } catch (err) {
+    return ReminderApiResponse.error(res, err.message, 400);
+  }
+});
+
+router.patch('/reminders/:id/done', async (req, res) => {
+  try {
+    const reminder = await PortalReminder.findById(req.params.id);
+    if (!reminder || reminder.user_id !== req.user.id) return ReminderApiResponse.error(res, 'Not found', 404);
+    await PortalReminder.toggleDone(req.params.id);
+    const updated = await PortalReminder.findById(req.params.id);
+    return ReminderApiResponse.success(res, { reminder: updated }, updated.is_done ? 'Done' : 'Restored');
+  } catch (err) {
+    return ReminderApiResponse.error(res, err.message, 400);
+  }
+});
+
+router.delete('/reminders/:id', async (req, res) => {
+  try {
+    const reminder = await PortalReminder.findById(req.params.id);
+    if (!reminder || reminder.user_id !== req.user.id) return ReminderApiResponse.error(res, 'Not found', 404);
+    await PortalReminder.delete(req.params.id);
+    return ReminderApiResponse.success(res, {}, 'Reminder deleted');
+  } catch (err) {
+    return ReminderApiResponse.error(res, err.message, 400);
+  }
+});
+
+// ── Reports Page & API ──────────────────────────────────
+const PortalReport = require('../models/Report');
+
+router.get('/reports', (req, res) => {
+  res.render('portal/reports', {
+    title: 'Links - Client Portal',
+    layout: 'portal/layout',
+    section: 'reports'
+  });
+});
+
+router.get('/reports/list', async (req, res) => {
+  const { ApiResponse } = require('../../utils/response');
+  try {
+    const reports = await PortalReport.getForUser(req.user.id);
+    return ApiResponse.success(res, { reports });
+  } catch (err) {
+    return ApiResponse.error(res, 'Failed to load reports');
+  }
+});
+
+router.post('/reports', async (req, res) => {
+  const { ApiResponse } = require('../../utils/response');
+  try {
+    const { name, url, color } = req.body;
+    if (!name || !name.trim()) return ApiResponse.error(res, 'Name is required', 400);
+    if (!url || !url.trim()) return ApiResponse.error(res, 'URL is required', 400);
+    const id = await PortalReport.create({ user_id: req.user.id, name: name.trim(), url: url.trim(), color: color || 'blue' });
+    const report = await PortalReport.findById(id);
+    return ApiResponse.success(res, { report }, 'Report added', 201);
+  } catch (err) {
+    return ApiResponse.error(res, err.message, 400);
+  }
+});
+
+router.put('/reports/:id', async (req, res) => {
+  const { ApiResponse } = require('../../utils/response');
+  try {
+    const report = await PortalReport.findById(req.params.id);
+    if (!report || report.user_id !== req.user.id) return ApiResponse.error(res, 'Not found', 404);
+    const { name, url, color } = req.body;
+    if (name !== undefined && !name.trim()) return ApiResponse.error(res, 'Name is required', 400);
+    if (url !== undefined && !url.trim()) return ApiResponse.error(res, 'URL is required', 400);
+    await PortalReport.update(req.params.id, { name: name?.trim(), url: url?.trim(), color });
+    const updated = await PortalReport.findById(req.params.id);
+    return ApiResponse.success(res, { report: updated }, 'Report updated');
+  } catch (err) {
+    return ApiResponse.error(res, err.message, 400);
+  }
+});
+
+router.delete('/reports/:id', async (req, res) => {
+  const { ApiResponse } = require('../../utils/response');
+  try {
+    const report = await PortalReport.findById(req.params.id);
+    if (!report || report.user_id !== req.user.id) return ApiResponse.error(res, 'Not found', 404);
+    await PortalReport.delete(req.params.id);
+    return ApiResponse.success(res, {}, 'Report deleted');
+  } catch (err) {
+    return ApiResponse.error(res, err.message, 400);
+  }
+});
+
+// ── Calendar Page & API ─────────────────────────────────
+const CalendarEvent = require('../models/CalendarEvent');
+
+router.get('/calendar', (req, res) => {
+  res.render('portal/calendar', {
+    title: 'Calendar - Client Portal',
+    layout: 'portal/layout',
+    section: 'calendar'
+  });
+});
+
+// Get year data (events + reminders + tasks aggregated by date)
+router.get('/calendar/year-data', async (req, res) => {
+  const { ApiResponse } = require('../../utils/response');
+  try {
+    const year = parseInt(req.query.year) || new Date().getFullYear();
+    const dateMap = await CalendarEvent.getYearData(req.user.id, year, req.user.role_name);
+    return ApiResponse.success(res, { year, dateMap });
+  } catch (err) {
+    console.error('Calendar year data error:', err);
+    return ApiResponse.error(res, 'Failed to load calendar data');
+  }
+});
+
+// Get entries for a specific date
+router.get('/calendar/date/:date', async (req, res) => {
+  const { ApiResponse } = require('../../utils/response');
+  try {
+    const date = req.params.date;
+    const events = await CalendarEvent.getForDate(req.user.id, date);
+
+    // Also get reminders for this date
+    const db = require('../../config/db');
+    const [reminders] = await db.query(
+      'SELECT id, title, note, remind_at, is_done FROM portal_reminders WHERE user_id = ? AND DATE(remind_at) = ?',
+      [req.user.id, date]
+    );
+
+    // Tasks due on this date
+    const isAdmin = ['CLIENT_ADMIN', 'CLIENT_TOP_MGMT'].includes(req.user.role_name);
+    let tasks;
+    if (isAdmin) {
+      const [rows] = await db.query(
+        `SELECT t.id, t.title, t.priority, t.status, t.due_date, assignee.name as assigned_to_name
+         FROM portal_tasks t JOIN users assignee ON assignee.id = t.assigned_to
+         WHERE t.due_date = ? AND t.is_archived = 0 ORDER BY t.priority DESC`,
+        [date]
+      );
+      tasks = rows;
+    } else {
+      const [rows] = await db.query(
+        `SELECT t.id, t.title, t.priority, t.status, t.due_date, assignee.name as assigned_to_name
+         FROM portal_tasks t JOIN users assignee ON assignee.id = t.assigned_to
+         WHERE t.due_date = ? AND t.is_archived = 0 AND (t.assigned_to = ? OR t.assigned_by = ?)
+         ORDER BY t.priority DESC`,
+        [date, req.user.id, req.user.id]
+      );
+      tasks = rows;
+    }
+
+    return ApiResponse.success(res, { events, reminders, tasks });
+  } catch (err) {
+    return ApiResponse.error(res, 'Failed to load date data');
+  }
+});
+
+// Create calendar event
+router.post('/calendar/events', async (req, res) => {
+  const { ApiResponse } = require('../../utils/response');
+  try {
+    const { event_date, title, description, color } = req.body;
+    if (!title || !title.trim()) return ApiResponse.error(res, 'Title is required', 400);
+    if (!event_date) return ApiResponse.error(res, 'Date is required', 400);
+    const id = await CalendarEvent.create({
+      user_id: req.user.id,
+      event_date,
+      title: title.trim(),
+      description: description?.trim() || null,
+      color: color || 'blue'
+    });
+    const event = await CalendarEvent.findById(id);
+    return ApiResponse.success(res, { event }, 'Event created', 201);
+  } catch (err) {
+    return ApiResponse.error(res, err.message, 400);
+  }
+});
+
+// Update calendar event
+router.put('/calendar/events/:id', async (req, res) => {
+  const { ApiResponse } = require('../../utils/response');
+  try {
+    const event = await CalendarEvent.findById(req.params.id);
+    if (!event || event.user_id !== req.user.id) return ApiResponse.error(res, 'Not found', 404);
+    const { title, description, event_date, color } = req.body;
+    if (title !== undefined && !title.trim()) return ApiResponse.error(res, 'Title is required', 400);
+    await CalendarEvent.update(req.params.id, { title: title?.trim(), description: description?.trim() || null, event_date, color });
+    const updated = await CalendarEvent.findById(req.params.id);
+    return ApiResponse.success(res, { event: updated }, 'Event updated');
+  } catch (err) {
+    return ApiResponse.error(res, err.message, 400);
+  }
+});
+
+// Delete calendar event
+router.delete('/calendar/events/:id', async (req, res) => {
+  const { ApiResponse } = require('../../utils/response');
+  try {
+    const event = await CalendarEvent.findById(req.params.id);
+    if (!event || event.user_id !== req.user.id) return ApiResponse.error(res, 'Not found', 404);
+    await CalendarEvent.delete(req.params.id);
+    return ApiResponse.success(res, {}, 'Event deleted');
+  } catch (err) {
+    return ApiResponse.error(res, err.message, 400);
+  }
+});
+
+// Toggle calendar event done
+router.patch('/calendar/events/:id/done', async (req, res) => {
+  const { ApiResponse } = require('../../utils/response');
+  try {
+    const event = await CalendarEvent.findById(req.params.id);
+    if (!event || event.user_id !== req.user.id) return ApiResponse.error(res, 'Not found', 404);
+    await CalendarEvent.toggleDone(req.params.id);
+    const updated = await CalendarEvent.findById(req.params.id);
+    return ApiResponse.success(res, { event: updated }, updated.is_done ? 'Done' : 'Restored');
+  } catch (err) {
+    return ApiResponse.error(res, err.message, 400);
+  }
+});
+
+// Upcoming entries for side rail (events + reminders + tasks, 30 days ahead)
+router.get('/calendar/upcoming', async (req, res) => {
+  const { ApiResponse } = require('../../utils/response');
+  const db = require('../../config/db');
+  try {
+    const userId = req.user.id;
+    const isAdmin = ['CLIENT_ADMIN', 'CLIENT_TOP_MGMT'].includes(req.user.role_name);
+    const today = new Date().toISOString().split('T')[0];
+    const endDate = new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0];
+
+    // Calendar events (today to 30 days ahead)
+    let events = [];
+    try {
+      const [rows] = await db.query(
+        'SELECT *, "event" as entry_type FROM portal_calendar_events WHERE user_id = ? AND event_date >= ? AND event_date <= ? ORDER BY event_date ASC, created_at ASC',
+        [userId, today, endDate]
+      );
+      events = rows;
+    } catch (_) {}
+
+    // Reminders (today to 30 days ahead)
+    let reminders = [];
+    try {
+      const [rows] = await db.query(
+        'SELECT *, "reminder" as entry_type FROM portal_reminders WHERE user_id = ? AND DATE(remind_at) >= ? AND DATE(remind_at) <= ? ORDER BY remind_at ASC',
+        [userId, today, endDate]
+      );
+      reminders = rows;
+    } catch (_) {}
+
+    // Tasks with due dates (today to 30 days ahead)
+    let tasks = [];
+    try {
+      let q, p;
+      if (isAdmin) {
+        q = `SELECT t.*, assignee.name as assigned_to_name, 'task' as entry_type
+             FROM portal_tasks t JOIN users assignee ON assignee.id = t.assigned_to
+             WHERE t.due_date >= ? AND t.due_date <= ? AND t.is_archived = 0
+             ORDER BY t.due_date ASC`;
+        p = [today, endDate];
+      } else {
+        q = `SELECT t.*, assignee.name as assigned_to_name, 'task' as entry_type
+             FROM portal_tasks t JOIN users assignee ON assignee.id = t.assigned_to
+             WHERE t.due_date >= ? AND t.due_date <= ? AND t.is_archived = 0
+               AND (t.assigned_to = ? OR t.assigned_by = ?)
+             ORDER BY t.due_date ASC`;
+        p = [today, endDate, userId, userId];
+      }
+      const [rows] = await db.query(q, p);
+      tasks = rows;
+    } catch (_) {}
+
+    // Also get overdue items (before today, not done)
+    let overdueEvents = [];
+    try {
+      const [rows] = await db.query(
+        'SELECT *, "event" as entry_type FROM portal_calendar_events WHERE user_id = ? AND event_date < ? AND is_done = 0 ORDER BY event_date ASC',
+        [userId, today]
+      );
+      overdueEvents = rows;
+    } catch (_) {}
+
+    let overdueTasks = [];
+    try {
+      let q, p;
+      if (isAdmin) {
+        q = `SELECT t.*, assignee.name as assigned_to_name, 'task' as entry_type
+             FROM portal_tasks t JOIN users assignee ON assignee.id = t.assigned_to
+             WHERE t.due_date < ? AND t.is_archived = 0 AND t.status NOT IN ('completed', 'cancelled')
+             ORDER BY t.due_date ASC`;
+        p = [today];
+      } else {
+        q = `SELECT t.*, assignee.name as assigned_to_name, 'task' as entry_type
+             FROM portal_tasks t JOIN users assignee ON assignee.id = t.assigned_to
+             WHERE t.due_date < ? AND t.is_archived = 0 AND t.status NOT IN ('completed', 'cancelled')
+               AND (t.assigned_to = ? OR t.assigned_by = ?)
+             ORDER BY t.due_date ASC`;
+        p = [today, userId, userId];
+      }
+      const [rows] = await db.query(q, p);
+      overdueTasks = rows;
+    } catch (_) {}
+
+    return ApiResponse.success(res, { events, reminders, tasks, overdueEvents, overdueTasks });
+  } catch (err) {
+    console.error('Calendar upcoming error:', err);
+    return ApiResponse.error(res, 'Failed to load upcoming entries');
+  }
+});
+
 // ── Chat Pages & API ─────────────────────────────────────
 router.get('/chat', PortalChatController.index);
 router.get('/chat/conversations', PortalChatController.listConversations);

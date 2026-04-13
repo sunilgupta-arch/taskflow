@@ -2,7 +2,10 @@
   <!-- Left: Contact/Conversation List -->
   <div class="chat-sidebar" id="chatSidebar">
     <div class="chat-sidebar-header">
-      <input type="text" class="form-control form-control-sm" id="contactSearch" placeholder="Search contacts...">
+      <div class="d-flex align-items-center gap-2">
+        <input type="text" class="form-control form-control-sm" id="contactSearch" placeholder="Search contacts..." style="flex:1">
+        <a href="/portal/help?section=chat" class="portal-help-link" title="Help — Chat"><i class="bi bi-question-circle-fill"></i></a>
+      </div>
       <div class="d-flex gap-2 mt-2">
         <button class="btn btn-sm btn-outline-primary flex-fill" onclick="showContacts()">
           <i class="bi bi-plus-lg me-1"></i>New Chat

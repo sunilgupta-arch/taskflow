@@ -1,0 +1,813 @@
+<div class="calendar-page">
+  <div class="calendar-layout">
+    <!-- LEFT: Calendar -->
+    <div class="calendar-main">
+      <!-- Single header row -->
+      <div class="calendar-header">
+        <button class="btn btn-sm btn-outline-secondary" onclick="navPrev()" title="Previous"><i class="bi bi-chevron-left"></i></button>
+        <h4 class="calendar-year" id="calendarYear"></h4>
+        <button class="btn btn-sm btn-outline-secondary" onclick="navNext()" title="Next"><i class="bi bi-chevron-right"></i></button>
+        <button class="btn btn-sm btn-outline-primary" onclick="goToToday()" title="Jump to today">Today</button>
+        <span class="cal-view-label ms-5">Months View</span>
+        <div class="cal-view-selector" id="calViewSelector" title="Number of months to display">
+          <button class="cal-view-btn" data-months="1" onclick="setView(1)" title="1 month view">1</button>
+          <button class="cal-view-btn" data-months="2" onclick="setView(2)" title="2 months view">2</button>
+          <button class="cal-view-btn" data-months="3" onclick="setView(3)" title="3 months — quarterly">3</button>
+          <button class="cal-view-btn" data-months="4" onclick="setView(4)" title="4 months view">4</button>
+          <button class="cal-view-btn" data-months="6" onclick="setView(6)" title="6 months — half year">6</button>
+          <button class="cal-view-btn active" data-months="12" onclick="setView(12)" title="12 months — full year">12</button>
+        </div>
+        <div class="calendar-legend">
+          <span class="legend-item"><span class="legend-dot" style="background:#3b82f6"></span> Event</span>
+          <span class="legend-item"><span class="legend-dot" style="background:#f59e0b"></span> Reminder</span>
+          <span class="legend-item"><span class="legend-dot" style="background:#8b5cf6"></span> Task Due</span>
+          <span class="legend-item legend-sep">|</span>
+          <span class="legend-item"><span class="legend-text-muted">Faded</span> = Past</span>
+        </div>
+        <a href="/portal/help?section=calendar" class="portal-help-link" title="Help — Calendar"><i class="bi bi-question-circle-fill"></i></a>
+      </div>
+
+      <!-- 12-month grid -->
+      <div class="calendar-grid" id="calendarGrid">
+        <!-- Built by JS -->
+      </div>
+    </div>
+
+    <!-- RIGHT: Side Rail -->
+    <div class="calendar-rail" id="calendarRail">
+      <div class="rail-header">
+        <h5>Upcoming</h5>
+      </div>
+      <div class="rail-list" id="railList">
+        <div class="text-center text-muted py-3 small">Loading...</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Date Detail Popover (click on a date) -->
+<div class="cal-date-panel" id="calDatePanel" style="display:none">
+  <div class="cal-date-panel-header">
+    <h5 id="calDatePanelTitle"></h5>
+    <button class="btn btn-sm btn-link p-0" onclick="closeDatePanel()"><i class="bi bi-x-lg"></i></button>
+  </div>
+  <div class="cal-date-panel-body" id="calDatePanelBody"></div>
+  <div class="cal-date-panel-footer">
+    <button class="btn btn-sm btn-primary w-100" onclick="showAddEventModal()"><i class="bi bi-plus-lg me-1"></i>Add Event</button>
+  </div>
+</div>
+<div class="cal-date-overlay" id="calDateOverlay" style="display:none" onclick="closeDatePanel()"></div>
+
+<!-- Add/Edit Event Modal -->
+<div class="modal fade" id="calEventModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-sm">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h6 class="modal-title" id="calEventModalTitle">Add Event</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="calEventId">
+        <input type="hidden" id="calEventDate">
+        <div class="mb-3">
+          <label class="form-label small">Title</label>
+          <div class="cal-title-chips" id="calTitleChips">
+            <button type="button" class="cal-chip" onclick="pickChip(this)" data-title="Meeting" data-color="blue"><i class="bi bi-camera-video"></i> Meeting</button>
+            <button type="button" class="cal-chip" onclick="pickChip(this)" data-title="Deadline" data-color="red"><i class="bi bi-alarm"></i> Deadline</button>
+            <button type="button" class="cal-chip" onclick="pickChip(this)" data-title="Note" data-color="amber"><i class="bi bi-sticky"></i> Note</button>
+            <button type="button" class="cal-chip" onclick="pickChip(this)" data-title="Event" data-color="purple"><i class="bi bi-calendar-event"></i> Event</button>
+            <button type="button" class="cal-chip" onclick="pickChip(this)" data-title="Call" data-color="green"><i class="bi bi-telephone"></i> Call</button>
+            <button type="button" class="cal-chip" onclick="pickChip(this)" data-title="" data-color=""><i class="bi bi-pencil"></i> Other</button>
+          </div>
+          <input type="text" class="form-control form-control-sm mt-2" id="calEventTitle" maxlength="255" placeholder="Type a custom title...">
+        </div>
+        <div class="mb-3">
+          <label class="form-label small">Description <span class="text-muted">(optional)</span></label>
+          <textarea class="form-control form-control-sm" id="calEventDesc" rows="3" placeholder="Details..."></textarea>
+        </div>
+        <div class="mb-3">
+          <label class="form-label small">Color</label>
+          <div class="cal-color-picker" id="calColorPicker">
+            <button type="button" class="cal-color-opt selected" data-color="blue" style="background:#3b82f6" onclick="pickColor(this)"></button>
+            <button type="button" class="cal-color-opt" data-color="green" style="background:#22c55e" onclick="pickColor(this)"></button>
+            <button type="button" class="cal-color-opt" data-color="red" style="background:#ef4444" onclick="pickColor(this)"></button>
+            <button type="button" class="cal-color-opt" data-color="amber" style="background:#f59e0b" onclick="pickColor(this)"></button>
+            <button type="button" class="cal-color-opt" data-color="purple" style="background:#8b5cf6" onclick="pickColor(this)"></button>
+            <button type="button" class="cal-color-opt" data-color="pink" style="background:#ec4899" onclick="pickColor(this)"></button>
+            <button type="button" class="cal-color-opt" data-color="cyan" style="background:#06b6d4" onclick="pickColor(this)"></button>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-sm btn-primary" onclick="saveCalEvent()">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Hover Tooltip (positioned absolutely) -->
+<div class="cal-tooltip" id="calTooltip" style="display:none"></div>
+
+<script>
+const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const DAY_HEADERS = ['Mo','Tu','We','Th','Fr','Sa','Su'];
+const COLOR_MAP = { blue: '#3b82f6', green: '#22c55e', red: '#ef4444', amber: '#f59e0b', purple: '#8b5cf6', pink: '#ec4899', cyan: '#06b6d4' };
+
+let currentYear = new Date().getFullYear();
+let currentStartMonth = 0; // 0-indexed (Jan=0)
+let monthsToShow = parseInt(localStorage.getItem('cal-view') || '12');
+let yearData = {}; // dateMap from API
+let selectedDate = null;
+let calEventModalInstance = null;
+let tooltipTimer = null;
+
+// Grid columns per view
+const VIEW_COLS = { 1: 1, 2: 2, 3: 3, 4: 2, 6: 3, 12: 4 };
+
+// ── View Selector ─────────────────────────────────────────
+function setView(n) {
+  monthsToShow = n;
+  localStorage.setItem('cal-view', n);
+  // Reset start to a sensible position
+  const nowMonth = new Date().getMonth();
+  if (n === 12) {
+    currentStartMonth = 0;
+    currentYear = new Date().getFullYear();
+  } else {
+    currentStartMonth = nowMonth;
+    currentYear = new Date().getFullYear();
+  }
+  // Highlight active button
+  document.querySelectorAll('.cal-view-btn').forEach(b => b.classList.remove('active'));
+  var btn = document.querySelector('.cal-view-btn[data-months="' + n + '"]');
+  if (btn) btn.classList.add('active');
+  // Set grid columns and view attribute
+  var grid = document.getElementById('calendarGrid');
+  grid.style.gridTemplateColumns = 'repeat(' + (VIEW_COLS[n] || 3) + ', 1fr)';
+  grid.dataset.view = n;
+  renderCalendar();
+  loadAllYearData();
+}
+
+function navPrev() {
+  if (monthsToShow === 12) {
+    currentYear--;
+    currentStartMonth = 0;
+  } else {
+    currentStartMonth -= monthsToShow;
+    while (currentStartMonth < 0) { currentStartMonth += 12; currentYear--; }
+  }
+  renderCalendar();
+  loadAllYearData();
+}
+
+function navNext() {
+  if (monthsToShow === 12) {
+    currentYear++;
+    currentStartMonth = 0;
+  } else {
+    currentStartMonth += monthsToShow;
+    while (currentStartMonth >= 12) { currentStartMonth -= 12; currentYear++; }
+  }
+  renderCalendar();
+  loadAllYearData();
+}
+
+function goToToday() {
+  const now = new Date();
+  currentYear = now.getFullYear();
+  currentStartMonth = monthsToShow === 12 ? 0 : now.getMonth();
+  renderCalendar();
+  loadAllYearData();
+  // Scroll to current month
+  setTimeout(() => {
+    const todayCell = document.querySelector('.cal-day.today');
+    if (todayCell) todayCell.closest('.cal-month')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, 100);
+}
+
+// Update the header label
+function updateHeaderLabel() {
+  const el = document.getElementById('calendarYear');
+  if (monthsToShow === 12) {
+    el.textContent = currentYear;
+  } else if (monthsToShow === 1) {
+    el.textContent = MONTH_NAMES[currentStartMonth] + ' ' + currentYear;
+  } else {
+    const endMonth = (currentStartMonth + monthsToShow - 1) % 12;
+    const endYear = currentStartMonth + monthsToShow - 1 >= 12 ? currentYear + 1 : currentYear;
+    if (currentYear === endYear) {
+      el.textContent = MONTH_NAMES[currentStartMonth].substring(0,3) + ' – ' + MONTH_NAMES[endMonth].substring(0,3) + ' ' + currentYear;
+    } else {
+      el.textContent = MONTH_NAMES[currentStartMonth].substring(0,3) + ' ' + currentYear + ' – ' + MONTH_NAMES[endMonth].substring(0,3) + ' ' + endYear;
+    }
+  }
+}
+
+// Load data for all visible years
+function loadAllYearData() {
+  const endMonth = currentStartMonth + monthsToShow - 1;
+  const endYear = currentYear + Math.floor(endMonth / 12);
+  // Load current year
+  loadYearData(currentYear);
+  // If months span into next year, load that too
+  if (endYear > currentYear) loadYearData(endYear);
+}
+
+// ── Build Calendar ────────────────────────────────────────
+function renderCalendar() {
+  updateHeaderLabel();
+  const grid = document.getElementById('calendarGrid');
+  grid.innerHTML = '';
+
+  const today = new Date();
+  const todayStr = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
+
+  for (let i = 0; i < monthsToShow; i++) {
+    const m = (currentStartMonth + i) % 12;
+    const y = currentYear + Math.floor((currentStartMonth + i) / 12);
+    const monthEl = document.createElement('div');
+    monthEl.className = 'cal-month';
+
+    // Month header
+    const header = document.createElement('div');
+    header.className = 'cal-month-header';
+    // Mark past months
+    const nowDate = new Date();
+    if (y < nowDate.getFullYear() || (y === nowDate.getFullYear() && m < nowDate.getMonth())) {
+      header.classList.add('cal-month-past');
+    } else if (y === nowDate.getFullYear() && m === nowDate.getMonth()) {
+      header.classList.add('cal-month-current');
+    }
+    header.textContent = monthsToShow === 12 ? MONTH_NAMES[m] : MONTH_NAMES[m] + ' ' + y;
+    monthEl.appendChild(header);
+
+    // Day-of-week headers
+    const dowRow = document.createElement('div');
+    dowRow.className = 'cal-dow-row';
+    DAY_HEADERS.forEach((d, i) => {
+      const cell = document.createElement('div');
+      cell.className = 'cal-dow';
+      if (i === 5) cell.classList.add('cal-sat');
+      if (i === 6) cell.classList.add('cal-sun');
+      cell.textContent = d;
+      dowRow.appendChild(cell);
+    });
+    monthEl.appendChild(dowRow);
+
+    // Days grid
+    const daysContainer = document.createElement('div');
+    daysContainer.className = 'cal-days';
+
+    const firstDay = new Date(y, m, 1);
+    let startDow = firstDay.getDay(); // 0=Sun
+    startDow = startDow === 0 ? 6 : startDow - 1; // Convert to Mon=0
+    const daysInMonth = new Date(y, m + 1, 0).getDate();
+
+    // Empty cells before first day
+    for (let i = 0; i < startDow; i++) {
+      const empty = document.createElement('div');
+      empty.className = 'cal-day empty';
+      daysContainer.appendChild(empty);
+    }
+
+    // Day cells
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dateStr = y + '-' + String(m+1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+      const cell = document.createElement('div');
+      cell.className = 'cal-day';
+      if (dateStr === todayStr) cell.classList.add('today');
+
+      // Weekend styling — compute day-of-week (Mon=0 based grid)
+      const colIndex = (startDow + d - 1) % 7; // 0=Mon .. 5=Sat, 6=Sun
+      if (colIndex === 5) cell.classList.add('cal-sat');
+      if (colIndex === 6) cell.classList.add('cal-sun');
+
+      const numEl = document.createElement('span');
+      numEl.className = 'cal-day-num';
+      numEl.textContent = d;
+      cell.appendChild(numEl);
+
+      // Dots for entries
+      const entry = yearData[dateStr];
+      if (entry) {
+        const dotsEl = document.createElement('div');
+        dotsEl.className = 'cal-dots';
+        if (entry.events && entry.events.length) {
+          const dot = document.createElement('span');
+          dot.className = 'cal-dot';
+          dot.style.background = '#3b82f6';
+          dotsEl.appendChild(dot);
+        }
+        if (entry.reminders && entry.reminders.length) {
+          const dot = document.createElement('span');
+          dot.className = 'cal-dot';
+          dot.style.background = '#f59e0b';
+          dotsEl.appendChild(dot);
+        }
+        if (entry.tasks && entry.tasks.length) {
+          const dot = document.createElement('span');
+          dot.className = 'cal-dot';
+          dot.style.background = '#8b5cf6';
+          dotsEl.appendChild(dot);
+        }
+        cell.appendChild(dotsEl);
+        cell.classList.add('has-entries');
+
+        // Hover tooltip
+        cell.addEventListener('mouseenter', function(e) { showTooltip(e, dateStr, entry); });
+        cell.addEventListener('mouseleave', hideTooltip);
+      }
+
+      // Click to open date panel
+      cell.addEventListener('click', function() { openDatePanel(dateStr); });
+      cell.dataset.date = dateStr;
+      daysContainer.appendChild(cell);
+    }
+
+    monthEl.appendChild(daysContainer);
+    grid.appendChild(monthEl);
+  }
+}
+
+// ── Load Data ─────────────────────────────────────────────
+function loadYearData(year) {
+  fetch('/portal/calendar/year-data?year=' + year)
+    .then(r => r.json())
+    .then(res => {
+      if (res.success && res.data && res.data.dateMap) {
+        // Merge into yearData (don't overwrite — we may have data from multiple years)
+        Object.assign(yearData, res.data.dateMap);
+      }
+      renderCalendar();
+    })
+    .catch(() => { renderCalendar(); });
+}
+
+// ── Tooltip (hover) ───────────────────────────────────────
+function showTooltip(e, dateStr, entry) {
+  clearTimeout(tooltipTimer);
+  tooltipTimer = setTimeout(function() {
+    const tooltip = document.getElementById('calTooltip');
+    const date = new Date(dateStr + 'T00:00:00');
+    const dateLabel = date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+
+    let html = '<div class="cal-tt-date">' + dateLabel + '</div>';
+
+    if (entry.events && entry.events.length) {
+      entry.events.forEach(ev => {
+        const c = COLOR_MAP[ev.color] || '#3b82f6';
+        html += '<div class="cal-tt-item"><span class="cal-tt-dot" style="background:' + c + '"></span>' +
+          '<span class="cal-tt-text">' + esc(ev.title) + '</span></div>';
+      });
+    }
+    if (entry.reminders && entry.reminders.length) {
+      entry.reminders.forEach(r => {
+        const time = new Date(r.remind_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        html += '<div class="cal-tt-item"><span class="cal-tt-dot" style="background:#f59e0b"></span>' +
+          '<span class="cal-tt-text">' + esc(r.title) + ' <span class="text-muted">(' + time + ')</span></span></div>';
+      });
+    }
+    if (entry.tasks && entry.tasks.length) {
+      entry.tasks.forEach(t => {
+        const statusIcon = t.status === 'completed' ? '<i class="bi bi-check-circle-fill text-success"></i> ' : '';
+        html += '<div class="cal-tt-item"><span class="cal-tt-dot" style="background:#8b5cf6"></span>' +
+          '<span class="cal-tt-text">' + statusIcon + esc(t.title) + '</span></div>';
+      });
+    }
+
+    tooltip.innerHTML = html;
+    tooltip.style.display = 'block';
+
+    // Position near the hovered element
+    const rect = e.target.closest('.cal-day').getBoundingClientRect();
+    const ttRect = tooltip.getBoundingClientRect();
+    let top = rect.bottom + 8;
+    let left = rect.left + rect.width / 2 - ttRect.width / 2;
+
+    // Keep on screen
+    if (left < 8) left = 8;
+    if (left + ttRect.width > window.innerWidth - 8) left = window.innerWidth - ttRect.width - 8;
+    if (top + ttRect.height > window.innerHeight - 8) top = rect.top - ttRect.height - 8;
+
+    tooltip.style.top = top + 'px';
+    tooltip.style.left = left + 'px';
+  }, 200);
+}
+
+function hideTooltip() {
+  clearTimeout(tooltipTimer);
+  document.getElementById('calTooltip').style.display = 'none';
+}
+
+// ── Date Panel (click) ────────────────────────────────────
+function openDatePanel(dateStr) {
+  selectedDate = dateStr;
+  hideTooltip();
+
+  const panel = document.getElementById('calDatePanel');
+  const overlay = document.getElementById('calDateOverlay');
+  const date = new Date(dateStr + 'T00:00:00');
+  document.getElementById('calDatePanelTitle').textContent = date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+
+  // Load date data
+  document.getElementById('calDatePanelBody').innerHTML = '<div class="text-center text-muted py-3 small">Loading...</div>';
+  panel.style.display = 'flex';
+  overlay.style.display = 'block';
+
+  fetch('/portal/calendar/date/' + dateStr)
+    .then(r => r.json())
+    .then(res => {
+      if (!res.success || !res.data) {
+        renderDatePanel({ events: [], reminders: [], tasks: [] });
+        return;
+      }
+      renderDatePanel(res.data);
+    })
+    .catch(() => {
+      renderDatePanel({ events: [], reminders: [], tasks: [] });
+    });
+}
+
+function renderDatePanel(data) {
+  const body = document.getElementById('calDatePanelBody');
+  let html = '';
+
+  if (!data.events.length && !data.reminders.length && !data.tasks.length) {
+    html = '<div class="text-center text-muted py-4"><i class="bi bi-calendar-check" style="font-size:1.5rem;opacity:0.4;display:block;margin-bottom:8px"></i><div class="small">Nothing planned for this day</div><div style="font-size:0.72rem;margin-top:4px;opacity:0.6">Click below to add an event</div></div>';
+    body.innerHTML = html;
+    return;
+  }
+
+  // Events
+  if (data.events.length) {
+    html += '<div class="cdp-section-label">Events</div>';
+    data.events.forEach(ev => {
+      const c = COLOR_MAP[ev.color] || '#3b82f6';
+      html += '<div class="cdp-item">' +
+        '<div class="cdp-item-dot" style="background:' + c + '"></div>' +
+        '<div class="cdp-item-body">' +
+          '<div class="cdp-item-title">' + esc(ev.title) + '</div>' +
+          (ev.description ? '<div class="cdp-item-desc">' + esc(ev.description) + '</div>' : '') +
+        '</div>' +
+        '<div class="cdp-item-actions">' +
+          '<button class="btn btn-sm btn-link p-0" onclick="editCalEvent(' + ev.id + ')" title="Edit"><i class="bi bi-pencil"></i></button>' +
+          '<button class="btn btn-sm btn-link p-0 text-danger" onclick="deleteCalEvent(' + ev.id + ')" title="Delete"><i class="bi bi-trash"></i></button>' +
+        '</div>' +
+      '</div>';
+    });
+  }
+
+  // Reminders
+  if (data.reminders.length) {
+    html += '<div class="cdp-section-label">Reminders</div>';
+    data.reminders.forEach(r => {
+      const time = new Date(r.remind_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const done = r.is_done ? ' cdp-done' : '';
+      html += '<div class="cdp-item' + done + '">' +
+        '<div class="cdp-item-dot" style="background:#f59e0b"></div>' +
+        '<div class="cdp-item-body">' +
+          '<div class="cdp-item-title">' + esc(r.title) + ' <span class="text-muted small">(' + time + ')</span></div>' +
+          (r.note ? '<div class="cdp-item-desc">' + esc(r.note) + '</div>' : '') +
+        '</div>' +
+      '</div>';
+    });
+  }
+
+  // Tasks
+  if (data.tasks.length) {
+    html += '<div class="cdp-section-label">Tasks Due</div>';
+    data.tasks.forEach(t => {
+      const priorityColors = { urgent: '#ef4444', high: '#f97316', medium: '#3b82f6', low: '#6b7280' };
+      const c = priorityColors[t.priority] || '#8b5cf6';
+      const isDone = t.status === 'completed';
+      html += '<a href="/portal/tasks?task=' + t.id + '" class="cdp-item cdp-task-link' + (isDone ? ' cdp-done' : '') + '">' +
+        '<div class="cdp-item-dot" style="background:' + c + '"></div>' +
+        '<div class="cdp-item-body">' +
+          '<div class="cdp-item-title">' + (isDone ? '<i class="bi bi-check-circle-fill text-success me-1"></i>' : '') + esc(t.title) + '</div>' +
+          '<div class="cdp-item-desc">' + esc(t.assigned_to_name) + ' &middot; ' + t.priority + '</div>' +
+        '</div>' +
+      '</a>';
+    });
+  }
+
+  body.innerHTML = html;
+}
+
+function closeDatePanel() {
+  document.getElementById('calDatePanel').style.display = 'none';
+  document.getElementById('calDateOverlay').style.display = 'none';
+  selectedDate = null;
+}
+
+// ── Event CRUD ────────────────────────────────────────────
+function showAddEventModal(editData) {
+  // Close the date panel first so modals don't stack
+  var reopenDate = selectedDate;
+  document.getElementById('calDatePanel').style.display = 'none';
+  document.getElementById('calDateOverlay').style.display = 'none';
+
+  document.getElementById('calEventId').value = editData ? editData.id : '';
+  document.getElementById('calEventDate').value = editData ? editData.event_date : reopenDate;
+  document.getElementById('calEventTitle').value = editData ? editData.title : '';
+  document.getElementById('calEventDesc').value = editData ? (editData.description || '') : '';
+  document.getElementById('calEventModalTitle').textContent = editData ? 'Edit Event' : 'Add Event';
+
+  // Reset chips and color picker
+  document.querySelectorAll('.cal-chip').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.cal-color-opt').forEach(btn => btn.classList.remove('selected'));
+  const activeColor = editData ? editData.color : 'blue';
+  const activeBtn = document.querySelector('.cal-color-opt[data-color="' + activeColor + '"]');
+  if (activeBtn) activeBtn.classList.add('selected');
+  document.getElementById('calEventTitle').placeholder = 'Type a custom title...';
+
+  // If editing, highlight matching chip
+  if (editData && editData.title) {
+    const matchChip = document.querySelector('.cal-chip[data-title="' + editData.title + '"]');
+    if (matchChip) matchChip.classList.add('active');
+  }
+
+  if (!calEventModalInstance) calEventModalInstance = new bootstrap.Modal(document.getElementById('calEventModal'));
+  calEventModalInstance.show();
+
+  // When modal closes, reopen the date panel to show the updated list
+  document.getElementById('calEventModal').addEventListener('hidden.bs.modal', function handler() {
+    document.getElementById('calEventModal').removeEventListener('hidden.bs.modal', handler);
+    if (reopenDate) openDatePanel(reopenDate);
+  });
+}
+
+function pickColor(btn) {
+  document.querySelectorAll('.cal-color-opt').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+}
+
+function pickChip(btn) {
+  document.querySelectorAll('.cal-chip').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+
+  const title = btn.dataset.title;
+  const color = btn.dataset.color;
+  const input = document.getElementById('calEventTitle');
+
+  if (title) {
+    // Preset chip — fill title, auto-select matching color
+    input.value = title;
+    input.placeholder = 'Add details after "' + title + '"...';
+    if (color) {
+      const colorBtn = document.querySelector('.cal-color-opt[data-color="' + color + '"]');
+      if (colorBtn) pickColor(colorBtn);
+    }
+  } else {
+    // "Other" chip — clear and focus
+    input.value = '';
+    input.placeholder = 'Type a custom title...';
+    input.focus();
+  }
+}
+
+async function saveCalEvent() {
+  const id = document.getElementById('calEventId').value;
+  const title = document.getElementById('calEventTitle').value.trim();
+  const description = document.getElementById('calEventDesc').value.trim();
+  const event_date = document.getElementById('calEventDate').value;
+  const color = document.querySelector('.cal-color-opt.selected')?.dataset.color || 'blue';
+
+  if (!title) return alert('Title is required');
+
+  const url = id ? '/portal/calendar/events/' + id : '/portal/calendar/events';
+  const method = id ? 'PUT' : 'POST';
+
+  try {
+    const res = await fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title, description, event_date, color })
+    });
+    const data = await res.json();
+    if (data.success) {
+      calEventModalInstance.hide();
+      refreshAll();
+    } else {
+      alert(data.message || 'Failed');
+    }
+  } catch (err) {
+    alert('Network error');
+  }
+}
+
+async function editCalEvent(id) {
+  try {
+    // Find the event in current panel data
+    const res = await fetch('/portal/calendar/date/' + selectedDate);
+    const data = await res.json();
+    if (data.success) {
+      const ev = data.data.events.find(e => e.id === id);
+      if (ev) {
+        const evDate = ev.event_date instanceof Date ? ev.event_date.toISOString().split('T')[0] : String(ev.event_date).split('T')[0];
+        showAddEventModal({ ...ev, event_date: evDate });
+      }
+    }
+  } catch (_) {}
+}
+
+async function deleteCalEvent(id) {
+  if (!confirm('Delete this event?')) return;
+  try {
+    const res = await fetch('/portal/calendar/events/' + id, { method: 'DELETE' });
+    const data = await res.json();
+    if (data.success) {
+      refreshAll();
+    }
+  } catch (_) {}
+}
+
+function esc(s) {
+  if (!s) return '';
+  var d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+// ── Side Rail ─────────────────────────────────────────────
+function loadRail() {
+  fetch('/portal/calendar/upcoming')
+    .then(r => r.json())
+    .then(res => {
+      if (!res.success || !res.data) {
+        document.getElementById('railList').innerHTML = '<div class="text-center text-muted py-3 small">No upcoming entries</div>';
+        return;
+      }
+      renderRail(res.data);
+    })
+    .catch(() => {
+      document.getElementById('railList').innerHTML = '<div class="text-center text-muted py-3 small">No upcoming entries</div>';
+    });
+}
+
+function renderRail(data) {
+  const list = document.getElementById('railList');
+  const today = new Date().toISOString().split('T')[0];
+  const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+
+  // Build a flat sorted list of all entries
+  const items = [];
+
+  // Overdue
+  (data.overdueEvents || []).forEach(e => {
+    const d = e.event_date instanceof Date ? e.event_date.toISOString().split('T')[0] : String(e.event_date).split('T')[0];
+    items.push({ type: 'event', id: e.id, title: e.title, date: d, color: e.color, done: !!e.is_done, overdue: true, desc: e.description });
+  });
+  (data.overdueTasks || []).forEach(t => {
+    const d = t.due_date instanceof Date ? t.due_date.toISOString().split('T')[0] : String(t.due_date).split('T')[0];
+    items.push({ type: 'task', id: t.id, title: t.title, date: d, color: t.priority, done: t.status === 'completed', overdue: true, assignee: t.assigned_to_name });
+  });
+
+  // Events
+  (data.events || []).forEach(e => {
+    const d = e.event_date instanceof Date ? e.event_date.toISOString().split('T')[0] : String(e.event_date).split('T')[0];
+    items.push({ type: 'event', id: e.id, title: e.title, date: d, color: e.color, done: !!e.is_done, overdue: false, desc: e.description });
+  });
+
+  // Reminders
+  (data.reminders || []).forEach(r => {
+    const d = new Date(r.remind_at).toISOString().split('T')[0];
+    const time = new Date(r.remind_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    items.push({ type: 'reminder', id: r.id, title: r.title, date: d, color: 'amber', done: !!r.is_done, overdue: false, time: time, desc: r.note });
+  });
+
+  // Tasks
+  (data.tasks || []).forEach(t => {
+    const d = t.due_date instanceof Date ? t.due_date.toISOString().split('T')[0] : String(t.due_date).split('T')[0];
+    items.push({ type: 'task', id: t.id, title: t.title, date: d, color: t.priority, done: t.status === 'completed', overdue: false, assignee: t.assigned_to_name });
+  });
+
+  // Show all items — done items stay visible with strike-through
+  const visible = items;
+
+  if (!visible.length) {
+    list.innerHTML = '<div class="text-center text-muted py-4 small"><i class="bi bi-calendar-check" style="font-size:1.2rem;opacity:0.4;display:block;margin-bottom:6px"></i>All clear — nothing upcoming</div>';
+    return;
+  }
+
+  // Group by date label
+  const groups = {};
+  visible.forEach(item => {
+    let label;
+    if (item.overdue) label = 'Overdue';
+    else if (item.date === today) label = 'Today';
+    else if (item.date === tomorrow) label = 'Tomorrow';
+    else {
+      const d = new Date(item.date + 'T00:00:00');
+      label = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+    }
+    if (!groups[label]) groups[label] = [];
+    groups[label].push(item);
+  });
+
+  let html = '';
+  const typeColors = { blue: '#3b82f6', green: '#22c55e', red: '#ef4444', amber: '#f59e0b', purple: '#8b5cf6', pink: '#ec4899', cyan: '#06b6d4' };
+  const priorityColors = { urgent: '#ef4444', high: '#f97316', medium: '#3b82f6', low: '#6b7280' };
+
+  for (const [label, items] of Object.entries(groups)) {
+    html += '<div class="rail-group">';
+    html += '<div class="rail-date-label' + (label === 'Overdue' ? ' rail-overdue' : '') + '">' + label + '</div>';
+
+    items.forEach(item => {
+      let dotColor;
+      if (item.type === 'event') dotColor = typeColors[item.color] || '#3b82f6';
+      else if (item.type === 'reminder') dotColor = '#f59e0b';
+      else dotColor = priorityColors[item.color] || '#8b5cf6';
+
+      const doneClass = item.done ? ' rail-item-done' : '';
+      // Checkbox action depends on type
+      let toggleAction = '';
+      if (item.type === 'event') toggleAction = 'toggleRailEvent(' + item.id + ')';
+      else if (item.type === 'reminder') toggleAction = 'toggleRailReminder(' + item.id + ')';
+      else if (item.type === 'task') toggleAction = 'toggleRailTask(' + item.id + ', ' + item.done + ')';
+
+      const tooltip = item.done ? 'Mark as pending' : 'Mark as done';
+
+      let subtitle = '';
+      if (item.time) subtitle = '<span class="rail-item-time"><i class="bi bi-clock"></i> ' + item.time + '</span>';
+      else if (item.assignee) subtitle = '<span class="rail-item-sub"><i class="bi bi-person"></i> ' + esc(item.assignee) + '</span>';
+
+      let descHtml = '';
+      if (item.desc) descHtml = '<div class="rail-item-desc" onclick="this.classList.toggle(\'expanded\')" title="Click to expand">' + esc(item.desc) + '</div>';
+
+      html += '<div class="rail-item' + doneClass + '">' +
+        '<label class="rail-checkbox" title="' + tooltip + '"><input type="checkbox" ' + (item.done ? 'checked' : '') + ' onchange="' + toggleAction + '"><span class="rail-checkmark"></span></label>' +
+        '<div class="rail-item-dot" style="background:' + dotColor + '"></div>' +
+        '<div class="rail-item-body">' +
+          '<div class="rail-item-title">' + esc(item.title) + '</div>' +
+          descHtml +
+          subtitle +
+        '</div>' +
+      '</div>';
+    });
+
+    html += '</div>';
+  }
+
+  list.innerHTML = html;
+}
+
+function refreshAll() {
+  loadRail();
+  yearData = {};
+  loadAllYearData();
+  // Refresh date panel if open
+  if (selectedDate && document.getElementById('calDatePanel').style.display !== 'none') {
+    openDatePanel(selectedDate);
+  }
+}
+
+async function toggleRailEvent(id) {
+  try {
+    await fetch('/portal/calendar/events/' + id + '/done', { method: 'PATCH' });
+    refreshAll();
+  } catch (_) {}
+}
+
+async function toggleRailReminder(id) {
+  try {
+    await fetch('/portal/reminders/' + id + '/done', { method: 'PATCH' });
+    refreshAll();
+  } catch (_) {}
+}
+
+async function toggleRailTask(id, isDone) {
+  try {
+    const newStatus = isDone ? 'open' : 'completed';
+    await fetch('/portal/tasks/' + id, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: newStatus })
+    });
+    refreshAll();
+  } catch (_) {}
+}
+
+// ── Init ──────────────────────────────────────────────────
+// Restore saved view
+(function() {
+  const saved = parseInt(localStorage.getItem('cal-view') || '12');
+  monthsToShow = saved;
+  if (saved !== 12) {
+    currentStartMonth = new Date().getMonth();
+  }
+  // Set grid columns and view attribute
+  var grid = document.getElementById('calendarGrid');
+  grid.style.gridTemplateColumns = 'repeat(' + (VIEW_COLS[saved] || 4) + ', 1fr)';
+  grid.dataset.view = saved;
+  // Highlight active button
+  document.querySelectorAll('.cal-view-btn').forEach(b => b.classList.remove('active'));
+  var btn = document.querySelector('.cal-view-btn[data-months="' + saved + '"]');
+  if (btn) btn.classList.add('active');
+})();
+
+renderCalendar();
+loadAllYearData();
+loadRail();
+</script>

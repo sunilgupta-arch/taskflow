@@ -5,36 +5,37 @@
     </div>
     <div class="help-nav" id="helpNav">
       <div class="help-nav-section">Getting Started</div>
-      <a class="help-nav-item active" href="#" onclick="showHelpSection('overview')">Portal Overview</a>
-      <a class="help-nav-item" href="#" onclick="showHelpSection('first-login')">First Login Guide</a>
-      <a class="help-nav-item" href="#" onclick="showHelpSection('navigation')">Navigation Guide</a>
+      <a class="help-nav-item active" href="#" onclick="showHelpSection('overview', this)">Portal Overview</a>
+      <a class="help-nav-item" href="#" onclick="showHelpSection('first-login', this)">First Login Guide</a>
+      <a class="help-nav-item" href="#" onclick="showHelpSection('navigation', this)">Navigation Guide</a>
 
       <div class="help-nav-section">Features</div>
-      <a class="help-nav-item" href="#" onclick="showHelpSection('chat')">Chat</a>
-      <a class="help-nav-item" href="#" onclick="showHelpSection('tasks')">Tasks</a>
-      <a class="help-nav-item" href="#" onclick="showHelpSection('notes')">Notes & Dictation</a>
-      <a class="help-nav-item" href="#" onclick="showHelpSection('admin-chat')">Admin Chat</a>
+      <a class="help-nav-item" href="#" onclick="showHelpSection('chat', this)">Chat</a>
+      <a class="help-nav-item" href="#" onclick="showHelpSection('tasks', this)">Tasks</a>
+      <a class="help-nav-item" href="#" onclick="showHelpSection('notes', this)">Notes & Dictation</a>
+      <a class="help-nav-item" href="#" onclick="showHelpSection('admin-chat', this)">Admin Chat</a>
       <% if (['CLIENT_ADMIN', 'CLIENT_TOP_MGMT'].includes(user.role_name)) { %>
-        <a class="help-nav-item" href="#" onclick="showHelpSection('team-india')">Team India</a>
-        <a class="help-nav-item" href="#" onclick="showHelpSection('bridge-chat')">Bridge Chat</a>
+        <a class="help-nav-item" href="#" onclick="showHelpSection('team-india', this)">Team India</a>
+        <a class="help-nav-item" href="#" onclick="showHelpSection('bridge-chat', this)">Bridge Chat</a>
       <% } %>
-      <a class="help-nav-item" href="#" onclick="showHelpSection('files')">Files & Attachments</a>
+      <a class="help-nav-item" href="#" onclick="showHelpSection('calendar', this)">Calendar</a>
+      <a class="help-nav-item" href="#" onclick="showHelpSection('files', this)">Files & Attachments</a>
 
       <% if (user.role_name === 'CLIENT_ADMIN') { %>
         <div class="help-nav-section">Administration</div>
-        <a class="help-nav-item" href="#" onclick="showHelpSection('roles')">Roles & Hierarchy</a>
-        <a class="help-nav-item" href="#" onclick="showHelpSection('team-mgmt')">Team Management</a>
-        <a class="help-nav-item" href="#" onclick="showHelpSection('permissions')">Permissions Matrix</a>
+        <a class="help-nav-item" href="#" onclick="showHelpSection('roles', this)">Roles & Hierarchy</a>
+        <a class="help-nav-item" href="#" onclick="showHelpSection('team-mgmt', this)">Team Management</a>
+        <a class="help-nav-item" href="#" onclick="showHelpSection('permissions', this)">Permissions Matrix</a>
       <% } %>
 
       <div class="help-nav-section">Account & Security</div>
-      <a class="help-nav-item" href="#" onclick="showHelpSection('security')">Security & Sessions</a>
-      <a class="help-nav-item" href="#" onclick="showHelpSection('settings')">Settings & Password</a>
+      <a class="help-nav-item" href="#" onclick="showHelpSection('security', this)">Security & Sessions</a>
+      <a class="help-nav-item" href="#" onclick="showHelpSection('settings', this)">Settings & Password</a>
 
       <div class="help-nav-section">Support</div>
-      <a class="help-nav-item" href="#" onclick="showHelpSection('tips')">Tips & Shortcuts</a>
-      <a class="help-nav-item" href="#" onclick="showHelpSection('troubleshooting')">Troubleshooting</a>
-      <a class="help-nav-item" href="#" onclick="showHelpSection('faq')">FAQ</a>
+      <a class="help-nav-item" href="#" onclick="showHelpSection('tips', this)">Tips & Shortcuts</a>
+      <a class="help-nav-item" href="#" onclick="showHelpSection('troubleshooting', this)">Troubleshooting</a>
+      <a class="help-nav-item" href="#" onclick="showHelpSection('faq', this)">FAQ</a>
     </div>
   </div>
 
@@ -65,6 +66,11 @@
           <div class="help-card-icon"><i class="bi bi-flag-fill"></i></div>
           <h6>Team India</h6>
           <p>Live employee status dashboard. See who's working, what they're doing, and chat with them directly.</p>
+        </div>
+        <div class="help-card">
+          <div class="help-card-icon"><i class="bi bi-calendar3"></i></div>
+          <h6>Calendar</h6>
+          <p>Full-year planner with events, reminders, and task deadlines. Click any date to add entries and track them in the side rail.</p>
         </div>
         <div class="help-card">
           <div class="help-card-icon"><i class="bi bi-headset"></i></div>
@@ -537,6 +543,129 @@
     </div>
 
     <!-- ═══ FILES & ATTACHMENTS ═══ -->
+    <!-- ═══ CALENDAR ═══ -->
+    <div class="help-section" id="section-calendar" style="display:none">
+      <h4>Calendar</h4>
+      <p class="help-lead">Your full-year planner — events, reminders, and task deadlines all in one view. Plan ahead, stay organized, and never miss a date.</p>
+
+      <div class="help-block">
+        <h6>The Calendar View</h6>
+        <p>The calendar page shows a <strong>12-month year grid</strong> with all months visible at once. Each day cell can show colored dots indicating activity:</p>
+        <table class="help-table">
+          <tr><td><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#3b82f6;margin-right:6px"></span><strong>Blue dot</strong></td><td>Calendar event (manually created by you)</td></tr>
+          <tr><td><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#f59e0b;margin-right:6px"></span><strong>Amber dot</strong></td><td>Reminder (set from the home page or reminders section)</td></tr>
+          <tr><td><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#8b5cf6;margin-right:6px"></span><strong>Purple dot</strong></td><td>Task with a due date (assigned via the Tasks section)</td></tr>
+        </table>
+        <div class="help-callout info">
+          <i class="bi bi-info-circle-fill me-2"></i>
+          <strong>Weekend styling:</strong> Saturdays are faded and Sundays appear in red to help you quickly distinguish working days from weekends.
+        </div>
+      </div>
+
+      <div class="help-block">
+        <h6>Navigating the Calendar</h6>
+        <table class="help-table">
+          <tr><td><i class="bi bi-chevron-left me-2"></i><i class="bi bi-chevron-right me-2"></i><strong>Year Arrows</strong></td><td>Switch between years to view past or future calendars</td></tr>
+          <tr><td><i class="bi bi-calendar-check me-2"></i><strong>Today Button</strong></td><td>Jump back to the current year and scroll to the current month</td></tr>
+        </table>
+        <p>The current date is highlighted with a <strong>blue background</strong> so you can always spot today at a glance.</p>
+      </div>
+
+      <div class="help-block">
+        <h6>Hovering Over a Date</h6>
+        <p>If a date has any activity (dots), <strong>hover your mouse over it</strong> to see a tooltip popup with a summary of all entries on that day — event titles, reminder times, and task names.</p>
+      </div>
+
+      <div class="help-block">
+        <h6>Clicking a Date</h6>
+        <p>Click any date to open a <strong>detail panel</strong> that shows:</p>
+        <ul>
+          <li><strong>Events</strong> — your calendar events with title, description, and color. You can edit or delete them.</li>
+          <li><strong>Reminders</strong> — any reminders set for that day with their scheduled time.</li>
+          <li><strong>Tasks Due</strong> — tasks with their priority and assignee. Click a task to open it directly in the Tasks page.</li>
+        </ul>
+        <p>If the day is empty, you'll see a friendly message: <em>"Nothing planned for this day — Click below to add an event."</em></p>
+      </div>
+
+      <div class="help-block">
+        <h6>Creating a Calendar Event</h6>
+        <ol>
+          <li>Click on the <strong>date</strong> where you want to add an event</li>
+          <li>In the detail panel, click <strong>+ Add Event</strong></li>
+          <li>Choose a <strong>quick title</strong> using the chips (Meeting, Deadline, Note, Event, Call) or click <strong>Other</strong> to type a custom title</li>
+          <li>Add an optional <strong>description</strong> for more details</li>
+          <li>Pick a <strong>color</strong> to categorize your event (blue, green, red, amber, purple, pink, or cyan)</li>
+          <li>Click <strong>Save</strong></li>
+        </ol>
+        <div class="help-callout info">
+          <i class="bi bi-info-circle-fill me-2"></i>
+          <strong>Tip:</strong> Clicking a chip like "Meeting" automatically sets the title and picks a matching color. You can still edit the title to add more detail, e.g. "Meeting with vendor at 3 PM".
+        </div>
+      </div>
+
+      <div class="help-block">
+        <h6>Editing & Deleting Events</h6>
+        <ul>
+          <li>Click a date to open the detail panel</li>
+          <li>Hover over an event to reveal the <strong>pencil</strong> (edit) and <strong>trash</strong> (delete) icons</li>
+          <li>Click pencil to edit the title, description, or color</li>
+          <li>Click trash to permanently delete the event (you'll be asked to confirm)</li>
+        </ul>
+        <div class="help-callout warning">
+          <i class="bi bi-exclamation-triangle-fill me-2"></i>
+          Deleting an event is permanent — it cannot be undone. Reminders and tasks cannot be deleted from the calendar; manage those from their respective pages.
+        </div>
+      </div>
+
+      <div class="help-block">
+        <h6>The Upcoming Panel (Side Rail)</h6>
+        <p>On the right side of the calendar page, you'll see the <strong>Upcoming</strong> panel — a checklist-style view of all your entries for the next 30 days, grouped by date:</p>
+        <ul>
+          <li><strong>Overdue</strong> — items past their date that haven't been completed (shown first, in red)</li>
+          <li><strong>Today</strong> — everything happening today</li>
+          <li><strong>Tomorrow</strong> — next day's entries</li>
+          <li><strong>Future dates</strong> — shown by day name and date (e.g. "Wed, Apr 15")</li>
+        </ul>
+        <p>Each item shows a colored dot matching its type, the title, and a small description if available. Click the description text to expand it if it's too long.</p>
+      </div>
+
+      <div class="help-block">
+        <h6>Checking Off Items</h6>
+        <p>Each entry in the Upcoming panel has a <strong>checkbox</strong>. Use it to track your progress:</p>
+        <ul>
+          <li><strong>Check</strong> an item — it gets a strike-through and fades, indicating it's done</li>
+          <li><strong>Uncheck</strong> it — the item is restored to its active state</li>
+          <li>Items <strong>stay in the list</strong> until you delete them from the calendar — checking only marks them as complete, it doesn't remove them</li>
+        </ul>
+        <table class="help-table">
+          <tr><td><strong>Calendar Events</strong></td><td>Checking toggles the event's done status</td></tr>
+          <tr><td><strong>Reminders</strong></td><td>Checking toggles the reminder's done status</td></tr>
+          <tr><td><strong>Tasks</strong></td><td>Checking marks the task as "Completed"; unchecking reopens it</td></tr>
+        </table>
+        <div class="help-callout info">
+          <i class="bi bi-info-circle-fill me-2"></i>
+          <strong>Tip:</strong> Hover over the checkbox to see a tooltip — "Mark as done" or "Mark as pending" — so you always know what the action will do.
+        </div>
+      </div>
+
+      <div class="help-block">
+        <h6>What Shows on the Calendar (Summary)</h6>
+        <p>The calendar is a <strong>unified view</strong> that pulls data from three sources automatically:</p>
+        <table class="help-table">
+          <tr><td><strong>Calendar Events</strong></td><td>Created manually by you on any date</td><td>Edit & delete from the calendar</td></tr>
+          <tr><td><strong>Reminders</strong></td><td>Set from the home page</td><td>Manage from the home page reminders section</td></tr>
+          <tr><td><strong>Task Due Dates</strong></td><td>Automatically shown when a task has a due date</td><td>Manage from the Tasks page</td></tr>
+        </table>
+      </div>
+
+      <% if (['CLIENT_ADMIN', 'CLIENT_TOP_MGMT'].includes(user.role_name)) { %>
+      <div class="help-block">
+        <h6>Admin View</h6>
+        <p>As an admin or top management user, you see <strong>all team task due dates</strong> on the calendar — not just your own. This gives you a bird's-eye view of what's due across the entire team. Calendar events and reminders remain personal and private.</p>
+      </div>
+      <% } %>
+    </div>
+
     <div class="help-section" id="section-files" style="display:none">
       <h4>Files & Attachments</h4>
       <p class="help-lead">Everything you need to know about sharing files in the portal.</p>
@@ -1146,11 +1275,23 @@
 </div>
 
 <script>
-function showHelpSection(id) {
+function showHelpSection(id, clickedEl) {
   document.querySelectorAll('.help-section').forEach(s => s.style.display = 'none');
   document.querySelectorAll('.help-nav-item').forEach(a => a.classList.remove('active'));
   const section = document.getElementById('section-' + id);
   if (section) section.style.display = '';
-  event.target.classList.add('active');
+  // Highlight the matching nav item
+  var el = clickedEl || document.querySelector('.help-nav-item[onclick*="' + id + '"]');
+  if (el) el.classList.add('active');
 }
+
+// Auto-open section from ?section= URL parameter
+(function() {
+  var params = new URLSearchParams(window.location.search);
+  var section = params.get('section');
+  if (section) {
+    showHelpSection(section);
+    window.history.replaceState({}, '', window.location.pathname);
+  }
+})();
 </script>

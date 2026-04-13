@@ -1,153 +1,440 @@
 <div class="portal-home">
-  <div class="home-center">
-    <div class="home-greeting">
-      <h2>Welcome, <%= user.name.split(' ')[0] %></h2>
-      <p class="text-muted">CFC Portal &mdash; What would you like to do?</p>
+  <div class="home-container">
+
+    <!-- Header -->
+    <div class="home-header">
+      <div>
+        <h2>Welcome, <%= user.name.split(' ')[0] %></h2>
+        <p class="text-muted" id="homeDate"></p>
+      </div>
+      <a href="/portal/help?section=overview" class="portal-help-link" title="Help — Portal Overview"><i class="bi bi-question-circle-fill"></i></a>
+      <div class="home-clock" id="homeClock">
+        <div class="home-clock-time" id="clockTime"></div>
+      </div>
     </div>
-    <div class="home-grid">
-      <a href="/portal/chat" class="home-tile">
-        <div class="home-tile-icon" style="--tile-color: #3b82f6"><i class="bi bi-chat-dots-fill"></i></div>
-        <div class="home-tile-label">Chat</div>
-        <div class="home-tile-desc">Messages & conversations</div>
-      </a>
-      <a href="/portal/tasks" class="home-tile">
-        <div class="home-tile-icon" style="--tile-color: #8b5cf6"><i class="bi bi-kanban-fill"></i></div>
-        <div class="home-tile-label">Tasks</div>
-        <div class="home-tile-desc">Track work & progress</div>
-      </a>
-      <a href="/portal/notes" class="home-tile">
-        <div class="home-tile-icon" style="--tile-color: #f59e0b"><i class="bi bi-journal-text"></i></div>
-        <div class="home-tile-label">Notes</div>
-        <div class="home-tile-desc">Personal notes & docs</div>
-      </a>
-      <% if (['CLIENT_ADMIN', 'CLIENT_TOP_MGMT'].includes(user.role_name)) { %>
-      <a href="/portal/team-status" class="home-tile">
-        <div class="home-tile-icon" style="--tile-color: #22c55e"><i class="bi bi-flag-fill"></i></div>
-        <div class="home-tile-label">Team India</div>
-        <div class="home-tile-desc">Live team status</div>
-      </a>
-      <% } %>
-      <% if (user.role_name === 'CLIENT_ADMIN') { %>
-      <a href="/portal/users" class="home-tile">
-        <div class="home-tile-icon" style="--tile-color: #06b6d4"><i class="bi bi-people-fill"></i></div>
-        <div class="home-tile-label">Users</div>
-        <div class="home-tile-desc">Manage portal users</div>
-      </a>
-      <% } %>
-      <a href="/portal/help" class="home-tile">
-        <div class="home-tile-icon" style="--tile-color: #ec4899"><i class="bi bi-question-circle-fill"></i></div>
-        <div class="home-tile-label">Help</div>
-        <div class="home-tile-desc">Guides & training</div>
-      </a>
-      <% if (localAdmin) { %>
-      <a href="#" onclick="event.preventDefault(); toggleSupportChat('admin');" class="home-tile">
-        <div class="home-tile-icon" style="--tile-color: #f97316"><i class="bi bi-headset"></i></div>
-        <div class="home-tile-label"><%= localAdmin.name.split(' ')[0] %></div>
-        <div class="home-tile-desc">Primary Support</div>
-      </a>
-      <% } %>
-      <% if (delegateSupport) { %>
-      <a href="#" onclick="event.preventDefault(); toggleSupportChat('delegate');" class="home-tile">
-        <div class="home-tile-icon" style="--tile-color: #22c55e"><i class="bi bi-person-badge-fill"></i></div>
-        <div class="home-tile-label"><%= delegateSupport.name.split(' ')[0] %></div>
-        <div class="home-tile-desc">Secondary Support</div>
-      </a>
-      <% } %>
+
+    <!-- Stats Row (inline compact) -->
+    <div class="briefing-stats" id="briefingStats">
+      <div class="stat-card stat-overdue" id="statOverdue" onclick="scrollToSection('overdue')" style="display:none">
+        <div class="stat-number" id="statOverdueNum">0</div>
+        <div class="stat-label">Overdue</div>
+      </div>
+      <div class="stat-card stat-due" id="statDue" onclick="scrollToSection('dueToday')">
+        <div class="stat-number" id="statDueNum">0</div>
+        <div class="stat-label">Due Today</div>
+      </div>
+      <div class="stat-card stat-progress" id="statProgress" onclick="window.location='/portal/tasks?status=in_progress'">
+        <div class="stat-number" id="statProgressNum">0</div>
+        <div class="stat-label">In Progress</div>
+      </div>
+      <div class="stat-card stat-open" id="statOpen" onclick="window.location='/portal/tasks?status=open'">
+        <div class="stat-number" id="statOpenNum">0</div>
+        <div class="stat-label">Open</div>
+      </div>
+      <div class="stat-card stat-chat" onclick="window.location='/portal/chat'">
+        <div class="stat-number" id="statChatNum">0</div>
+        <div class="stat-label">Unread Chats</div>
+      </div>
+    </div>
+
+    <!-- Main layout: Cards left, Briefing right -->
+    <div class="home-two-col">
+
+      <!-- LEFT: Quick Links (cards) — the hero -->
+      <div class="home-cards-area">
+        <div class="home-grid">
+          <a href="/portal/chat" class="home-tile">
+            <div class="home-tile-icon" style="--tile-color: #3b82f6"><i class="bi bi-chat-dots-fill"></i></div>
+            <div class="home-tile-label">Chat</div>
+            <div class="home-tile-desc">Messages & conversations</div>
+          </a>
+          <a href="/portal/tasks" class="home-tile">
+            <div class="home-tile-icon" style="--tile-color: #8b5cf6"><i class="bi bi-kanban-fill"></i></div>
+            <div class="home-tile-label">Tasks</div>
+            <div class="home-tile-desc">Track work & progress</div>
+          </a>
+          <a href="/portal/notes" class="home-tile">
+            <div class="home-tile-icon" style="--tile-color: #f59e0b"><i class="bi bi-journal-text"></i></div>
+            <div class="home-tile-label">Notes</div>
+            <div class="home-tile-desc">Personal notes & docs</div>
+          </a>
+          <a href="/portal/calendar" class="home-tile">
+            <div class="home-tile-icon" style="--tile-color: #10b981"><i class="bi bi-calendar3"></i></div>
+            <div class="home-tile-label">Calendar</div>
+            <div class="home-tile-desc">Events & planner</div>
+          </a>
+          <a href="/portal/reports" class="home-tile">
+            <div class="home-tile-icon" style="--tile-color: #64748b"><i class="bi bi-link-45deg"></i></div>
+            <div class="home-tile-label">Links</div>
+            <div class="home-tile-desc">Saved links & reports</div>
+          </a>
+          <% if (['CLIENT_ADMIN', 'CLIENT_TOP_MGMT'].includes(user.role_name)) { %>
+          <a href="/portal/team-status" class="home-tile">
+            <div class="home-tile-icon" style="--tile-color: #22c55e"><i class="bi bi-flag-fill"></i></div>
+            <div class="home-tile-label">Team India</div>
+            <div class="home-tile-desc">Live team status</div>
+          </a>
+          <% } %>
+          <% if (user.role_name === 'CLIENT_ADMIN') { %>
+          <a href="/portal/users" class="home-tile">
+            <div class="home-tile-icon" style="--tile-color: #06b6d4"><i class="bi bi-people-fill"></i></div>
+            <div class="home-tile-label">Users</div>
+            <div class="home-tile-desc">Manage portal team</div>
+          </a>
+          <% } %>
+          <% if (localAdmin) { %>
+          <a href="#" onclick="event.preventDefault(); toggleSupportChat('admin');" class="home-tile">
+            <div class="home-tile-icon" style="--tile-color: #f97316"><i class="bi bi-headset"></i></div>
+            <div class="home-tile-label"><%= localAdmin.name.split(' ')[0] %></div>
+            <div class="home-tile-desc">Primary Support</div>
+          </a>
+          <% } %>
+          <% if (delegateSupport) { %>
+          <a href="#" onclick="event.preventDefault(); toggleSupportChat('delegate');" class="home-tile">
+            <div class="home-tile-icon" style="--tile-color: #22c55e"><i class="bi bi-person-badge-fill"></i></div>
+            <div class="home-tile-label"><%= delegateSupport.name.split(' ')[0] %></div>
+            <div class="home-tile-desc">Secondary Support</div>
+          </a>
+          <% } %>
+        </div>
+      </div>
+
+      <!-- RIGHT: Briefing sidebar (stacked) -->
+      <div class="home-briefing-rail">
+        <!-- Overdue -->
+        <div class="briefing-section" id="overdueSection" style="display:none">
+          <div class="briefing-section-header">
+            <h3><i class="bi bi-exclamation-triangle-fill text-danger"></i> Overdue</h3>
+          </div>
+          <div class="briefing-task-list" id="overdueList"></div>
+        </div>
+
+        <!-- Due Today -->
+        <div class="briefing-section" id="dueTodaySection">
+          <div class="briefing-section-header">
+            <h3><i class="bi bi-calendar-event"></i> Due Today</h3>
+          </div>
+          <div class="briefing-task-list" id="dueTodayList">
+            <div class="briefing-empty">Loading...</div>
+          </div>
+        </div>
+
+        <!-- Reminders -->
+        <div class="briefing-section reminders-section">
+          <div class="briefing-section-header">
+            <h3><i class="bi bi-bell"></i> Reminders</h3>
+            <button class="btn btn-sm btn-outline-primary" onclick="showReminderModal()"><i class="bi bi-plus-lg"></i> Add</button>
+          </div>
+          <div class="reminder-list" id="reminderList">
+            <div class="briefing-empty">Loading...</div>
+          </div>
+        </div>
+
+        <!-- Activity -->
+        <div class="briefing-section" id="activitySection">
+          <div class="briefing-section-header">
+            <h3><i class="bi bi-activity"></i> Today's Activity</h3>
+          </div>
+          <div class="briefing-activity-list" id="activityList">
+            <div class="briefing-empty">Loading...</div>
+          </div>
+        </div>
+      </div>
+
     </div>
   </div>
 </div>
 
-<style>
-.portal-home {
-  height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
-  overflow: auto;
+<!-- Reminder Modal -->
+<div class="modal fade" id="reminderModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="reminderModalTitle">Add Reminder</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="reminderEditId">
+        <div class="mb-3">
+          <label class="form-label">Title</label>
+          <input type="text" class="form-control" id="reminderTitle" placeholder="e.g. Call vendor, Review report..." maxlength="255">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Note <span class="text-muted">(optional)</span></label>
+          <textarea class="form-control" id="reminderNote" rows="2" placeholder="Additional details..."></textarea>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Remind At</label>
+          <input type="datetime-local" class="form-control" id="reminderAt">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" onclick="saveReminder()">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Date display ──────────────────────────────────────────
+const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const now = new Date();
+document.getElementById('homeDate').textContent = days[now.getDay()] + ', ' + months[now.getMonth()] + ' ' + now.getDate() + ', ' + now.getFullYear();
+
+// ── Briefing ──────────────────────────────────────────────
+function loadBriefing() {
+  fetch('/portal/briefing')
+    .then(r => r.json())
+    .then(res => {
+      if (!res.success) return;
+      const d = res.data;
+
+      // Stats
+      document.getElementById('statDueNum').textContent = d.dueToday.length;
+      document.getElementById('statProgressNum').textContent = d.inProgressCount;
+      document.getElementById('statOpenNum').textContent = d.openCount;
+      document.getElementById('statChatNum').textContent = d.unreadCount;
+
+      if (d.overdue.length > 0) {
+        document.getElementById('statOverdue').style.display = '';
+        document.getElementById('statOverdueNum').textContent = d.overdue.length;
+        document.getElementById('overdueSection').style.display = '';
+        document.getElementById('overdueList').innerHTML = d.overdue.map(t => taskCard(t, true)).join('');
+      }
+
+      // Due today
+      if (d.dueToday.length > 0) {
+        document.getElementById('dueTodayList').innerHTML = d.dueToday.map(t => taskCard(t, false)).join('');
+      } else {
+        document.getElementById('dueTodayList').innerHTML = '<div class="briefing-empty"><i class="bi bi-check-circle"></i> Nothing due today</div>';
+      }
+
+      // Activity
+      if (d.activity.length > 0) {
+        document.getElementById('activityList').innerHTML = d.activity.map(a => {
+          const time = new Date(a.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          const detail = a.detail && a.detail.length > 80 ? a.detail.substring(0, 80) + '...' : a.detail;
+          return '<div class="activity-item">' +
+            '<div class="activity-icon"><i class="bi bi-chat-square-text"></i></div>' +
+            '<div class="activity-body">' +
+              '<span class="activity-user">' + escHtml(a.user_name) + '</span> commented on <a href="/portal/tasks?task=' + a.task_id + '" class="activity-task">' + escHtml(a.task_title) + '</a>' +
+              (detail ? '<div class="activity-detail">' + escHtml(detail) + '</div>' : '') +
+            '</div>' +
+            '<div class="activity-time">' + time + '</div>' +
+          '</div>';
+        }).join('');
+      } else {
+        document.getElementById('activityList').innerHTML = '<div class="briefing-empty"><i class="bi bi-clock-history"></i> No activity yet today</div>';
+      }
+    })
+    .catch(() => {});
 }
 
-.home-center {
-  text-align: center;
-  max-width: 680px;
-  width: 100%;
+function taskCard(t, isOverdue) {
+  const priorityColors = { urgent: '#ef4444', high: '#f97316', medium: '#3b82f6', low: '#6b7280' };
+  const statusLabels = { open: 'Open', in_progress: 'In Progress', completed: 'Done', cancelled: 'Cancelled' };
+  const color = priorityColors[t.priority] || '#6b7280';
+  const dueLabel = isOverdue ? formatDueAgo(t.due_date) : '';
+  return '<a href="/portal/tasks?task=' + t.id + '" class="briefing-task-card">' +
+    '<div class="btc-priority" style="background:' + color + '"></div>' +
+    '<div class="btc-body">' +
+      '<div class="btc-title">' + escHtml(t.title) + '</div>' +
+      '<div class="btc-meta">' +
+        '<span class="btc-badge btc-status">' + (statusLabels[t.status] || t.status) + '</span>' +
+        '<span class="btc-assignee"><i class="bi bi-person"></i> ' + escHtml(t.assigned_to_name) + '</span>' +
+        (isOverdue && dueLabel ? '<span class="btc-overdue">' + dueLabel + '</span>' : '') +
+      '</div>' +
+    '</div>' +
+  '</a>';
 }
 
-.home-greeting h2 {
-  font-weight: 700;
-  font-size: 1.6rem;
-  margin-bottom: 4px;
+function formatDueAgo(dateStr) {
+  if (!dateStr) return '';
+  const due = new Date(dateStr + 'T00:00:00');
+  const today = new Date(); today.setHours(0,0,0,0);
+  const diff = Math.round((today - due) / 86400000);
+  if (diff === 1) return '1 day overdue';
+  if (diff > 1) return diff + ' days overdue';
+  return '';
 }
 
-.home-greeting p {
-  font-size: 0.9rem;
-  margin-bottom: 36px;
+function scrollToSection(id) {
+  const el = document.getElementById(id + 'Section');
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-.home-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 16px;
-  justify-items: center;
+// ── Reminders ─────────────────────────────────────────────
+let reminderModalInstance = null;
+
+function loadReminders() {
+  fetch('/portal/reminders')
+    .then(r => r.json())
+    .then(res => {
+      if (!res.success) return;
+      const list = res.data.reminders;
+      const el = document.getElementById('reminderList');
+      if (!list.length) {
+        el.innerHTML = '<div class="briefing-empty"><i class="bi bi-bell-slash"></i> No reminders</div>';
+        return;
+      }
+      el.innerHTML = list.map(r => {
+        const dt = new Date(r.remind_at);
+        const isPast = dt <= new Date();
+        const timeStr = formatReminderTime(dt);
+        return '<div class="reminder-item' + (isPast ? ' reminder-due' : '') + '" data-id="' + r.id + '">' +
+          '<button class="reminder-check" onclick="toggleReminderDone(' + r.id + ')" title="Mark done"><i class="bi bi-circle"></i></button>' +
+          '<div class="reminder-body" onclick="editReminder(' + r.id + ')">' +
+            '<div class="reminder-title">' + escHtml(r.title) + '</div>' +
+            '<div class="reminder-time"><i class="bi bi-clock"></i> ' + timeStr + '</div>' +
+            (r.note ? '<div class="reminder-note">' + escHtml(r.note) + '</div>' : '') +
+          '</div>' +
+          '<button class="reminder-delete" onclick="deleteReminder(' + r.id + ')" title="Delete"><i class="bi bi-x-lg"></i></button>' +
+        '</div>';
+      }).join('');
+    })
+    .catch(() => {});
 }
 
-.home-tile {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  max-width: 160px;
-  padding: 28px 16px 22px;
-  border-radius: 16px;
-  background: var(--tf-surface);
-  border: 1px solid var(--tf-border);
-  text-decoration: none;
-  color: var(--tf-text);
-  transition: all 0.2s ease;
-  cursor: pointer;
+function formatReminderTime(dt) {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
+  const d = new Date(dt); d.setHours(0,0,0,0);
+  const time = dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  if (d.getTime() === today.getTime()) return 'Today ' + time;
+  if (d.getTime() === tomorrow.getTime()) return 'Tomorrow ' + time;
+  const diff = Math.round((d - today) / 86400000);
+  if (diff > 0 && diff <= 6) return days[dt.getDay()] + ' ' + time;
+  return dt.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' ' + time;
 }
 
-.home-tile:hover {
-  transform: translateY(-4px);
-  box-shadow: var(--tf-shadow-lg);
-  border-color: var(--tf-accent);
-  color: var(--tf-text);
+function showReminderModal(editData) {
+  document.getElementById('reminderEditId').value = editData ? editData.id : '';
+  document.getElementById('reminderTitle').value = editData ? editData.title : '';
+  document.getElementById('reminderNote').value = editData ? (editData.note || '') : '';
+  document.getElementById('reminderModalTitle').textContent = editData ? 'Edit Reminder' : 'Add Reminder';
+
+  if (!editData) {
+    const def = new Date();
+    def.setHours(def.getHours() + 1, 0, 0, 0);
+    document.getElementById('reminderAt').value = toLocalISO(def);
+  } else {
+    document.getElementById('reminderAt').value = toLocalISO(new Date(editData.remind_at));
+  }
+
+  if (!reminderModalInstance) reminderModalInstance = new bootstrap.Modal(document.getElementById('reminderModal'));
+  reminderModalInstance.show();
 }
 
-.home-tile-icon {
-  width: 56px;
-  height: 56px;
-  border-radius: 14px;
-  background: color-mix(in srgb, var(--tile-color) 15%, transparent);
-  color: var(--tile-color);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.6rem;
-  margin-bottom: 12px;
-  transition: transform 0.2s;
+function toLocalISO(d) {
+  const pad = n => String(n).padStart(2, '0');
+  return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
 }
 
-.home-tile:hover .home-tile-icon {
-  transform: scale(1.1);
+async function saveReminder() {
+  const id = document.getElementById('reminderEditId').value;
+  const title = document.getElementById('reminderTitle').value.trim();
+  const note = document.getElementById('reminderNote').value.trim();
+  const remind_at = document.getElementById('reminderAt').value;
+  if (!title) return alert('Title is required');
+  if (!remind_at) return alert('Date/time is required');
+
+  const url = id ? '/portal/reminders/' + id : '/portal/reminders';
+  const method = id ? 'PUT' : 'POST';
+  try {
+    const res = await fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title, note, remind_at })
+    });
+    const data = await res.json();
+    if (data.success) {
+      reminderModalInstance.hide();
+      loadReminders();
+    } else {
+      alert(data.message || 'Failed');
+    }
+  } catch (err) {
+    alert('Network error');
+  }
 }
 
-.home-tile-label {
-  font-weight: 600;
-  font-size: 0.9rem;
-  margin-bottom: 2px;
+async function editReminder(id) {
+  try {
+    const res = await fetch('/portal/reminders');
+    const data = await res.json();
+    if (data.success) {
+      const r = data.data.reminders.find(x => x.id === id);
+      if (r) showReminderModal(r);
+    }
+  } catch (_) {}
 }
 
-.home-tile-desc {
-  font-size: 0.72rem;
-  color: var(--tf-text-muted);
+async function toggleReminderDone(id) {
+  try {
+    await fetch('/portal/reminders/' + id + '/done', { method: 'PATCH' });
+    loadReminders();
+  } catch (_) {}
 }
 
-@media (max-width: 480px) {
-  .home-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
-  .home-tile { padding: 20px 12px 16px; }
-  .home-tile-icon { width: 48px; height: 48px; font-size: 1.3rem; }
-  .home-greeting h2 { font-size: 1.3rem; }
+async function deleteReminder(id) {
+  if (!confirm('Delete this reminder?')) return;
+  try {
+    await fetch('/portal/reminders/' + id, { method: 'DELETE' });
+    loadReminders();
+  } catch (_) {}
 }
-</style>
+
+function escHtml(s) {
+  if (!s) return '';
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+// ── Socket.IO reminder notifications ──────────────────────
+if (typeof portalSocket !== 'undefined') {
+  portalSocket.on('portal:reminder', function(data) {
+    if (Notification.permission === 'granted') {
+      new Notification('Reminder: ' + data.title, { body: data.note || '', icon: '/portal/favicon.ico' });
+    }
+    showReminderToast(data);
+    loadReminders();
+  });
+}
+
+function showReminderToast(data) {
+  let container = document.getElementById('reminderToastContainer');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'reminderToastContainer';
+    container.className = 'reminder-toast-container';
+    document.body.appendChild(container);
+  }
+  const toast = document.createElement('div');
+  toast.className = 'reminder-toast';
+  toast.innerHTML = '<div class="reminder-toast-icon"><i class="bi bi-bell-fill"></i></div>' +
+    '<div class="reminder-toast-body"><strong>' + escHtml(data.title) + '</strong>' +
+    (data.note ? '<div class="small text-muted">' + escHtml(data.note) + '</div>' : '') + '</div>' +
+    '<button class="btn-close btn-close-white btn-sm" onclick="this.parentElement.remove()"></button>';
+  container.appendChild(toast);
+  setTimeout(() => { if (toast.parentElement) toast.remove(); }, 8000);
+}
+
+// ── Init ──────────────────────────────────────────────────
+// ── Clock ─────────────────────────────────────────────────
+function updateClock() {
+  const n = new Date();
+  document.getElementById('clockTime').textContent = n.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+updateClock();
+setInterval(updateClock, 1000);
+
+loadBriefing();
+loadReminders();
+
+if ('Notification' in window && Notification.permission === 'default') {
+  Notification.requestPermission();
+}
+</script>

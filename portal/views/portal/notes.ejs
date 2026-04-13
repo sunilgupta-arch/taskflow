@@ -2,9 +2,12 @@
   <div class="notes-sidebar" id="notesSidebar">
     <div class="notes-sidebar-header">
       <h6 class="mb-0">My Notes</h6>
-      <button class="btn btn-sm btn-primary" onclick="createNewNote()" style="border-radius:8px;">
-        <i class="bi bi-plus-lg"></i>
-      </button>
+      <div class="d-flex align-items-center gap-2">
+        <a href="/portal/help?section=notes" class="portal-help-link" title="Help — Notes"><i class="bi bi-question-circle-fill"></i></a>
+        <button class="btn btn-sm btn-primary" onclick="createNewNote()" style="border-radius:8px;">
+          <i class="bi bi-plus-lg"></i>
+        </button>
+      </div>
     </div>
     <div class="notes-search">
       <input type="text" class="form-control form-control-sm" id="noteSearch" placeholder="Search notes..." oninput="searchNotes()">

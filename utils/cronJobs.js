@@ -604,6 +604,42 @@ const weeklyDigestHandler = async () => {
   }
 };
 
+/**
+ * Portal reminder notifications — runs every minute.
+ * Checks for portal reminders that are due and sends Socket.IO notifications.
+ */
+const portalReminderJob = cron.schedule('* * * * *', async () => {
+  try {
+    const PortalReminder = require('../portal/models/Reminder');
+    const dueReminders = await PortalReminder.getDueReminders();
+
+    for (const reminder of dueReminders) {
+      await PortalReminder.markNotified(reminder.id);
+
+      // Emit via portal Socket.IO namespace
+      try {
+        const { getIO } = require('../config/socket');
+        const io = getIO();
+        if (io) {
+          io.of('/portal').to(`portal:user:${reminder.user_id}`).emit('portal:reminder', {
+            id: reminder.id,
+            title: reminder.title,
+            note: reminder.note,
+            remind_at: reminder.remind_at
+          });
+        }
+      } catch (_) {}
+
+      console.log(`[CRON] Portal reminder fired for ${reminder.user_name}: "${reminder.title}"`);
+    }
+  } catch (err) {
+    // Table may not exist yet on first run
+    if (!err.message.includes("doesn't exist")) {
+      console.error('[CRON] Portal reminder error:', err.message);
+    }
+  }
+}, { scheduled: false });
+
 const startCronJobs = async () => {
   // Load LOCAL org timezone from DB for fixed-schedule crons
   let orgTz = 'America/New_York';
@@ -656,7 +692,9 @@ const startCronJobs = async () => {
   deadlineAlertJob.start();
   dailySummaryJob.start();
 
-  console.log(`⏰ Cron jobs started (timezone: ${orgTz}) — attendance, auto-logout, backup, reminders, deadline, overdue, summary, weekly`);
+  portalReminderJob.start();
+
+  console.log(`⏰ Cron jobs started (timezone: ${orgTz}) — attendance, auto-logout, backup, reminders, deadline, overdue, summary, weekly, portal-reminders`);
 };
 
 module.exports = { startCronJobs };

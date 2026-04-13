@@ -397,10 +397,11 @@ function renderArchivedTable(tasks, total, page, totalPages) {
 
   // Table
   html += '<div class="archived-table-wrap"><table class="archived-table">';
-  html += '<thead><tr><th>Title</th><th>Status</th><th>Priority</th><th>Assigned To</th><th>Created By</th><th>Due Date</th><th>Archived</th><th></th></tr></thead>';
+  html += '<thead><tr><th>Title</th><th>Status</th><th>Priority</th><th>Assigned To</th><th>Created By</th><th>Created</th><th>Due Date</th><th>Archived</th><th></th></tr></thead>';
   html += '<tbody>';
   tasks.forEach(function(t) {
-    var dueStr = t.due_date ? new Date(t.due_date).toLocaleDateString() : '--';
+    var createdStr = t.created_at ? new Date(t.created_at).toLocaleDateString() : '--';
+    var dueStr = t.due_date ? new Date(t.due_date).toLocaleDateString() : '';
     var archivedDate = t.updated_at ? new Date(t.updated_at).toLocaleDateString() : '--';
     html += '<tr onclick="openTask(' + t.id + ')" style="cursor:pointer">';
     html += '<td class="archived-title">' + escapeHtml(t.title) + '</td>';
@@ -408,6 +409,7 @@ function renderArchivedTable(tasks, total, page, totalPages) {
     html += '<td><span class="priority-badge priority-' + t.priority + '">' + t.priority + '</span></td>';
     html += '<td>' + escapeHtml(t.assigned_to_name) + '</td>';
     html += '<td>' + escapeHtml(t.assigned_by_name) + '</td>';
+    html += '<td>' + createdStr + '</td>';
     html += '<td>' + dueStr + '</td>';
     html += '<td>' + archivedDate + '</td>';
     html += '<td><button class="task-archive-btn unarchive" onclick="event.stopPropagation(); archiveTask(' + t.id + ')" title="Unarchive"><i class="bi bi-arrow-counterclockwise"></i></button></td>';
@@ -497,7 +499,8 @@ function renderTasks(tasks) {
   }
 
   list.innerHTML = tasks.map(function(t) {
-    var dueStr = t.due_date ? new Date(t.due_date).toLocaleDateString() : 'No due date';
+    var dueStr = t.due_date ? '<i class="bi bi-calendar-event"></i> Due: ' + new Date(t.due_date).toLocaleDateString() : '';
+    var createdStr = t.created_at ? new Date(t.created_at).toLocaleDateString() : '';
     var isOverdue = t.due_date && t.status !== 'completed' && t.status !== 'cancelled' && new Date(t.due_date) < new Date(new Date().toDateString());
     var overdueClass = isOverdue ? ' task-overdue' : '';
     var overdueIcon = isOverdue ? '<span class="overdue-badge"><i class="bi bi-exclamation-triangle-fill me-1"></i>OVERDUE</span>' : '';
@@ -522,9 +525,10 @@ function renderTasks(tasks) {
         archivedBadge +
         overdueIcon +
         '<span><i class="bi bi-person"></i> ' + t.assigned_to_name + '</span>' +
-        '<span><i class="bi bi-calendar"></i> ' + dueStr + '</span>' +
+        (dueStr ? '<span>' + dueStr + '</span>' : '') +
         '<span><i class="bi bi-chat-dots"></i> ' + (t.comment_count || 0) + '</span>' +
         '<span><i class="bi bi-person-up"></i> ' + t.assigned_by_name + '</span>' +
+        '<span><i class="bi bi-clock"></i> ' + createdStr + '</span>' +
       '</div>' +
     '</div>';
   }).join('');
@@ -600,7 +604,8 @@ function renderTaskDetail(task, comments) {
   }
   actionsEl.innerHTML = statusHtml + archiveBtnHtml;
 
-  const dueStr = task.due_date ? new Date(task.due_date).toLocaleDateString() : 'No due date';
+  var createdDate = task.created_at ? new Date(task.created_at).toLocaleDateString() : '';
+  var dueDate = task.due_date ? new Date(task.due_date).toLocaleDateString() : '';
 
   body.innerHTML = `
     <div class="task-detail-compact">
@@ -611,7 +616,8 @@ function renderTaskDetail(task, comments) {
         <span class="status-badge status-${task.status}">${task.status === 'completed' ? '<i class="bi bi-check-circle-fill me-1"></i>DONE' : task.status.replace('_', ' ')}</span>
         <span class="task-detail-info"><i class="bi bi-person-up"></i> ${task.assigned_by_name}</span>
         <span class="task-detail-info"><i class="bi bi-person"></i> ${task.assigned_to_name}</span>
-        <span class="task-detail-info"><i class="bi bi-calendar"></i> ${dueStr}</span>
+        <span class="task-detail-info"><i class="bi bi-clock"></i> Created: ${createdDate}</span>
+        ${dueDate ? `<span class="task-detail-info"><i class="bi bi-calendar-event"></i> Due: ${dueDate}</span>` : ''}
       </div>
     </div>
   `;
@@ -1291,8 +1297,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Tasks page init
   if (document.getElementById('tasksList')) {
+    // Pre-set filter if ?status= is in the URL
+    var urlParams = new URLSearchParams(window.location.search);
+    var urlStatus = urlParams.get('status');
+    if (urlStatus && document.getElementById('filterStatus')) {
+      document.getElementById('filterStatus').value = urlStatus;
+    }
     loadTasks();
     checkDueTodayReminders();
+    // Auto-open task if ?task=ID is in the URL
+    var urlTaskId = urlParams.get('task');
+    if (urlTaskId) {
+      setTimeout(function() { openTask(parseInt(urlTaskId)); }, 400);
+    }
+    // Clean up the URL without reload
+    if (urlTaskId || urlStatus) {
+      window.history.replaceState({}, '', window.location.pathname);
+    }
   }
 
   // Users page init

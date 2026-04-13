@@ -16,13 +16,15 @@
   <!-- Activity Bar (VS Code style, expand/collapse) -->
   <nav class="portal-activity-bar" id="portalActivityBar">
     <div class="activity-bar-top">
-      <a href="/portal" class="activity-bar-brand" title="CFC Portal Home">
-        <span class="brand-icon">C</span>
-        <span class="ab-brand-name">CFC Portal</span>
-      </a>
-      <button class="ab-toggle" onclick="toggleSidebarExpand()" title="Expand / Collapse">
-        <i class="bi bi-chevron-right"></i>
-      </button>
+      <div class="activity-bar-brand-row">
+        <a href="/portal" class="activity-bar-brand" title="CFC Portal Home">
+          <span class="brand-icon">C</span>
+          <span class="ab-brand-name">CFC Portal</span>
+        </a>
+        <button class="ab-toggle" onclick="toggleSidebarExpand()" title="Expand / Collapse">
+          <i class="bi bi-chevron-right"></i>
+        </button>
+      </div>
       <a href="/portal/chat" class="activity-bar-item <%= section === 'chat' ? 'active' : '' %>">
         <i class="bi bi-chat-dots-fill"></i>
         <span class="ab-label">Chat</span>
@@ -38,6 +40,16 @@
         <i class="bi bi-journal-text"></i>
         <span class="ab-label">Notes</span>
         <span class="ab-tooltip">Notes</span>
+      </a>
+      <a href="/portal/calendar" class="activity-bar-item <%= section === 'calendar' ? 'active' : '' %>">
+        <i class="bi bi-calendar3"></i>
+        <span class="ab-label">Calendar</span>
+        <span class="ab-tooltip">Calendar</span>
+      </a>
+      <a href="/portal/reports" class="activity-bar-item <%= section === 'reports' ? 'active' : '' %>">
+        <i class="bi bi-link-45deg"></i>
+        <span class="ab-label">Links</span>
+        <span class="ab-tooltip">Links</span>
       </a>
       <% if (['CLIENT_ADMIN', 'CLIENT_TOP_MGMT'].includes(user.role_name)) { %>
         <a href="/portal/team-status" class="activity-bar-item <%= section === 'team-status' ? 'active' : '' %>">
