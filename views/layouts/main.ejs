@@ -816,6 +816,159 @@
       .btn-menu { display: inline-flex; }
       #topbar .badge span:not([id]) { display: none; }
     }
+
+    /* ── Urgent Banner (local team) ─────────────────────────── */
+    .urgent-banner {
+      background: linear-gradient(135deg, #dc2626, #b91c1c);
+      color: #fff;
+      padding: 0;
+      overflow: hidden;
+      animation: urgentBannerSlide 0.4s ease-out;
+    }
+    @keyframes urgentBannerSlide {
+      from { max-height: 0; opacity: 0; }
+      to { max-height: 80px; opacity: 1; }
+    }
+    .urgent-banner.accepted {
+      background: linear-gradient(135deg, #1e40af, #1e3a5f);
+    }
+    .urgent-banner-inner {
+      display: flex; align-items: center; gap: 12px;
+      padding: 10px 20px; min-height: 48px;
+    }
+    .urgent-banner-pulse {
+      width: 10px; height: 10px; border-radius: 50%;
+      background: #fff; flex-shrink: 0;
+      animation: urgBannerPulse 1.5s ease-in-out infinite;
+    }
+    .urgent-banner.accepted .urgent-banner-pulse { animation: none; opacity: 0.5; }
+    @keyframes urgBannerPulse {
+      0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(255,255,255,0.6); }
+      50% { opacity: 0.5; box-shadow: 0 0 0 8px rgba(255,255,255,0); }
+    }
+    .urgent-banner-body { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .urgent-banner-label {
+      font-family: var(--tf-font-mono); font-size: 0.65rem; font-weight: 700;
+      letter-spacing: 1.5px; background: rgba(255,255,255,0.2);
+      padding: 2px 8px; border-radius: 4px; flex-shrink: 0;
+    }
+    .urgent-banner-from { font-weight: 600; font-size: 0.82rem; flex-shrink: 0; }
+    .urgent-banner-msg {
+      font-size: 0.78rem; opacity: 0.9;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;
+    }
+    .urgent-banner-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+    .urgent-banner-accept {
+      font-family: var(--tf-font-mono); font-size: 0.7rem; letter-spacing: 0.5px;
+      animation: urgAcceptPulse 2s ease-in-out infinite;
+    }
+    @keyframes urgAcceptPulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(255,255,255,0.3); }
+      50% { box-shadow: 0 0 0 6px rgba(255,255,255,0); }
+    }
+    .urgent-banner-accepted {
+      font-size: 0.75rem; font-weight: 600; opacity: 0.9;
+    }
+    .urgent-banner-view { font-size: 0.7rem; }
+    .urgent-banner-dismiss { font-size: 0.7rem; padding: 2px 6px; }
+
+    /* ── Urgent Chat Widget (local team) ────────────────────── */
+    .urgent-local-widget {
+      position: fixed; bottom: 80px; right: 20px;
+      width: 380px; height: 480px;
+      background: var(--tf-surface);
+      border: 1px solid rgba(239, 68, 68, 0.4);
+      border-radius: 14px;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.3), 0 0 20px rgba(239, 68, 68, 0.1);
+      display: flex; flex-direction: column;
+      overflow: hidden;
+      z-index: 9999;
+    }
+    .urgent-local-header {
+      padding: 10px 14px;
+      background: linear-gradient(135deg, #dc2626, #b91c1c);
+      color: #fff;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .urgent-local-pulse {
+      width: 8px; height: 8px; border-radius: 50%; background: #fff;
+      animation: urgBannerPulse 1.5s ease-in-out infinite;
+    }
+    .urgent-local-status { font-size: 0.7rem; color: #bbf7d0; }
+    .urgent-local-messages {
+      flex: 1; overflow-y: auto; padding: 10px;
+      display: flex; flex-direction: column; gap: 6px;
+    }
+    .urgent-local-input {
+      padding: 8px; border-top: 1px solid var(--tf-border);
+    }
+    .urgent-local-input textarea { font-size: 0.8rem; resize: none; }
+
+    /* Shared urgent message styles */
+    .urgent-msg {
+      max-width: 85%; padding: 6px 10px; border-radius: 12px;
+      font-size: 0.8rem; word-wrap: break-word;
+    }
+    .urgent-msg.sent {
+      align-self: flex-end; background: var(--tf-accent); color: #fff;
+      border-bottom-right-radius: 4px;
+    }
+    .urgent-msg.received {
+      align-self: flex-start; background: var(--tf-surface-2);
+      border: 1px solid var(--tf-border);
+      border-bottom-left-radius: 4px;
+    }
+    .urgent-msg-sender { font-size: 0.65rem; font-weight: 600; color: var(--tf-accent); margin-bottom: 2px; }
+    .urgent-msg-content { line-height: 1.4; }
+    .urgent-msg-time { font-size: 0.6rem; opacity: 0.6; margin-top: 2px; text-align: right; }
+    .urgent-msg-system {
+      text-align: center; font-size: 0.7rem; color: var(--tf-text-muted);
+      padding: 4px 0; font-style: italic;
+    }
+    .urgent-file-link { color: inherit; text-decoration: underline; font-size: 0.75rem; }
+
+    .urgent-local-fab {
+      position: fixed; bottom: 80px; right: 20px;
+      width: 50px; height: 50px; border-radius: 50%;
+      background: linear-gradient(135deg, #dc2626, #b91c1c);
+      border: none; color: #fff; font-size: 1.2rem;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; z-index: 9999;
+      box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4);
+      animation: urgLocalFabPulse 2s ease-in-out infinite;
+    }
+    @keyframes urgLocalFabPulse {
+      0%, 100% { box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3); }
+      50% { box-shadow: 0 4px 25px rgba(239, 68, 68, 0.6); }
+    }
+    .urgent-local-fab:hover { transform: scale(1.1); }
+
+    /* Typing indicator */
+    .urgent-typing-indicator { font-size: 0.7rem; color: #bbf7d0; }
+    .urgent-typing-indicator .typing-dots span {
+      animation: urgentTypingDot 1.4s ease-in-out infinite;
+      opacity: 0.3;
+    }
+    .urgent-typing-indicator .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+    .urgent-typing-indicator .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes urgentTypingDot {
+      0%, 60%, 100% { opacity: 0.3; }
+      30% { opacity: 1; }
+    }
+
+    /* Buzzer flash animation */
+    .buzzer-flash {
+      animation: buzzerFlash 0.3s ease-in-out 4;
+    }
+    @keyframes buzzerFlash {
+      0%, 100% { filter: brightness(1); }
+      50% { filter: brightness(2); background: #fbbf24; }
+    }
+
+    @media (max-width: 768px) {
+      .urgent-local-widget { width: calc(100vw - 16px); right: 8px; bottom: 70px; height: 400px; }
+      .urgent-banner-msg { display: none; }
+    }
   </style>
   <%- style %>
 </head>
@@ -1023,6 +1176,26 @@
     </div>
   </div>
 
+  <!-- Urgent Alert Banner (for local team) -->
+  <% if (typeof user !== 'undefined' && user.role_name && user.role_name.startsWith('LOCAL_')) { %>
+  <div class="urgent-banner" id="urgentBanner" style="display:none">
+    <div class="urgent-banner-inner">
+      <div class="urgent-banner-pulse"></div>
+      <div class="urgent-banner-body">
+        <span class="urgent-banner-label">URGENT</span>
+        <span class="urgent-banner-from" id="urgentBannerFrom"></span>
+        <span class="urgent-banner-msg" id="urgentBannerMsg"></span>
+      </div>
+      <div class="urgent-banner-actions">
+        <span class="urgent-banner-accepted" id="urgentBannerAccepted" style="display:none"></span>
+        <button class="btn btn-sm btn-light fw-bold urgent-banner-accept" id="urgentBannerAcceptBtn" onclick="acceptUrgent()">Accept</button>
+        <button class="btn btn-sm btn-outline-light urgent-banner-view" id="urgentBannerViewBtn" style="display:none" onclick="viewUrgent()">View</button>
+        <button class="btn btn-sm btn-outline-light urgent-banner-dismiss" id="urgentBannerDismissBtn" style="display:none" onclick="dismissUrgentBanner()"><i class="bi bi-x"></i></button>
+      </div>
+    </div>
+  </div>
+  <% } %>
+
   <div class="content-area">
     <% if (typeof announcements !== 'undefined' && announcements.length > 0 && typeof title !== 'undefined' && title !== 'Info Board') { %>
     <div id="announceBanner" style="margin-bottom:0.75rem;background:linear-gradient(135deg, rgba(168,85,247,0.08), rgba(0,212,255,0.05));border:1px solid rgba(168,85,247,0.2);border-radius:10px;padding:0.6rem 1rem;position:relative;">
@@ -1130,6 +1303,37 @@
     </div>
   </div>
 </div>
+<% } %>
+
+<!-- Urgent Chat Widget (LOCAL users) -->
+<% if (typeof user !== 'undefined' && user.role_name && user.role_name.startsWith('LOCAL_')) { %>
+<div class="urgent-local-widget" id="urgentLocalWidget" style="display:none">
+  <div class="urgent-local-header">
+    <div class="d-flex align-items-center gap-2">
+      <div class="urgent-local-pulse"></div>
+      <span class="fw-bold" style="font-size:0.85rem;color:#fff">Urgent</span>
+      <span class="urgent-local-status" id="urgentLocalStatus"></span>
+    </div>
+    <div class="d-flex align-items-center gap-1">
+      <button class="btn btn-sm btn-link p-0 text-white" onclick="toggleUrgentLocal()" title="Minimize"><i class="bi bi-dash-lg"></i></button>
+      <button class="btn btn-sm btn-outline-light" onclick="resolveUrgentLocal()" style="font-size:0.65rem;padding:2px 8px">Resolve</button>
+    </div>
+  </div>
+  <div class="urgent-local-messages" id="urgentLocalMessages"></div>
+  <div class="urgent-local-input">
+    <input type="file" id="urgentLocalFile" style="display:none" onchange="sendUrgentLocalFile()">
+    <div class="d-flex gap-1">
+      <textarea class="form-control" id="urgentLocalInput" placeholder="Type a message..." rows="2"></textarea>
+      <div style="display:grid;grid-template-columns:1fr;gap:3px;">
+        <button class="btn btn-outline-secondary btn-sm" onclick="document.getElementById('urgentLocalFile').click()" style="width:34px;height:34px;padding:0" title="Attach"><i class="bi bi-paperclip"></i></button>
+        <button class="btn btn-danger btn-sm" onclick="sendUrgentLocalMessage()" style="width:34px;height:34px;padding:0" title="Send"><i class="bi bi-send"></i></button>
+      </div>
+    </div>
+  </div>
+</div>
+<button class="urgent-local-fab" id="urgentLocalFab" style="display:none" onclick="toggleUrgentLocal()">
+  <i class="bi bi-exclamation-triangle-fill"></i>
+</button>
 <% } %>
 
 <!-- Scripts -->
@@ -2370,6 +2574,345 @@ if (typeof io !== 'undefined') {
   50%      { box-shadow:0 0 0 16px rgba(16,185,129,0); }
 }
 </style>
+
+<script>
+// ── Urgent Chat (Local team side) ──────────────────────────────────────────────
+<% if (typeof user !== 'undefined' && user.role_name && user.role_name.startsWith('LOCAL_')) { %>
+(function() {
+  var _urgentId = null;
+  var _urgentOpen = false;
+  var _urgentAccepted = false; // whether current user accepted it
+  var _urgentSound = null;
+
+  function playUrgentSound() {
+    try {
+      var ctx = new (window.AudioContext || window.webkitAudioContext)();
+      var osc = ctx.createOscillator();
+      var gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.frequency.value = 880; osc.type = 'square';
+      gain.gain.value = 0.15;
+      osc.start(); osc.stop(ctx.currentTime + 0.15);
+      setTimeout(function() {
+        var osc2 = ctx.createOscillator();
+        var gain2 = ctx.createGain();
+        osc2.connect(gain2); gain2.connect(ctx.destination);
+        osc2.frequency.value = 1100; osc2.type = 'square';
+        gain2.gain.value = 0.15;
+        osc2.start(); osc2.stop(ctx.currentTime + 0.15);
+      }, 200);
+    } catch (_) {}
+  }
+
+  function showUrgentBanner(data) {
+    _urgentId = data.id;
+    var banner = document.getElementById('urgentBanner');
+    document.getElementById('urgentBannerFrom').textContent = data.created_by_name;
+    document.getElementById('urgentBannerMsg').textContent = data.message.length > 100 ? data.message.substring(0, 100) + '...' : data.message;
+    document.getElementById('urgentBannerAcceptBtn').style.display = 'inline-block';
+    document.getElementById('urgentBannerAccepted').style.display = 'none';
+    document.getElementById('urgentBannerViewBtn').style.display = 'none';
+    document.getElementById('urgentBannerDismissBtn').style.display = 'none';
+    banner.style.display = 'block';
+    banner.className = 'urgent-banner active';
+    playUrgentSound();
+  }
+
+  window.acceptUrgent = async function() {
+    if (!_urgentId) return;
+    try {
+      var res = await fetch('/urgent/' + _urgentId + '/accept', { method: 'POST' });
+      var data = await res.json();
+      if (data.success) {
+        _urgentAccepted = true;
+        showUrgentLocalWidget();
+      } else {
+        alert(data.message || 'Failed to accept');
+      }
+    } catch (e) { alert('Network error'); }
+  };
+
+  window.viewUrgent = function() {
+    showUrgentLocalWidget();
+  };
+
+  window.dismissUrgentBanner = function() {
+    document.getElementById('urgentBanner').style.display = 'none';
+  };
+
+  function showUrgentLocalWidget() {
+    _urgentOpen = true;
+    document.getElementById('urgentLocalWidget').style.display = 'flex';
+    document.getElementById('urgentLocalFab').style.display = 'none';
+    document.getElementById('urgentBanner').style.display = 'none';
+    loadUrgentLocalMessages();
+  }
+
+  window.toggleUrgentLocal = function() {
+    if (_urgentOpen) {
+      document.getElementById('urgentLocalWidget').style.display = 'none';
+      document.getElementById('urgentLocalFab').style.display = 'flex';
+      _urgentOpen = false;
+    } else {
+      document.getElementById('urgentLocalWidget').style.display = 'flex';
+      document.getElementById('urgentLocalFab').style.display = 'none';
+      _urgentOpen = true;
+      loadUrgentLocalMessages();
+    }
+  };
+
+  function loadUrgentLocalMessages() {
+    if (!_urgentId) return;
+    fetch('/urgent/' + _urgentId + '/messages').then(function(r) { return r.json(); }).then(function(res) {
+      if (!res.success) return;
+      var container = document.getElementById('urgentLocalMessages');
+      var messages = res.data.messages;
+      if (!messages.length) { container.innerHTML = '<div class="text-center text-muted py-3 small">No messages yet</div>'; return; }
+      var userId = <%= typeof user !== 'undefined' ? user.id : 0 %>;
+      container.innerHTML = messages.map(function(m) {
+        if (m.type === 'system') return '<div class="urgent-msg-system">' + _escHtml(m.content) + '</div>';
+        var isMine = m.sender_id === userId;
+        var cls = isMine ? 'sent' : 'received';
+        var time = new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        var content = '';
+        if (m.type === 'file' && m.attachment) {
+          content = '<a href="/urgent/attachment/' + m.id + '" target="_blank" class="urgent-file-link"><i class="bi bi-file-earmark me-1"></i>' + _escHtml(m.attachment.file_name) + '</a>';
+        } else {
+          content = _escHtml(m.content);
+        }
+        return '<div class="urgent-msg ' + cls + '">' +
+          (!isMine ? '<div class="urgent-msg-sender">' + _escHtml(m.sender_name) + '</div>' : '') +
+          '<div class="urgent-msg-content">' + content + '</div>' +
+          '<div class="urgent-msg-time">' + time + '</div></div>';
+      }).join('');
+      container.scrollTop = container.scrollHeight;
+    });
+  }
+
+  window.sendUrgentLocalMessage = async function() {
+    if (!_urgentId) return;
+    var input = document.getElementById('urgentLocalInput');
+    var content = input.value.trim();
+    if (!content) return;
+    input.value = '';
+    await fetch('/urgent/' + _urgentId + '/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: content })
+    });
+  };
+
+  window.sendUrgentLocalFile = async function() {
+    if (!_urgentId) return;
+    var fileInput = document.getElementById('urgentLocalFile');
+    if (!fileInput.files.length) return;
+    var fd = new FormData();
+    fd.append('file', fileInput.files[0]);
+    await fetch('/urgent/' + _urgentId + '/file', { method: 'POST', body: fd });
+    fileInput.value = '';
+  };
+
+  window.resolveUrgentLocal = async function() {
+    if (!_urgentId) return;
+    if (!confirm('Resolve this urgent chat?')) return;
+    await fetch('/urgent/' + _urgentId + '/resolve', { method: 'POST' });
+  };
+
+  var _urgentLocalTypingTimeout = null;
+  document.getElementById('urgentLocalInput')?.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendUrgentLocalMessage(); return; }
+    if (_urgentId) {
+      fetch('/urgent/' + _urgentId + '/typing', { method: 'POST' });
+      clearTimeout(_urgentLocalTypingTimeout);
+      _urgentLocalTypingTimeout = setTimeout(function() {
+        if (_urgentId) fetch('/urgent/' + _urgentId + '/stop-typing', { method: 'POST' });
+      }, 2000);
+    }
+  });
+
+  function _escHtml(s) {
+    if (!s) return '';
+    var d = document.createElement('div'); d.textContent = s; return d.innerHTML;
+  }
+
+  // Socket listeners — own connection for urgent events
+  var urgentSocket = io({ withCredentials: true });
+
+  urgentSocket.on('urgent:new', function(data) {
+    showUrgentBanner(data);
+  });
+
+  urgentSocket.on('urgent:accepted', function(data) {
+    if (data.id !== _urgentId) return;
+    var userId = <%= typeof user !== 'undefined' ? user.id : 0 %>;
+    var banner = document.getElementById('urgentBanner');
+    if (data.accepted_by === userId) {
+      _urgentAccepted = true;
+    } else {
+      document.getElementById('urgentBannerAcceptBtn').style.display = 'none';
+      document.getElementById('urgentBannerAccepted').style.display = 'inline';
+      document.getElementById('urgentBannerAccepted').textContent = 'Accepted by ' + data.accepted_by_name;
+      document.getElementById('urgentBannerViewBtn').style.display = 'inline-block';
+      document.getElementById('urgentBannerDismissBtn').style.display = 'inline-block';
+      banner.className = 'urgent-banner accepted';
+    }
+    document.getElementById('urgentLocalStatus').textContent = 'Accepted by ' + data.accepted_by_name;
+    loadUrgentLocalMessages();
+  });
+
+  urgentSocket.on('urgent:message', function(data) {
+    if (data.urgent_chat_id === _urgentId) {
+      loadUrgentLocalMessages();
+      // Play alert sound for messages from client side
+      var userId = <%= typeof user !== 'undefined' ? user.id : 0 %>;
+      if (data.sender_id !== userId) {
+        playUrgentMsgSound();
+      }
+    }
+  });
+
+  urgentSocket.on('urgent:resolved', function(data) {
+    if (data.id === _urgentId) {
+      _urgentId = null;
+      _urgentAccepted = false;
+      document.getElementById('urgentBanner').style.display = 'none';
+      document.getElementById('urgentLocalWidget').style.display = 'none';
+      document.getElementById('urgentLocalFab').style.display = 'none';
+      _urgentOpen = false;
+      showToast('Urgent chat resolved', 'success');
+    }
+  });
+
+  // Buzzer — loud alarm + force open chat widget
+  // Typing indicators
+  var _urgentRemoteTypingTimer = null;
+  urgentSocket.on('urgent:typing', function(data) {
+    if (data.id !== _urgentId) return;
+    var userId = <%= typeof user !== 'undefined' ? user.id : 0 %>;
+    if (data.user_id === userId) return;
+    var statusEl = document.getElementById('urgentLocalStatus');
+    if (!statusEl) return;
+    statusEl.setAttribute('data-saved-text', statusEl.getAttribute('data-saved-text') || statusEl.textContent);
+    statusEl.innerHTML = '<span class="urgent-typing-indicator">' + _escHtml(data.user_name.split(' ')[0]) + ' is typing<span class="typing-dots"><span>.</span><span>.</span><span>.</span></span></span>';
+    clearTimeout(_urgentRemoteTypingTimer);
+    _urgentRemoteTypingTimer = setTimeout(function() {
+      statusEl.textContent = statusEl.getAttribute('data-saved-text') || '';
+    }, 3000);
+  });
+  urgentSocket.on('urgent:stop-typing', function(data) {
+    if (data.id !== _urgentId) return;
+    var userId = <%= typeof user !== 'undefined' ? user.id : 0 %>;
+    if (data.user_id === userId) return;
+    clearTimeout(_urgentRemoteTypingTimer);
+    var statusEl = document.getElementById('urgentLocalStatus');
+    if (statusEl) statusEl.textContent = statusEl.getAttribute('data-saved-text') || '';
+  });
+
+  urgentSocket.on('urgent:buzz', function(data) {
+    if (data.id !== _urgentId) return;
+    playBuzzerAlarm();
+    // Force open the chat widget if minimized or hidden
+    if (!_urgentOpen) {
+      if (_urgentAccepted || document.getElementById('urgentLocalFab').style.display !== 'none') {
+        // Accepted user or has fab visible — open the widget
+        document.getElementById('urgentLocalWidget').style.display = 'flex';
+        document.getElementById('urgentLocalFab').style.display = 'none';
+        _urgentOpen = true;
+        loadUrgentLocalMessages();
+      } else {
+        // Not accepted yet — show the banner
+        showUrgentBanner({ id: _urgentId, created_by_name: data.from, message: 'BUZZER — Needs immediate attention!' });
+      }
+    }
+    // Flash the widget header
+    var header = document.getElementById('urgentLocalWidget')?.querySelector('.urgent-local-header');
+    if (header) {
+      header.classList.add('buzzer-flash');
+      setTimeout(function() { header.classList.remove('buzzer-flash'); }, 2000);
+    }
+    // Also flash the banner if visible
+    var banner = document.getElementById('urgentBanner');
+    if (banner && banner.style.display !== 'none') {
+      banner.classList.add('buzzer-flash');
+      setTimeout(function() { banner.classList.remove('buzzer-flash'); }, 2000);
+    }
+  });
+
+  function playUrgentMsgSound() {
+    try {
+      var ctx = new (window.AudioContext || window.webkitAudioContext)();
+      var osc = ctx.createOscillator();
+      var gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.frequency.value = 660;
+      osc.type = 'sine';
+      gain.gain.setValueAtTime(0.2, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+      osc.start(); osc.stop(ctx.currentTime + 0.3);
+    } catch (_) {}
+  }
+
+  function playBuzzerAlarm() {
+    try {
+      var ctx = new (window.AudioContext || window.webkitAudioContext)();
+      // Three loud ascending beeps
+      [0, 0.25, 0.5].forEach(function(delay, i) {
+        var osc = ctx.createOscillator();
+        var gain = ctx.createGain();
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.frequency.value = 800 + (i * 200);
+        osc.type = 'square';
+        gain.gain.setValueAtTime(0.3, ctx.currentTime + delay);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + delay + 0.2);
+        osc.start(ctx.currentTime + delay);
+        osc.stop(ctx.currentTime + delay + 0.2);
+      });
+      // Follow up with a longer alarm tone
+      setTimeout(function() {
+        var osc2 = ctx.createOscillator();
+        var gain2 = ctx.createGain();
+        osc2.connect(gain2); gain2.connect(ctx.destination);
+        osc2.frequency.value = 1200;
+        osc2.type = 'sawtooth';
+        gain2.gain.setValueAtTime(0.25, ctx.currentTime);
+        gain2.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.8);
+        osc2.start(); osc2.stop(ctx.currentTime + 0.8);
+      }, 800);
+    } catch (_) {}
+  }
+
+  // On page load — check for active urgent chat
+  fetch('/urgent/active').then(function(r) { return r.json(); }).then(function(res) {
+    if (res.success && res.data.chat) {
+      var chat = res.data.chat;
+      _urgentId = chat.id;
+      var userId = <%= typeof user !== 'undefined' ? user.id : 0 %>;
+      if (chat.status === 'waiting') {
+        showUrgentBanner(chat);
+      } else if (chat.status === 'accepted') {
+        if (chat.accepted_by === userId) {
+          _urgentAccepted = true;
+          document.getElementById('urgentLocalFab').style.display = 'flex';
+          document.getElementById('urgentLocalStatus').textContent = 'You accepted';
+        } else {
+          // Show calmer banner
+          document.getElementById('urgentBannerFrom').textContent = chat.created_by_name;
+          document.getElementById('urgentBannerMsg').textContent = chat.message.length > 100 ? chat.message.substring(0, 100) + '...' : chat.message;
+          document.getElementById('urgentBannerAcceptBtn').style.display = 'none';
+          document.getElementById('urgentBannerAccepted').style.display = 'inline';
+          document.getElementById('urgentBannerAccepted').textContent = 'Accepted by ' + chat.accepted_by_name;
+          document.getElementById('urgentBannerViewBtn').style.display = 'inline-block';
+          document.getElementById('urgentBannerDismissBtn').style.display = 'inline-block';
+          document.getElementById('urgentBanner').style.display = 'block';
+          document.getElementById('urgentBanner').className = 'urgent-banner accepted';
+          document.getElementById('urgentLocalStatus').textContent = 'Accepted by ' + chat.accepted_by_name;
+        }
+      }
+    }
+  }).catch(function(){});
+})();
+<% } %>
+</script>
 
 <script>
 // ── Global Voice Call (WebRTC, works on every page) ──────────────────────────

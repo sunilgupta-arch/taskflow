@@ -7,6 +7,7 @@ const PortalChatController = require('../controllers/chatController');
 const PortalTaskController = require('../controllers/taskController');
 const PortalUserController = require('../controllers/userController');
 const PortalTeamStatusController = require('../controllers/teamStatusController');
+const UrgentController = require('../controllers/urgentController');
 const { requireRoles } = require('../../middleware/authorize');
 
 // Multer: memory storage for portal file uploads, 100MB max
@@ -619,6 +620,19 @@ router.post('/bridge/conversations/:id/read', BridgeChatController.markAsRead);
 router.delete('/bridge/messages/:messageId', BridgeChatController.deleteMessage);
 router.get('/bridge/attachment/:messageId', BridgeChatController.serveAttachment);
 router.get('/bridge/unread-count', BridgeChatController.unreadCount);
+
+// ── Urgent Chat (Client → Local team) ───────────────────
+router.post('/urgent', requireRoles('CLIENT_ADMIN', 'CLIENT_TOP_MGMT', 'CLIENT_MGMT', 'CLIENT_MANAGER'), UrgentController.create);
+router.get('/urgent/active', UrgentController.getActive);
+router.get('/urgent/:id/messages', UrgentController.getMessages);
+router.post('/urgent/:id/messages', UrgentController.sendMessage);
+router.post('/urgent/:id/file', upload.single('file'), UrgentController.sendFile);
+router.post('/urgent/:id/resolve', UrgentController.resolve);
+router.post('/urgent/:id/buzz', requireRoles('CLIENT_ADMIN', 'CLIENT_TOP_MGMT', 'CLIENT_MGMT', 'CLIENT_MANAGER'), UrgentController.buzz);
+router.get('/urgent/history', UrgentController.getHistory);
+router.post('/urgent/:id/typing', UrgentController.typing);
+router.post('/urgent/:id/stop-typing', UrgentController.stopTyping);
+router.get('/urgent/attachment/:messageId', UrgentController.serveAttachment);
 
 // ── Change Password (all portal users) ───────────────────
 router.post('/change-password', (req, res) => {

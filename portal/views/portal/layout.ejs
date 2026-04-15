@@ -191,6 +191,96 @@
   </div>
   <% } %>
 
+  <!-- Urgent Chat Compose Modal -->
+  <% if (['CLIENT_ADMIN', 'CLIENT_TOP_MGMT', 'CLIENT_MGMT', 'CLIENT_MANAGER'].includes(user.role_name)) { %>
+  <div class="modal fade" id="urgentComposeModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content urgent-modal-content">
+        <div class="modal-header urgent-modal-header">
+          <h5 class="modal-title"><i class="bi bi-exclamation-triangle-fill me-2"></i>Urgent Line</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <p class="text-muted small mb-3">This sends an alert to the entire local team. Someone will pick up and respond.</p>
+          <div class="mb-3">
+            <textarea class="form-control" id="urgentComposeMsg" rows="3" placeholder="What do you need? Be specific..." maxlength="2000"></textarea>
+          </div>
+          <div class="mb-2">
+            <input type="file" id="urgentComposeFile" style="display:none">
+            <button class="btn btn-sm btn-outline-secondary" onclick="document.getElementById('urgentComposeFile').click()"><i class="bi bi-paperclip me-1"></i>Attach file</button>
+            <span class="small text-muted ms-2" id="urgentComposeFileName"></span>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-danger" onclick="sendUrgent()"><i class="bi bi-send me-1"></i>Send Urgent</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <% } %>
+
+  <!-- Urgent Chat Floating Widget (visible when active) -->
+  <div class="urgent-widget" id="urgentWidget" style="display:none">
+    <div class="urgent-widget-header" id="urgentWidgetHeader">
+      <div class="d-flex align-items-center gap-2">
+        <div class="urgent-widget-pulse"></div>
+        <span class="fw-bold" style="font-size:0.85rem">Urgent Line</span>
+        <span class="urgent-widget-status" id="urgentWidgetStatus">Waiting...</span>
+      </div>
+      <div class="d-flex align-items-center gap-1">
+        <button class="btn btn-sm btn-link p-0 text-white" onclick="toggleUrgentWidget()" title="Minimize"><i class="bi bi-dash-lg"></i></button>
+        <button class="btn btn-sm btn-outline-light urgent-resolve-btn" onclick="resolveUrgent()" title="Resolve"><i class="bi bi-check-lg"></i></button>
+      </div>
+    </div>
+    <div class="urgent-widget-messages" id="urgentWidgetMessages"></div>
+    <div class="urgent-widget-input" id="urgentWidgetInput">
+      <input type="file" id="urgentChatFile" style="display:none" onchange="sendUrgentFile()">
+      <div class="d-flex gap-1">
+        <textarea class="form-control" id="urgentChatInput" placeholder="Type a message..." rows="2"></textarea>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:3px;">
+          <button class="btn btn-outline-secondary btn-sm" onclick="document.getElementById('urgentChatFile').click()" style="width:34px;height:34px;padding:0" title="Attach"><i class="bi bi-paperclip"></i></button>
+          <button class="btn btn-warning btn-sm urgent-buzzer-btn" onclick="sendBuzzer()" style="width:34px;height:34px;padding:0" title="Buzz! Get attention"><i class="bi bi-bell-fill"></i></button>
+          <button class="btn btn-danger btn-sm" onclick="sendUrgentMessage()" style="width:34px;height:34px;padding:0;grid-column:span 2" title="Send"><i class="bi bi-send"></i></button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Urgent History Modal -->
+  <div class="modal fade" id="urgentHistoryModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title"><i class="bi bi-clock-history me-2"></i>Urgent Line History</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body p-0" id="urgentHistoryBody">
+          <div class="text-center text-muted py-4">Loading...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Urgent History Detail Modal (messages for a specific chat) -->
+  <div class="modal fade" id="urgentHistoryDetailModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="urgentHistoryDetailTitle">Messages</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body" id="urgentHistoryDetailBody" style="max-height:400px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Urgent Widget Minimized Fab -->
+  <button class="urgent-fab" id="urgentFab" style="display:none" onclick="toggleUrgentWidget()">
+    <i class="bi bi-exclamation-triangle-fill"></i>
+  </button>
+
   <!-- Toast Container -->
   <div id="portalToastContainer" class="portal-toast-container"></div>
 
@@ -635,6 +725,340 @@
     // Initial badge check + periodic refresh
     updateSupportBadges();
     setInterval(updateSupportBadges, 30000);
+
+    // ── Urgent Line ──────────────────────────────────────────
+    var _urgentChatId = null;
+    var _urgentWidgetOpen = false;
+    var _urgentComposeModalInst = null;
+
+    function openUrgentLine() {
+      // Check if there's an active urgent chat first
+      fetch('/portal/urgent/active').then(r => r.json()).then(res => {
+        if (res.success && res.data.chat) {
+          // Already active — open the widget
+          _urgentChatId = res.data.chat.id;
+          showUrgentWidget(res.data.chat);
+        } else {
+          // No active — show compose modal
+          if (!_urgentComposeModalInst) _urgentComposeModalInst = new bootstrap.Modal(document.getElementById('urgentComposeModal'));
+          document.getElementById('urgentComposeMsg').value = '';
+          document.getElementById('urgentComposeFile').value = '';
+          document.getElementById('urgentComposeFileName').textContent = '';
+          _urgentComposeModalInst.show();
+        }
+      });
+    }
+
+    // File name preview in compose modal
+    document.getElementById('urgentComposeFile')?.addEventListener('change', function() {
+      document.getElementById('urgentComposeFileName').textContent = this.files.length ? this.files[0].name : '';
+    });
+
+    async function sendUrgent() {
+      var msg = document.getElementById('urgentComposeMsg').value.trim();
+      if (!msg) return alert('Please write a message');
+
+      try {
+        var res = await fetch('/portal/urgent', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: msg })
+        });
+        var data = await res.json();
+        if (!data.success) return alert(data.message || 'Failed');
+
+        _urgentChatId = data.data.chat.id;
+        if (_urgentComposeModalInst) _urgentComposeModalInst.hide();
+
+        // Send file attachment if any
+        var fileInput = document.getElementById('urgentComposeFile');
+        if (fileInput.files.length) {
+          var fd = new FormData();
+          fd.append('file', fileInput.files[0]);
+          await fetch('/portal/urgent/' + _urgentChatId + '/file', { method: 'POST', body: fd });
+        }
+
+        showUrgentWidget(data.data.chat);
+      } catch (err) {
+        alert('Failed to send urgent message');
+      }
+    }
+
+    function showUrgentWidget(chat) {
+      _urgentChatId = chat.id;
+      _urgentWidgetOpen = true;
+      document.getElementById('urgentWidget').style.display = 'flex';
+      document.getElementById('urgentFab').style.display = 'none';
+
+      // Update status
+      if (chat.status === 'waiting') {
+        document.getElementById('urgentWidgetStatus').textContent = 'Waiting for response...';
+        document.getElementById('urgentWidgetStatus').className = 'urgent-widget-status waiting';
+      } else if (chat.status === 'accepted') {
+        document.getElementById('urgentWidgetStatus').textContent = 'Connected with ' + chat.accepted_by_name;
+        document.getElementById('urgentWidgetStatus').className = 'urgent-widget-status connected';
+      }
+      // Client can always send messages
+      document.getElementById('urgentWidgetInput').style.display = '';
+
+      loadUrgentMessages();
+    }
+
+    function toggleUrgentWidget() {
+      if (_urgentWidgetOpen) {
+        document.getElementById('urgentWidget').style.display = 'none';
+        document.getElementById('urgentFab').style.display = 'flex';
+        _urgentWidgetOpen = false;
+      } else {
+        document.getElementById('urgentWidget').style.display = 'flex';
+        document.getElementById('urgentFab').style.display = 'none';
+        _urgentWidgetOpen = true;
+        loadUrgentMessages();
+      }
+    }
+
+    function loadUrgentMessages() {
+      if (!_urgentChatId) return;
+      fetch('/portal/urgent/' + _urgentChatId + '/messages').then(r => r.json()).then(res => {
+        if (!res.success) return;
+        renderUrgentMessages(res.data.messages);
+      });
+    }
+
+    function renderUrgentMessages(messages) {
+      var container = document.getElementById('urgentWidgetMessages');
+      if (!messages.length) { container.innerHTML = '<div class="text-center text-muted py-3 small">Waiting for response...</div>'; return; }
+      container.innerHTML = messages.map(function(m) {
+        if (m.type === 'system') {
+          return '<div class="urgent-msg-system">' + escapeHtml(m.content) + '</div>';
+        }
+        var isMine = m.sender_id === PORTAL_USER.id;
+        var cls = isMine ? 'sent' : 'received';
+        var time = new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        var content = '';
+        if (m.type === 'file' && m.attachment) {
+          content = '<a href="/portal/urgent/attachment/' + m.id + '" target="_blank" class="urgent-file-link"><i class="bi bi-file-earmark me-1"></i>' + escapeHtml(m.attachment.file_name) + '</a>';
+        } else {
+          content = escapeHtml(m.content);
+        }
+        return '<div class="urgent-msg ' + cls + '">' +
+          (!isMine ? '<div class="urgent-msg-sender">' + escapeHtml(m.sender_name) + '</div>' : '') +
+          '<div class="urgent-msg-content">' + content + '</div>' +
+          '<div class="urgent-msg-time">' + time + '</div></div>';
+      }).join('');
+      container.scrollTop = container.scrollHeight;
+    }
+
+    async function sendUrgentMessage() {
+      if (!_urgentChatId) return;
+      var input = document.getElementById('urgentChatInput');
+      var content = input.value.trim();
+      if (!content) return;
+      input.value = '';
+      await fetch('/portal/urgent/' + _urgentChatId + '/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: content })
+      });
+    }
+
+    var _buzzerCooldown = false;
+    async function sendBuzzer() {
+      if (!_urgentChatId || _buzzerCooldown) return;
+      _buzzerCooldown = true;
+      // Visual feedback immediately
+      var btn = document.querySelector('.urgent-buzzer-btn');
+      if (btn) { btn.classList.add('buzzing'); setTimeout(function() { btn.classList.remove('buzzing'); }, 1000); }
+      // Hit API endpoint which will emit to all local users
+      try {
+        await fetch('/portal/urgent/' + _urgentChatId + '/buzz', { method: 'POST' });
+      } catch (_) {}
+      // Cooldown 5 seconds
+      setTimeout(function() { _buzzerCooldown = false; }, 5000);
+    }
+
+    async function sendUrgentFile() {
+      if (!_urgentChatId) return;
+      var fileInput = document.getElementById('urgentChatFile');
+      if (!fileInput.files.length) return;
+      var fd = new FormData();
+      fd.append('file', fileInput.files[0]);
+      await fetch('/portal/urgent/' + _urgentChatId + '/file', { method: 'POST', body: fd });
+      fileInput.value = '';
+    }
+
+    async function resolveUrgent() {
+      if (!_urgentChatId) return;
+      if (!confirm('Resolve this urgent chat?')) return;
+      await fetch('/portal/urgent/' + _urgentChatId + '/resolve', { method: 'POST' });
+    }
+
+    // Enter key to send + typing indicator
+    var _urgentTypingTimeout = null;
+    document.getElementById('urgentChatInput')?.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendUrgentMessage(); return; }
+      // Emit typing
+      if (_urgentChatId) {
+        fetch('/portal/urgent/' + _urgentChatId + '/typing', { method: 'POST' });
+        clearTimeout(_urgentTypingTimeout);
+        _urgentTypingTimeout = setTimeout(function() {
+          if (_urgentChatId) fetch('/portal/urgent/' + _urgentChatId + '/stop-typing', { method: 'POST' });
+        }, 2000);
+      }
+    });
+
+    // Socket listeners for urgent events
+    portalSocket.on('urgent:message', function(data) {
+      if (data.urgent_chat_id === _urgentChatId) {
+        loadUrgentMessages();
+      }
+    });
+    // Also listen on main socket (controller emits to both)
+    mainSocket.on('urgent:message', function(data) {
+      if (data.urgent_chat_id === _urgentChatId) {
+        loadUrgentMessages();
+      }
+    });
+
+    // Typing indicators
+    var _urgentRemoteTypingTimer = null;
+    function handleUrgentTyping(data) {
+      if (data.id !== _urgentChatId || data.user_id === PORTAL_USER.id) return;
+      var statusEl = document.getElementById('urgentWidgetStatus');
+      if (!statusEl) return;
+      statusEl.setAttribute('data-saved-text', statusEl.getAttribute('data-saved-text') || statusEl.textContent);
+      statusEl.innerHTML = '<span class="urgent-typing-indicator">' + escapeHtml(data.user_name.split(' ')[0]) + ' is typing<span class="typing-dots"><span>.</span><span>.</span><span>.</span></span></span>';
+      clearTimeout(_urgentRemoteTypingTimer);
+      _urgentRemoteTypingTimer = setTimeout(function() {
+        statusEl.textContent = statusEl.getAttribute('data-saved-text') || '';
+      }, 3000);
+    }
+    function handleUrgentStopTyping(data) {
+      if (data.id !== _urgentChatId || data.user_id === PORTAL_USER.id) return;
+      clearTimeout(_urgentRemoteTypingTimer);
+      var statusEl = document.getElementById('urgentWidgetStatus');
+      if (statusEl) statusEl.textContent = statusEl.getAttribute('data-saved-text') || '';
+    }
+    portalSocket.on('urgent:typing', handleUrgentTyping);
+    mainSocket.on('urgent:typing', handleUrgentTyping);
+    portalSocket.on('urgent:stop-typing', handleUrgentStopTyping);
+    mainSocket.on('urgent:stop-typing', handleUrgentStopTyping);
+
+    portalSocket.on('urgent:accepted', function(data) {
+      if (data.id === _urgentChatId) {
+        document.getElementById('urgentWidgetStatus').textContent = 'Connected with ' + data.accepted_by_name;
+        document.getElementById('urgentWidgetStatus').className = 'urgent-widget-status connected';
+        document.getElementById('urgentWidgetInput').style.display = '';
+        loadUrgentMessages();
+      }
+    });
+    mainSocket.on('urgent:accepted', function(data) {
+      if (data.id === _urgentChatId) {
+        document.getElementById('urgentWidgetStatus').textContent = 'Connected with ' + data.accepted_by_name;
+        document.getElementById('urgentWidgetStatus').className = 'urgent-widget-status connected';
+        document.getElementById('urgentWidgetInput').style.display = '';
+        loadUrgentMessages();
+      }
+    });
+
+    portalSocket.on('urgent:resolved', function(data) {
+      if (data.id === _urgentChatId) {
+        _urgentChatId = null;
+        document.getElementById('urgentWidget').style.display = 'none';
+        document.getElementById('urgentFab').style.display = 'none';
+        _urgentWidgetOpen = false;
+      }
+    });
+    mainSocket.on('urgent:resolved', function(data) {
+      if (data.id === _urgentChatId) {
+        _urgentChatId = null;
+        document.getElementById('urgentWidget').style.display = 'none';
+        document.getElementById('urgentFab').style.display = 'none';
+        _urgentWidgetOpen = false;
+      }
+    });
+
+    // On page load — check if there's an active urgent chat
+    // ── Urgent History ─────────────────────────────────────
+    var _urgentHistoryModalInst = null;
+    var _urgentHistoryDetailModalInst = null;
+
+    function showUrgentHistory() {
+      if (!_urgentHistoryModalInst) _urgentHistoryModalInst = new bootstrap.Modal(document.getElementById('urgentHistoryModal'));
+      document.getElementById('urgentHistoryBody').innerHTML = '<div class="text-center text-muted py-4">Loading...</div>';
+      _urgentHistoryModalInst.show();
+      fetch('/portal/urgent/history').then(function(r) { return r.json(); }).then(function(res) {
+        if (!res.success || !res.data.chats.length) {
+          document.getElementById('urgentHistoryBody').innerHTML = '<div class="text-center text-muted py-4">No urgent chat history yet</div>';
+          return;
+        }
+        document.getElementById('urgentHistoryBody').innerHTML = '<table class="table table-sm table-hover mb-0" style="font-size:0.82rem;">' +
+          '<thead><tr><th>Date</th><th>Raised By</th><th>Message</th><th>Accepted By</th><th>Status</th><th>Messages</th><th></th></tr></thead>' +
+          '<tbody>' + res.data.chats.map(function(c) {
+            var dt = new Date(c.created_at);
+            var dateStr = dt.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' ' + dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            var statusCls = c.status === 'resolved' ? 'text-success' : c.status === 'accepted' ? 'text-info' : 'text-warning';
+            var msg = c.message.length > 50 ? c.message.substring(0, 50) + '...' : c.message;
+            var duration = '';
+            if (c.resolved_at && c.created_at) {
+              var mins = Math.round((new Date(c.resolved_at) - new Date(c.created_at)) / 60000);
+              duration = mins < 1 ? '<1m' : mins + 'm';
+            }
+            return '<tr>' +
+              '<td class="text-nowrap">' + dateStr + '</td>' +
+              '<td>' + escapeHtml(c.created_by_name) + '</td>' +
+              '<td title="' + escapeHtml(c.message) + '">' + escapeHtml(msg) + '</td>' +
+              '<td>' + (c.accepted_by_name || '<span class="text-muted">—</span>') + '</td>' +
+              '<td><span class="' + statusCls + ' fw-bold" style="font-size:0.72rem;text-transform:uppercase">' + c.status + '</span>' +
+                (duration ? ' <span class="text-muted" style="font-size:0.65rem">(' + duration + ')</span>' : '') + '</td>' +
+              '<td class="text-center">' + (c.message_count || 0) + '</td>' +
+              '<td><button class="btn btn-sm btn-outline-primary" style="font-size:0.65rem;padding:1px 6px" onclick="viewUrgentHistoryDetail(' + c.id + ', \'' + escapeHtml(c.created_by_name) + '\')">View</button></td>' +
+            '</tr>';
+          }).join('') + '</tbody></table>';
+      });
+    }
+
+    function viewUrgentHistoryDetail(chatId, creatorName) {
+      if (!_urgentHistoryDetailModalInst) _urgentHistoryDetailModalInst = new bootstrap.Modal(document.getElementById('urgentHistoryDetailModal'));
+      document.getElementById('urgentHistoryDetailTitle').textContent = 'Urgent — ' + creatorName;
+      document.getElementById('urgentHistoryDetailBody').innerHTML = '<div class="text-center text-muted py-3">Loading...</div>';
+      if (_urgentHistoryModalInst) _urgentHistoryModalInst.hide();
+      _urgentHistoryDetailModalInst.show();
+      fetch('/portal/urgent/' + chatId + '/messages').then(function(r) { return r.json(); }).then(function(res) {
+        if (!res.success || !res.data.messages.length) {
+          document.getElementById('urgentHistoryDetailBody').innerHTML = '<div class="text-center text-muted py-3">No messages</div>';
+          return;
+        }
+        document.getElementById('urgentHistoryDetailBody').innerHTML = res.data.messages.map(function(m) {
+          if (m.type === 'system') return '<div class="urgent-msg-system">' + escapeHtml(m.content) + '</div>';
+          var isMine = m.sender_id === PORTAL_USER.id;
+          var cls = isMine ? 'sent' : 'received';
+          var time = new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          var content = '';
+          if (m.type === 'file' && m.attachment) {
+            content = '<i class="bi bi-file-earmark me-1"></i>' + escapeHtml(m.attachment.file_name);
+          } else {
+            content = escapeHtml(m.content);
+          }
+          return '<div class="urgent-msg ' + cls + '">' +
+            (!isMine ? '<div class="urgent-msg-sender">' + escapeHtml(m.sender_name) + '</div>' : '') +
+            '<div class="urgent-msg-content">' + content + '</div>' +
+            '<div class="urgent-msg-time">' + time + '</div></div>';
+        }).join('');
+        var container = document.getElementById('urgentHistoryDetailBody');
+        container.scrollTop = container.scrollHeight;
+      });
+    }
+
+    (function checkActiveUrgent() {
+      fetch('/portal/urgent/active').then(r => r.json()).then(res => {
+        if (res.success && res.data.chat) {
+          _urgentChatId = res.data.chat.id;
+          // Show minimized fab
+          document.getElementById('urgentFab').style.display = 'flex';
+        }
+      }).catch(function(){});
+    })();
 
     function portalLogout() {
       fetch('/auth/logout', { method: 'POST', headers: { 'Content-Type': 'application/json' } })

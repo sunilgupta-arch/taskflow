@@ -64,6 +64,21 @@ router.post('/leaves/grant', authenticate, requireRoles('LOCAL_ADMIN', 'LOCAL_MA
 router.patch('/leaves/:id/approve', authenticate, requireRoles('LOCAL_ADMIN', 'LOCAL_MANAGER'), LeaveController.approve);
 router.patch('/leaves/:id/reject', authenticate, requireRoles('LOCAL_ADMIN', 'LOCAL_MANAGER'), LeaveController.reject);
 
+// ── Urgent Chat (Local team responds to client urgent) ──────
+const UrgentController = require('../portal/controllers/urgentController');
+const urgentUpload = require('multer')({ storage: require('multer').memoryStorage(), limits: { fileSize: 100 * 1024 * 1024 } });
+
+router.get('/urgent/active', authenticate, UrgentController.getActive);
+router.get('/urgent/:id/messages', authenticate, UrgentController.getMessages);
+router.post('/urgent/:id/accept', authenticate, requireRoles('LOCAL_ADMIN', 'LOCAL_MANAGER', 'LOCAL_USER'), UrgentController.accept);
+router.post('/urgent/:id/messages', authenticate, UrgentController.sendMessage);
+router.post('/urgent/:id/file', authenticate, urgentUpload.single('file'), UrgentController.sendFile);
+router.post('/urgent/:id/resolve', authenticate, UrgentController.resolve);
+router.get('/urgent/attachment/:messageId', authenticate, UrgentController.serveAttachment);
+router.get('/urgent/history', authenticate, UrgentController.getHistory);
+router.post('/urgent/:id/typing', authenticate, UrgentController.typing);
+router.post('/urgent/:id/stop-typing', authenticate, UrgentController.stopTyping);
+
 // Notes (all authenticated users)
 router.get('/notes', authenticate, NoteController.index);
 router.post('/notes', authenticate, NoteController.create);

@@ -13,30 +13,6 @@
       </div>
     </div>
 
-    <!-- Stats Row (inline compact) -->
-    <div class="briefing-stats" id="briefingStats">
-      <div class="stat-card stat-overdue" id="statOverdue" onclick="scrollToSection('overdue')" style="display:none">
-        <div class="stat-number" id="statOverdueNum">0</div>
-        <div class="stat-label">Overdue</div>
-      </div>
-      <div class="stat-card stat-due" id="statDue" onclick="scrollToSection('dueToday')">
-        <div class="stat-number" id="statDueNum">0</div>
-        <div class="stat-label">Due Today</div>
-      </div>
-      <div class="stat-card stat-progress" id="statProgress" onclick="window.location='/portal/tasks?status=in_progress'">
-        <div class="stat-number" id="statProgressNum">0</div>
-        <div class="stat-label">In Progress</div>
-      </div>
-      <div class="stat-card stat-open" id="statOpen" onclick="window.location='/portal/tasks?status=open'">
-        <div class="stat-number" id="statOpenNum">0</div>
-        <div class="stat-label">Open</div>
-      </div>
-      <div class="stat-card stat-chat" onclick="window.location='/portal/chat'">
-        <div class="stat-number" id="statChatNum">0</div>
-        <div class="stat-label">Unread Chats</div>
-      </div>
-    </div>
-
     <!-- Main layout: Cards left, Briefing right -->
     <div class="home-two-col">
 
@@ -96,6 +72,14 @@
             <div class="home-tile-desc">Secondary Support</div>
           </a>
           <% } %>
+          <% if (['CLIENT_ADMIN', 'CLIENT_TOP_MGMT', 'CLIENT_MGMT', 'CLIENT_MANAGER'].includes(user.role_name)) { %>
+          <a href="#" onclick="event.preventDefault(); openUrgentLine();" class="home-tile home-tile-urgent" id="urgentLineTile">
+            <div class="home-tile-icon" style="--tile-color: #ef4444"><i class="bi bi-exclamation-triangle-fill"></i></div>
+            <div class="home-tile-label">Urgent Line</div>
+            <div class="home-tile-desc">Contact local team now</div>
+            <span class="home-tile-history" onclick="event.preventDefault(); event.stopPropagation(); showUrgentHistory();"><i class="bi bi-clock-history"></i> History</span>
+          </a>
+          <% } %>
         </div>
       </div>
 
@@ -109,15 +93,6 @@
           <div class="briefing-task-list" id="overdueList"></div>
         </div>
 
-        <!-- Due Today -->
-        <div class="briefing-section" id="dueTodaySection">
-          <div class="briefing-section-header">
-            <h3><i class="bi bi-calendar-event"></i> Due Today</h3>
-          </div>
-          <div class="briefing-task-list" id="dueTodayList">
-            <div class="briefing-empty">Loading...</div>
-          </div>
-        </div>
 
         <!-- Reminders -->
         <div class="briefing-section reminders-section">
@@ -130,15 +105,6 @@
           </div>
         </div>
 
-        <!-- Activity -->
-        <div class="briefing-section" id="activitySection">
-          <div class="briefing-section-header">
-            <h3><i class="bi bi-activity"></i> Today's Activity</h3>
-          </div>
-          <div class="briefing-activity-list" id="activityList">
-            <div class="briefing-empty">Loading...</div>
-          </div>
-        </div>
       </div>
 
     </div>
@@ -191,42 +157,10 @@ function loadBriefing() {
       if (!res.success) return;
       const d = res.data;
 
-      // Stats
-      document.getElementById('statDueNum').textContent = d.dueToday.length;
-      document.getElementById('statProgressNum').textContent = d.inProgressCount;
-      document.getElementById('statOpenNum').textContent = d.openCount;
-      document.getElementById('statChatNum').textContent = d.unreadCount;
-
+      // Overdue
       if (d.overdue.length > 0) {
-        document.getElementById('statOverdue').style.display = '';
-        document.getElementById('statOverdueNum').textContent = d.overdue.length;
         document.getElementById('overdueSection').style.display = '';
         document.getElementById('overdueList').innerHTML = d.overdue.map(t => taskCard(t, true)).join('');
-      }
-
-      // Due today
-      if (d.dueToday.length > 0) {
-        document.getElementById('dueTodayList').innerHTML = d.dueToday.map(t => taskCard(t, false)).join('');
-      } else {
-        document.getElementById('dueTodayList').innerHTML = '<div class="briefing-empty"><i class="bi bi-check-circle"></i> Nothing due today</div>';
-      }
-
-      // Activity
-      if (d.activity.length > 0) {
-        document.getElementById('activityList').innerHTML = d.activity.map(a => {
-          const time = new Date(a.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-          const detail = a.detail && a.detail.length > 80 ? a.detail.substring(0, 80) + '...' : a.detail;
-          return '<div class="activity-item">' +
-            '<div class="activity-icon"><i class="bi bi-chat-square-text"></i></div>' +
-            '<div class="activity-body">' +
-              '<span class="activity-user">' + escHtml(a.user_name) + '</span> commented on <a href="/portal/tasks?task=' + a.task_id + '" class="activity-task">' + escHtml(a.task_title) + '</a>' +
-              (detail ? '<div class="activity-detail">' + escHtml(detail) + '</div>' : '') +
-            '</div>' +
-            '<div class="activity-time">' + time + '</div>' +
-          '</div>';
-        }).join('');
-      } else {
-        document.getElementById('activityList').innerHTML = '<div class="briefing-empty"><i class="bi bi-clock-history"></i> No activity yet today</div>';
       }
     })
     .catch(() => {});
@@ -258,11 +192,6 @@ function formatDueAgo(dateStr) {
   if (diff === 1) return '1 day overdue';
   if (diff > 1) return diff + ' days overdue';
   return '';
-}
-
-function scrollToSection(id) {
-  const el = document.getElementById(id + 'Section');
-  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 // ── Reminders ─────────────────────────────────────────────
