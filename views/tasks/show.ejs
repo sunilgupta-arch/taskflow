@@ -86,16 +86,30 @@
       <div class="card-header"><i class="bi bi-paperclip me-2"></i>ATTACHMENTS (<%= attachments.length %>)</div>
       <div class="p-3">
         <% if (attachments.length > 0) { %>
-        <% attachments.forEach(a => { %>
+        <%
+          var fileIconMap = {
+            pdf: ['bi-file-earmark-pdf-fill', '#ef4444'],
+            doc: ['bi-file-earmark-word-fill', '#2b7bf0'], docx: ['bi-file-earmark-word-fill', '#2b7bf0'],
+            xls: ['bi-file-earmark-excel-fill', '#16a34a'], xlsx: ['bi-file-earmark-excel-fill', '#16a34a'], csv: ['bi-file-earmark-spreadsheet-fill', '#16a34a'],
+            ppt: ['bi-file-earmark-ppt-fill', '#f97316'], pptx: ['bi-file-earmark-ppt-fill', '#f97316'],
+            zip: ['bi-file-earmark-zip-fill', '#eab308'], rar: ['bi-file-earmark-zip-fill', '#eab308'],
+            jpg: ['bi-file-earmark-image-fill', '#06b6d4'], jpeg: ['bi-file-earmark-image-fill', '#06b6d4'], png: ['bi-file-earmark-image-fill', '#06b6d4'], gif: ['bi-file-earmark-image-fill', '#06b6d4'], webp: ['bi-file-earmark-image-fill', '#06b6d4'],
+            txt: ['bi-file-earmark-text-fill', '#9ca3af']
+          };
+        %>
+        <% attachments.forEach(a => {
+          var ext = (a.original_name || '').split('.').pop().toLowerCase();
+          var icon = fileIconMap[ext] || ['bi-file-earmark-fill', '#94a3b8'];
+        %>
         <div class="d-flex align-items-center gap-2 mb-2 p-2" style="background:var(--tf-surface-2);border-radius:6px;">
-          <i class="bi bi-file-earmark" style="color:var(--tf-accent);"></i>
+          <i class="bi <%= icon[0] %>" style="color: <%= icon[1] %>; font-size: 1.3rem;"></i>
           <div class="flex-grow-1">
             <div style="font-size:0.8rem;font-weight:500;"><%= a.original_name %></div>
             <div style="font-size:0.7rem;color:var(--tf-text-muted);">
               By <%= a.uploaded_by_name %> · <%= new Date(a.created_at).toLocaleDateString() %>
             </div>
           </div>
-          <a href="/uploads/tasks/<%= a.file_path %>" target="_blank" style="font-size:0.75rem;color:var(--tf-accent);">
+          <a href="/tasks/attachment/<%= a.id %>" target="_blank" style="font-size:0.75rem;color:var(--tf-accent);">
             <i class="bi bi-download"></i>
           </a>
         </div>

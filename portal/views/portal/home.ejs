@@ -8,8 +8,27 @@
         <p class="text-muted" id="homeDate"></p>
       </div>
       <a href="/portal/help?section=overview" class="portal-help-link" title="Help — Portal Overview"><i class="bi bi-question-circle-fill"></i></a>
-      <div class="home-clock" id="homeClock">
+      <div class="home-clock" id="homeClock" onclick="toggleClockMode()" title="Click to switch clock style">
+        <!-- Digital -->
         <div class="home-clock-time" id="clockTime"></div>
+        <!-- Analog -->
+        <div class="analog-clock" id="analogClock" style="display:none">
+          <svg viewBox="0 0 200 200" class="analog-svg">
+            <!-- Outer ring -->
+            <circle cx="100" cy="100" r="97" fill="none" stroke="#3b4563" stroke-width="2"/>
+            <!-- Face -->
+            <circle cx="100" cy="100" r="92" fill="#141825"/>
+            <!-- Ticks -->
+            <g id="analogTicks"></g>
+            <!-- Hands -->
+            <line id="analogHour" x1="100" y1="100" x2="100" y2="44" stroke="#fff" stroke-width="5" stroke-linecap="round"/>
+            <line id="analogMinute" x1="100" y1="100" x2="100" y2="26" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+            <line id="analogSecond" x1="100" y1="114" x2="100" y2="24" stroke="#ef4444" stroke-width="1.5" stroke-linecap="round"/>
+            <!-- Center dot -->
+            <circle cx="100" cy="100" r="4" fill="#ef4444"/>
+            <circle cx="100" cy="100" r="2" fill="#fff"/>
+          </svg>
+        </div>
       </div>
     </div>
 
@@ -58,14 +77,14 @@
             <div class="home-tile-desc">Manage portal team</div>
           </a>
           <% } %>
-          <% if (localAdmin) { %>
+          <% if (localAdmin && user.role_name !== 'CLIENT_SALES') { %>
           <a href="#" onclick="event.preventDefault(); toggleSupportChat('admin');" class="home-tile">
             <div class="home-tile-icon" style="--tile-color: #f97316"><i class="bi bi-headset"></i></div>
             <div class="home-tile-label"><%= localAdmin.name.split(' ')[0] %></div>
             <div class="home-tile-desc">Primary Support</div>
           </a>
           <% } %>
-          <% if (delegateSupport) { %>
+          <% if (delegateSupport && user.role_name !== 'CLIENT_SALES') { %>
           <a href="#" onclick="event.preventDefault(); toggleSupportChat('delegate');" class="home-tile">
             <div class="home-tile-icon" style="--tile-color: #22c55e"><i class="bi bi-person-badge-fill"></i></div>
             <div class="home-tile-label"><%= delegateSupport.name.split(' ')[0] %></div>
@@ -75,7 +94,7 @@
           <% if (['CLIENT_ADMIN', 'CLIENT_TOP_MGMT', 'CLIENT_MGMT', 'CLIENT_MANAGER'].includes(user.role_name)) { %>
           <a href="#" onclick="event.preventDefault(); openUrgentLine();" class="home-tile home-tile-urgent" id="urgentLineTile">
             <div class="home-tile-icon" style="--tile-color: #ef4444"><i class="bi bi-exclamation-triangle-fill"></i></div>
-            <div class="home-tile-label">Urgent Line</div>
+            <div class="home-tile-label">Urgent Message</div>
             <div class="home-tile-desc">Contact local team now</div>
             <span class="home-tile-history" onclick="event.preventDefault(); event.stopPropagation(); showUrgentHistory();"><i class="bi bi-clock-history"></i> History</span>
           </a>
@@ -352,11 +371,56 @@ function showReminderToast(data) {
 }
 
 // ── Init ──────────────────────────────────────────────────
-// ── Clock ─────────────────────────────────────────────────
+// ── Clock (digital + analog with toggle) ─────────────────
+var _clockMode = localStorage.getItem('portal-clock-mode') || 'digital';
+
+function applyClockMode() {
+  document.getElementById('clockTime').style.display = _clockMode === 'digital' ? '' : 'none';
+  document.getElementById('analogClock').style.display = _clockMode === 'analog' ? '' : 'none';
+}
+
+function toggleClockMode() {
+  _clockMode = _clockMode === 'digital' ? 'analog' : 'digital';
+  localStorage.setItem('portal-clock-mode', _clockMode);
+  applyClockMode();
+}
+
+// Generate 60 tick marks
+(function buildTicks() {
+  var g = document.getElementById('analogTicks');
+  if (!g) return;
+  for (var i = 0; i < 60; i++) {
+    var line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    var isHour = i % 5 === 0;
+    line.setAttribute('x1', '100');
+    line.setAttribute('x2', '100');
+    line.setAttribute('y1', isHour ? '12' : '18');
+    line.setAttribute('y2', isHour ? '28' : '24');
+    line.setAttribute('transform', 'rotate(' + (i * 6) + ' 100 100)');
+    line.setAttribute('stroke', isHour ? '#ffffff' : '#2a3150');
+    line.setAttribute('stroke-width', isHour ? '2.5' : '1');
+    line.setAttribute('stroke-linecap', 'round');
+    g.appendChild(line);
+  }
+})();
+
 function updateClock() {
   const n = new Date();
-  document.getElementById('clockTime').textContent = n.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  // Digital
+  document.getElementById('clockTime').textContent = n.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  // Analog hands
+  const sec = n.getSeconds() + n.getMilliseconds() / 1000;
+  const min = n.getMinutes() + sec / 60;
+  const hr = (n.getHours() % 12) + min / 60;
+  var sHand = document.getElementById('analogSecond');
+  var mHand = document.getElementById('analogMinute');
+  var hHand = document.getElementById('analogHour');
+  if (sHand) sHand.setAttribute('transform', 'rotate(' + (sec * 6) + ' 100 100)');
+  if (mHand) mHand.setAttribute('transform', 'rotate(' + (min * 6) + ' 100 100)');
+  if (hHand) hHand.setAttribute('transform', 'rotate(' + (hr * 30) + ' 100 100)');
 }
+
+applyClockMode();
 updateClock();
 setInterval(updateClock, 1000);
 

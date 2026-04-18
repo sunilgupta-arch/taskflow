@@ -8,7 +8,7 @@ class PortalChat {
       `SELECT u.id, u.name, u.email, r.name as role_name
        FROM users u
        JOIN roles r ON u.role_id = r.id
-       WHERE r.name IN ('CLIENT_ADMIN', 'CLIENT_TOP_MGMT', 'CLIENT_MGMT', 'CLIENT_MANAGER', 'CLIENT_USER')
+       WHERE r.name IN ('CLIENT_ADMIN', 'CLIENT_TOP_MGMT', 'CLIENT_MGMT', 'CLIENT_MANAGER', 'CLIENT_USER', 'CLIENT_SALES')
          AND u.is_active = 1 AND u.id != ? AND u.email != 'system@taskflow.local'
        ORDER BY u.name`,
       [excludeUserId]
@@ -202,11 +202,11 @@ class PortalChat {
   }
 
   // Save attachment
-  static async saveAttachment({ message_id, file_name, file_path, file_size, mime_type, uploaded_by }) {
+  static async saveAttachment({ message_id, drive_file_id, file_name, file_path, file_size, mime_type, uploaded_by }) {
     const [result] = await db.query(
-      `INSERT INTO portal_attachments (message_id, file_name, file_path, file_size, mime_type, uploaded_by)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [message_id, file_name, file_path, file_size, mime_type, uploaded_by]
+      `INSERT INTO portal_attachments (message_id, drive_file_id, file_name, file_path, file_size, mime_type, uploaded_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [message_id, drive_file_id || null, file_name, file_path || null, file_size, mime_type, uploaded_by]
     );
     return result.insertId;
   }
@@ -303,16 +303,25 @@ class PortalChat {
     );
     if (!rows.length) return null;
 
-    // If file message, delete file from disk and remove attachment record
+    // If file message, remove file — Drive first (new), local disk fallback (legacy)
     if (rows[0].type === 'file') {
       const [attachments] = await db.query(
-        'SELECT file_path FROM portal_attachments WHERE message_id = ?', [messageId]
+        'SELECT drive_file_id, file_path FROM portal_attachments WHERE message_id = ?', [messageId]
       );
-      const path = require('path');
-      const fs = require('fs');
       for (const a of attachments) {
-        const filePath = path.join(__dirname, '../../uploads', a.file_path);
-        if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+        if (a.drive_file_id) {
+          try {
+            const GoogleDriveService = require('../../services/googleDriveService');
+            await GoogleDriveService.deleteFile(a.drive_file_id);
+          } catch (e) {
+            console.error('Failed to trash Drive file:', e.message);
+          }
+        } else if (a.file_path) {
+          const path = require('path');
+          const fs = require('fs');
+          const filePath = path.join(__dirname, '../../uploads', a.file_path);
+          if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+        }
       }
       await db.query('DELETE FROM portal_attachments WHERE message_id = ?', [messageId]);
     }

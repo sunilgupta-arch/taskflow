@@ -807,7 +807,8 @@
     <div id="chatInputArea" style="display:none;">
       <div class="typing-indicator" id="typingIndicator"></div>
       <div class="attach-preview" id="attachPreview">
-        <div class="attach-preview-icon"><i class="bi bi-file-earmark"></i></div>
+        <div class="attach-preview-icon" id="attachPreviewIcon"><i class="bi bi-file-earmark"></i></div>
+        <img class="attach-preview-thumb" id="attachPreviewThumb" style="display:none;width:48px;height:48px;object-fit:cover;border-radius:6px;" alt="">
         <div class="attach-preview-info">
           <div class="attach-preview-name" id="attachPreviewName"></div>
           <div class="attach-preview-size" id="attachPreviewSize"></div>
@@ -1756,34 +1757,71 @@ function triggerLocalUpload() {
 
 function handleAttachFile(input) {
   if (!input.files || !input.files[0]) return;
-  var file = input.files[0];
-
-  if (file.size > maxAttachMB * 1024 * 1024) {
-    showToast('File exceeds ' + maxAttachMB + 'MB limit', 'error');
-    input.value = '';
-    return;
-  }
-
-  pendingAttachment = {
-    type: 'local',
-    file: file,
-    name: file.name,
-    size: file.size,
-    mime: file.type
-  };
-
-  showAttachPreview(file.name, file.size);
+  attachPendingFile(input.files[0]);
   input.value = '';
 }
 
-function showAttachPreview(name, size) {
+function attachPendingFile(file) {
+  if (file.size > maxAttachMB * 1024 * 1024) {
+    showToast('File exceeds ' + maxAttachMB + 'MB limit', 'error');
+    return;
+  }
+  pendingAttachment = {
+    type: 'local',
+    file: file,
+    name: file.name || ('pasted-' + Date.now() + '.png'),
+    size: file.size,
+    mime: file.type
+  };
+  showAttachPreview(pendingAttachment.name, pendingAttachment.size, file);
+}
+
+// Paste screenshot into local chat input — attach directly
+(function attachLocalChatPaste() {
+  var el = document.getElementById('chatInput');
+  if (!el) { setTimeout(attachLocalChatPaste, 300); return; }
+  el.addEventListener('paste', function(e) {
+    var items = (e.clipboardData || window.clipboardData)?.items;
+    if (!items) return;
+    for (var i = 0; i < items.length; i++) {
+      if (items[i].kind === 'file') {
+        var f = items[i].getAsFile();
+        if (f) { e.preventDefault(); attachPendingFile(f); return; }
+      }
+    }
+  });
+})();
+
+function showAttachPreview(name, size, file) {
   document.getElementById('attachPreviewName').textContent = name;
   document.getElementById('attachPreviewSize').textContent = formatBytes(size);
+  var thumb = document.getElementById('attachPreviewThumb');
+  var icon = document.getElementById('attachPreviewIcon');
+  // If the attachment is an image File/Blob, show a thumbnail
+  if (file && file.type && file.type.indexOf('image/') === 0) {
+    try {
+      if (thumb.dataset.blobUrl) URL.revokeObjectURL(thumb.dataset.blobUrl);
+      var url = URL.createObjectURL(file);
+      thumb.src = url;
+      thumb.dataset.blobUrl = url;
+      thumb.style.display = '';
+      if (icon) icon.style.display = 'none';
+    } catch (e) {}
+  } else {
+    thumb.style.display = 'none';
+    if (icon) icon.style.display = '';
+  }
   document.getElementById('attachPreview').classList.add('show');
 }
 
 function clearAttachment() {
   pendingAttachment = null;
+  var thumb = document.getElementById('attachPreviewThumb');
+  if (thumb.dataset.blobUrl) { URL.revokeObjectURL(thumb.dataset.blobUrl); delete thumb.dataset.blobUrl; }
+  thumb.style.display = 'none';
+  thumb.src = '';
+  var icon = document.getElementById('attachPreviewIcon');
+  if (icon) icon.style.display = '';
   document.getElementById('attachPreview').classList.remove('show');
   document.getElementById('attachPreviewName').textContent = '';
   document.getElementById('attachPreviewSize').textContent = '';

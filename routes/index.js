@@ -66,13 +66,18 @@ router.patch('/leaves/:id/reject', authenticate, requireRoles('LOCAL_ADMIN', 'LO
 
 // ── Urgent Chat (Local team responds to client urgent) ──────
 const UrgentController = require('../portal/controllers/urgentController');
-const urgentUpload = require('multer')({ storage: require('multer').memoryStorage(), limits: { fileSize: 100 * 1024 * 1024 } });
+const urgentUpload = require('multer')({ storage: require('multer').memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
+const handleUrgentUploadError = (err, req, res, next) => {
+  if (err && err.code === 'LIMIT_FILE_SIZE') return res.status(413).json({ success: false, message: 'Attachment too large. Max 10 MB.' });
+  if (err) return res.status(400).json({ success: false, message: err.message || 'Upload failed' });
+  next();
+};
 
 router.get('/urgent/active', authenticate, UrgentController.getActive);
 router.get('/urgent/:id/messages', authenticate, UrgentController.getMessages);
 router.post('/urgent/:id/accept', authenticate, requireRoles('LOCAL_ADMIN', 'LOCAL_MANAGER', 'LOCAL_USER'), UrgentController.accept);
 router.post('/urgent/:id/messages', authenticate, UrgentController.sendMessage);
-router.post('/urgent/:id/file', authenticate, urgentUpload.single('file'), UrgentController.sendFile);
+router.post('/urgent/:id/file', authenticate, (req, res, next) => urgentUpload.single('file')(req, res, (err) => handleUrgentUploadError(err, req, res, next)), UrgentController.sendFile);
 router.post('/urgent/:id/resolve', authenticate, UrgentController.resolve);
 router.get('/urgent/attachment/:messageId', authenticate, UrgentController.serveAttachment);
 router.get('/urgent/history', authenticate, UrgentController.getHistory);
@@ -129,15 +134,38 @@ router.get('/users/delegate-support', authenticate, requireRoles('LOCAL_ADMIN'),
 
 // Bridge Chat (for LOCAL users — floating widget)
 const BridgeChatController = require('../controllers/bridgeChatController');
-const bridgeUpload = require('multer')({ storage: require('multer').memoryStorage(), limits: { fileSize: 100 * 1024 * 1024 } });
+const bridgeUpload = require('multer')({ storage: require('multer').memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
+const handleBridgeUploadError = (err, req, res, next) => {
+  if (err && err.code === 'LIMIT_FILE_SIZE') return res.status(413).json({ success: false, message: 'Attachment too large. Max 10 MB.' });
+  if (err) return res.status(400).json({ success: false, message: err.message || 'Upload failed' });
+  next();
+};
 router.get('/bridge/conversations', authenticate, BridgeChatController.getMyConversations);
 router.get('/bridge/conversations/:id/messages', authenticate, BridgeChatController.getMessages);
 router.post('/bridge/conversations/:id/messages', authenticate, BridgeChatController.sendMessage);
-router.post('/bridge/conversations/:id/file', authenticate, bridgeUpload.single('file'), BridgeChatController.sendFile);
+router.post('/bridge/conversations/:id/file', authenticate, (req, res, next) => bridgeUpload.single('file')(req, res, (err) => handleBridgeUploadError(err, req, res, next)), BridgeChatController.sendFile);
 router.post('/bridge/conversations/:id/read', authenticate, BridgeChatController.markAsRead);
 router.delete('/bridge/messages/:messageId', authenticate, BridgeChatController.deleteMessage);
 router.get('/bridge/attachment/:messageId', authenticate, BridgeChatController.serveAttachment);
 router.get('/bridge/unread-count', authenticate, BridgeChatController.unreadCount);
+
+// Group Channel (cross-team group chat)
+const GroupChannelController = require('../controllers/groupChannelController');
+const channelUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
+const handleChannelUploadError = (err, req, res, next) => {
+  if (err && err.code === 'LIMIT_FILE_SIZE') return res.status(413).json({ success: false, message: 'Attachment too large. Max 5 MB.' });
+  if (err) return res.status(400).json({ success: false, message: err.message || 'Upload failed' });
+  next();
+};
+router.get('/channel', authenticate, (req, res) => {
+  res.render('channel/index', { title: 'Group Channel', gcFullPage: true });
+});
+router.get('/channel/users', authenticate, GroupChannelController.getUsers);
+router.get('/channel/messages', authenticate, GroupChannelController.getMessages);
+router.post('/channel/messages', authenticate, GroupChannelController.sendMessage);
+router.post('/channel/file', authenticate, (req, res, next) => channelUpload.single('file')(req, res, (err) => handleChannelUploadError(err, req, res, next)), GroupChannelController.sendFile);
+router.delete('/channel/messages/:messageId', authenticate, GroupChannelController.deleteMessage);
+router.get('/channel/attachment/:messageId', authenticate, GroupChannelController.serveAttachment);
 
 // Announcements / Info Board
 router.get('/announcements', authenticate, requireRoles('LOCAL_ADMIN', 'LOCAL_MANAGER', 'LOCAL_USER', 'CLIENT_ADMIN', 'CLIENT_MANAGER'), AnnouncementController.index);

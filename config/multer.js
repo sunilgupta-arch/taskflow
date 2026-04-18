@@ -1,23 +1,4 @@
 const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
-
-const ensureDir = (dir) => {
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-};
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const uploadPath = path.join(__dirname, '..', process.env.UPLOAD_PATH || 'uploads', 'tasks');
-    ensureDir(uploadPath);
-    cb(null, uploadPath);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
-    const ext = path.extname(file.originalname);
-    cb(null, `task-${uniqueSuffix}${ext}`);
-  }
-});
 
 const fileFilter = (req, file, cb) => {
   const allowedTypes = [
@@ -38,11 +19,12 @@ const fileFilter = (req, file, cb) => {
   }
 };
 
+// Memory storage so we can stream the buffer to Google Drive
 const upload = multer({
-  storage,
+  storage: multer.memoryStorage(),
   fileFilter,
   limits: {
-    fileSize: parseInt(process.env.MAX_FILE_SIZE) || 10 * 1024 * 1024, // 10MB
+    fileSize: 25 * 1024 * 1024, // 25MB
     files: 5
   }
 });

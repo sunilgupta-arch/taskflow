@@ -503,7 +503,12 @@ router.get('/chat/conversations', PortalChatController.listConversations);
 router.post('/chat/conversations', PortalChatController.createConversation);
 router.get('/chat/conversations/:id/messages', PortalChatController.getMessages);
 router.post('/chat/conversations/:id/messages', PortalChatController.sendMessage);
-router.post('/chat/conversations/:id/file', upload.single('file'), PortalChatController.sendFile);
+const portalChatUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
+router.post('/chat/conversations/:id/file', (req, res, next) => portalChatUpload.single('file')(req, res, (err) => {
+  if (err && err.code === 'LIMIT_FILE_SIZE') return res.status(413).json({ success: false, message: 'Attachment too large. Max 10 MB.' });
+  if (err) return res.status(400).json({ success: false, message: err.message || 'Upload failed' });
+  next();
+}), PortalChatController.sendFile);
 router.get('/chat/attachment/:messageId', PortalChatController.serveAttachment);
 router.post('/chat/conversations/:id/read', PortalChatController.markAsRead);
 router.get('/chat/unread-count', PortalChatController.unreadCount);
@@ -521,7 +526,12 @@ router.post('/tasks', PortalTaskController.create);
 router.get('/tasks/:id', PortalTaskController.getTask);
 router.put('/tasks/:id', PortalTaskController.update);
 router.patch('/tasks/:id/archive', PortalTaskController.toggleArchive);
-router.post('/tasks/:id/comments', upload.single('file'), PortalTaskController.addComment);
+const portalTaskUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 25 * 1024 * 1024 } });
+router.post('/tasks/:id/comments', (req, res, next) => portalTaskUpload.single('file')(req, res, (err) => {
+  if (err && err.code === 'LIMIT_FILE_SIZE') return res.status(413).json({ success: false, message: 'Attachment too large. Max 25 MB.' });
+  if (err) return res.status(400).json({ success: false, message: err.message || 'Upload failed' });
+  next();
+}), PortalTaskController.addComment);
 router.put('/tasks/comments/:commentId', PortalTaskController.editComment);
 router.get('/tasks/attachment/:attachmentId', PortalTaskController.serveAttachment);
 
@@ -615,7 +625,12 @@ const BridgeChatController = require('../../controllers/bridgeChatController');
 router.post('/bridge/conversations', BridgeChatController.getOrCreateConversation);
 router.get('/bridge/conversations/:id/messages', BridgeChatController.getMessages);
 router.post('/bridge/conversations/:id/messages', BridgeChatController.sendMessage);
-router.post('/bridge/conversations/:id/file', upload.single('file'), BridgeChatController.sendFile);
+const bridgeUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
+router.post('/bridge/conversations/:id/file', (req, res, next) => bridgeUpload.single('file')(req, res, (err) => {
+  if (err && err.code === 'LIMIT_FILE_SIZE') return res.status(413).json({ success: false, message: 'Attachment too large. Max 10 MB.' });
+  if (err) return res.status(400).json({ success: false, message: err.message || 'Upload failed' });
+  next();
+}), BridgeChatController.sendFile);
 router.post('/bridge/conversations/:id/read', BridgeChatController.markAsRead);
 router.delete('/bridge/messages/:messageId', BridgeChatController.deleteMessage);
 router.get('/bridge/attachment/:messageId', BridgeChatController.serveAttachment);
@@ -626,13 +641,37 @@ router.post('/urgent', requireRoles('CLIENT_ADMIN', 'CLIENT_TOP_MGMT', 'CLIENT_M
 router.get('/urgent/active', UrgentController.getActive);
 router.get('/urgent/:id/messages', UrgentController.getMessages);
 router.post('/urgent/:id/messages', UrgentController.sendMessage);
-router.post('/urgent/:id/file', upload.single('file'), UrgentController.sendFile);
+const urgentPortalUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
+router.post('/urgent/:id/file', (req, res, next) => urgentPortalUpload.single('file')(req, res, (err) => {
+  if (err && err.code === 'LIMIT_FILE_SIZE') return res.status(413).json({ success: false, message: 'Attachment too large. Max 10 MB.' });
+  if (err) return res.status(400).json({ success: false, message: err.message || 'Upload failed' });
+  next();
+}), UrgentController.sendFile);
 router.post('/urgent/:id/resolve', UrgentController.resolve);
 router.post('/urgent/:id/buzz', requireRoles('CLIENT_ADMIN', 'CLIENT_TOP_MGMT', 'CLIENT_MGMT', 'CLIENT_MANAGER'), UrgentController.buzz);
 router.get('/urgent/history', UrgentController.getHistory);
 router.post('/urgent/:id/typing', UrgentController.typing);
 router.post('/urgent/:id/stop-typing', UrgentController.stopTyping);
 router.get('/urgent/attachment/:messageId', UrgentController.serveAttachment);
+
+// ── Group Channel (cross-team group chat) ──────────────────
+const GroupChannelController = require('../../controllers/groupChannelController');
+const gcExcludeSales = requireRoles('CLIENT_ADMIN', 'CLIENT_TOP_MGMT', 'CLIENT_MGMT', 'CLIENT_MANAGER', 'CLIENT_USER');
+const gcUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
+const handleGcUploadError = (err, req, res, next) => {
+  if (err && err.code === 'LIMIT_FILE_SIZE') return res.status(413).json({ success: false, message: 'Attachment too large. Max 5 MB.' });
+  if (err) return res.status(400).json({ success: false, message: err.message || 'Upload failed' });
+  next();
+};
+router.get('/channel', gcExcludeSales, (req, res) => {
+  res.render('portal/channel', { title: 'Group Channel', layout: 'portal/layout', section: 'channel' });
+});
+router.get('/channel/users', gcExcludeSales, GroupChannelController.getUsers);
+router.get('/channel/messages', gcExcludeSales, GroupChannelController.getMessages);
+router.post('/channel/messages', gcExcludeSales, GroupChannelController.sendMessage);
+router.post('/channel/file', gcExcludeSales, (req, res, next) => gcUpload.single('file')(req, res, (err) => handleGcUploadError(err, req, res, next)), GroupChannelController.sendFile);
+router.delete('/channel/messages/:messageId', gcExcludeSales, GroupChannelController.deleteMessage);
+router.get('/channel/attachment/:messageId', gcExcludeSales, GroupChannelController.serveAttachment);
 
 // ── Change Password (all portal users) ───────────────────
 router.post('/change-password', (req, res) => {

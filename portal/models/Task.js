@@ -205,11 +205,11 @@ class PortalTask {
   }
 
   // Save task comment attachment
-  static async saveCommentAttachment({ comment_id, file_name, file_path, file_size, mime_type, uploaded_by }) {
+  static async saveCommentAttachment({ comment_id, drive_file_id, file_name, file_path, file_size, mime_type, uploaded_by }) {
     const [result] = await db.query(
-      `INSERT INTO portal_task_attachments (comment_id, file_name, file_path, file_size, mime_type, uploaded_by)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [comment_id, file_name, file_path, file_size, mime_type, uploaded_by]
+      `INSERT INTO portal_task_attachments (comment_id, drive_file_id, file_name, file_path, file_size, mime_type, uploaded_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [comment_id, drive_file_id || null, file_name, file_path || null, file_size, mime_type, uploaded_by]
     );
     return result.insertId;
   }

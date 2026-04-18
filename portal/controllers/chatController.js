@@ -157,13 +157,9 @@ class PortalChatController {
         return ApiResponse.error(res, 'Access denied', 403);
       }
 
-      // Save file to disk
-      const uploadsDir = path.join(__dirname, '../../uploads/portal');
-      if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
-
-      const uniqueName = `${Date.now()}_${req.file.originalname}`;
-      const filePath = path.join(uploadsDir, uniqueName);
-      fs.writeFileSync(filePath, req.file.buffer);
+      // Upload to Google Drive
+      const GoogleDriveService = require('../../services/googleDriveService');
+      const driveFile = await GoogleDriveService.uploadToFolder(process.env.PORTAL_CHAT_DRIVE_FOLDER_ID, req.file);
 
       // Create file message
       const message = await PortalChat.sendMessage({
@@ -176,8 +172,8 @@ class PortalChatController {
       // Save attachment record
       await PortalChat.saveAttachment({
         message_id: message.id,
+        drive_file_id: driveFile.id,
         file_name: req.file.originalname,
-        file_path: `portal/${uniqueName}`,
         file_size: req.file.size,
         mime_type: req.file.mimetype,
         uploaded_by: req.user.id
@@ -233,14 +229,24 @@ class PortalChatController {
       const isParticipant = await PortalChat.isParticipant(msgRows[0].conversation_id, req.user.id);
       if (!isParticipant) return res.status(403).json({ success: false, message: 'Access denied' });
 
-      const filePath = path.join(__dirname, '../../uploads', attachment.file_path);
-      if (!fs.existsSync(filePath)) {
-        return res.status(404).json({ success: false, message: 'File not found on disk' });
-      }
-
       res.setHeader('Content-Disposition', `inline; filename="${attachment.file_name}"`);
       res.setHeader('Content-Type', attachment.mime_type || 'application/octet-stream');
-      res.sendFile(filePath);
+
+      // New: stream from Drive
+      if (attachment.drive_file_id) {
+        const GoogleDriveService = require('../../services/googleDriveService');
+        const { stream } = await GoogleDriveService.downloadFile(attachment.drive_file_id);
+        return stream.pipe(res);
+      }
+
+      // Legacy: local disk
+      if (attachment.file_path) {
+        const filePath = path.join(__dirname, '../../uploads', attachment.file_path);
+        if (!fs.existsSync(filePath)) return res.status(404).json({ success: false, message: 'File not found on disk' });
+        return res.sendFile(filePath);
+      }
+
+      return res.status(404).json({ success: false, message: 'File not found' });
     } catch (err) {
       console.error('Portal serve attachment error:', err);
       return res.status(500).json({ success: false, message: 'Failed to serve file' });

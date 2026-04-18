@@ -532,23 +532,28 @@ class TaskService {
     const task = await TaskModel.findById(taskId);
     if (!task) throw new Error('Task not found');
 
-    const attachments = files.map(f => ({
-      task_id: taskId,
-      file_path: f.filename,
-      original_name: f.originalname,
-      file_size: f.size,
-      uploaded_by: userId
-    }));
+    const GoogleDriveService = require('./googleDriveService');
+    const folderId = process.env.TASK_ATTACH_DRIVE_FOLDER_ID;
 
-    for (const att of attachments) {
-      await db.query(
-        `INSERT INTO task_attachments (task_id, file_path, original_name, file_size, uploaded_by)
+    const saved = [];
+    for (const f of files) {
+      const driveFile = await GoogleDriveService.uploadToFolder(folderId, f);
+      const [result] = await db.query(
+        `INSERT INTO task_attachments (task_id, drive_file_id, original_name, file_size, uploaded_by)
          VALUES (?, ?, ?, ?, ?)`,
-        [att.task_id, att.file_path, att.original_name, att.file_size, att.uploaded_by]
+        [taskId, driveFile.id, f.originalname, f.size, userId]
       );
+      saved.push({
+        id: result.insertId,
+        task_id: taskId,
+        drive_file_id: driveFile.id,
+        original_name: f.originalname,
+        file_size: f.size,
+        uploaded_by: userId
+      });
     }
 
-    return attachments;
+    return saved;
   }
 
   static async getTaskStats(userId = null, orgType = null, todayDate = null) {

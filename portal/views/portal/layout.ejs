@@ -72,11 +72,11 @@
       </a>
     </div>
     <div class="activity-bar-bottom">
-      <% if (localAdmin || delegateSupport) { %>
+      <% if ((localAdmin || delegateSupport) && user.role_name !== 'CLIENT_SALES') { %>
         <div class="activity-bar-separator"></div>
         <div class="ab-section-label">Support</div>
       <% } %>
-      <% if (localAdmin) { %>
+      <% if (localAdmin && user.role_name !== 'CLIENT_SALES') { %>
         <button class="activity-bar-item" onclick="toggleSupportChat('admin')">
           <i class="bi bi-headset"></i>
           <span class="ab-label"><span class="ab-label-name"><%= localAdmin.name.split(' ')[0] %></span><span class="ab-label-role">Primary</span></span>
@@ -84,7 +84,7 @@
           <span class="activity-bar-badge" id="adminChatBadge" style="display:none"></span>
         </button>
       <% } %>
-      <% if (delegateSupport) { %>
+      <% if (delegateSupport && user.role_name !== 'CLIENT_SALES') { %>
         <button class="activity-bar-item" onclick="toggleSupportChat('delegate')">
           <i class="bi bi-person-badge"></i>
           <span class="ab-label"><span class="ab-label-name"><%= delegateSupport.name.split(' ')[0] %></span><span class="ab-label-role">Secondary</span></span>
@@ -127,12 +127,50 @@
   </nav>
 
   <!-- Main Content -->
-  <div class="portal-main">
+  <div class="portal-main<%= (typeof section !== 'undefined' && section === 'channel') ? ' gc-collapsed' : '' %>">
     <%- body %>
   </div>
 
+  <% if (user.role_name !== 'CLIENT_SALES' && section !== 'channel') { %>
+  <!-- Group Channel — right-side persistent panel -->
+  <div class="gc-panel" id="gcPanel">
+    <div class="gc-panel-header">
+      <div class="d-flex align-items-center gap-2">
+        <i class="bi bi-broadcast" style="font-size:0.9rem"></i>
+        <span class="fw-bold" style="font-size:0.8rem">Group Channel</span>
+      </div>
+      <div class="d-flex align-items-center gap-1">
+        <a href="/portal/channel" class="btn btn-sm btn-link p-0 text-white" title="Maximize"><i class="bi bi-arrows-fullscreen" style="font-size:0.7rem"></i></a>
+        <button class="btn btn-sm btn-link p-0 text-white" onclick="toggleGroupChannel()" title="Collapse"><i class="bi bi-chevron-right" id="gcCollapseIcon"></i></button>
+      </div>
+    </div>
+    <div class="gc-panel-body" id="gcPanelBody">
+      <div class="gc-presence-strip" id="gcPresenceStrip"></div>
+      <div class="gc-messages" id="gcMessages">
+        <div class="text-center text-muted py-3 small">Loading...</div>
+      </div>
+      <div class="gc-typing-bar" id="gcTypingBar" style="display:none"></div>
+      <div class="gc-input">
+        <input type="file" id="gcFileInput" style="display:none" onchange="sendGcFile()">
+        <div class="d-flex gap-1 align-items-stretch">
+          <textarea class="form-control" id="gcInput" placeholder="Message..." rows="2" oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,100)+'px'"></textarea>
+          <div class="gc-input-btns">
+            <button class="btn btn-outline-secondary btn-sm gc-input-btn" onclick="document.getElementById('gcFileInput').click()" title="Attach"><i class="bi bi-paperclip"></i></button>
+            <button class="btn btn-primary btn-sm gc-input-btn" onclick="sendGcMessage()" title="Send"><i class="bi bi-send"></i></button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- Group Channel collapsed handle -->
+  <div class="gc-handle" id="gcHandle" style="display:none" onclick="toggleGroupChannel()" title="Open Group Channel">
+    <i class="bi bi-broadcast"></i>
+    <span class="gc-handle-badge" id="gcHandleBadge" style="display:none"></span>
+  </div>
+  <% } %>
+
   <!-- Admin Chat Floating Panel (Primary Support) -->
-  <% if (localAdmin) { %>
+  <% if (localAdmin && user.role_name !== 'CLIENT_SALES') { %>
   <div class="admin-chat-panel" id="adminChatPanel" style="display:none">
     <div class="admin-chat-header">
       <div class="d-flex align-items-center gap-2">
@@ -162,7 +200,7 @@
   <% } %>
 
   <!-- Delegate Chat Floating Panel (Secondary Support) -->
-  <% if (delegateSupport) { %>
+  <% if (delegateSupport && user.role_name !== 'CLIENT_SALES') { %>
   <div class="admin-chat-panel" id="delegateChatPanel" style="display:none">
     <div class="admin-chat-header">
       <div class="d-flex align-items-center gap-2">
@@ -234,6 +272,7 @@
       </div>
     </div>
     <div class="urgent-widget-messages" id="urgentWidgetMessages"></div>
+    <div class="urgent-typing-bar" id="urgentTypingBar" style="display:none;padding:2px 12px;font-size:0.75rem;color:#bbf7d0;"></div>
     <div class="urgent-widget-input" id="urgentWidgetInput">
       <input type="file" id="urgentChatFile" style="display:none" onchange="sendUrgentFile()">
       <div class="d-flex gap-1">
@@ -546,15 +585,54 @@
       }).then(function() { input.value = ''; });
     }
 
+    // Shared upload helper for admin + delegate bridge panels
+    function showBridgeUploadPlaceholder(containerId, filename) {
+      var container = document.getElementById(containerId);
+      if (!container) return null;
+      var id = 'bridge-upload-' + Date.now();
+      var html = '<div class="msg-bubble sent chat-uploading" id="' + id + '">' +
+        '<div class="msg-content"><span class="gc-upload-spinner"></span><i class="bi bi-paperclip me-1"></i>' + escapeHtml(filename) + '</div>' +
+        '<div class="msg-footer"><span class="msg-time">Uploading…</span></div>' +
+        '</div>';
+      container.insertAdjacentHTML('beforeend', html);
+      container.scrollTop = container.scrollHeight;
+      return id;
+    }
+    function markBridgeUploadFailed(id, reason) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      el.classList.add('chat-upload-failed');
+      var footer = el.querySelector('.msg-time');
+      if (footer) footer.innerHTML = '<i class="bi bi-exclamation-circle me-1"></i>' + escapeHtml(reason || 'Upload failed');
+      var spinner = el.querySelector('.gc-upload-spinner');
+      if (spinner) spinner.remove();
+    }
+    function uploadBridgeFileDirect(convId, containerId, file) {
+      if (!convId) return;
+      if (file.size > 10 * 1024 * 1024) { alert('File too large. Max 10 MB.'); return; }
+      var placeholderId = showBridgeUploadPlaceholder(containerId, file.name || 'pasted-image.png');
+      var fd = new FormData();
+      fd.append('file', file, file.name || ('pasted-' + Date.now() + '.png'));
+      fetch('/portal/bridge/conversations/' + convId + '/file', { method: 'POST', body: fd })
+        .then(function(r) { return r.json().then(function(j) { return { ok: r.ok, body: j }; }); })
+        .then(function(res) {
+          if (res.ok && res.body.success) {
+            var el = document.getElementById(placeholderId);
+            if (el) el.remove();
+          } else {
+            markBridgeUploadFailed(placeholderId, (res.body && res.body.message) || 'Upload failed');
+          }
+        })
+        .catch(function() { markBridgeUploadFailed(placeholderId, 'Upload failed'); });
+    }
+
     function sendAdminChatFile() {
       if (!adminChatConvId) return;
       var fileInput = document.getElementById('adminChatFile');
       if (!fileInput.files.length) return;
-      var fd = new FormData();
-      fd.append('file', fileInput.files[0]);
-      fetch('/portal/bridge/conversations/' + adminChatConvId + '/file', {
-        method: 'POST', body: fd
-      }).then(function() { fileInput.value = ''; });
+      var file = fileInput.files[0];
+      fileInput.value = '';
+      uploadBridgeFileDirect(adminChatConvId, 'adminChatMessages', file);
     }
 
     function sendDelegateChatMessage() {
@@ -573,12 +651,32 @@
       if (!delegateChatConvId) return;
       var fileInput = document.getElementById('delegateChatFile');
       if (!fileInput.files.length) return;
-      var fd = new FormData();
-      fd.append('file', fileInput.files[0]);
-      fetch('/portal/bridge/conversations/' + delegateChatConvId + '/file', {
-        method: 'POST', body: fd
-      }).then(function() { fileInput.value = ''; });
+      var file = fileInput.files[0];
+      fileInput.value = '';
+      uploadBridgeFileDirect(delegateChatConvId, 'delegateChatMessages', file);
     }
+
+    // Paste screenshot handlers for admin + delegate chat inputs
+    document.getElementById('adminChatInput')?.addEventListener('paste', function(e) {
+      var items = (e.clipboardData || window.clipboardData)?.items;
+      if (!items || !adminChatConvId) return;
+      for (var i = 0; i < items.length; i++) {
+        if (items[i].kind === 'file') {
+          var f = items[i].getAsFile();
+          if (f) { e.preventDefault(); uploadBridgeFileDirect(adminChatConvId, 'adminChatMessages', f); return; }
+        }
+      }
+    });
+    document.getElementById('delegateChatInput')?.addEventListener('paste', function(e) {
+      var items = (e.clipboardData || window.clipboardData)?.items;
+      if (!items || !delegateChatConvId) return;
+      for (var i = 0; i < items.length; i++) {
+        if (items[i].kind === 'file') {
+          var f = items[i].getAsFile();
+          if (f) { e.preventDefault(); uploadBridgeFileDirect(delegateChatConvId, 'delegateChatMessages', f); return; }
+        }
+      }
+    });
 
     function updateSupportBadges() {
       fetch('/portal/bridge/unread-count')
@@ -754,6 +852,31 @@
       document.getElementById('urgentComposeFileName').textContent = this.files.length ? this.files[0].name : '';
     });
 
+    // Paste screenshot directly into urgent compose textarea
+    document.getElementById('urgentComposeMsg')?.addEventListener('paste', function(e) {
+      var items = (e.clipboardData || window.clipboardData)?.items;
+      if (!items) return;
+      for (var i = 0; i < items.length; i++) {
+        if (items[i].kind === 'file') {
+          var f = items[i].getAsFile();
+          if (f) {
+            e.preventDefault();
+            try {
+              var renamed = new File([f], f.name || ('pasted-' + Date.now() + '.png'), { type: f.type });
+              var dt = new DataTransfer();
+              dt.items.add(renamed);
+              var input = document.getElementById('urgentComposeFile');
+              input.files = dt.files;
+              input.dispatchEvent(new Event('change'));
+            } catch (err) {
+              alert('Paste failed — use the Attach file button instead');
+            }
+            return;
+          }
+        }
+      }
+    });
+
     async function sendUrgent() {
       var msg = document.getElementById('urgentComposeMsg').value.trim();
       if (!msg) return alert('Please write a message');
@@ -837,7 +960,16 @@
         var time = new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         var content = '';
         if (m.type === 'file' && m.attachment) {
-          content = '<a href="/portal/urgent/attachment/' + m.id + '" target="_blank" class="urgent-file-link"><i class="bi bi-file-earmark me-1"></i>' + escapeHtml(m.attachment.file_name) + '</a>';
+          var _uext = m.attachment.file_name.split('.').pop().toLowerCase();
+          var _uImgExts = ['jpg','jpeg','png','gif','webp','bmp','svg'];
+          var _uurl = '/portal/urgent/attachment/' + m.id;
+          if (_uImgExts.indexOf(_uext) !== -1) {
+            content = '<a href="' + _uurl + '" target="_blank" class="msg-image-link"><img src="' + _uurl + '" class="msg-image-preview" alt="' + escapeHtml(m.attachment.file_name) + '" loading="lazy" style="max-width:200px;border-radius:6px;"></a>';
+          } else {
+            var _uMap = {pdf:['bi-file-earmark-pdf-fill','#ef4444'],doc:['bi-file-earmark-word-fill','#2b7bf0'],docx:['bi-file-earmark-word-fill','#2b7bf0'],xls:['bi-file-earmark-excel-fill','#16a34a'],xlsx:['bi-file-earmark-excel-fill','#16a34a'],csv:['bi-file-earmark-spreadsheet-fill','#16a34a'],ppt:['bi-file-earmark-ppt-fill','#f97316'],pptx:['bi-file-earmark-ppt-fill','#f97316'],zip:['bi-file-earmark-zip-fill','#eab308'],rar:['bi-file-earmark-zip-fill','#eab308'],'7z':['bi-file-earmark-zip-fill','#eab308'],txt:['bi-file-earmark-text-fill','#9ca3af'],mp3:['bi-file-earmark-music-fill','#a855f7'],mp4:['bi-file-earmark-play-fill','#ec4899']};
+            var _uInfo = _uMap[_uext] || ['bi-file-earmark-fill','#94a3b8'];
+            content = '<a href="' + _uurl + '" target="_blank" class="urgent-file-link"><i class="bi ' + _uInfo[0] + '" style="color:' + _uInfo[1] + ';font-size:1.3rem;"></i> ' + escapeHtml(m.attachment.file_name) + '</a>';
+          }
         } else {
           content = escapeHtml(m.content);
         }
@@ -877,15 +1009,58 @@
       setTimeout(function() { _buzzerCooldown = false; }, 5000);
     }
 
-    async function sendUrgentFile() {
-      if (!_urgentChatId) return;
-      var fileInput = document.getElementById('urgentChatFile');
-      if (!fileInput.files.length) return;
-      var fd = new FormData();
-      fd.append('file', fileInput.files[0]);
-      await fetch('/portal/urgent/' + _urgentChatId + '/file', { method: 'POST', body: fd });
-      fileInput.value = '';
+    function showUrgentUploadPlaceholder(filename) {
+      var container = document.getElementById('urgentWidgetMessages');
+      if (!container) return null;
+      var id = 'urgent-upload-' + Date.now();
+      var html = '<div class="urgent-msg sent" id="' + id + '" style="opacity:0.7">' +
+        '<div class="urgent-msg-content"><span class="gc-upload-spinner"></span><i class="bi bi-paperclip me-1"></i>' + escapeHtml(filename) + '</div>' +
+        '<div class="urgent-msg-time">Uploading…</div></div>';
+      container.insertAdjacentHTML('beforeend', html);
+      container.scrollTop = container.scrollHeight;
+      return id;
     }
+    function uploadUrgentFileDirect(file) {
+      if (!_urgentChatId) return;
+      if (file.size > 10 * 1024 * 1024) { alert('File too large. Max 10 MB.'); return; }
+      var placeholderId = showUrgentUploadPlaceholder(file.name || 'pasted-image.png');
+      var fd = new FormData();
+      fd.append('file', file, file.name || ('pasted-' + Date.now() + '.png'));
+      fetch('/portal/urgent/' + _urgentChatId + '/file', { method: 'POST', body: fd })
+        .then(function(r) {
+          var el = document.getElementById(placeholderId);
+          if (el) el.remove();
+          if (!r.ok) alert('Upload failed');
+        })
+        .catch(function() {
+          var el = document.getElementById(placeholderId);
+          if (el) { el.style.opacity = '1'; el.style.background = 'rgba(220,38,38,0.15)'; el.querySelector('.urgent-msg-time').textContent = 'Upload failed'; }
+        });
+    }
+
+    async function sendUrgentFile() {
+      var fileInput = document.getElementById('urgentChatFile');
+      if (!fileInput.files.length || !_urgentChatId) return;
+      var file = fileInput.files[0];
+      fileInput.value = '';
+      uploadUrgentFileDirect(file);
+    }
+
+    // Paste screenshot in urgent chat — attach directly to the textarea
+    (function attachUrgentPaste() {
+      var el = document.getElementById('urgentChatInput');
+      if (!el) { setTimeout(attachUrgentPaste, 300); return; }
+      el.addEventListener('paste', function(e) {
+        var items = (e.clipboardData || window.clipboardData)?.items;
+        if (!items || !_urgentChatId) return;
+        for (var i = 0; i < items.length; i++) {
+          if (items[i].kind === 'file') {
+            var f = items[i].getAsFile();
+            if (f) { e.preventDefault(); uploadUrgentFileDirect(f); return; }
+          }
+        }
+      });
+    })();
 
     async function resolveUrgent() {
       if (!_urgentChatId) return;
@@ -924,20 +1099,21 @@
     var _urgentRemoteTypingTimer = null;
     function handleUrgentTyping(data) {
       if (data.id !== _urgentChatId || data.user_id === PORTAL_USER.id) return;
-      var statusEl = document.getElementById('urgentWidgetStatus');
-      if (!statusEl) return;
-      statusEl.setAttribute('data-saved-text', statusEl.getAttribute('data-saved-text') || statusEl.textContent);
-      statusEl.innerHTML = '<span class="urgent-typing-indicator">' + escapeHtml(data.user_name.split(' ')[0]) + ' is typing<span class="typing-dots"><span>.</span><span>.</span><span>.</span></span></span>';
+      var bar = document.getElementById('urgentTypingBar');
+      if (!bar) return;
+      bar.innerHTML = '<span class="bridge-typing"><span class="typing-dots"><span></span><span></span><span></span></span></span>';
+      bar.style.display = '';
       clearTimeout(_urgentRemoteTypingTimer);
       _urgentRemoteTypingTimer = setTimeout(function() {
-        statusEl.textContent = statusEl.getAttribute('data-saved-text') || '';
+        bar.style.display = 'none';
+        bar.innerHTML = '';
       }, 3000);
     }
     function handleUrgentStopTyping(data) {
       if (data.id !== _urgentChatId || data.user_id === PORTAL_USER.id) return;
       clearTimeout(_urgentRemoteTypingTimer);
-      var statusEl = document.getElementById('urgentWidgetStatus');
-      if (statusEl) statusEl.textContent = statusEl.getAttribute('data-saved-text') || '';
+      var bar = document.getElementById('urgentTypingBar');
+      if (bar) { bar.style.display = 'none'; bar.innerHTML = ''; }
     }
     portalSocket.on('urgent:typing', handleUrgentTyping);
     mainSocket.on('urgent:typing', handleUrgentTyping);
@@ -1089,6 +1265,361 @@
       return d.toLocaleDateString();
     }
   </script>
+
+  <% if (user.role_name !== 'CLIENT_SALES' && section !== 'channel') { %>
+  <script>
+  // ── Group Channel ──────────────────────────────────────────
+  var _gcUserId = PORTAL_USER.id;
+  var _gcCollapsed = localStorage.getItem('gc-collapsed') === '1';
+  var _gcUnread = 0;
+  var _gcBaseUrl = '/portal/channel';
+
+  // Apply initial collapsed state on load
+  (function() {
+    if (_gcCollapsed) {
+      var panel = document.getElementById('gcPanel');
+      var handle = document.getElementById('gcHandle');
+      var main = document.querySelector('.portal-main');
+      if (panel) panel.style.display = 'none';
+      if (handle) handle.style.display = '';
+      if (main) main.classList.add('gc-collapsed');
+    }
+  })();
+
+  function toggleGroupChannel() {
+    _gcCollapsed = !_gcCollapsed;
+    localStorage.setItem('gc-collapsed', _gcCollapsed ? '1' : '0');
+    document.getElementById('gcPanel').style.display = _gcCollapsed ? 'none' : '';
+    document.getElementById('gcHandle').style.display = _gcCollapsed ? '' : 'none';
+    document.querySelector('.portal-main').classList.toggle('gc-collapsed', _gcCollapsed);
+    if (!_gcCollapsed) {
+      _gcUnread = 0;
+      var badge = document.getElementById('gcHandleBadge');
+      badge.style.display = 'none';
+      loadGcMessages();
+    }
+  }
+
+  function loadGcMessages(beforeId) {
+    var url = _gcBaseUrl + '/messages' + (beforeId ? '?before=' + beforeId : '');
+    fetch(url).then(function(r) { return r.json(); }).then(function(res) {
+      if (!res.success) return;
+      renderGcMessages(res.data.messages, !!beforeId);
+    });
+  }
+
+  var GC_IMAGE_EXTS = ['jpg','jpeg','png','gif','webp','bmp','svg'];
+  function gcFileIcon(ext) {
+    var map = {
+      pdf: { icon: 'bi-file-earmark-pdf-fill', color: '#ef4444' },
+      doc: { icon: 'bi-file-earmark-word-fill', color: '#2b7bf0' },
+      docx: { icon: 'bi-file-earmark-word-fill', color: '#2b7bf0' },
+      xls: { icon: 'bi-file-earmark-excel-fill', color: '#16a34a' },
+      xlsx: { icon: 'bi-file-earmark-excel-fill', color: '#16a34a' },
+      csv: { icon: 'bi-file-earmark-spreadsheet-fill', color: '#16a34a' },
+      ppt: { icon: 'bi-file-earmark-ppt-fill', color: '#f97316' },
+      pptx: { icon: 'bi-file-earmark-ppt-fill', color: '#f97316' },
+      zip: { icon: 'bi-file-earmark-zip-fill', color: '#eab308' },
+      rar: { icon: 'bi-file-earmark-zip-fill', color: '#eab308' },
+      '7z': { icon: 'bi-file-earmark-zip-fill', color: '#eab308' },
+      txt: { icon: 'bi-file-earmark-text-fill', color: '#9ca3af' },
+      mp3: { icon: 'bi-file-earmark-music-fill', color: '#a855f7' },
+      wav: { icon: 'bi-file-earmark-music-fill', color: '#a855f7' },
+      mp4: { icon: 'bi-file-earmark-play-fill', color: '#ec4899' },
+      mov: { icon: 'bi-file-earmark-play-fill', color: '#ec4899' },
+      webm: { icon: 'bi-file-earmark-play-fill', color: '#ec4899' },
+      js: { icon: 'bi-file-earmark-code-fill', color: '#f0db4f' },
+      json: { icon: 'bi-file-earmark-code-fill', color: '#f0db4f' },
+      html: { icon: 'bi-file-earmark-code-fill', color: '#e34c26' },
+      css: { icon: 'bi-file-earmark-code-fill', color: '#2965f1' }
+    };
+    return map[ext] || { icon: 'bi-file-earmark-fill', color: '#94a3b8' };
+  }
+  function gcRenderFile(attachment, msgId) {
+    var fname = attachment.file_name;
+    var ext = fname.split('.').pop().toLowerCase();
+    var url = _gcBaseUrl + '/attachment/' + msgId;
+    if (GC_IMAGE_EXTS.indexOf(ext) !== -1) {
+      return '<a href="' + url + '" target="_blank" class="msg-image-link"><img src="' + url + '" class="msg-image-preview" alt="' + fname + '" loading="lazy" style="max-width:180px;border-radius:6px;"></a>';
+    }
+    var short = fname.length > 20 ? fname.substring(0, 17) + '...' : fname;
+    var size = attachment.file_size ? (attachment.file_size < 1048576 ? (attachment.file_size/1024).toFixed(1)+' KB' : (attachment.file_size/1048576).toFixed(1)+' MB') : '';
+    var meta = gcFileIcon(ext);
+    return '<a class="msg-file" href="' + url + '" target="_blank"><i class="bi ' + meta.icon + '" style="color:' + meta.color + ';font-size:1.4rem;"></i><div><span class="msg-file-name">' + short + '</span>' + (size ? '<span class="msg-file-size">' + size + '</span>' : '') + '</div></a>';
+  }
+
+  function gcDateLabel(dateStr) {
+    var d = new Date(dateStr);
+    var today = new Date();
+    var yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    if (d.toDateString() === today.toDateString()) return 'Today';
+    if (d.toDateString() === yesterday.toDateString()) return 'Yesterday';
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
+
+  function renderGcMessages(messages, prepend) {
+    var container = document.getElementById('gcMessages');
+    if (!messages.length && !prepend) {
+      container.innerHTML = '<div class="text-center text-muted py-3 small">No messages yet. Start the conversation!</div>';
+      return;
+    }
+    var lastDate = '';
+    var html = messages.map(function(m) {
+      var msgDate = gcDateLabel(m.created_at);
+      var dateDivider = '';
+      if (msgDate !== lastDate) {
+        dateDivider = '<div class="msg-date-divider"><span>' + msgDate + '</span></div>';
+        lastDate = msgDate;
+      }
+      var isSent = m.sender_id === _gcUserId;
+      var cls = isSent ? 'sent' : 'received';
+      var time = new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      var content = '';
+      if (m.is_deleted) {
+        content = '<em class="text-muted" style="font-size:0.75rem"><i class="bi bi-ban me-1"></i>deleted</em>';
+      } else if (m.type === 'file' && m.attachment) {
+        content = gcRenderFile(m.attachment, m.id);
+      } else {
+        var div = document.createElement('div'); div.textContent = m.content; content = div.innerHTML;
+      }
+      var deleteBtn = isSent && !m.is_deleted ? '<span class="gc-msg-delete" onclick="event.stopPropagation(); deleteGcMsg(' + m.id + ')" title="Delete"><i class="bi bi-trash"></i></span>' : '';
+      var senderName = !isSent ? '<div class="gc-msg-sender">' + escapeHtml(m.sender_name) + '</div>' : '';
+      return dateDivider + '<div class="msg-bubble ' + cls + (m.is_deleted ? ' deleted' : '') + '" data-gc-msg-id="' + m.id + '">' + deleteBtn + senderName + '<div class="msg-content">' + content + '</div><div class="msg-footer"><span class="msg-time">' + time + '</span></div></div>';
+    }).join('');
+    if (prepend) {
+      container.insertAdjacentHTML('afterbegin', html);
+    } else {
+      container.innerHTML = html;
+      container.scrollTop = container.scrollHeight;
+    }
+  }
+
+  function sendGcMessage() {
+    var input = document.getElementById('gcInput');
+    var content = input.value.trim();
+    if (!content) return;
+    fetch(_gcBaseUrl + '/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: content })
+    }).then(function() { input.value = ''; input.style.height = 'auto'; });
+  }
+
+  function showGcUploadPlaceholder(filename, containerId) {
+    var container = document.getElementById(containerId || 'gcMessages');
+    if (!container) return null;
+    if (container.querySelector('.text-center')) container.innerHTML = '';
+    var id = 'gc-upload-' + Date.now();
+    var html = '<div class="msg-bubble sent gc-uploading" id="' + id + '">' +
+      '<div class="msg-content"><span class="gc-upload-spinner"></span><i class="bi bi-paperclip me-1"></i><span class="gc-upload-name">' + escapeHtml(filename) + '</span></div>' +
+      '<div class="msg-footer"><span class="msg-time">Uploading…</span></div>' +
+      '</div>';
+    container.insertAdjacentHTML('beforeend', html);
+    container.scrollTop = container.scrollHeight;
+    return id;
+  }
+  function markGcUploadFailed(id, reason) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.classList.add('gc-upload-failed');
+    var footer = el.querySelector('.msg-time');
+    if (footer) footer.innerHTML = '<i class="bi bi-exclamation-circle me-1"></i>' + escapeHtml(reason || 'Upload failed');
+    var spinner = el.querySelector('.gc-upload-spinner');
+    if (spinner) spinner.remove();
+  }
+
+  function sendGcFile() {
+    var fileInput = document.getElementById('gcFileInput');
+    if (!fileInput.files.length) return;
+    var file = fileInput.files[0];
+    if (file.size > 5 * 1024 * 1024) {
+      alert('File too large. Max 5 MB.');
+      fileInput.value = '';
+      return;
+    }
+    var placeholderId = showGcUploadPlaceholder(file.name, 'gcMessages');
+    var fd = new FormData();
+    fd.append('file', file);
+    fileInput.value = '';
+    fetch(_gcBaseUrl + '/file', { method: 'POST', body: fd })
+      .then(function(r) { return r.json().then(function(j) { return { ok: r.ok, body: j }; }); })
+      .then(function(res) {
+        if (res.ok) {
+          var el = document.getElementById(placeholderId);
+          if (el) el.remove();
+        } else {
+          markGcUploadFailed(placeholderId, res.body.message);
+        }
+      })
+      .catch(function() { markGcUploadFailed(placeholderId, 'Upload failed'); });
+  }
+
+  function deleteGcMsg(msgId) {
+    if (!confirm('Delete this message?')) return;
+    fetch(_gcBaseUrl + '/messages/' + msgId, { method: 'DELETE' });
+  }
+
+  // Enter to send
+  document.getElementById('gcInput')?.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendGcMessage(); }
+  });
+
+  // Paste screenshot/image directly into chat
+  function uploadGcFileDirect(file) {
+    if (file.size > 5 * 1024 * 1024) { alert('File too large. Max 5 MB.'); return; }
+    var placeholderId = showGcUploadPlaceholder(file.name || 'pasted-image.png', 'gcMessages');
+    var fd = new FormData();
+    fd.append('file', file, file.name || ('pasted-' + Date.now() + '.png'));
+    fetch(_gcBaseUrl + '/file', { method: 'POST', body: fd })
+      .then(function(r) { return r.json().then(function(j) { return { ok: r.ok, body: j }; }); })
+      .then(function(res) {
+        if (res.ok) {
+          var el = document.getElementById(placeholderId);
+          if (el) el.remove();
+        } else {
+          markGcUploadFailed(placeholderId, res.body.message);
+        }
+      })
+      .catch(function() { markGcUploadFailed(placeholderId, 'Upload failed'); });
+  }
+
+  document.getElementById('gcInput')?.addEventListener('paste', function(e) {
+    var items = (e.clipboardData || window.clipboardData)?.items;
+    if (!items) return;
+    for (var i = 0; i < items.length; i++) {
+      if (items[i].kind === 'file') {
+        var file = items[i].getAsFile();
+        if (file) {
+          e.preventDefault();
+          uploadGcFileDirect(file);
+          return;
+        }
+      }
+    }
+  });
+
+  // Socket: real-time messages
+  function playGcAlert() {
+    try {
+      var ctx = new (window.AudioContext || window.webkitAudioContext)();
+      var now = ctx.currentTime;
+      [784, 1046].forEach(function(freq, i) {
+        var o = ctx.createOscillator(); var g = ctx.createGain();
+        o.type = 'sine'; o.frequency.value = freq;
+        o.connect(g); g.connect(ctx.destination);
+        var t = now + i * 0.08;
+        g.gain.setValueAtTime(0, t);
+        g.gain.linearRampToValueAtTime(0.12, t + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
+        o.start(t); o.stop(t + 0.25);
+      });
+    } catch (e) {}
+  }
+
+  mainSocket.on('channel:message', function(msg) {
+    if (msg.sender_id !== _gcUserId) playGcAlert();
+    if (_gcCollapsed) {
+      _gcUnread++;
+      var badge = document.getElementById('gcHandleBadge');
+      badge.textContent = _gcUnread;
+      badge.style.display = '';
+    } else {
+      var container = document.getElementById('gcMessages');
+      if (container.querySelector('.text-center')) container.innerHTML = '';
+      var isSent = msg.sender_id === _gcUserId;
+      var cls = isSent ? 'sent' : 'received';
+      var time = new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      var content = '';
+      if (msg.type === 'file' && msg.attachment) {
+        content = gcRenderFile(msg.attachment, msg.id);
+      } else {
+        var div = document.createElement('div'); div.textContent = msg.content; content = div.innerHTML;
+      }
+      var deleteBtn = isSent ? '<span class="gc-msg-delete" onclick="event.stopPropagation(); deleteGcMsg(' + msg.id + ')" title="Delete"><i class="bi bi-trash"></i></span>' : '';
+      var senderName = !isSent ? '<div class="gc-msg-sender">' + escapeHtml(msg.sender_name) + '</div>' : '';
+      container.insertAdjacentHTML('beforeend', '<div class="msg-bubble ' + cls + '" data-gc-msg-id="' + msg.id + '">' + deleteBtn + senderName + '<div class="msg-content">' + content + '</div><div class="msg-footer"><span class="msg-time">' + time + '</span></div></div>');
+      container.scrollTop = container.scrollHeight;
+    }
+  });
+
+  mainSocket.on('channel:message:delete', function(data) {
+    var bubble = document.querySelector('[data-gc-msg-id="' + data.id + '"]');
+    if (bubble) {
+      bubble.classList.add('deleted');
+      var c = bubble.querySelector('.msg-content');
+      if (c) c.innerHTML = '<em class="text-muted" style="font-size:0.75rem"><i class="bi bi-ban me-1"></i>deleted</em>';
+      var d = bubble.querySelector('.gc-msg-delete');
+      if (d) d.remove();
+    }
+  });
+
+  // Typing indicators
+  var _gcTypingTimer = null;
+  var _gcRemoteTypingTimer = null;
+  document.getElementById('gcInput')?.addEventListener('input', function() {
+    mainSocket.emit('channel:typing');
+    clearTimeout(_gcTypingTimer);
+    _gcTypingTimer = setTimeout(function() {
+      mainSocket.emit('channel:typing:stop');
+    }, 2000);
+  });
+  mainSocket.on('channel:typing', function(data) {
+    if (data.user_id === _gcUserId) return;
+    var bar = document.getElementById('gcTypingBar');
+    if (bar) { bar.innerHTML = '<span class="bridge-typing"><span class="typing-dots"><span></span><span></span><span></span></span></span>'; bar.style.display = ''; }
+    clearTimeout(_gcRemoteTypingTimer);
+    _gcRemoteTypingTimer = setTimeout(function() {
+      if (bar) { bar.style.display = 'none'; bar.innerHTML = ''; }
+    }, 3000);
+  });
+  mainSocket.on('channel:typing:stop', function(data) {
+    if (data.user_id === _gcUserId) return;
+    clearTimeout(_gcRemoteTypingTimer);
+    var bar = document.getElementById('gcTypingBar');
+    if (bar) { bar.style.display = 'none'; bar.innerHTML = ''; }
+  });
+
+  // ── Presence strip ──────────────────────────────
+  var _gcAllUsers = [];
+
+  function loadGcUsers() {
+    fetch(_gcBaseUrl + '/users').then(function(r) { return r.json(); }).then(function(res) {
+      if (!res.success) return;
+      _gcAllUsers = res.data.users;
+      renderGcPresence();
+    });
+  }
+
+  function renderGcPresence() {
+    var strip = document.getElementById('gcPresenceStrip');
+    if (!strip) return;
+    var online = _gcAllUsers.filter(function(u) { return u.online; });
+    var offlineCount = _gcAllUsers.filter(function(u) {
+      return !u.online && u.role_name && u.role_name.indexOf('LOCAL_') === 0;
+    }).length;
+    var html = online.map(function(u) {
+      var initial = u.name.charAt(0).toUpperCase();
+      return '<div class="gc-presence-avatar online" title="' + escapeHtml(u.name) + '" data-gc-uid="' + u.id + '">' + initial + '<span class="gc-presence-dot"></span></div>';
+    }).join('');
+    if (offlineCount > 0) {
+      html += '<span class="gc-presence-offline">' + offlineCount + ' offline</span>';
+    }
+    strip.innerHTML = html;
+  }
+
+  // Real-time presence updates
+  mainSocket.on('channel:presence', function(data) {
+    _gcAllUsers.forEach(function(u) { if (u.id === data.user_id) u.online = data.online; });
+    renderGcPresence();
+  });
+
+  // Load on page load
+  loadGcMessages();
+  loadGcUsers();
+  </script>
+  <% } %>
+
   <script src="/portal/portal.js"></script>
   <%- script %>
 </body>

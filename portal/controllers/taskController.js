@@ -243,19 +243,15 @@ class PortalTaskController {
         content: commentText
       });
 
-      // Save file attachment if present
+      // Save file attachment if present — upload to Google Drive
       if (hasFile) {
-        const uploadsDir = path.join(__dirname, '../../uploads/portal/tasks');
-        if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
-
-        const uniqueName = `${Date.now()}_${req.file.originalname}`;
-        const filePath = path.join(uploadsDir, uniqueName);
-        fs.writeFileSync(filePath, req.file.buffer);
+        const GoogleDriveService = require('../../services/googleDriveService');
+        const driveFile = await GoogleDriveService.uploadToFolder(process.env.PORTAL_TASK_DRIVE_FOLDER_ID, req.file);
 
         await PortalTask.saveCommentAttachment({
           comment_id: commentId,
+          drive_file_id: driveFile.id,
           file_name: req.file.originalname,
-          file_path: `portal/tasks/${uniqueName}`,
           file_size: req.file.size,
           mime_type: req.file.mimetype,
           uploaded_by: req.user.id
@@ -321,14 +317,22 @@ class PortalTaskController {
       const canAccess = await PortalTask.canAccess(attachment.task_id, req.user.id, req.user.role_name);
       if (!canAccess) return res.status(403).json({ success: false, message: 'Access denied' });
 
-      const filePath = path.join(__dirname, '../../uploads', attachment.file_path);
-      if (!fs.existsSync(filePath)) {
-        return res.status(404).json({ success: false, message: 'File not found on disk' });
-      }
-
       res.setHeader('Content-Disposition', `inline; filename="${attachment.file_name}"`);
       res.setHeader('Content-Type', attachment.mime_type || 'application/octet-stream');
-      res.sendFile(filePath);
+
+      if (attachment.drive_file_id) {
+        const GoogleDriveService = require('../../services/googleDriveService');
+        const { stream } = await GoogleDriveService.downloadFile(attachment.drive_file_id);
+        return stream.pipe(res);
+      }
+
+      if (attachment.file_path) {
+        const filePath = path.join(__dirname, '../../uploads', attachment.file_path);
+        if (!fs.existsSync(filePath)) return res.status(404).json({ success: false, message: 'File not found on disk' });
+        return res.sendFile(filePath);
+      }
+
+      return res.status(404).json({ success: false, message: 'File not found' });
     } catch (err) {
       console.error('Portal serve task attachment error:', err);
       return res.status(500).json({ success: false, message: 'Failed to serve file' });

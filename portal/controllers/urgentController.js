@@ -132,13 +132,9 @@ class UrgentController {
         return ApiResponse.error(res, 'Urgent chat not found or already resolved', 400);
       }
 
-      // Save file to disk
-      const uploadsDir = path.join(__dirname, '../../uploads/urgent');
-      if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
-
-      const uniqueName = `${Date.now()}_${req.file.originalname}`;
-      const filePath = path.join(uploadsDir, uniqueName);
-      fs.writeFileSync(filePath, req.file.buffer);
+      // Upload to Google Drive
+      const GoogleDriveService = require('../../services/googleDriveService');
+      const driveFile = await GoogleDriveService.uploadToFolder(process.env.URGENT_DRIVE_FOLDER_ID, req.file);
 
       // Create file message
       const message = await UrgentChat.sendMessage({
@@ -151,8 +147,8 @@ class UrgentController {
       // Save attachment
       await UrgentChat.saveAttachment({
         message_id: message.id,
+        drive_file_id: driveFile.id,
         file_name: req.file.originalname,
-        file_path: `urgent/${uniqueName}`,
         file_size: req.file.size,
         mime_type: req.file.mimetype,
         uploaded_by: req.user.id
@@ -187,14 +183,24 @@ class UrgentController {
         return res.status(404).json({ success: false, message: 'Attachment not found' });
       }
 
-      const filePath = path.join(__dirname, '../../uploads', attachment.file_path);
-      if (!fs.existsSync(filePath)) {
-        return res.status(404).json({ success: false, message: 'File not found on disk' });
-      }
-
       res.setHeader('Content-Disposition', `inline; filename="${attachment.file_name}"`);
       res.setHeader('Content-Type', attachment.mime_type || 'application/octet-stream');
-      res.sendFile(filePath);
+
+      if (attachment.drive_file_id) {
+        const GoogleDriveService = require('../../services/googleDriveService');
+        const { stream } = await GoogleDriveService.downloadFile(attachment.drive_file_id);
+        return stream.pipe(res);
+      }
+
+      if (attachment.file_path) {
+        const filePath = path.join(__dirname, '../../uploads', attachment.file_path);
+        if (!fs.existsSync(filePath)) {
+          return res.status(404).json({ success: false, message: 'File not found on disk' });
+        }
+        return res.sendFile(filePath);
+      }
+
+      return res.status(404).json({ success: false, message: 'File not found' });
     } catch (err) {
       console.error('Urgent serveAttachment error:', err);
       return res.status(500).json({ success: false, message: 'Failed to serve file' });

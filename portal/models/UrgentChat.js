@@ -115,11 +115,11 @@ class UrgentChat {
   }
 
   // Save attachment for a message
-  static async saveAttachment({ message_id, file_name, file_path, file_size, mime_type, uploaded_by }) {
+  static async saveAttachment({ message_id, drive_file_id, file_name, file_path, file_size, mime_type, uploaded_by }) {
     const [result] = await db.query(
-      `INSERT INTO portal_urgent_attachments (message_id, file_name, file_path, file_size, mime_type, uploaded_by)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [message_id, file_name, file_path, file_size, mime_type, uploaded_by]
+      `INSERT INTO portal_urgent_attachments (message_id, drive_file_id, file_name, file_path, file_size, mime_type, uploaded_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [message_id, drive_file_id || null, file_name, file_path || null, file_size, mime_type, uploaded_by]
     );
     return result.insertId;
   }

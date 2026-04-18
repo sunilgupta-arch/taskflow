@@ -36,6 +36,7 @@ router.get('/:id/comments', TaskController.getComments);
 router.post('/:id/comments', TaskController.addComment);
 router.put('/comments/:commentId', TaskController.editComment);
 router.post('/:id/upload', upload.array('files', 5), TaskController.uploadAttachments);
+router.get('/attachment/:id', TaskController.serveAttachment);
 router.delete('/:id', requireRoles('CLIENT_ADMIN', 'CLIENT_USER', 'LOCAL_ADMIN', 'LOCAL_USER'), TaskController.destroy);
 
 module.exports = router;

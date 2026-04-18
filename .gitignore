@@ -3,6 +3,8 @@ node_modules/
 logs/
 uploads/tasks/*
 !uploads/tasks/.gitkeep
+uploads/portal/
+uploads/channel/
 public/dist/
 backups/
 *.log

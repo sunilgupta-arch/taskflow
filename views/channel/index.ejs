@@ -1,0 +1,415 @@
+<style>
+/* Hide bridge chat FAB and adjust urgent widget on this page */
+.bridge-widget { display: none !important; }
+.urgent-local-widget { right: 20px !important; }
+.urgent-local-fab { right: 20px !important; }
+
+/* Make main-content fill viewport and let gc-fullpage take remaining space */
+#main-content { height: 100vh; overflow: hidden; margin-right: 0 !important; }
+.content-area { flex: 1; display: flex; flex-direction: column; min-height: 0; overflow: hidden; padding: 0 !important; }
+#announceBanner { display: none !important; }
+
+.gc-fullpage {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.gc-fullpage-header { display: none; }
+
+.gc-fullpage-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.gc-fullpage-messages .msg-bubble {
+  max-width: 60%;
+  padding: 8px 14px;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  position: relative;
+  word-wrap: break-word;
+}
+
+.gc-fullpage-messages .msg-bubble.sent {
+  align-self: flex-end;
+  background: #2563eb;
+  color: #fff;
+  border-bottom-right-radius: 4px;
+}
+
+.gc-fullpage-messages .msg-bubble.received {
+  align-self: flex-start;
+  background: var(--tf-surface-2);
+  color: var(--tf-text);
+  border: 1px solid var(--tf-border);
+  border-bottom-left-radius: 4px;
+}
+
+.gc-fullpage-messages .msg-bubble.deleted { opacity: 0.5; }
+
+.gc-fullpage-messages .gc-msg-sender {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--tf-accent);
+  margin-bottom: 2px;
+}
+
+.gc-fullpage-messages .msg-bubble.sent .gc-msg-sender { color: rgba(255,255,255,0.7); }
+
+.gc-fullpage-messages .msg-footer { text-align: right; margin-top: 2px; }
+.gc-fullpage-messages .msg-time { font-size: 0.65rem; opacity: 0.6; }
+
+.gc-fullpage-messages .msg-date-divider { text-align: center; padding: 8px 0; }
+.gc-fullpage-messages .msg-date-divider span {
+  font-size: 0.7rem;
+  color: var(--tf-text-muted);
+  background: var(--tf-surface);
+  padding: 3px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--tf-border);
+}
+
+.gc-fullpage-messages .gc-msg-delete {
+  position: absolute; top: 6px; right: 6px; cursor: pointer;
+  opacity: 0; visibility: hidden; font-size: 0.9rem; color: #fff;
+  background: rgba(0,0,0,0.6); width: 30px; height: 30px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 6px; transition: opacity 0.15s, background 0.15s; line-height: 1; z-index: 2;
+}
+.gc-fullpage-messages .msg-bubble:hover .gc-msg-delete,
+.gc-fullpage-messages .gc-msg-delete:hover { opacity: 1; visibility: visible; }
+.gc-fullpage-messages .gc-msg-delete:hover { background: rgba(220,38,38,0.9); }
+
+.gc-fullpage-input {
+  padding: 12px 24px;
+  border-top: 1px solid var(--tf-border);
+  background: var(--tf-surface-2);
+}
+
+.gc-fullpage-input textarea {
+  font-size: 0.85rem;
+  resize: none;
+  max-height: 120px;
+}
+
+.gc-fullpage-input .gc-input-btn {
+  width: 40px; height: 40px; padding: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+
+.gc-fullpage-input .gc-input-btns {
+  display: flex; flex-direction: column; gap: 4px; flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+  .gc-fullpage-messages .msg-bubble { max-width: 85%; }
+}
+</style>
+
+<div class="gc-fullpage">
+  <div class="gc-fullpage-header">
+    <div class="d-flex align-items-center gap-2">
+      <i class="bi bi-broadcast" style="font-size:1.1rem"></i>
+      <span class="fw-bold" style="font-size:1rem">Group Channel</span>
+    </div>
+  </div>
+  <div class="gc-presence-strip" id="gcPresenceStrip"></div>
+  <div class="gc-fullpage-messages" id="gcFullMessages">
+    <div class="text-center text-muted py-4 small">Loading...</div>
+  </div>
+  <div class="gc-typing-bar" id="gcFullTypingBar" style="display:none;padding:2px 24px"></div>
+  <div class="gc-fullpage-input">
+    <input type="file" id="gcFullFileInput" style="display:none" onchange="sendGcFullFile()">
+    <div class="d-flex gap-2 align-items-stretch">
+      <textarea class="form-control" id="gcFullInput" placeholder="Type a message..." rows="2" oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px'"></textarea>
+      <div class="gc-input-btns">
+        <button class="btn btn-outline-secondary gc-input-btn" onclick="document.getElementById('gcFullFileInput').click()" title="Attach"><i class="bi bi-paperclip"></i></button>
+        <button class="btn btn-primary gc-input-btn" onclick="sendGcFullMessage()" title="Send"><i class="bi bi-send"></i></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  var _userId = <%= user.id %>;
+  var _baseUrl = '/channel';
+
+  function _esc(str) { var d = document.createElement('div'); d.textContent = str; return d.innerHTML; }
+
+  function loadMessages(beforeId) {
+    var url = _baseUrl + '/messages' + (beforeId ? '?before=' + beforeId : '');
+    $.get(url, function(res) {
+      if (!res.success) return;
+      renderMessages(res.data.messages, !!beforeId);
+    });
+  }
+
+  var IMAGE_EXTS = ['jpg','jpeg','png','gif','webp','bmp','svg'];
+  function fileIconMeta(ext) {
+    var map = {
+      pdf:{i:'bi-file-earmark-pdf-fill',c:'#ef4444'},
+      doc:{i:'bi-file-earmark-word-fill',c:'#2b7bf0'}, docx:{i:'bi-file-earmark-word-fill',c:'#2b7bf0'},
+      xls:{i:'bi-file-earmark-excel-fill',c:'#16a34a'}, xlsx:{i:'bi-file-earmark-excel-fill',c:'#16a34a'}, csv:{i:'bi-file-earmark-spreadsheet-fill',c:'#16a34a'},
+      ppt:{i:'bi-file-earmark-ppt-fill',c:'#f97316'}, pptx:{i:'bi-file-earmark-ppt-fill',c:'#f97316'},
+      zip:{i:'bi-file-earmark-zip-fill',c:'#eab308'}, rar:{i:'bi-file-earmark-zip-fill',c:'#eab308'}, '7z':{i:'bi-file-earmark-zip-fill',c:'#eab308'},
+      txt:{i:'bi-file-earmark-text-fill',c:'#9ca3af'},
+      mp3:{i:'bi-file-earmark-music-fill',c:'#a855f7'}, wav:{i:'bi-file-earmark-music-fill',c:'#a855f7'},
+      mp4:{i:'bi-file-earmark-play-fill',c:'#ec4899'}, mov:{i:'bi-file-earmark-play-fill',c:'#ec4899'}, webm:{i:'bi-file-earmark-play-fill',c:'#ec4899'},
+      js:{i:'bi-file-earmark-code-fill',c:'#f0db4f'}, json:{i:'bi-file-earmark-code-fill',c:'#f0db4f'}, html:{i:'bi-file-earmark-code-fill',c:'#e34c26'}, css:{i:'bi-file-earmark-code-fill',c:'#2965f1'}
+    };
+    return map[ext] || {i:'bi-file-earmark-fill',c:'#94a3b8'};
+  }
+  function renderFile(attachment, msgId) {
+    var fname = attachment.file_name;
+    var ext = fname.split('.').pop().toLowerCase();
+    var url = _baseUrl + '/attachment/' + msgId;
+    if (IMAGE_EXTS.indexOf(ext) !== -1) {
+      return '<a href="' + url + '" target="_blank"><img src="' + url + '" style="max-width:300px;border-radius:8px;" loading="lazy"></a>';
+    }
+    var short = fname.length > 30 ? fname.substring(0, 27) + '...' : fname;
+    var size = attachment.file_size ? (attachment.file_size < 1048576 ? (attachment.file_size/1024).toFixed(1)+' KB' : (attachment.file_size/1048576).toFixed(1)+' MB') : '';
+    var meta = fileIconMeta(ext);
+    return '<a class="msg-file" href="' + url + '" target="_blank"><i class="bi ' + meta.i + '" style="color:' + meta.c + ';font-size:1.6rem;"></i><div><span class="msg-file-name">' + short + '</span>' + (size ? '<span class="msg-file-size">' + size + '</span>' : '') + '</div></a>';
+  }
+
+  function dateLabel(dateStr) {
+    var d = new Date(dateStr);
+    var today = new Date();
+    var yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1);
+    if (d.toDateString() === today.toDateString()) return 'Today';
+    if (d.toDateString() === yesterday.toDateString()) return 'Yesterday';
+    return d.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' });
+  }
+
+  function renderMessages(messages, prepend) {
+    var container = document.getElementById('gcFullMessages');
+    if (!messages.length && !prepend) {
+      container.innerHTML = '<div class="text-center text-muted py-4 small">No messages yet. Start the conversation!</div>';
+      return;
+    }
+    var lastDate = '';
+    var html = messages.map(function(m) {
+      var msgDate = dateLabel(m.created_at);
+      var dateDivider = '';
+      if (msgDate !== lastDate) { dateDivider = '<div class="msg-date-divider"><span>' + msgDate + '</span></div>'; lastDate = msgDate; }
+      var isSent = m.sender_id === _userId;
+      var cls = isSent ? 'sent' : 'received';
+      var time = new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      var content = '';
+      if (m.is_deleted) { content = '<em class="text-muted" style="font-size:0.75rem"><i class="bi bi-ban me-1"></i>deleted</em>'; }
+      else if (m.type === 'file' && m.attachment) { content = renderFile(m.attachment, m.id); }
+      else { var div = document.createElement('div'); div.textContent = m.content; content = div.innerHTML; }
+      var deleteBtn = isSent && !m.is_deleted ? '<span class="gc-msg-delete" onclick="event.stopPropagation(); deleteGcFullMsg(' + m.id + ')" title="Delete"><i class="bi bi-trash"></i></span>' : '';
+      var senderName = !isSent ? '<div class="gc-msg-sender">' + _esc(m.sender_name) + '</div>' : '';
+      return dateDivider + '<div class="msg-bubble ' + cls + (m.is_deleted ? ' deleted' : '') + '" data-gcf-msg-id="' + m.id + '">' + deleteBtn + senderName + '<div class="msg-content">' + content + '</div><div class="msg-footer"><span class="msg-time">' + time + '</span></div></div>';
+    }).join('');
+    if (prepend) { container.insertAdjacentHTML('afterbegin', html); }
+    else { container.innerHTML = html; container.scrollTop = container.scrollHeight; }
+  }
+
+  window.sendGcFullMessage = function() {
+    var input = document.getElementById('gcFullInput');
+    var content = input.value.trim();
+    if (!content) return;
+    $.ajax({
+      url: _baseUrl + '/messages', method: 'POST',
+      contentType: 'application/json', data: JSON.stringify({ content: content }),
+      success: function() { input.value = ''; input.style.height = 'auto'; }
+    });
+  };
+
+  function showUploadPlaceholder(filename) {
+    var container = document.getElementById('gcFullMessages');
+    if (container.querySelector('.text-center')) container.innerHTML = '';
+    var id = 'gc-upload-' + Date.now();
+    var html = '<div class="msg-bubble sent gc-uploading" id="' + id + '">' +
+      '<div class="msg-content"><span class="gc-upload-spinner"></span><i class="bi bi-paperclip me-1"></i><span class="gc-upload-name">' + _esc(filename) + '</span></div>' +
+      '<div class="msg-footer"><span class="msg-time">Uploading…</span></div>' +
+      '</div>';
+    container.insertAdjacentHTML('beforeend', html);
+    container.scrollTop = container.scrollHeight;
+    return id;
+  }
+  function markUploadFailed(id, reason) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.classList.add('gc-upload-failed');
+    var footer = el.querySelector('.msg-time');
+    if (footer) footer.innerHTML = '<i class="bi bi-exclamation-circle me-1"></i>' + _esc(reason || 'Upload failed');
+    var spinner = el.querySelector('.gc-upload-spinner');
+    if (spinner) spinner.remove();
+  }
+
+  window.sendGcFullFile = function() {
+    var fileInput = document.getElementById('gcFullFileInput');
+    if (!fileInput.files.length) return;
+    var file = fileInput.files[0];
+    if (file.size > 5 * 1024 * 1024) {
+      alert('File too large. Max 5 MB.');
+      fileInput.value = '';
+      return;
+    }
+    var placeholderId = showUploadPlaceholder(file.name);
+    var fd = new FormData(); fd.append('file', file);
+    fileInput.value = '';
+    $.ajax({
+      url: _baseUrl + '/file', method: 'POST', data: fd, processData: false, contentType: false,
+      success: function() {
+        var el = document.getElementById(placeholderId);
+        if (el) el.remove();
+      },
+      error: function(xhr) {
+        var msg = (xhr.responseJSON && xhr.responseJSON.message) || 'Upload failed';
+        markUploadFailed(placeholderId, msg);
+      }
+    });
+  };
+
+  window.deleteGcFullMsg = function(msgId) {
+    if (!confirm('Delete this message?')) return;
+    $.ajax({ url: _baseUrl + '/messages/' + msgId, method: 'DELETE' });
+  };
+
+  document.getElementById('gcFullInput').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendGcFullMessage(); }
+  });
+
+  // Paste screenshot/image directly
+  function uploadFileDirect(file) {
+    if (file.size > 5 * 1024 * 1024) { alert('File too large. Max 5 MB.'); return; }
+    var placeholderId = showUploadPlaceholder(file.name || 'pasted-image.png');
+    var fd = new FormData();
+    fd.append('file', file, file.name || ('pasted-' + Date.now() + '.png'));
+    $.ajax({
+      url: _baseUrl + '/file', method: 'POST', data: fd, processData: false, contentType: false,
+      success: function() { var el = document.getElementById(placeholderId); if (el) el.remove(); },
+      error: function(xhr) {
+        var msg = (xhr.responseJSON && xhr.responseJSON.message) || 'Upload failed';
+        markUploadFailed(placeholderId, msg);
+      }
+    });
+  }
+  document.getElementById('gcFullInput').addEventListener('paste', function(e) {
+    var items = (e.clipboardData || window.clipboardData)?.items;
+    if (!items) return;
+    for (var i = 0; i < items.length; i++) {
+      if (items[i].kind === 'file') {
+        var file = items[i].getAsFile();
+        if (file) { e.preventDefault(); uploadFileDirect(file); return; }
+      }
+    }
+  });
+
+  // Socket — use the same socket already on the page
+  function playGcAlert() {
+    try {
+      var ctx = new (window.AudioContext || window.webkitAudioContext)();
+      var now = ctx.currentTime;
+      [784, 1046].forEach(function(freq, i) {
+        var o = ctx.createOscillator(); var g = ctx.createGain();
+        o.type = 'sine'; o.frequency.value = freq;
+        o.connect(g); g.connect(ctx.destination);
+        var t = now + i * 0.08;
+        g.gain.setValueAtTime(0, t);
+        g.gain.linearRampToValueAtTime(0.12, t + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
+        o.start(t); o.stop(t + 0.25);
+      });
+    } catch (e) {}
+  }
+
+  var sock = typeof io !== 'undefined' ? io('/', { withCredentials: true }) : null;
+  if (sock) {
+    sock.on('channel:message', function(msg) {
+      if (msg.sender_id !== _userId) playGcAlert();
+      var container = document.getElementById('gcFullMessages');
+      if (container.querySelector('.text-center')) container.innerHTML = '';
+      var isSent = msg.sender_id === _userId;
+      var cls = isSent ? 'sent' : 'received';
+      var time = new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      var content = '';
+      if (msg.type === 'file' && msg.attachment) { content = renderFile(msg.attachment, msg.id); }
+      else { var div = document.createElement('div'); div.textContent = msg.content; content = div.innerHTML; }
+      var deleteBtn = isSent ? '<span class="gc-msg-delete" onclick="event.stopPropagation(); deleteGcFullMsg(' + msg.id + ')" title="Delete"><i class="bi bi-trash"></i></span>' : '';
+      var senderName = !isSent ? '<div class="gc-msg-sender">' + _esc(msg.sender_name) + '</div>' : '';
+      container.insertAdjacentHTML('beforeend', '<div class="msg-bubble ' + cls + '" data-gcf-msg-id="' + msg.id + '">' + deleteBtn + senderName + '<div class="msg-content">' + content + '</div><div class="msg-footer"><span class="msg-time">' + time + '</span></div></div>');
+      container.scrollTop = container.scrollHeight;
+    });
+
+    sock.on('channel:message:delete', function(data) {
+      var bubble = document.querySelector('[data-gcf-msg-id="' + data.id + '"]');
+      if (bubble) {
+        bubble.classList.add('deleted');
+        var c = bubble.querySelector('.msg-content');
+        if (c) c.innerHTML = '<em class="text-muted" style="font-size:0.75rem"><i class="bi bi-ban me-1"></i>deleted</em>';
+        var d = bubble.querySelector('.gc-msg-delete');
+        if (d) d.remove();
+      }
+    });
+
+    // Typing
+    var _typingTimer = null, _remoteTypingTimer = null;
+    document.getElementById('gcFullInput').addEventListener('input', function() {
+      sock.emit('channel:typing');
+      clearTimeout(_typingTimer);
+      _typingTimer = setTimeout(function() { sock.emit('channel:typing:stop'); }, 2000);
+    });
+    sock.on('channel:typing', function(data) {
+      if (data.user_id === _userId) return;
+      var bar = document.getElementById('gcFullTypingBar');
+      if (bar) { bar.innerHTML = '<span class="bridge-typing"><span class="typing-dots"><span></span><span></span><span></span></span></span>'; bar.style.display = ''; }
+      clearTimeout(_remoteTypingTimer);
+      _remoteTypingTimer = setTimeout(function() { if (bar) { bar.style.display = 'none'; bar.innerHTML = ''; } }, 3000);
+    });
+    sock.on('channel:typing:stop', function(data) {
+      if (data.user_id === _userId) return;
+      clearTimeout(_remoteTypingTimer);
+      var bar = document.getElementById('gcFullTypingBar');
+      if (bar) { bar.style.display = 'none'; bar.innerHTML = ''; }
+    });
+  }
+
+  // ── Presence strip ──────────────────────────────
+  var _allUsers = [];
+  function loadGcUsers() {
+    $.get(_baseUrl + '/users', function(res) {
+      if (!res.success) return;
+      _allUsers = res.data.users;
+      renderGcPresence();
+    });
+  }
+
+  function renderGcPresence() {
+    var strip = document.getElementById('gcPresenceStrip');
+    if (!strip) return;
+    var online = _allUsers.filter(function(u) { return u.online; });
+    var offlineCount = _allUsers.filter(function(u) {
+      return !u.online && u.role_name && u.role_name.indexOf('LOCAL_') === 0;
+    }).length;
+    var html = online.map(function(u) {
+      var initial = u.name.charAt(0).toUpperCase();
+      return '<div class="gc-presence-avatar online" title="' + _esc(u.name) + '" data-gc-uid="' + u.id + '">' + initial + '<span class="gc-presence-dot"></span></div>';
+    }).join('');
+    if (offlineCount > 0) html += '<span class="gc-presence-offline">' + offlineCount + ' offline</span>';
+    strip.innerHTML = html;
+  }
+
+  if (sock) {
+    sock.on('channel:presence', function(data) {
+      _allUsers.forEach(function(u) { if (u.id === data.user_id) u.online = data.online; });
+      renderGcPresence();
+    });
+  }
+
+  loadMessages();
+  loadGcUsers();
+})();
+</script>

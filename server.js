@@ -139,12 +139,27 @@ app.use((err, req, res, next) => {
   const activeCalls = new Map();
   const ChatModel = require('./models/Chat');
 
+  // Track online users: userId -> { id, name, role_name, socketCount }
+  const onlineUsers = new Map();
+
+  // Expose online users for API routes
+  app.set('onlineUsers', onlineUsers);
+
   // Socket.IO connection handler
   io.on('connection', (socket) => {
     const user = socket.user;
 
     // Join user-specific room
     socket.join(`user:${user.id}`);
+
+    // Track online presence
+    if (onlineUsers.has(user.id)) {
+      onlineUsers.get(user.id).socketCount++;
+    } else {
+      onlineUsers.set(user.id, { id: user.id, name: user.name, role_name: user.role_name, socketCount: 1 });
+      // Broadcast that this user came online
+      io.emit('channel:presence', { user_id: user.id, online: true });
+    }
 
     // Join admins room if user is admin or manager
     if (['CLIENT_ADMIN', 'CLIENT_MANAGER', 'LOCAL_ADMIN', 'LOCAL_MANAGER'].includes(user.role_name)) {
@@ -247,8 +262,18 @@ app.use((err, req, res, next) => {
       }
     });
 
-    // Clean up if user disconnects mid-call
+    // Clean up on disconnect
     socket.on('disconnect', () => {
+      // Online presence tracking
+      if (onlineUsers.has(user.id)) {
+        const entry = onlineUsers.get(user.id);
+        entry.socketCount--;
+        if (entry.socketCount <= 0) {
+          onlineUsers.delete(user.id);
+          io.emit('channel:presence', { user_id: user.id, online: false });
+        }
+      }
+
       if (activeCalls.has(user.id)) {
         const call = activeCalls.get(user.id);
         console.log(`[Call] ${user.name} (${user.id}) disconnected mid-call, notifying peer ${call.peer_id}`);
@@ -287,6 +312,14 @@ app.use((err, req, res, next) => {
           io.to(`user:${otherId}`).emit('bridge:typing:stop', { conversation_id: data.conversation_id, user_id: user.id });
         }).catch(() => {});
       }
+    });
+
+    // Group Channel: typing relay — broadcast to all except sender
+    socket.on('channel:typing', () => {
+      socket.broadcast.emit('channel:typing', { user_id: user.id, user_name: user.name });
+    });
+    socket.on('channel:typing:stop', () => {
+      socket.broadcast.emit('channel:typing:stop', { user_id: user.id });
     });
 
   });

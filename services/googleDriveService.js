@@ -186,6 +186,37 @@ class GoogleDriveService {
     return res.data;
   }
 
+  // Generic: upload a buffer to a specific Drive folder (used for all chat/attachment features)
+  static async uploadToFolder(folderId, file) {
+    if (!folderId) throw new Error('Drive folder ID not configured');
+
+    const stream = new Readable();
+    stream.push(file.buffer);
+    stream.push(null);
+
+    const uniqueName = `${Date.now()}_${file.originalname}`;
+
+    const res = await drive.files.create({
+      requestBody: {
+        name: uniqueName,
+        parents: [folderId]
+      },
+      media: {
+        mimeType: file.mimetype,
+        body: stream
+      },
+      fields: 'id,name,mimeType,size',
+      ...SHARED_DRIVE_PARAMS
+    });
+
+    return res.data;
+  }
+
+  // Backwards-compat wrapper for Group Channel
+  static async uploadGroupChannelAttachment(file) {
+    return this.uploadToFolder(process.env.GC_DRIVE_FOLDER_ID, file);
+  }
+
   // Copy a file to a target folder (used for "Save to Drive")
   static async copyFile(sourceFileId, targetFolderId, newName) {
     const res = await drive.files.copy({

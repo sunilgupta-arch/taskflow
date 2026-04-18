@@ -538,6 +538,38 @@ class TaskController {
     }
   }
 
+  // GET /tasks/attachment/:id — serve task attachment (Drive or legacy local disk)
+  static async serveAttachment(req, res) {
+    try {
+      const db = require('../config/db');
+      const [rows] = await db.query('SELECT * FROM task_attachments WHERE id = ?', [req.params.id]);
+      if (!rows.length) return res.status(404).json({ success: false, message: 'Not found' });
+      const att = rows[0];
+
+      res.setHeader('Content-Disposition', `inline; filename="${att.original_name}"`);
+      res.setHeader('Content-Type', 'application/octet-stream');
+
+      if (att.drive_file_id) {
+        const GoogleDriveService = require('../services/googleDriveService');
+        const { stream } = await GoogleDriveService.downloadFile(att.drive_file_id);
+        return stream.pipe(res);
+      }
+
+      if (att.file_path) {
+        const path = require('path');
+        const fs = require('fs');
+        const filePath = path.join(__dirname, '..', 'uploads', 'tasks', att.file_path);
+        if (!fs.existsSync(filePath)) return res.status(404).json({ success: false, message: 'File not found' });
+        return res.sendFile(filePath);
+      }
+
+      return res.status(404).json({ success: false, message: 'File not found' });
+    } catch (err) {
+      console.error('Task serveAttachment error:', err);
+      return res.status(500).json({ success: false, message: 'Failed to serve file' });
+    }
+  }
+
   // POST /tasks/deactivate/:id
   static async deactivate(req, res) {
     try {

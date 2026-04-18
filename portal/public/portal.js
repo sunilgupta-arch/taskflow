@@ -287,23 +287,73 @@ function sendMessage() {
     });
 }
 
-function sendFile() {
-  const fileInput = document.getElementById('fileInput');
-  if (!fileInput.files.length || !currentConversationId) return;
+function showChatUploadPlaceholder(filename) {
+  const container = document.getElementById('chatMessages');
+  if (!container) return null;
+  const id = 'chat-upload-' + Date.now();
+  const html = `<div class="msg-bubble sent chat-uploading" id="${id}">
+    <div class="msg-content"><span class="gc-upload-spinner"></span><i class="bi bi-paperclip me-1"></i><span>${escapeHtml(filename)}</span></div>
+    <div class="msg-footer"><span class="msg-time">Uploading…</span></div>
+  </div>`;
+  container.insertAdjacentHTML('beforeend', html);
+  container.scrollTop = container.scrollHeight;
+  return id;
+}
+function markChatUploadFailed(id, reason) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.classList.add('chat-upload-failed');
+  const footer = el.querySelector('.msg-time');
+  if (footer) footer.innerHTML = '<i class="bi bi-exclamation-circle me-1"></i>' + escapeHtml(reason || 'Upload failed');
+  const spinner = el.querySelector('.gc-upload-spinner');
+  if (spinner) spinner.remove();
+}
 
+function uploadChatFileDirect(file) {
+  if (!currentConversationId) return;
+  if (file.size > 10 * 1024 * 1024) { alert('File too large. Max 10 MB.'); return; }
+  const placeholderId = showChatUploadPlaceholder(file.name || 'pasted-image.png');
   const formData = new FormData();
-  formData.append('file', fileInput.files[0]);
-
+  formData.append('file', file, file.name || ('pasted-' + Date.now() + '.png'));
   fetch(`/portal/chat/conversations/${currentConversationId}/file`, {
     method: 'POST',
     body: formData
   })
-    .then(r => r.json())
+    .then(r => r.json().then(j => ({ ok: r.ok, body: j })))
     .then(res => {
-      if (!res.success) alert('Failed to send file');
-      fileInput.value = '';
-    });
+      if (res.ok && res.body.success) {
+        const el = document.getElementById(placeholderId);
+        if (el) el.remove();
+      } else {
+        markChatUploadFailed(placeholderId, (res.body && res.body.message) || 'Upload failed');
+      }
+    })
+    .catch(() => markChatUploadFailed(placeholderId, 'Upload failed'));
 }
+
+function sendFile() {
+  const fileInput = document.getElementById('fileInput');
+  if (!fileInput.files.length || !currentConversationId) return;
+  const file = fileInput.files[0];
+  fileInput.value = '';
+  uploadChatFileDirect(file);
+}
+
+// Paste screenshot/image directly into chat
+document.addEventListener('DOMContentLoaded', function() {
+  const input = document.getElementById('messageInput');
+  if (!input) return;
+  input.addEventListener('paste', function(e) {
+    const items = (e.clipboardData || window.clipboardData)?.items;
+    if (!items) return;
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].kind === 'file') {
+        const file = items[i].getAsFile();
+        if (file) { e.preventDefault(); uploadChatFileDirect(file); return; }
+      }
+    }
+  });
+});
 
 function showSidebar() {
   document.getElementById('chatSidebar').classList.remove('hidden');
@@ -629,11 +679,10 @@ function renderTaskDetail(task, comments) {
       if (c.attachments && c.attachments.length) {
         attachHtml = c.attachments.map(a => {
           const ext = a.file_name.split('.').pop().toLowerCase();
-          const iconMap = { jpg: 'bi-file-image', jpeg: 'bi-file-image', png: 'bi-file-image', gif: 'bi-file-image', webp: 'bi-file-image', pdf: 'bi-file-pdf', doc: 'bi-file-word', docx: 'bi-file-word', xls: 'bi-file-excel', xlsx: 'bi-file-excel', zip: 'bi-file-zip', rar: 'bi-file-zip' };
-          const icon = iconMap[ext] || 'bi-file-earmark';
+          const meta = getFileIconMeta(ext);
           const size = a.file_size ? formatFileSize(a.file_size) : '';
           return `<a href="/portal/tasks/attachment/${a.id}" target="_blank" class="comment-attachment">
-            <i class="bi ${icon}"></i> ${escapeHtml(a.file_name)} ${size ? `<span class="text-muted">(${size})</span>` : ''}
+            <i class="bi ${meta.i}" style="color:${meta.c};font-size:1.1rem;"></i> ${escapeHtml(a.file_name)} ${size ? `<span class="text-muted">(${size})</span>` : ''}
           </a>`;
         }).join('');
       }
@@ -743,12 +792,13 @@ function renderUsers(users) {
   }
 
   // Group users by role
-  const roleOrder = ['CLIENT_ADMIN', 'CLIENT_TOP_MGMT', 'CLIENT_MGMT', 'CLIENT_MANAGER', 'CLIENT_USER'];
+  const roleOrder = ['CLIENT_ADMIN', 'CLIENT_TOP_MGMT', 'CLIENT_MGMT', 'CLIENT_MANAGER', 'CLIENT_SALES', 'CLIENT_USER'];
   const roleLabels = {
     CLIENT_ADMIN: { title: 'Admin', icon: 'bi-shield-lock-fill', color: '#a78bfa' },
     CLIENT_TOP_MGMT: { title: 'Top Management', icon: 'bi-star-fill', color: '#3b82f6' },
     CLIENT_MGMT: { title: 'Management', icon: 'bi-briefcase-fill', color: '#22c55e' },
     CLIENT_MANAGER: { title: 'Managers', icon: 'bi-person-badge-fill', color: '#eab308' },
+    CLIENT_SALES: { title: 'Sales', icon: 'bi-cart-fill', color: '#f97316' },
     CLIENT_USER: { title: 'Users', icon: 'bi-person-fill', color: '#94a3b8' }
   };
 
@@ -2523,6 +2573,33 @@ function insertEmoji(emoji) {
 
 const IMAGE_EXTS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'];
 
+function getFileIconMeta(ext) {
+  const map = {
+    pdf:  { i: 'bi-file-earmark-pdf-fill',        c: '#ef4444' },
+    doc:  { i: 'bi-file-earmark-word-fill',       c: '#2b7bf0' },
+    docx: { i: 'bi-file-earmark-word-fill',       c: '#2b7bf0' },
+    xls:  { i: 'bi-file-earmark-excel-fill',      c: '#16a34a' },
+    xlsx: { i: 'bi-file-earmark-excel-fill',      c: '#16a34a' },
+    csv:  { i: 'bi-file-earmark-spreadsheet-fill', c: '#16a34a' },
+    ppt:  { i: 'bi-file-earmark-ppt-fill',        c: '#f97316' },
+    pptx: { i: 'bi-file-earmark-ppt-fill',        c: '#f97316' },
+    zip:  { i: 'bi-file-earmark-zip-fill',        c: '#eab308' },
+    rar:  { i: 'bi-file-earmark-zip-fill',        c: '#eab308' },
+    '7z': { i: 'bi-file-earmark-zip-fill',        c: '#eab308' },
+    txt:  { i: 'bi-file-earmark-text-fill',       c: '#9ca3af' },
+    mp3:  { i: 'bi-file-earmark-music-fill',      c: '#a855f7' },
+    wav:  { i: 'bi-file-earmark-music-fill',      c: '#a855f7' },
+    mp4:  { i: 'bi-file-earmark-play-fill',       c: '#ec4899' },
+    mov:  { i: 'bi-file-earmark-play-fill',       c: '#ec4899' },
+    webm: { i: 'bi-file-earmark-play-fill',       c: '#ec4899' },
+    js:   { i: 'bi-file-earmark-code-fill',       c: '#f0db4f' },
+    json: { i: 'bi-file-earmark-code-fill',       c: '#f0db4f' },
+    html: { i: 'bi-file-earmark-code-fill',       c: '#e34c26' },
+    css:  { i: 'bi-file-earmark-code-fill',       c: '#2965f1' }
+  };
+  return map[ext] || { i: 'bi-file-earmark-fill', c: '#94a3b8' };
+}
+
 function renderFileContent(attachment, msgId, baseUrl) {
   const fname = attachment.file_name;
   const ext = fname.split('.').pop().toLowerCase();
@@ -2536,10 +2613,9 @@ function renderFileContent(attachment, msgId, baseUrl) {
     </a>`;
   }
 
-  const iconMap = { pdf: 'bi-file-pdf', doc: 'bi-file-word', docx: 'bi-file-word', xls: 'bi-file-excel', xlsx: 'bi-file-excel', zip: 'bi-file-zip', rar: 'bi-file-zip', mp4: 'bi-file-play', mp3: 'bi-file-music' };
-  const icon = iconMap[ext] || 'bi-file-earmark';
+  const meta = getFileIconMeta(ext);
   return `<a class="msg-file" href="${url}" target="_blank">
-    <i class="bi ${icon}"></i>
+    <i class="bi ${meta.i}" style="color:${meta.c};font-size:1.5rem;"></i>
     <div><span class="msg-file-name">${escapeHtml(shortName)}</span>${size ? `<span class="msg-file-size">${size}</span>` : ''}</div>
   </a>`;
 }
