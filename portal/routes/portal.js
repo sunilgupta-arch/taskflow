@@ -535,6 +535,17 @@ router.post('/tasks/:id/comments', (req, res, next) => portalTaskUpload.single('
 router.put('/tasks/comments/:commentId', PortalTaskController.editComment);
 router.get('/tasks/attachment/:attachmentId', PortalTaskController.serveAttachment);
 
+// ── Work Requests (client submits tasks to local team) ───
+const ClientRequestController = require('../controllers/clientRequestController');
+
+router.get('/requests', ClientRequestController.index);
+router.get('/requests/instances', ClientRequestController.getInstances);
+router.post('/requests', ClientRequestController.create);
+router.patch('/requests/:id/deactivate', ClientRequestController.deactivate);
+router.get('/requests/task-types', ClientRequestController.getTaskTypes);
+router.get('/requests/instances/:id', ClientRequestController.getDetail);
+router.post('/requests/instances/:id/comments', ClientRequestController.addComment);
+
 // ── Help & Training ──────────────────────────────────────
 router.get('/help', (req, res) => {
   res.render('portal/help', {

@@ -36,6 +36,11 @@
         <span class="ab-label">Tasks</span>
         <span class="ab-tooltip">Tasks</span>
       </a>
+      <a href="/portal/requests" class="activity-bar-item <%= section === 'requests' ? 'active' : '' %>">
+        <i class="bi bi-inbox-fill"></i>
+        <span class="ab-label">Requests</span>
+        <span class="ab-tooltip">Work Requests</span>
+      </a>
       <a href="/portal/notes" class="activity-bar-item <%= section === 'notes' ? 'active' : '' %>">
         <i class="bi bi-journal-text"></i>
         <span class="ab-label">Notes</span>
@@ -139,10 +144,11 @@
         <i class="bi bi-broadcast" style="font-size:0.9rem"></i>
         <span class="fw-bold" style="font-size:0.8rem">Group Channel</span>
       </div>
-      <div class="d-flex align-items-center gap-1">
-        <button class="btn btn-sm btn-link p-0 text-white" onclick="toggleGcSearch()" title="Search"><i class="bi bi-search" style="font-size:0.7rem"></i></button>
-        <a href="/portal/channel" class="btn btn-sm btn-link p-0 text-white" title="Maximize"><i class="bi bi-arrows-fullscreen" style="font-size:0.7rem"></i></a>
-        <button class="btn btn-sm btn-link p-0 text-white" onclick="toggleGroupChannel()" title="Collapse"><i class="bi bi-chevron-right" id="gcCollapseIcon"></i></button>
+      <div class="d-flex align-items-center gc-header-actions">
+        <button class="gc-header-btn" onclick="toggleGcSearch()" title="Search"><i class="bi bi-search"></i></button>
+        <button class="gc-header-btn" onclick="openGcHelp()" title="Help"><i class="bi bi-question-circle"></i></button>
+        <a href="/portal/channel" class="gc-header-btn" title="Maximize"><i class="bi bi-arrows-fullscreen"></i></a>
+        <button class="gc-header-btn" onclick="toggleGroupChannel()" title="Collapse"><i class="bi bi-chevron-right" id="gcCollapseIcon"></i></button>
       </div>
     </div>
     <div class="gc-panel-body" id="gcPanelBody">
@@ -191,6 +197,137 @@
     <i class="bi bi-broadcast"></i>
     <span class="gc-handle-badge" id="gcHandleBadge" style="display:none"></span>
   </div>
+  <% } %>
+
+  <% if (user.role_name !== 'CLIENT_SALES') { %>
+  <!-- Group Channel Help Modal -->
+  <div class="gc-help-backdrop" id="gcHelpBackdrop" style="display:none" onclick="if(event.target===this) closeGcHelp()">
+    <div class="gc-help-modal" role="dialog" aria-label="Group Channel help">
+      <div class="gc-help-header">
+        <div class="gc-help-title"><i class="bi bi-broadcast"></i>Group Channel — Guide</div>
+        <button class="gc-help-close" onclick="closeGcHelp()" title="Close"><i class="bi bi-x-lg"></i></button>
+      </div>
+      <div class="gc-help-body">
+        <div class="gc-help-intro">The Group Channel is a shared chat between your team and the local team. Here's everything you can do.</div>
+
+        <div class="gc-help-section-title">Sending</div>
+        <div class="gc-help-item">
+          <div class="gc-help-icon"><i class="bi bi-chat-dots-fill"></i></div>
+          <div class="gc-help-content">
+            <div class="gc-help-feature">Send messages & files</div>
+            <div class="gc-help-desc">Type and press <code>Enter</code>. <code>Shift+Enter</code> adds a new line. Click the paperclip for attachments (up to 5 MB). You can also <b>paste screenshots</b> directly into the compose box.</div>
+          </div>
+        </div>
+        <div class="gc-help-item">
+          <div class="gc-help-icon"><i class="bi bi-at"></i></div>
+          <div class="gc-help-content">
+            <div class="gc-help-feature">Mention someone with @</div>
+            <div class="gc-help-desc">Type <code>@</code> and start typing a name — a list pops up. Use <code>↑/↓</code> to move, <code>Enter</code> to pick. The mentioned person gets a red highlight on the message and a louder desktop notification (even if their chat is open).</div>
+          </div>
+        </div>
+        <div class="gc-help-item">
+          <div class="gc-help-icon"><i class="bi bi-reply-fill"></i></div>
+          <div class="gc-help-content">
+            <div class="gc-help-feature">Reply to a specific message</div>
+            <div class="gc-help-desc">Hover any message and click the <i class="bi bi-reply-fill"></i> icon. Your reply shows a quote of the original — click the quote later to jump to it.</div>
+          </div>
+        </div>
+        <div class="gc-help-item">
+          <div class="gc-help-icon"><i class="bi bi-emoji-smile-fill"></i></div>
+          <div class="gc-help-content">
+            <div class="gc-help-feature">React with emoji</div>
+            <div class="gc-help-desc">Hover a message and click the smile icon to pick from 48 emojis. Click existing reaction chips to toggle yours on/off. Hover a chip to see who reacted.</div>
+          </div>
+        </div>
+        <div class="gc-help-item">
+          <div class="gc-help-icon"><i class="bi bi-pencil-fill"></i></div>
+          <div class="gc-help-content">
+            <div class="gc-help-feature">Edit your own message</div>
+            <div class="gc-help-desc">Within <b>15 minutes</b> of sending, hover your text message and click the pencil to edit inline. <code>Enter</code> saves, <code>Esc</code> cancels. Edited messages show <i>"(edited)"</i> in the footer.</div>
+          </div>
+        </div>
+
+        <div class="gc-help-section-title">Reading</div>
+        <div class="gc-help-item">
+          <div class="gc-help-icon"><i class="bi bi-chevron-double-down"></i></div>
+          <div class="gc-help-content">
+            <div class="gc-help-feature">Stay caught up</div>
+            <div class="gc-help-desc">When messages arrive while you're scrolled up, a blue jump-button appears with a red unread count. A <b>"New messages"</b> divider marks where you last left off. Scroll to the top to auto-load older history.</div>
+          </div>
+        </div>
+        <div class="gc-help-item">
+          <div class="gc-help-icon"><i class="bi bi-bell-fill"></i></div>
+          <div class="gc-help-content">
+            <div class="gc-help-feature">Browser notifications</div>
+            <div class="gc-help-desc">If the panel is collapsed or the tab is in the background, a desktop notification fires for new messages. Grant notification permission the first time you open the chat. Mentions always notify.</div>
+          </div>
+        </div>
+        <div class="gc-help-item">
+          <div class="gc-help-icon"><i class="bi bi-search"></i></div>
+          <div class="gc-help-content">
+            <div class="gc-help-feature">Search older messages</div>
+            <div class="gc-help-desc">Click the search icon, type 2+ characters. Matches are highlighted. Click a result to jump to it (scroll up first if it's not loaded yet).</div>
+          </div>
+        </div>
+        <div class="gc-help-item">
+          <div class="gc-help-icon"><i class="bi bi-link-45deg"></i></div>
+          <div class="gc-help-content">
+            <div class="gc-help-feature">Automatic link previews</div>
+            <div class="gc-help-desc">Any URL you paste becomes clickable and gets a preview card showing site title, description, and image.</div>
+          </div>
+        </div>
+
+        <div class="gc-help-section-title">Organizing (admin)</div>
+        <div class="gc-help-item">
+          <div class="gc-help-icon"><i class="bi bi-pin-angle-fill"></i></div>
+          <div class="gc-help-content">
+            <div class="gc-help-feature">Pin important messages</div>
+            <div class="gc-help-desc">Admins (<code>LOCAL_ADMIN</code>, <code>CLIENT_ADMIN</code>) can pin any message via the yellow pin icon on hover. A "N pinned" bar shows at the top — click to expand the list, click any pin to jump to it.</div>
+          </div>
+        </div>
+        <div class="gc-help-item">
+          <div class="gc-help-icon"><i class="bi bi-trash-fill"></i></div>
+          <div class="gc-help-content">
+            <div class="gc-help-feature">Delete your own message</div>
+            <div class="gc-help-desc">Hover your message and click the red trash icon. Deleted messages show as "deleted" with the original replaced.</div>
+          </div>
+        </div>
+        <div class="gc-help-item">
+          <div class="gc-help-icon"><i class="bi bi-people-fill"></i></div>
+          <div class="gc-help-content">
+            <div class="gc-help-feature">See who's online</div>
+            <div class="gc-help-desc">The top strip shows online users with a green dot.</div>
+          </div>
+        </div>
+
+        <div class="gc-help-section-title">Tips</div>
+        <ul class="gc-help-tips">
+          <li>The chat panel stays collapsed/expanded across pages — your choice persists.</li>
+          <li>Click <i class="bi bi-arrows-fullscreen"></i> Maximize to open a full-page channel view with more space.</li>
+          <li>Messages with deleted reply-targets still work — the quote just shows "deleted message".</li>
+          <li>Hover any reaction chip to see the full list of users who reacted.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <script>
+    (function() {
+      window.openGcHelp = function() {
+        var bd = document.getElementById('gcHelpBackdrop');
+        if (bd) bd.style.display = 'flex';
+      };
+      window.closeGcHelp = function() {
+        var bd = document.getElementById('gcHelpBackdrop');
+        if (bd) bd.style.display = 'none';
+      };
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+          var bd = document.getElementById('gcHelpBackdrop');
+          if (bd && bd.style.display !== 'none') closeGcHelp();
+        }
+      });
+    })();
+  </script>
   <% } %>
 
   <!-- Admin Chat Floating Panel (Primary Support) -->
@@ -1630,7 +1767,7 @@
   };
 
   // ── Reactions ───────────────────────────────────
-  var GC_EMOJI_LIST = ['👍','❤️','😂','😮','😢','🎉','🔥','👀'];
+  var GC_EMOJI_LIST = ['😀','😂','😊','😍','🥰','😎','🤔','🤩','😐','😢','😭','😤','😡','🤯','😱','🥳','👍','👎','👌','✌️','🤞','🙏','👏','🙌','❤️','🧡','💛','💚','💙','💜','🖤','💔','🎉','🔥','✨','💯','✅','❌','⚠️','💡','👀','💪','🚀','⚡','🌟','🎯','📌','📎'];
   function _gcRenderReactions(m) {
     if (!m.reactions || !m.reactions.length) return '';
     var html = m.reactions.map(function(r) {
@@ -1657,9 +1794,12 @@
     }).join('');
     document.body.appendChild(picker);
     var rect = evt.currentTarget.getBoundingClientRect();
-    var pickerWidth = 280;
-    picker.style.top = (rect.top - 44) + 'px';
-    picker.style.left = Math.max(10, Math.min(window.innerWidth - pickerWidth - 10, rect.right - pickerWidth)) + 'px';
+    var pw = picker.offsetWidth;
+    var ph = picker.offsetHeight;
+    var top = rect.top - ph - 8;
+    if (top < 8) top = Math.min(rect.bottom + 8, window.innerHeight - ph - 8);
+    picker.style.top = top + 'px';
+    picker.style.left = Math.max(10, Math.min(window.innerWidth - pw - 10, rect.right - pw)) + 'px';
     setTimeout(function() {
       document.addEventListener('click', function close(e) {
         if (!picker.contains(e.target)) { picker.remove(); document.removeEventListener('click', close); }

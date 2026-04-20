@@ -1,0 +1,370 @@
+<%
+const isToday = selectedDate === today;
+const isPast = selectedDate < today;
+
+function fmtDate(d) {
+  if (!d) return '';
+  const dt = new Date(d + 'T00:00:00');
+  return dt.toLocaleDateString('en-GB', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+function prevDate(d) {
+  const dt = new Date(d + 'T00:00:00');
+  dt.setDate(dt.getDate() - 1);
+  return dt.toISOString().split('T')[0];
+}
+
+function nextDate(d) {
+  const dt = new Date(d + 'T00:00:00');
+  dt.setDate(dt.getDate() + 1);
+  return dt.toISOString().split('T')[0];
+}
+
+function recurrenceIcon(r) {
+  if (r === 'daily')   return '<i class="bi bi-arrow-repeat text-info" title="Daily"></i>';
+  if (r === 'weekly')  return '<i class="bi bi-calendar-week text-primary" title="Weekly"></i>';
+  if (r === 'monthly') return '<i class="bi bi-calendar-month text-warning" title="Monthly"></i>';
+  return '<i class="bi bi-dash-circle text-secondary" title="One-time"></i>';
+}
+
+function priorityBadge(p) {
+  if (p === 'urgent') return '<span class="badge bg-danger">Urgent</span>';
+  if (p === 'high')   return '<span class="badge bg-warning text-dark">High</span>';
+  return '<span class="badge bg-secondary">Normal</span>';
+}
+
+function statusBadge(s) {
+  if (s === 'done')   return '<span class="badge bg-success">Done</span>';
+  if (s === 'picked') return '<span class="badge bg-primary">Picked</span>';
+  if (s === 'missed') return '<span class="badge bg-danger">Missed</span>';
+  return '<span class="badge bg-secondary">Open</span>';
+}
+%>
+
+<!-- Page Header + Date Nav -->
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+  <h5 class="mb-0"><i class="bi bi-list-task me-2"></i>Client Queue</h5>
+  <div class="d-flex align-items-center gap-2">
+    <a href="/queue?date=<%= prevDate(selectedDate) %>" class="btn btn-sm btn-outline-secondary"><i class="bi bi-chevron-left"></i></a>
+    <input type="date" id="queueDatePicker" value="<%= selectedDate %>"
+           onchange="window.location='/queue?date='+this.value"
+           class="tf-form-control" style="width:160px; cursor:pointer;">
+    <% if (!isToday) { %>
+    <a href="/queue?date=<%= nextDate(selectedDate) %>" class="btn btn-sm btn-outline-secondary"><i class="bi bi-chevron-right"></i></a>
+    <% } %>
+    <a href="/queue" class="btn btn-sm btn-outline-primary <%= isToday ? 'disabled' : '' %>"><i class="bi bi-calendar-today me-1"></i>Today</a>
+  </div>
+</div>
+
+<!-- Stats Bar -->
+<div class="d-flex flex-wrap gap-2 mb-3">
+  <span class="badge fs-6 bg-secondary"><i class="bi bi-list me-1"></i><%= stats.total %> Total</span>
+  <span class="badge fs-6 bg-secondary"><i class="bi bi-circle me-1"></i><%= stats.open %> Open</span>
+  <span class="badge fs-6 bg-primary"><i class="bi bi-hand-index me-1"></i><%= stats.picked %> Picked</span>
+  <span class="badge fs-6 bg-success"><i class="bi bi-check-circle me-1"></i><%= stats.done %> Done</span>
+  <% if (stats.missed > 0) { %>
+  <span class="badge fs-6 bg-danger"><i class="bi bi-exclamation-circle me-1"></i><%= stats.missed %> Missed</span>
+  <% } %>
+  <% if (isPast) { %>
+  <span class="badge fs-6 bg-warning text-dark ms-auto"><i class="bi bi-clock-history me-1"></i>Viewing past — read only</span>
+  <% } %>
+</div>
+
+<!-- Queue Table -->
+<div class="tf-card">
+  <div style="overflow-x:auto;">
+    <table class="tf-table" id="queueTable">
+      <thead>
+        <tr>
+          <th style="width:40px">#</th>
+          <th style="width:44px"></th>
+          <th>Title</th>
+          <th>Client</th>
+          <th>Type</th>
+          <th>Priority</th>
+          <th>Due</th>
+          <th>Status</th>
+          <th>Picked By</th>
+          <% if (!isPast) { %><th style="width:130px">Actions</th><% } %>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (instances.length === 0) { %>
+        <tr><td colspan="<%= isPast ? 9 : 10 %>" class="text-center text-muted py-4">
+          <i class="bi bi-inbox me-2"></i>No tasks for <%= fmtDate(selectedDate) %>
+        </td></tr>
+        <% } %>
+        <% instances.forEach(function(inst, idx) {
+          const isOverdue = isPast && ['open','picked'].includes(inst.status);
+          const rowClass = inst.status === 'done' ? 'table-success opacity-75'
+                         : isOverdue ? 'table-danger'
+                         : inst.status === 'picked' ? 'table-primary'
+                         : '';
+        %>
+        <tr class="<%= rowClass %>" data-id="<%= inst.id %>">
+          <td class="text-muted small"><%= idx + 1 %></td>
+          <td class="text-center"><%- recurrenceIcon(inst.recurrence) %></td>
+          <td>
+            <a href="#" class="text-decoration-none fw-semibold queue-detail-link" data-id="<%= inst.id %>">
+              <%= inst.title %>
+            </a>
+            <% if (isOverdue) { %><span class="badge bg-danger ms-1">Overdue</span><% } %>
+          </td>
+          <td class="text-muted small"><%= inst.org_name %></td>
+          <td><span class="badge bg-info text-dark"><%= inst.task_type %></span></td>
+          <td><%- priorityBadge(inst.priority) %></td>
+          <td class="small text-muted"><%= inst.due_time ? inst.due_time.substring(0,5) : '—' %></td>
+          <td><%- statusBadge(inst.status) %></td>
+          <td class="small"><%= inst.picked_by_name || '—' %></td>
+          <% if (!isPast) { %>
+          <td>
+            <% if (inst.status === 'open') { %>
+              <button class="btn btn-xs btn-primary queue-pick-btn" data-id="<%= inst.id %>">Pick</button>
+            <% } else if (inst.status === 'picked' && inst.picked_by === user.id) { %>
+              <button class="btn btn-xs btn-success queue-done-btn" data-id="<%= inst.id %>">Done</button>
+              <button class="btn btn-xs btn-outline-secondary queue-release-btn ms-1" data-id="<%= inst.id %>">Release</button>
+            <% } else if (inst.status === 'picked') { %>
+              <% if (['LOCAL_ADMIN','LOCAL_MANAGER'].includes(user.role_name)) { %>
+                <button class="btn btn-xs btn-success queue-done-btn" data-id="<%= inst.id %>">Done</button>
+              <% } else { %>
+                <span class="text-muted small">By <%= inst.picked_by_name %></span>
+              <% } %>
+            <% } else if (inst.status === 'done') { %>
+              <span class="text-success small"><i class="bi bi-check-circle-fill"></i></span>
+            <% } %>
+          </td>
+          <% } %>
+        </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Detail Modal -->
+<div class="modal fade" id="queueDetailModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="queueDetailTitle">Task Detail</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="queueDetailBody">
+        <div class="text-center py-4"><div class="spinner-border spinner-border-sm"></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Release Modal -->
+<div class="modal fade" id="queueReleaseModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Release Task</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p class="text-muted mb-2">Provide a reason for releasing this task back to the queue:</p>
+        <textarea class="tf-form-control" id="releaseReason" rows="3" placeholder="Reason (optional)"></textarea>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-warning" id="releaseConfirmBtn">Release</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.btn-xs { padding: 2px 8px; font-size: 0.75rem; }
+.queue-detail-link:hover { text-decoration: underline !important; }
+</style>
+
+<script>
+(function() {
+  let pendingReleaseId = null;
+
+  // Pick
+  document.addEventListener('click', async function(e) {
+    const btn = e.target.closest('.queue-pick-btn');
+    if (!btn) return;
+    btn.disabled = true;
+    btn.textContent = '...';
+    const id = btn.dataset.id;
+    try {
+      const r = await fetch('/queue/' + id + '/pick', { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+      const data = await r.json();
+      if (data.success) reloadQueue();
+      else alert(data.message || 'Failed');
+    } catch { btn.disabled = false; btn.textContent = 'Pick'; }
+  });
+
+  // Done
+  document.addEventListener('click', async function(e) {
+    const btn = e.target.closest('.queue-done-btn');
+    if (!btn) return;
+    btn.disabled = true;
+    const id = btn.dataset.id;
+    try {
+      const r = await fetch('/queue/' + id + '/complete', { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+      const data = await r.json();
+      if (data.success) reloadQueue();
+      else { alert(data.message || 'Failed'); btn.disabled = false; }
+    } catch { btn.disabled = false; }
+  });
+
+  // Release — open modal
+  document.addEventListener('click', function(e) {
+    const btn = e.target.closest('.queue-release-btn');
+    if (!btn) return;
+    pendingReleaseId = btn.dataset.id;
+    document.getElementById('releaseReason').value = '';
+    new bootstrap.Modal(document.getElementById('queueReleaseModal')).show();
+  });
+
+  // Release confirm
+  document.getElementById('releaseConfirmBtn').addEventListener('click', async function() {
+    if (!pendingReleaseId) return;
+    const reason = document.getElementById('releaseReason').value.trim();
+    bootstrap.Modal.getInstance(document.getElementById('queueReleaseModal')).hide();
+    try {
+      const r = await fetch('/queue/' + pendingReleaseId + '/release', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+        body: JSON.stringify({ reason })
+      });
+      const data = await r.json();
+      if (data.success) reloadQueue();
+      else alert(data.message || 'Failed');
+    } catch (err) { console.error(err); }
+    pendingReleaseId = null;
+  });
+
+  // Detail modal
+  document.addEventListener('click', async function(e) {
+    const link = e.target.closest('.queue-detail-link');
+    if (!link) return;
+    e.preventDefault();
+    const id = link.dataset.id;
+    document.getElementById('queueDetailTitle').textContent = 'Loading...';
+    document.getElementById('queueDetailBody').innerHTML = '<div class="text-center py-4"><div class="spinner-border spinner-border-sm"></div></div>';
+    new bootstrap.Modal(document.getElementById('queueDetailModal')).show();
+    try {
+      const r = await fetch('/queue/' + id + '/detail', { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+      const data = await r.json();
+      if (!data.success) { document.getElementById('queueDetailBody').innerHTML = '<p class="text-danger">Failed to load</p>'; return; }
+      renderDetail(data.data);
+    } catch { document.getElementById('queueDetailBody').innerHTML = '<p class="text-danger">Error</p>'; }
+  });
+
+  function renderDetail(d) {
+    const { instance: inst, history, comments } = d;
+    document.getElementById('queueDetailTitle').textContent = inst.title;
+
+    const recLabels = { none: 'One-time', daily: 'Daily', weekly: 'Weekly', monthly: 'Monthly' };
+    let html = `
+      <div class="row g-3 mb-3">
+        <div class="col-md-6">
+          <div class="small text-muted mb-1">Task Type</div>
+          <span class="badge bg-info text-dark">${inst.task_type}</span>
+        </div>
+        <div class="col-md-6">
+          <div class="small text-muted mb-1">Priority</div>
+          ${inst.priority === 'urgent' ? '<span class="badge bg-danger">Urgent</span>' : inst.priority === 'high' ? '<span class="badge bg-warning text-dark">High</span>' : '<span class="badge bg-secondary">Normal</span>'}
+        </div>
+        <div class="col-md-6">
+          <div class="small text-muted mb-1">Client</div>
+          <strong>${inst.org_name}</strong>
+        </div>
+        <div class="col-md-6">
+          <div class="small text-muted mb-1">Recurrence</div>
+          ${recLabels[inst.recurrence] || inst.recurrence}
+        </div>
+        <div class="col-md-6">
+          <div class="small text-muted mb-1">Due Time</div>
+          ${inst.due_time ? inst.due_time.substring(0,5) : '—'}
+        </div>
+        <div class="col-md-6">
+          <div class="small text-muted mb-1">Created By</div>
+          ${inst.created_by_name}
+        </div>
+      </div>`;
+
+    if (inst.description) {
+      html += `<div class="mb-3"><div class="small text-muted mb-1">Description</div><div class="p-2 rounded" style="background:var(--tf-surface-2);white-space:pre-wrap">${escHtml(inst.description)}</div></div>`;
+    }
+
+    if (history.length > 0) {
+      html += `<div class="mb-3"><div class="small text-muted mb-1">Release History</div><ul class="list-group list-group-flush">`;
+      history.forEach(h => {
+        html += `<li class="list-group-item px-0 py-1 small">
+          <span class="text-muted">${new Date(h.released_at).toLocaleString()}</span>
+          — released by <strong>${h.released_by_name}</strong>
+          ${h.reason ? ': ' + escHtml(h.reason) : ''}
+        </li>`;
+      });
+      html += `</ul></div>`;
+    }
+
+    html += `<hr><div class="mb-2 fw-semibold small">Comments</div>`;
+    if (comments.length === 0) html += `<p class="text-muted small">No comments yet.</p>`;
+    comments.forEach(c => {
+      const isClient = ['CLIENT_ADMIN','CLIENT_MANAGER','CLIENT_USER','CLIENT_TOP_MGMT','CLIENT_MGMT','CLIENT_SALES'].includes(c.role_name);
+      html += `<div class="d-flex gap-2 mb-2">
+        <div class="flex-shrink-0 rounded-circle d-flex align-items-center justify-content-center text-white small fw-bold"
+             style="width:32px;height:32px;background:${isClient ? '#0d6efd' : '#198754'}">${c.user_name[0]}</div>
+        <div class="flex-grow-1">
+          <div class="small fw-semibold">${escHtml(c.user_name)} <span class="text-muted fw-normal">${new Date(c.created_at).toLocaleString()}</span></div>
+          <div class="small" style="white-space:pre-wrap">${escHtml(c.body)}</div>
+        </div>
+      </div>`;
+    });
+
+    html += `<div class="mt-2 d-flex gap-2">
+      <textarea class="tf-form-control flex-grow-1" id="queueCommentInput" rows="2" placeholder="Add a comment..."></textarea>
+      <button class="btn btn-sm btn-primary align-self-end" onclick="submitQueueComment(${inst.id})">Send</button>
+    </div>`;
+
+    document.getElementById('queueDetailBody').innerHTML = html;
+  }
+
+  window.submitQueueComment = async function(instanceId) {
+    const input = document.getElementById('queueCommentInput');
+    const body = input.value.trim();
+    if (!body) return;
+    input.disabled = true;
+    try {
+      const r = await fetch('/queue/' + instanceId + '/comments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+        body: JSON.stringify({ body })
+      });
+      const data = await r.json();
+      if (data.success) {
+        input.value = '';
+        // Reload detail
+        const r2 = await fetch('/queue/' + instanceId + '/detail', { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+        const d2 = await r2.json();
+        if (d2.success) renderDetail(d2.data);
+      } else alert(data.message || 'Failed');
+    } catch { } finally { input.disabled = false; }
+  };
+
+  function reloadQueue() {
+    window.location.reload();
+  }
+
+  function escHtml(s) {
+    if (!s) return '';
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // Socket.IO live updates
+  if (typeof io !== 'undefined') {
+    const socket = io();
+    socket.on('queue:updated', function() { reloadQueue(); });
+    socket.on('queue:new_request', function() { reloadQueue(); });
+  }
+})();
+</script>

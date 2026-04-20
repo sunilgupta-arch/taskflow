@@ -173,6 +173,17 @@ router.get('/channel/search', authenticate, GroupChannelController.search);
 router.get('/channel/unfurl', authenticate, GroupChannelController.unfurl);
 router.get('/channel/attachment/:messageId', authenticate, GroupChannelController.serveAttachment);
 
+// ── Client Queue (local team works client-dispatched tasks) ─
+const ClientQueueController = require('../controllers/clientQueueController');
+
+router.get('/queue', authenticate, ClientQueueController.index);
+router.get('/queue/data', authenticate, ClientQueueController.getQueue);
+router.post('/queue/:id/pick', authenticate, ClientQueueController.pick);
+router.post('/queue/:id/release', authenticate, ClientQueueController.release);
+router.post('/queue/:id/complete', authenticate, ClientQueueController.complete);
+router.get('/queue/:id/detail', authenticate, ClientQueueController.getDetail);
+router.post('/queue/:id/comments', authenticate, ClientQueueController.addComment);
+
 // Announcements / Info Board
 router.get('/announcements', authenticate, requireRoles('LOCAL_ADMIN', 'LOCAL_MANAGER', 'LOCAL_USER', 'CLIENT_ADMIN', 'CLIENT_MANAGER'), AnnouncementController.index);
 router.post('/announcements', authenticate, requireRoles('LOCAL_ADMIN', 'CLIENT_ADMIN', 'CLIENT_MANAGER'), AnnouncementController.create);
