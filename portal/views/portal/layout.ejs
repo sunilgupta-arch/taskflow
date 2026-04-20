@@ -140,11 +140,17 @@
         <span class="fw-bold" style="font-size:0.8rem">Group Channel</span>
       </div>
       <div class="d-flex align-items-center gap-1">
+        <button class="btn btn-sm btn-link p-0 text-white" onclick="toggleGcSearch()" title="Search"><i class="bi bi-search" style="font-size:0.7rem"></i></button>
         <a href="/portal/channel" class="btn btn-sm btn-link p-0 text-white" title="Maximize"><i class="bi bi-arrows-fullscreen" style="font-size:0.7rem"></i></a>
         <button class="btn btn-sm btn-link p-0 text-white" onclick="toggleGroupChannel()" title="Collapse"><i class="bi bi-chevron-right" id="gcCollapseIcon"></i></button>
       </div>
     </div>
     <div class="gc-panel-body" id="gcPanelBody">
+      <div class="gc-search-bar" id="gcSearchBar" style="display:none">
+        <input type="text" class="form-control form-control-sm" id="gcSearchInput" placeholder="Search messages...">
+        <i class="bi bi-x-lg gc-search-close" onclick="toggleGcSearch()" title="Close"></i>
+        <div class="gc-search-results" id="gcSearchResults"></div>
+      </div>
       <div class="gc-presence-strip" id="gcPresenceStrip"></div>
       <div class="gc-pinned-bar" id="gcPinnedBar" style="display:none">
         <div class="gc-pinned-bar-header" onclick="toggleGcPinnedList()">
@@ -1420,6 +1426,61 @@
     if (e.key === 'Escape') { e.preventDefault(); _gcHideMention(); return true; }
     return false;
   }
+
+  // ── Search ──────────────────────────────────────
+  var _gcSearchTimer = null;
+  window.toggleGcSearch = function() {
+    var bar = document.getElementById('gcSearchBar');
+    if (!bar) return;
+    var open = bar.style.display !== 'none';
+    bar.style.display = open ? 'none' : '';
+    if (!open) {
+      document.getElementById('gcSearchInput')?.focus();
+    } else {
+      var results = document.getElementById('gcSearchResults');
+      if (results) results.innerHTML = '';
+      var input = document.getElementById('gcSearchInput');
+      if (input) input.value = '';
+    }
+  };
+  function _gcDoSearch(q) {
+    var results = document.getElementById('gcSearchResults');
+    if (!results) return;
+    if (!q || q.length < 2) { results.innerHTML = ''; return; }
+    fetch(_gcBaseUrl + '/search?q=' + encodeURIComponent(q))
+      .then(function(r) { return r.json(); })
+      .then(function(res) {
+        if (!res.success) return;
+        var msgs = res.data.messages || [];
+        if (!msgs.length) { results.innerHTML = '<div class="gc-search-empty">No matches</div>'; return; }
+        var re = new RegExp('(' + q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
+        results.innerHTML = msgs.map(function(m) {
+          var text = escapeHtml((m.content || '').substring(0, 140));
+          text = text.replace(re, '<mark>$1</mark>');
+          return '<div class="gc-search-item" onclick="_gcSearchJump(' + m.id + ')">' +
+            '<div class="gc-search-item-sender">' + escapeHtml(m.sender_name) + '</div>' +
+            '<div class="gc-search-item-content">' + text + '</div>' +
+          '</div>';
+        }).join('');
+      });
+  }
+  window._gcSearchJump = function(msgId) {
+    var bubble = document.querySelector('[data-gc-msg-id="' + msgId + '"]');
+    if (bubble) {
+      gcJumpToMsg(msgId);
+      toggleGcSearch();
+    } else {
+      alert('Message not in view — scroll up to load older messages first.');
+    }
+  };
+  document.getElementById('gcSearchInput')?.addEventListener('input', function() {
+    clearTimeout(_gcSearchTimer);
+    var q = this.value;
+    _gcSearchTimer = setTimeout(function() { _gcDoSearch(q); }, 280);
+  });
+  document.getElementById('gcSearchInput')?.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') { e.preventDefault(); toggleGcSearch(); }
+  });
 
   // ── Pinned messages ─────────────────────────────
   var _gcIsAdmin = (PORTAL_USER.role === 'CLIENT_ADMIN' || PORTAL_USER.role === 'LOCAL_ADMIN');

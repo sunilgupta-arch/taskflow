@@ -164,6 +164,18 @@ class GroupChannelController {
     }
   }
 
+  static async search(req, res) {
+    try {
+      const q = (req.query.q || '').trim();
+      if (!q || q.length < 2) return ApiResponse.success(res, { messages: [] });
+      const messages = await GroupChannel.searchMessages(q, 30);
+      return ApiResponse.success(res, { messages });
+    } catch (err) {
+      console.error('GroupChannel search error:', err);
+      return ApiResponse.error(res, 'Search failed');
+    }
+  }
+
   static async getPinned(req, res) {
     try {
       const messages = await GroupChannel.getPinnedMessages();

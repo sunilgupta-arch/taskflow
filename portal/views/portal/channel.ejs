@@ -5,6 +5,12 @@
       <span class="fw-bold" style="font-size:1rem">Group Channel</span>
     </div>
   </div>
+  <button class="gc-search-toggle" onclick="toggleGcSearch()" title="Search"><i class="bi bi-search"></i></button>
+  <div class="gc-search-bar" id="gcSearchBar" style="display:none">
+    <input type="text" class="form-control form-control-sm" id="gcSearchInput" placeholder="Search messages...">
+    <i class="bi bi-x-lg gc-search-close" onclick="toggleGcSearch()" title="Close"></i>
+    <div class="gc-search-results" id="gcSearchResults"></div>
+  </div>
   <div class="gc-presence-strip" id="gcPresenceStrip"></div>
   <div class="gc-pinned-bar" id="gcPinnedBar" style="display:none">
     <div class="gc-pinned-bar-header" onclick="toggleGcPinnedList()">
@@ -195,6 +201,36 @@
 .gc-pinned-item:hover { background: rgba(234,179,8,0.1); }
 .gc-pinned-item-sender { font-weight: 600; color: var(--tf-accent); font-size: 0.7rem; }
 .gc-pinned-item-content { color: var(--tf-text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gc-search-toggle {
+  position: absolute; top: 12px; right: 24px;
+  width: 36px; height: 36px; border-radius: 50%;
+  background: var(--tf-surface-2); border: 1px solid var(--tf-border);
+  color: var(--tf-text); cursor: pointer; z-index: 15;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s;
+}
+.gc-search-toggle:hover { background: rgba(37,99,235,0.3); }
+.gc-search-bar {
+  padding: 8px 20px; background: var(--tf-surface-2);
+  border-bottom: 1px solid var(--tf-border);
+  position: relative; flex-shrink: 0;
+}
+.gc-search-bar input { font-size: 0.85rem; padding-right: 32px; }
+.gc-search-close {
+  position: absolute; top: 17px; right: 30px;
+  cursor: pointer; color: var(--tf-text-muted); font-size: 0.9rem;
+}
+.gc-search-close:hover { color: #ef4444; }
+.gc-search-results { max-height: 320px; overflow-y: auto; margin-top: 6px; }
+.gc-search-item {
+  padding: 8px 12px; font-size: 0.8rem; cursor: pointer;
+  border-top: 1px solid rgba(255,255,255,0.05);
+}
+.gc-search-item:hover { background: rgba(37,99,235,0.15); }
+.gc-search-item-sender { font-weight: 600; color: var(--tf-accent); font-size: 0.7rem; }
+.gc-search-item-content { color: var(--tf-text); }
+.gc-search-item-content mark { background: rgba(234,179,8,0.35); color: inherit; padding: 0 2px; border-radius: 2px; }
+.gc-search-empty { padding: 12px; font-size: 0.78rem; text-align: center; color: var(--tf-text-muted); }
 .gc-fullpage-messages .gc-msg-edit {
   position: absolute; top: 6px; right: 78px; cursor: pointer;
   opacity: 0; visibility: hidden; color: #fff;
@@ -468,6 +504,61 @@
     if (e.key === 'Escape') { e.preventDefault(); _gcHideMention(); return true; }
     return false;
   }
+
+  // ── Search ──────────────────────────────────────
+  var _gcSearchTimer = null;
+  window.toggleGcSearch = function() {
+    var bar = document.getElementById('gcSearchBar');
+    if (!bar) return;
+    var open = bar.style.display !== 'none';
+    bar.style.display = open ? 'none' : '';
+    if (!open) {
+      document.getElementById('gcSearchInput')?.focus();
+    } else {
+      var results = document.getElementById('gcSearchResults');
+      if (results) results.innerHTML = '';
+      var input = document.getElementById('gcSearchInput');
+      if (input) input.value = '';
+    }
+  };
+  function _gcDoSearch(q) {
+    var results = document.getElementById('gcSearchResults');
+    if (!results) return;
+    if (!q || q.length < 2) { results.innerHTML = ''; return; }
+    fetch(_baseUrl + '/search?q=' + encodeURIComponent(q))
+      .then(function(r) { return r.json(); })
+      .then(function(res) {
+        if (!res.success) return;
+        var msgs = res.data.messages || [];
+        if (!msgs.length) { results.innerHTML = '<div class="gc-search-empty">No matches</div>'; return; }
+        var re = new RegExp('(' + q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
+        results.innerHTML = msgs.map(function(m) {
+          var text = _esc((m.content || '').substring(0, 160));
+          text = text.replace(re, '<mark>$1</mark>');
+          return '<div class="gc-search-item" onclick="_gcSearchJump(' + m.id + ')">' +
+            '<div class="gc-search-item-sender">' + _esc(m.sender_name) + '</div>' +
+            '<div class="gc-search-item-content">' + text + '</div>' +
+          '</div>';
+        }).join('');
+      });
+  }
+  window._gcSearchJump = function(msgId) {
+    var bubble = document.querySelector('[data-gcf-msg-id="' + msgId + '"]');
+    if (bubble) {
+      gcFullJumpToMsg(msgId);
+      toggleGcSearch();
+    } else {
+      alert('Message not in view — scroll up to load older messages first.');
+    }
+  };
+  document.getElementById('gcSearchInput')?.addEventListener('input', function() {
+    clearTimeout(_gcSearchTimer);
+    var q = this.value;
+    _gcSearchTimer = setTimeout(function() { _gcDoSearch(q); }, 280);
+  });
+  document.getElementById('gcSearchInput')?.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') { e.preventDefault(); toggleGcSearch(); }
+  });
 
   // ── Pinned messages ─────────────────────────────
   var _gcIsAdmin = (PORTAL_USER.role === 'CLIENT_ADMIN' || PORTAL_USER.role === 'LOCAL_ADMIN');

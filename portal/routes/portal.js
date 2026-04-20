@@ -675,6 +675,7 @@ router.delete('/channel/messages/:messageId', gcExcludeSales, GroupChannelContro
 router.post('/channel/messages/:messageId/reactions', gcExcludeSales, GroupChannelController.toggleReaction);
 router.post('/channel/messages/:messageId/pin', gcExcludeSales, GroupChannelController.togglePin);
 router.get('/channel/pinned', gcExcludeSales, GroupChannelController.getPinned);
+router.get('/channel/search', gcExcludeSales, GroupChannelController.search);
 router.get('/channel/attachment/:messageId', gcExcludeSales, GroupChannelController.serveAttachment);
 
 // ── Change Password (all portal users) ───────────────────

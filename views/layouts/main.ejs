@@ -1160,6 +1160,28 @@
     .gc-pinned-item:hover { background: rgba(234,179,8,0.1); }
     .gc-pinned-item-sender { font-weight: 600; color: var(--tf-accent); font-size: 0.65rem; }
     .gc-pinned-item-content { color: var(--tf-text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    /* Search */
+    .gc-search-bar {
+      padding: 6px 8px; background: var(--tf-surface-2, #1e293b);
+      border-bottom: 1px solid var(--tf-border, #334155);
+      position: relative; flex-shrink: 0;
+    }
+    .gc-search-bar input { font-size: 0.75rem; padding-right: 28px; }
+    .gc-search-close {
+      position: absolute; top: 13px; right: 16px;
+      cursor: pointer; color: var(--tf-text-muted); font-size: 0.8rem;
+    }
+    .gc-search-close:hover { color: #ef4444; }
+    .gc-search-results { max-height: 240px; overflow-y: auto; margin-top: 4px; }
+    .gc-search-item {
+      padding: 6px 8px; font-size: 0.72rem; cursor: pointer;
+      border-top: 1px solid rgba(255,255,255,0.05);
+    }
+    .gc-search-item:hover { background: rgba(37,99,235,0.15); }
+    .gc-search-item-sender { font-weight: 600; color: var(--tf-accent); font-size: 0.65rem; }
+    .gc-search-item-content { color: var(--tf-text); }
+    .gc-search-item-content mark { background: rgba(234,179,8,0.35); color: inherit; padding: 0 2px; border-radius: 2px; }
+    .gc-search-empty { padding: 10px; font-size: 0.72rem; text-align: center; color: var(--tf-text-muted); }
     .gc-editor textarea {
       font-size: 0.8rem; resize: none; background: rgba(0,0,0,0.25); color: inherit;
       border: 1px solid rgba(255,255,255,0.2);
@@ -1607,11 +1629,17 @@
       <span class="fw-bold" style="font-size:0.8rem">Group Channel</span>
     </div>
     <div class="d-flex align-items-center gap-1">
+      <button class="btn btn-sm btn-link p-0 text-white" onclick="toggleGcSearch()" title="Search"><i class="bi bi-search" style="font-size:0.7rem"></i></button>
       <a href="/channel" class="btn btn-sm btn-link p-0 text-white" title="Maximize"><i class="bi bi-arrows-fullscreen" style="font-size:0.7rem"></i></a>
       <button class="btn btn-sm btn-link p-0 text-white" onclick="toggleGroupChannel()" title="Collapse"><i class="bi bi-chevron-right" id="gcCollapseIcon"></i></button>
     </div>
   </div>
   <div class="gc-panel-body" id="gcPanelBody">
+    <div class="gc-search-bar" id="gcSearchBar" style="display:none">
+      <input type="text" class="form-control form-control-sm" id="gcSearchInput" placeholder="Search messages...">
+      <i class="bi bi-x-lg gc-search-close" onclick="toggleGcSearch()" title="Close"></i>
+      <div class="gc-search-results" id="gcSearchResults"></div>
+    </div>
     <div class="gc-presence-strip" id="gcPresenceStrip"></div>
     <div class="gc-pinned-bar" id="gcPinnedBar" style="display:none">
       <div class="gc-pinned-bar-header" onclick="toggleGcPinnedList()">
@@ -3149,6 +3177,60 @@ if (typeof io !== 'undefined') {
     if (e.key === 'Escape') { e.preventDefault(); _gcHideMention(); return true; }
     return false;
   }
+
+  // ── Search ──────────────────────────────────────
+  var _gcSearchTimer = null;
+  window.toggleGcSearch = function() {
+    var bar = document.getElementById('gcSearchBar');
+    if (!bar) return;
+    var open = bar.style.display !== 'none';
+    bar.style.display = open ? 'none' : '';
+    if (!open) {
+      var input = document.getElementById('gcSearchInput');
+      if (input) input.focus();
+    } else {
+      var results = document.getElementById('gcSearchResults');
+      if (results) results.innerHTML = '';
+      var input = document.getElementById('gcSearchInput');
+      if (input) input.value = '';
+    }
+  };
+  function _gcDoSearch(q) {
+    var results = document.getElementById('gcSearchResults');
+    if (!results) return;
+    if (!q || q.length < 2) { results.innerHTML = ''; return; }
+    $.get(_gcBaseUrl + '/search?q=' + encodeURIComponent(q), function(res) {
+      if (!res.success) return;
+      var msgs = res.data.messages || [];
+      if (!msgs.length) { results.innerHTML = '<div class="gc-search-empty">No matches</div>'; return; }
+      var re = new RegExp('(' + q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
+      results.innerHTML = msgs.map(function(m) {
+        var text = _escHtmlGc((m.content || '').substring(0, 140));
+        text = text.replace(re, '<mark>$1</mark>');
+        return '<div class="gc-search-item" onclick="_gcSearchJump(' + m.id + ')">' +
+          '<div class="gc-search-item-sender">' + _escHtmlGc(m.sender_name) + '</div>' +
+          '<div class="gc-search-item-content">' + text + '</div>' +
+        '</div>';
+      }).join('');
+    });
+  }
+  window._gcSearchJump = function(msgId) {
+    var bubble = document.querySelector('[data-gc-msg-id="' + msgId + '"]');
+    if (bubble) {
+      gcJumpToMsg(msgId);
+      toggleGcSearch();
+    } else {
+      alert('Message not in view — scroll up to load older messages first.');
+    }
+  };
+  document.getElementById('gcSearchInput')?.addEventListener('input', function() {
+    clearTimeout(_gcSearchTimer);
+    var q = this.value;
+    _gcSearchTimer = setTimeout(function() { _gcDoSearch(q); }, 280);
+  });
+  document.getElementById('gcSearchInput')?.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') { e.preventDefault(); toggleGcSearch(); }
+  });
 
   // ── Pinned messages ─────────────────────────────
   function _gcPinBtnHtml(m) {

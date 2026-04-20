@@ -103,6 +103,21 @@ class GroupChannel {
     return { message: updated[0], pinned: !!newPinned };
   }
 
+  static async searchMessages(query, limit = 30) {
+    if (!query || !query.trim()) return [];
+    const q = '%' + query.trim() + '%';
+    const [messages] = await db.query(
+      `SELECT m.id, m.sender_id, m.content, m.type, m.created_at, u.name AS sender_name
+       FROM group_channel_messages m
+       JOIN users u ON u.id = m.sender_id
+       WHERE m.is_deleted = 0 AND m.type = 'text' AND m.content LIKE ?
+       ORDER BY m.id DESC
+       LIMIT ?`,
+      [q, limit]
+    );
+    return messages;
+  }
+
   static async getPinnedMessages() {
     const [messages] = await db.query(
       `SELECT m.id, m.sender_id, m.content, m.type, m.is_deleted, m.created_at, m.pinned_at,
