@@ -34,6 +34,17 @@ const authenticate = async (req, res, next) => {
     req.user = users[0];
     res.locals.user = users[0];
 
+    // Block CLIENT users from accessing local-side routes
+    if (users[0].role_name.startsWith('CLIENT_')) {
+      const url = req.originalUrl;
+      if (!url.startsWith('/portal') && !url.startsWith('/auth') && !url.startsWith('/uploads')) {
+        if (req.xhr || req.headers['x-requested-with']) {
+          return res.status(403).json({ success: false, message: 'Access denied' });
+        }
+        return res.redirect('/portal');
+      }
+    }
+
     // Fetch the "other" org timezone (CLIENT for LOCAL users, LOCAL for CLIENT users)
     const otherOrgType = users[0].org_type === 'LOCAL' ? 'CLIENT' : 'LOCAL';
     const [otherOrgs] = await db.query(
