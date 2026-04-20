@@ -114,6 +114,40 @@
 .gc-mention-item .gc-mention-role { font-size: 0.65rem; color: var(--tf-text-muted); }
 @keyframes gcMentionPulse { 0%,100% { box-shadow: none; } 50% { box-shadow: 0 0 0 3px rgba(239,68,68,0.5); } }
 .gc-msg-mention-me { animation: gcMentionPulse 1.6s ease 2; }
+.gc-fullpage-messages .gc-msg-react {
+  position: absolute; top: 6px; right: 6px; cursor: pointer;
+  opacity: 0; visibility: hidden; color: #fff;
+  background: rgba(0,0,0,0.6); width: 30px; height: 30px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 6px; transition: opacity 0.15s, background 0.15s;
+  font-size: 0.95rem; line-height: 1; z-index: 2;
+}
+.gc-fullpage-messages .msg-bubble:hover .gc-msg-react,
+.gc-fullpage-messages .gc-msg-react:hover { opacity: 1; visibility: visible; }
+.gc-fullpage-messages .gc-msg-react:hover { background: rgba(250,204,21,0.9); color: #000; }
+.gc-fullpage-messages .msg-bubble.sent .gc-msg-delete { right: 78px; }
+.gc-emoji-picker {
+  position: absolute; background: var(--tf-surface-2, #1e293b);
+  border: 1px solid var(--tf-border, #334155); border-radius: 8px;
+  padding: 4px; box-shadow: 0 4px 14px rgba(0,0,0,0.4);
+  display: flex; gap: 2px; z-index: 30;
+}
+.gc-emoji-pick {
+  cursor: pointer; padding: 4px 6px; border-radius: 4px;
+  font-size: 1.2rem; line-height: 1; transition: background 0.1s;
+}
+.gc-emoji-pick:hover { background: rgba(37,99,235,0.3); }
+.gc-reactions { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+.gc-reaction-chip {
+  background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 12px; padding: 2px 8px; font-size: 0.75rem;
+  cursor: pointer; display: flex; align-items: center; gap: 4px;
+  line-height: 1.3; transition: background 0.15s;
+}
+.gc-reaction-chip:hover { background: rgba(255,255,255,0.15); }
+.gc-reaction-chip.mine { background: rgba(37,99,235,0.3); border-color: rgba(37,99,235,0.6); }
+.gc-fullpage-messages .msg-bubble.sent .gc-reaction-chip { background: rgba(0,0,0,0.25); border-color: rgba(255,255,255,0.25); }
+.gc-fullpage-messages .msg-bubble.sent .gc-reaction-chip.mine { background: rgba(255,255,255,0.35); border-color: rgba(255,255,255,0.6); }
 
 .gc-fullpage-header { display: none; }
 
@@ -372,6 +406,54 @@
     return false;
   }
 
+  // ── Reactions ───────────────────────────────────
+  var GC_EMOJI_LIST = ['👍','❤️','😂','😮','😢','🎉','🔥','👀'];
+  function _gcRenderReactions(m) {
+    if (!m.reactions || !m.reactions.length) return '';
+    var html = m.reactions.map(function(r) {
+      var mine = r.users && r.users.some(function(u) { return u.id === _userId; });
+      var tooltip = (r.users || []).map(function(u) { return u.name; }).join(', ');
+      return '<span class="gc-reaction-chip' + (mine ? ' mine' : '') + '" title="' + _esc(tooltip) + '" onclick="event.stopPropagation(); _gcToggleReaction(' + m.id + ',\'' + r.emoji.replace(/'/g, "\\'") + '\',' + (mine ? 'true' : 'false') + ')">' + r.emoji + ' <span>' + r.count + '</span></span>';
+    }).join('');
+    return '<div class="gc-reactions">' + html + '</div>';
+  }
+  window._gcToggleReaction = function(msgId, emoji, mine) {
+    $.ajax({
+      url: _baseUrl + '/messages/' + msgId + '/reactions',
+      method: 'POST', contentType: 'application/json',
+      data: JSON.stringify({ emoji: emoji, action: mine ? 'remove' : 'add' })
+    });
+  };
+  window.showGcEmojiPicker = function(evt, msgId) {
+    var existing = document.getElementById('gcEmojiPicker');
+    if (existing) existing.remove();
+    var picker = document.createElement('div');
+    picker.id = 'gcEmojiPicker';
+    picker.className = 'gc-emoji-picker';
+    picker.innerHTML = GC_EMOJI_LIST.map(function(e) {
+      return '<span class="gc-emoji-pick" onclick="_gcPickEmoji(' + msgId + ',\'' + e.replace(/'/g, "\\'") + '\')">' + e + '</span>';
+    }).join('');
+    document.body.appendChild(picker);
+    var rect = evt.currentTarget.getBoundingClientRect();
+    var pickerWidth = 310;
+    picker.style.top = (rect.top - 48) + 'px';
+    picker.style.left = Math.max(10, Math.min(window.innerWidth - pickerWidth - 10, rect.right - pickerWidth)) + 'px';
+    setTimeout(function() {
+      document.addEventListener('click', function close(e) {
+        if (!picker.contains(e.target)) { picker.remove(); document.removeEventListener('click', close); }
+      });
+    }, 10);
+  };
+  window._gcPickEmoji = function(msgId, emoji) {
+    _gcToggleReaction(msgId, emoji, false);
+    var p = document.getElementById('gcEmojiPicker');
+    if (p) p.remove();
+  };
+  function _gcReactBtnHtml(m) {
+    if (m.is_deleted) return '';
+    return '<span class="gc-msg-react" onclick="event.stopPropagation(); showGcEmojiPicker(event,' + m.id + ')" title="Add reaction"><i class="bi bi-emoji-smile"></i></span>';
+  }
+
   // ── Reply-to-message ─────────────────────────────
   var _gcReplyingTo = null;
   window.replyToGcFullMsg = function(msgId) {
@@ -411,8 +493,7 @@
   }
   function _gcReplyBtnHtml(m, isSent) {
     if (m.is_deleted) return '';
-    var right = isSent ? 42 : 6;
-    return '<span class="gc-msg-reply" style="right:' + right + 'px" onclick="event.stopPropagation(); replyToGcFullMsg(' + m.id + ')" title="Reply"><i class="bi bi-reply-fill"></i></span>';
+    return '<span class="gc-msg-reply" style="right:42px" onclick="event.stopPropagation(); replyToGcFullMsg(' + m.id + ')" title="Reply"><i class="bi bi-reply-fill"></i></span>';
   }
 
   // ── Browser notifications ────────────────────────
@@ -540,9 +621,11 @@
       else { content = gcRenderWithMentions(m.content); }
       var deleteBtn = isSent && !m.is_deleted ? '<span class="gc-msg-delete" onclick="event.stopPropagation(); deleteGcFullMsg(' + m.id + ')" title="Delete"><i class="bi bi-trash"></i></span>' : '';
       var replyBtn = _gcReplyBtnHtml(m, isSent);
+      var reactBtn = _gcReactBtnHtml(m);
       var replyQuote = _gcReplyQuoteHtml(m);
+      var reactions = _gcRenderReactions(m);
       var senderName = !isSent ? '<div class="gc-msg-sender">' + _esc(m.sender_name) + '</div>' : '';
-      return dateDivider + unreadDivider + '<div class="msg-bubble ' + cls + (m.is_deleted ? ' deleted' : '') + '" data-gcf-msg-id="' + m.id + '">' + deleteBtn + replyBtn + senderName + replyQuote + '<div class="msg-content">' + content + '</div><div class="msg-footer"><span class="msg-time">' + time + '</span></div></div>';
+      return dateDivider + unreadDivider + '<div class="msg-bubble ' + cls + (m.is_deleted ? ' deleted' : '') + '" data-gcf-msg-id="' + m.id + '">' + deleteBtn + replyBtn + reactBtn + senderName + replyQuote + '<div class="msg-content">' + content + '</div>' + reactions + '<div class="msg-footer"><span class="msg-time">' + time + '</span></div></div>';
     }).join('');
     if (prepend) { container.insertAdjacentHTML('afterbegin', html); }
     else {
@@ -690,12 +773,13 @@
       else { content = gcRenderWithMentions(msg.content); }
       var deleteBtn = isSent ? '<span class="gc-msg-delete" onclick="event.stopPropagation(); deleteGcFullMsg(' + msg.id + ')" title="Delete"><i class="bi bi-trash"></i></span>' : '';
       var replyBtn = _gcReplyBtnHtml(msg, isSent);
+      var reactBtn = _gcReactBtnHtml(msg);
       var replyQuote = _gcReplyQuoteHtml(msg);
       var senderName = !isSent ? '<div class="gc-msg-sender">' + _esc(msg.sender_name) + '</div>' : '';
       if (isFromOther && !wasAtBottom && !container.querySelector('[data-gc-unread-divider]')) {
         container.insertAdjacentHTML('beforeend', _gcUnreadDividerHtml());
       }
-      container.insertAdjacentHTML('beforeend', '<div class="msg-bubble ' + cls + '" data-gcf-msg-id="' + msg.id + '">' + deleteBtn + replyBtn + senderName + replyQuote + '<div class="msg-content">' + content + '</div><div class="msg-footer"><span class="msg-time">' + time + '</span></div></div>');
+      container.insertAdjacentHTML('beforeend', '<div class="msg-bubble ' + cls + '" data-gcf-msg-id="' + msg.id + '">' + deleteBtn + replyBtn + reactBtn + senderName + replyQuote + '<div class="msg-content">' + content + '</div><div class="msg-footer"><span class="msg-time">' + time + '</span></div></div>');
       if (isFromOther && _gcMentionsMe(msg.content)) {
         var bubble = container.querySelector('[data-gcf-msg-id="' + msg.id + '"]');
         if (bubble) bubble.classList.add('gc-msg-mention-me');
@@ -707,6 +791,19 @@
         _gcBumpScrollBadge();
       }
       _gcUpdateScrollBtn();
+    });
+
+    sock.on('channel:reaction', function(data) {
+      var bubble = document.querySelector('[data-gcf-msg-id="' + data.message_id + '"]');
+      if (!bubble) return;
+      var block = bubble.querySelector('.gc-reactions');
+      if (block) block.remove();
+      var fakeMsg = { id: data.message_id, reactions: data.reactions || [] };
+      var newHtml = _gcRenderReactions(fakeMsg);
+      if (newHtml) {
+        var content = bubble.querySelector('.msg-content');
+        if (content) content.insertAdjacentHTML('afterend', newHtml);
+      }
     });
 
     sock.on('channel:message:delete', function(data) {

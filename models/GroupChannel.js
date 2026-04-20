@@ -37,7 +37,61 @@ class GroupChannel {
       });
     }
 
+    // Load reactions
+    if (messages.length) {
+      const [reactions] = await db.query(
+        `SELECT r.message_id, r.emoji, r.user_id, u.name
+         FROM group_channel_reactions r
+         JOIN users u ON u.id = r.user_id
+         WHERE r.message_id IN (?)`,
+        [messages.map(m => m.id)]
+      );
+      const byMsg = {};
+      reactions.forEach(r => {
+        if (!byMsg[r.message_id]) byMsg[r.message_id] = {};
+        if (!byMsg[r.message_id][r.emoji]) byMsg[r.message_id][r.emoji] = { emoji: r.emoji, count: 0, users: [] };
+        byMsg[r.message_id][r.emoji].count++;
+        byMsg[r.message_id][r.emoji].users.push({ id: r.user_id, name: r.name });
+      });
+      messages.forEach(m => {
+        m.reactions = byMsg[m.id] ? Object.values(byMsg[m.id]) : [];
+      });
+    }
+
     return messages.reverse();
+  }
+
+  static async addReaction(messageId, userId, emoji) {
+    await db.query(
+      'INSERT IGNORE INTO group_channel_reactions (message_id, user_id, emoji) VALUES (?, ?, ?)',
+      [messageId, userId, emoji]
+    );
+    return this.getReactionSummary(messageId);
+  }
+
+  static async removeReaction(messageId, userId, emoji) {
+    await db.query(
+      'DELETE FROM group_channel_reactions WHERE message_id = ? AND user_id = ? AND emoji = ?',
+      [messageId, userId, emoji]
+    );
+    return this.getReactionSummary(messageId);
+  }
+
+  static async getReactionSummary(messageId) {
+    const [rows] = await db.query(
+      `SELECT r.emoji, r.user_id, u.name
+       FROM group_channel_reactions r
+       JOIN users u ON u.id = r.user_id
+       WHERE r.message_id = ?`,
+      [messageId]
+    );
+    const byEmoji = {};
+    rows.forEach(r => {
+      if (!byEmoji[r.emoji]) byEmoji[r.emoji] = { emoji: r.emoji, count: 0, users: [] };
+      byEmoji[r.emoji].count++;
+      byEmoji[r.emoji].users.push({ id: r.user_id, name: r.name });
+    });
+    return Object.values(byEmoji);
   }
 
   static async sendMessage({ sender_id, content, type = 'text', reply_to_id = null }) {

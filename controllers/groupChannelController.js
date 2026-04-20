@@ -130,6 +130,28 @@ class GroupChannelController {
     }
   }
 
+  static async toggleReaction(req, res) {
+    try {
+      const messageId = parseInt(req.params.messageId);
+      const { emoji, action } = req.body; // action: 'add' | 'remove'
+      if (!emoji || !/^[\p{Emoji}\p{Emoji_Component}]{1,8}$/u.test(emoji)) {
+        return ApiResponse.error(res, 'Invalid emoji', 400);
+      }
+      let reactions;
+      if (action === 'remove') {
+        reactions = await GroupChannel.removeReaction(messageId, req.user.id, emoji);
+      } else {
+        reactions = await GroupChannel.addReaction(messageId, req.user.id, emoji);
+      }
+      const { getIO } = require('../config/socket');
+      try { getIO().emit('channel:reaction', { message_id: messageId, reactions }); } catch (_) {}
+      return ApiResponse.success(res, { reactions });
+    } catch (err) {
+      console.error('GroupChannel toggleReaction error:', err);
+      return ApiResponse.error(res, 'Failed to update reaction');
+    }
+  }
+
   // Get all users who can access the channel, with online status
   static async getUsers(req, res) {
     try {

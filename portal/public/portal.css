@@ -4759,6 +4759,56 @@ html.sidebar-expanded .portal-main {
 .gc-mention-item .gc-mention-role { font-size: 0.6rem; color: var(--tf-text-muted); }
 @keyframes gcMentionPulse { 0%,100% { box-shadow: none; } 50% { box-shadow: 0 0 0 3px rgba(239,68,68,0.5); } }
 .gc-msg-mention-me { animation: gcMentionPulse 1.6s ease 2; }
+/* React button */
+.gc-msg-react {
+  position: absolute; top: 4px; right: 4px; cursor: pointer;
+  opacity: 0; visibility: hidden; color: #fff;
+  background: rgba(0,0,0,0.6); width: 26px; height: 26px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 4px; font-size: 0.9rem; line-height: 1; z-index: 2;
+  transition: opacity 0.15s, visibility 0.15s, background 0.15s;
+}
+.gc-messages .msg-bubble:hover .gc-msg-react,
+.gc-msg-react:hover { opacity: 1; visibility: visible; }
+.gc-msg-react:hover { background: rgba(250,204,21,0.9); color: #000; }
+.gc-messages .msg-bubble.sent .gc-msg-delete { right: 68px; }
+/* Full-page react */
+.gc-fullpage-messages .gc-msg-react {
+  position: absolute; top: 6px; right: 6px; cursor: pointer;
+  opacity: 0; visibility: hidden; color: #fff;
+  background: rgba(0,0,0,0.6); width: 30px; height: 30px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 6px; transition: opacity 0.15s, background 0.15s;
+  font-size: 0.95rem; line-height: 1; z-index: 2;
+}
+.gc-fullpage-messages .msg-bubble:hover .gc-msg-react,
+.gc-fullpage-messages .gc-msg-react:hover { opacity: 1; visibility: visible; }
+.gc-fullpage-messages .gc-msg-react:hover { background: rgba(250,204,21,0.9); color: #000; }
+.gc-fullpage-messages .msg-bubble.sent .gc-msg-delete { right: 78px; }
+/* Emoji picker */
+.gc-emoji-picker {
+  position: absolute; background: var(--tf-surface-2, #1e293b);
+  border: 1px solid var(--tf-border, #334155); border-radius: 8px;
+  padding: 4px; box-shadow: 0 4px 14px rgba(0,0,0,0.4);
+  display: flex; gap: 2px; z-index: 30;
+}
+.gc-emoji-pick {
+  cursor: pointer; padding: 4px 6px; border-radius: 4px;
+  font-size: 1.1rem; line-height: 1; transition: background 0.1s;
+}
+.gc-emoji-pick:hover { background: rgba(37,99,235,0.3); }
+/* Reactions row */
+.gc-reactions { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 4px; }
+.gc-reaction-chip {
+  background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 10px; padding: 1px 6px; font-size: 0.7rem;
+  cursor: pointer; display: flex; align-items: center; gap: 3px;
+  line-height: 1.3; transition: background 0.15s;
+}
+.gc-reaction-chip:hover { background: rgba(255,255,255,0.15); }
+.gc-reaction-chip.mine { background: rgba(37,99,235,0.3); border-color: rgba(37,99,235,0.6); }
+.msg-bubble.sent .gc-reaction-chip { background: rgba(0,0,0,0.25); border-color: rgba(255,255,255,0.25); }
+.msg-bubble.sent .gc-reaction-chip.mine { background: rgba(255,255,255,0.35); border-color: rgba(255,255,255,0.6); }
 
 .gc-messages {
   flex: 1;
