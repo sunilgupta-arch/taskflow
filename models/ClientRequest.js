@@ -362,15 +362,20 @@ class ClientRequest {
     if (requestId) { conditions.push('cra.request_id = ?'); params.push(requestId); }
     if (instanceId) { conditions.push('cra.instance_id = ?'); params.push(instanceId); }
     if (!conditions.length) return [];
-    const [rows] = await db.query(
-      `SELECT cra.*, u.name as uploaded_by_name
-       FROM client_request_attachments cra
-       JOIN users u ON cra.uploaded_by = u.id
-       WHERE ${conditions.join(' OR ')}
-       ORDER BY cra.created_at ASC`,
-      params
-    );
-    return rows;
+    try {
+      const [rows] = await db.query(
+        `SELECT cra.*, u.name as uploaded_by_name
+         FROM client_request_attachments cra
+         JOIN users u ON cra.uploaded_by = u.id
+         WHERE ${conditions.join(' OR ')}
+         ORDER BY cra.created_at ASC`,
+        params
+      );
+      return rows;
+    } catch (err) {
+      if (err.code === 'ER_NO_SUCH_TABLE') return [];
+      throw err;
+    }
   }
 
   // Get local users for assigning (LOCAL roles)
