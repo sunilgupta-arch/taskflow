@@ -9,6 +9,7 @@
   <div class="gc-fullpage-messages" id="gcFullMessages">
     <div class="text-center text-muted py-4 small">Loading...</div>
   </div>
+  <button class="gc-scroll-btn" id="gcScrollBtn" onclick="gcScrollToBottom()" style="display:none" title="Jump to latest"><i class="bi bi-chevron-double-down"></i><span class="gc-scroll-btn-badge" id="gcScrollBtnBadge" style="display:none">0</span></button>
   <div class="gc-typing-bar" id="gcFullTypingBar" style="display:none"></div>
   <div class="gc-fullpage-input">
     <input type="file" id="gcFullFileInput" style="display:none" onchange="sendGcFullFile()">
@@ -28,6 +29,38 @@
   flex-direction: column;
   height: 100vh;
   overflow: hidden;
+  position: relative;
+}
+
+.gc-scroll-btn {
+  position: absolute; right: 28px; bottom: 110px;
+  width: 42px; height: 42px; border-radius: 50%;
+  background: #2563eb; color: #fff; border: 0;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.4); cursor: pointer; z-index: 10;
+  transition: transform 0.15s; font-size: 1rem;
+}
+.gc-scroll-btn:hover { transform: translateY(-2px); background: #1d4ed8; }
+.gc-scroll-btn-badge {
+  position: absolute; top: -6px; right: -6px;
+  background: #ef4444; color: #fff; font-size: 0.65rem; font-weight: 700;
+  min-width: 20px; height: 20px; border-radius: 10px; padding: 0 5px;
+  display: flex; align-items: center; justify-content: center; line-height: 1;
+  border: 2px solid var(--tf-bg, #0f172a);
+}
+
+.gc-unread-divider { text-align: center; padding: 10px 0; position: relative; }
+.gc-unread-divider::before, .gc-unread-divider::after {
+  content: ''; position: absolute; top: 50%; width: 38%; height: 1px;
+  background: rgba(239,68,68,0.4);
+}
+.gc-unread-divider::before { left: 4%; }
+.gc-unread-divider::after { right: 4%; }
+.gc-unread-divider span {
+  font-size: 0.7rem; color: #ef4444; background: rgba(239,68,68,0.12);
+  padding: 4px 14px; border-radius: 12px; border: 1px solid rgba(239,68,68,0.35);
+  text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;
+  position: relative; display: inline-block;
 }
 
 .gc-fullpage-header {
@@ -142,12 +175,100 @@
   var _userId = PORTAL_USER.id;
   var _baseUrl = '/portal/channel';
 
+  // ── Unread tracking + scroll-to-bottom ──────────
+  var _gcLastReadKey = 'gc-last-read-' + _userId;
+  function _gcGetLastRead() { return parseInt(localStorage.getItem(_gcLastReadKey) || '0', 10); }
+  function _gcSetLastRead(id) { var c = _gcGetLastRead(); if (id > c) localStorage.setItem(_gcLastReadKey, String(id)); }
+  function _gcIsAtBottom(c, t) { t = t || 60; return c.scrollHeight - (c.scrollTop + c.clientHeight) < t; }
+  window.gcScrollToBottom = function() {
+    var c = document.getElementById('gcFullMessages');
+    if (!c) return; c.scrollTop = c.scrollHeight; _gcUpdateScrollBtn();
+  };
+  function _gcUpdateScrollBtn() {
+    var c = document.getElementById('gcFullMessages');
+    var btn = document.getElementById('gcScrollBtn');
+    var badge = document.getElementById('gcScrollBtnBadge');
+    if (!c || !btn) return;
+    if (_gcIsAtBottom(c)) {
+      btn.style.display = 'none';
+      if (badge) { badge.style.display = 'none'; badge.textContent = '0'; }
+      var bubbles = c.querySelectorAll('[data-gcf-msg-id]');
+      if (bubbles.length) {
+        var lastId = parseInt(bubbles[bubbles.length - 1].getAttribute('data-gcf-msg-id'), 10);
+        if (lastId) _gcSetLastRead(lastId);
+      }
+    } else {
+      btn.style.display = '';
+    }
+  }
+  function _gcBumpScrollBadge() {
+    var badge = document.getElementById('gcScrollBtnBadge');
+    if (!badge) return;
+    var n = parseInt(badge.textContent || '0', 10) + 1;
+    badge.textContent = n > 99 ? '99+' : n;
+    badge.style.display = '';
+  }
+  function _gcUnreadDividerHtml() {
+    return '<div class="gc-unread-divider" data-gc-unread-divider><span><i class="bi bi-arrow-down-circle me-1"></i>New messages</span></div>';
+  }
+  // ── Browser notifications ────────────────────────
+  var _gcNotifAsked = false;
+  function _gcRequestNotifPerm() {
+    if (_gcNotifAsked) return;
+    if (!('Notification' in window)) return;
+    if (Notification.permission === 'default') { try { Notification.requestPermission(); } catch (e) {} }
+    _gcNotifAsked = true;
+  }
+  function _gcShowNotif(msg) {
+    if (!('Notification' in window)) return;
+    if (Notification.permission !== 'granted') return;
+    if (msg.sender_id === _userId) return;
+    if (!document.hidden) return;
+    var body = (msg.type === 'file' && msg.attachment) ? ('📎 ' + (msg.attachment.file_name || 'Sent a file')) : (msg.content || '');
+    try {
+      var n = new Notification('Group Channel — ' + msg.sender_name, { body: body, tag: 'gc-channel', renotify: true });
+      n.onclick = function() { window.focus(); n.close(); };
+      setTimeout(function() { try { n.close(); } catch (e) {} }, 8000);
+    } catch (e) {}
+  }
+  document.addEventListener('click', function _gcAsk() { _gcRequestNotifPerm(); document.removeEventListener('click', _gcAsk); });
+
+  var _gcLoadingMore = false;
+  var _gcHasMore = true;
   function loadMessages(beforeId) {
     var url = _baseUrl + '/messages' + (beforeId ? '?before=' + beforeId : '');
     fetch(url).then(function(r) { return r.json(); }).then(function(res) {
       if (!res.success) return;
+      if (!beforeId) { _gcHasMore = true; }
       renderMessages(res.data.messages, !!beforeId);
     });
+  }
+  function _gcLoadMore() {
+    if (_gcLoadingMore || !_gcHasMore) return;
+    var container = document.getElementById('gcFullMessages');
+    if (!container) return;
+    var first = container.querySelector('[data-gcf-msg-id]');
+    if (!first) return;
+    var oldestId = parseInt(first.getAttribute('data-gcf-msg-id'), 10);
+    if (!oldestId) return;
+    _gcLoadingMore = true;
+    var prevHeight = container.scrollHeight;
+    var loader = document.createElement('div');
+    loader.className = 'text-center text-muted py-2 small gc-loading-more';
+    loader.innerHTML = '<span class="gc-upload-spinner"></span> Loading older messages...';
+    container.insertAdjacentElement('afterbegin', loader);
+    fetch(_baseUrl + '/messages?before=' + oldestId)
+      .then(function(r) { return r.json(); })
+      .then(function(res) {
+        loader.remove();
+        if (!res.success) { _gcLoadingMore = false; return; }
+        var msgs = res.data.messages || [];
+        if (!msgs.length) { _gcHasMore = false; _gcLoadingMore = false; return; }
+        renderMessages(msgs, true);
+        container.scrollTop = container.scrollHeight - prevHeight;
+        _gcLoadingMore = false;
+      })
+      .catch(function() { loader.remove(); _gcLoadingMore = false; });
   }
 
   var IMAGE_EXTS = ['jpg','jpeg','png','gif','webp','bmp','svg'];
@@ -194,11 +315,18 @@
       return;
     }
     var lastDate = '';
+    var lastReadId = _gcGetLastRead();
+    var unreadInserted = false;
     var html = messages.map(function(m) {
       var msgDate = dateLabel(m.created_at);
       var dateDivider = '';
       if (msgDate !== lastDate) { dateDivider = '<div class="msg-date-divider"><span>' + msgDate + '</span></div>'; lastDate = msgDate; }
       var isSent = m.sender_id === _userId;
+      var unreadDivider = '';
+      if (!unreadInserted && !isSent && m.id > lastReadId && lastReadId > 0) {
+        unreadDivider = _gcUnreadDividerHtml();
+        unreadInserted = true;
+      }
       var cls = isSent ? 'sent' : 'received';
       var time = new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       var content = '';
@@ -207,10 +335,16 @@
       else { var div = document.createElement('div'); div.textContent = m.content; content = div.innerHTML; }
       var deleteBtn = isSent && !m.is_deleted ? '<span class="gc-msg-delete" onclick="event.stopPropagation(); deleteGcFullMsg(' + m.id + ')" title="Delete"><i class="bi bi-trash"></i></span>' : '';
       var senderName = !isSent ? '<div class="gc-msg-sender">' + escapeHtml(m.sender_name) + '</div>' : '';
-      return dateDivider + '<div class="msg-bubble ' + cls + (m.is_deleted ? ' deleted' : '') + '" data-gcf-msg-id="' + m.id + '">' + deleteBtn + senderName + '<div class="msg-content">' + content + '</div><div class="msg-footer"><span class="msg-time">' + time + '</span></div></div>';
+      return dateDivider + unreadDivider + '<div class="msg-bubble ' + cls + (m.is_deleted ? ' deleted' : '') + '" data-gcf-msg-id="' + m.id + '">' + deleteBtn + senderName + '<div class="msg-content">' + content + '</div><div class="msg-footer"><span class="msg-time">' + time + '</span></div></div>';
     }).join('');
     if (prepend) { container.insertAdjacentHTML('afterbegin', html); }
-    else { container.innerHTML = html; container.scrollTop = container.scrollHeight; }
+    else {
+      container.innerHTML = html;
+      var div = container.querySelector('[data-gc-unread-divider]');
+      if (div) { div.scrollIntoView({ block: 'center' }); }
+      else { container.scrollTop = container.scrollHeight; }
+      _gcUpdateScrollBtn();
+    }
   }
 
   window.sendGcFullMessage = function() {
@@ -327,10 +461,13 @@
 
   // Socket events
   mainSocket.on('channel:message', function(msg) {
-    if (msg.sender_id !== _userId) playGcAlert();
+    var isFromOther = msg.sender_id !== _userId;
+    if (isFromOther) playGcAlert();
+    _gcShowNotif(msg);
     var container = document.getElementById('gcFullMessages');
     if (container.querySelector('.text-center')) container.innerHTML = '';
-    var isSent = msg.sender_id === _userId;
+    var wasAtBottom = _gcIsAtBottom(container);
+    var isSent = !isFromOther;
     var cls = isSent ? 'sent' : 'received';
     var time = new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     var content = '';
@@ -338,8 +475,17 @@
     else { var div = document.createElement('div'); div.textContent = msg.content; content = div.innerHTML; }
     var deleteBtn = isSent ? '<span class="gc-msg-delete" onclick="event.stopPropagation(); deleteGcFullMsg(' + msg.id + ')" title="Delete"><i class="bi bi-trash"></i></span>' : '';
     var senderName = !isSent ? '<div class="gc-msg-sender">' + escapeHtml(msg.sender_name) + '</div>' : '';
+    if (isFromOther && !wasAtBottom && !container.querySelector('[data-gc-unread-divider]')) {
+      container.insertAdjacentHTML('beforeend', _gcUnreadDividerHtml());
+    }
     container.insertAdjacentHTML('beforeend', '<div class="msg-bubble ' + cls + '" data-gcf-msg-id="' + msg.id + '">' + deleteBtn + senderName + '<div class="msg-content">' + content + '</div><div class="msg-footer"><span class="msg-time">' + time + '</span></div></div>');
-    container.scrollTop = container.scrollHeight;
+    if (wasAtBottom && !document.hidden) {
+      container.scrollTop = container.scrollHeight;
+      _gcSetLastRead(msg.id);
+    } else if (isFromOther) {
+      _gcBumpScrollBadge();
+    }
+    _gcUpdateScrollBtn();
   });
 
   mainSocket.on('channel:message:delete', function(data) {
@@ -403,6 +549,12 @@
     _allUsers.forEach(function(u) { if (u.id === data.user_id) u.online = data.online; });
     renderGcPresence();
   });
+
+  document.getElementById('gcFullMessages')?.addEventListener('scroll', function() {
+    _gcUpdateScrollBtn();
+    if (this.scrollTop < 80) _gcLoadMore();
+  });
+  document.addEventListener('visibilitychange', function() { if (!document.hidden) _gcUpdateScrollBtn(); });
 
   loadMessages();
   loadGcUsers();

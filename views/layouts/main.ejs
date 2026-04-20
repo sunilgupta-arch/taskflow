@@ -988,7 +988,38 @@
       border-bottom: 1px solid var(--tf-border, #1e293b);
       color: var(--tf-text); min-height: 44px;
     }
-    .gc-panel-body { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
+    .gc-panel-body { display: flex; flex-direction: column; flex: 1; overflow: hidden; position: relative; }
+    .gc-scroll-btn {
+      position: absolute; right: 14px; bottom: 96px;
+      width: 36px; height: 36px; border-radius: 50%;
+      background: #2563eb; color: #fff; border: 0;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4); cursor: pointer; z-index: 10;
+      transition: transform 0.15s, opacity 0.15s; font-size: 0.85rem;
+    }
+    .gc-scroll-btn:hover { transform: translateY(-2px); background: #1d4ed8; }
+    .gc-scroll-btn-badge {
+      position: absolute; top: -5px; right: -5px;
+      background: #ef4444; color: #fff; font-size: 0.6rem; font-weight: 700;
+      min-width: 18px; height: 18px; border-radius: 9px; padding: 0 4px;
+      display: flex; align-items: center; justify-content: center; line-height: 1;
+      border: 2px solid var(--tf-bg, #0f172a);
+    }
+    .gc-unread-divider {
+      text-align: center; padding: 8px 0; position: relative;
+    }
+    .gc-unread-divider::before, .gc-unread-divider::after {
+      content: ''; position: absolute; top: 50%; width: 35%; height: 1px;
+      background: rgba(239,68,68,0.4);
+    }
+    .gc-unread-divider::before { left: 4%; }
+    .gc-unread-divider::after { right: 4%; }
+    .gc-unread-divider span {
+      font-size: 0.62rem; color: #ef4444; background: rgba(239,68,68,0.12);
+      padding: 3px 12px; border-radius: 10px; border: 1px solid rgba(239,68,68,0.35);
+      text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;
+      position: relative; display: inline-block;
+    }
     .gc-messages {
       flex: 1; overflow-y: auto; padding: 10px 8px;
       display: flex; flex-direction: column; gap: 4px;
@@ -1411,6 +1442,7 @@
     <div class="gc-messages" id="gcMessages">
       <div class="text-center text-muted py-3 small">Loading...</div>
     </div>
+    <button class="gc-scroll-btn" id="gcScrollBtn" onclick="gcScrollToBottom()" style="display:none" title="Jump to latest"><i class="bi bi-chevron-double-down"></i><span class="gc-scroll-btn-badge" id="gcScrollBtnBadge" style="display:none">0</span></button>
     <div class="gc-typing-bar" id="gcTypingBar" style="display:none"></div>
     <div class="gc-input">
       <input type="file" id="gcFileInput" style="display:none" onchange="sendGcFile()">
@@ -2789,13 +2821,118 @@ if (typeof io !== 'undefined') {
     var d = document.createElement('div'); d.textContent = str; return d.innerHTML;
   }
 
+  // ── Unread tracking + scroll-to-bottom ──────────
+  var _gcLastReadKey = 'gc-last-read-' + _gcUserId;
+  function _gcGetLastRead() { return parseInt(localStorage.getItem(_gcLastReadKey) || '0', 10); }
+  function _gcSetLastRead(id) {
+    var cur = _gcGetLastRead();
+    if (id > cur) localStorage.setItem(_gcLastReadKey, String(id));
+  }
+  function _gcIsAtBottom(c, threshold) {
+    threshold = threshold || 60;
+    return c.scrollHeight - (c.scrollTop + c.clientHeight) < threshold;
+  }
+  window.gcScrollToBottom = function() {
+    var c = document.getElementById('gcMessages');
+    if (!c) return;
+    c.scrollTop = c.scrollHeight;
+    _gcUpdateScrollBtn();
+  };
+  function _gcUpdateScrollBtn() {
+    var c = document.getElementById('gcMessages');
+    var btn = document.getElementById('gcScrollBtn');
+    var badge = document.getElementById('gcScrollBtnBadge');
+    if (!c || !btn) return;
+    if (_gcIsAtBottom(c)) {
+      btn.style.display = 'none';
+      if (badge) { badge.style.display = 'none'; badge.textContent = '0'; }
+      // Mark all visible as read
+      var bubbles = c.querySelectorAll('[data-gc-msg-id]');
+      if (bubbles.length) {
+        var lastId = parseInt(bubbles[bubbles.length - 1].getAttribute('data-gc-msg-id'), 10);
+        if (lastId) _gcSetLastRead(lastId);
+      }
+    } else {
+      btn.style.display = '';
+    }
+  }
+  function _gcBumpScrollBadge() {
+    var badge = document.getElementById('gcScrollBtnBadge');
+    if (!badge) return;
+    var n = parseInt(badge.textContent || '0', 10) + 1;
+    badge.textContent = n > 99 ? '99+' : n;
+    badge.style.display = '';
+  }
+  function _gcUnreadDividerHtml() {
+    return '<div class="gc-unread-divider" data-gc-unread-divider><span><i class="bi bi-arrow-down-circle me-1"></i>New messages</span></div>';
+  }
+  // ── Browser notifications ────────────────────────
+  var _gcNotifAsked = false;
+  function _gcRequestNotifPerm() {
+    if (_gcNotifAsked) return;
+    if (!('Notification' in window)) return;
+    if (Notification.permission === 'default') {
+      try { Notification.requestPermission(); } catch (e) {}
+    }
+    _gcNotifAsked = true;
+  }
+  function _gcShowNotif(msg) {
+    if (!('Notification' in window)) return;
+    if (Notification.permission !== 'granted') return;
+    if (msg.sender_id === _gcUserId) return;
+    if (!document.hidden && !_gcCollapsed) return;
+    var body = '';
+    if (msg.type === 'file' && msg.attachment) body = '📎 ' + (msg.attachment.file_name || 'Sent a file');
+    else body = msg.content || '';
+    try {
+      var n = new Notification('Group Channel — ' + msg.sender_name, { body: body, tag: 'gc-channel', renotify: true });
+      n.onclick = function() { window.focus(); n.close(); };
+      setTimeout(function() { try { n.close(); } catch (e) {} }, 8000);
+    } catch (e) {}
+  }
+  // Ask for notification permission on any user interaction with the panel
+  document.addEventListener('click', function _gcAsk(e) {
+    var t = e.target;
+    if (t.closest && (t.closest('#gcPanel') || t.closest('#gcHandle'))) {
+      _gcRequestNotifPerm();
+      document.removeEventListener('click', _gcAsk);
+    }
+  });
+
+  var _gcLoadingMore = false;
+  var _gcHasMore = true;
   window.loadGcMessages = function(beforeId) {
     var url = _gcBaseUrl + '/messages' + (beforeId ? '?before=' + beforeId : '');
     $.get(url, function(res) {
       if (!res.success) return;
+      if (!beforeId) { _gcHasMore = true; }
       renderGcMessages(res.data.messages, !!beforeId);
     });
   };
+  function _gcLoadMore() {
+    if (_gcLoadingMore || !_gcHasMore) return;
+    var container = document.getElementById('gcMessages');
+    if (!container) return;
+    var first = container.querySelector('[data-gc-msg-id]');
+    if (!first) return;
+    var oldestId = parseInt(first.getAttribute('data-gc-msg-id'), 10);
+    if (!oldestId) return;
+    _gcLoadingMore = true;
+    var prevHeight = container.scrollHeight;
+    var loader = document.createElement('div');
+    loader.className = 'text-center text-muted py-2 small gc-loading-more';
+    loader.innerHTML = '<span class="gc-upload-spinner"></span> Loading...';
+    container.insertAdjacentElement('afterbegin', loader);
+    $.get(_gcBaseUrl + '/messages?before=' + oldestId, function(res) {
+      loader.remove();
+      if (!res.success) { _gcLoadingMore = false; return; }
+      var msgs = res.data.messages || [];
+      if (!msgs.length) { _gcHasMore = false; _gcLoadingMore = false; return; }
+      renderGcMessages(msgs, true);
+      container.scrollTop = container.scrollHeight - prevHeight;
+      _gcLoadingMore = false;
+    }).fail(function() { loader.remove(); _gcLoadingMore = false; });
+  }
 
   var GC_IMAGE_EXTS = ['jpg','jpeg','png','gif','webp','bmp','svg'];
   function gcFileIconMeta(ext) {
@@ -2842,6 +2979,8 @@ if (typeof io !== 'undefined') {
       return;
     }
     var lastDate = '';
+    var lastReadId = _gcGetLastRead();
+    var unreadInserted = false;
     var html = messages.map(function(m) {
       var msgDate = gcDateLabel(m.created_at);
       var dateDivider = '';
@@ -2850,6 +2989,11 @@ if (typeof io !== 'undefined') {
         lastDate = msgDate;
       }
       var isSent = m.sender_id === _gcUserId;
+      var unreadDivider = '';
+      if (!unreadInserted && !isSent && m.id > lastReadId && lastReadId > 0) {
+        unreadDivider = _gcUnreadDividerHtml();
+        unreadInserted = true;
+      }
       var cls = isSent ? 'sent' : 'received';
       var time = new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       var content = '';
@@ -2862,13 +3006,17 @@ if (typeof io !== 'undefined') {
       }
       var deleteBtn = isSent && !m.is_deleted ? '<span class="gc-msg-delete" onclick="event.stopPropagation(); deleteGcMsg(' + m.id + ')" title="Delete"><i class="bi bi-trash"></i></span>' : '';
       var senderName = !isSent ? '<div class="gc-msg-sender">' + _escHtmlGc(m.sender_name) + '</div>' : '';
-      return dateDivider + '<div class="msg-bubble ' + cls + (m.is_deleted ? ' deleted' : '') + '" data-gc-msg-id="' + m.id + '">' + deleteBtn + senderName + '<div class="msg-content">' + content + '</div><div class="msg-footer"><span class="msg-time">' + time + '</span></div></div>';
+      return dateDivider + unreadDivider + '<div class="msg-bubble ' + cls + (m.is_deleted ? ' deleted' : '') + '" data-gc-msg-id="' + m.id + '">' + deleteBtn + senderName + '<div class="msg-content">' + content + '</div><div class="msg-footer"><span class="msg-time">' + time + '</span></div></div>';
     }).join('');
     if (prepend) {
       container.insertAdjacentHTML('afterbegin', html);
     } else {
       container.innerHTML = html;
-      container.scrollTop = container.scrollHeight;
+      // If unread divider is present, scroll to it; else scroll to bottom
+      var div = container.querySelector('[data-gc-unread-divider]');
+      if (div) { div.scrollIntoView({ block: 'center' }); }
+      else { container.scrollTop = container.scrollHeight; }
+      _gcUpdateScrollBtn();
     }
   }
 
@@ -2994,15 +3142,21 @@ if (typeof io !== 'undefined') {
   if (_gcSocket) {
     // Socket: real-time messages
     _gcSocket.on('channel:message', function(msg) {
-      if (msg.sender_id !== _gcUserId) playGcAlert();
+      var isFromOther = msg.sender_id !== _gcUserId;
+      if (isFromOther) playGcAlert();
+      // Browser notification (collapsed or background tab)
+      _gcShowNotif(msg);
       if (_gcCollapsed) {
-        _gcUnread++;
-        var badge = document.getElementById('gcHandleBadge');
-        badge.textContent = _gcUnread;
-        badge.style.display = '';
+        if (isFromOther) {
+          _gcUnread++;
+          var badge = document.getElementById('gcHandleBadge');
+          badge.textContent = _gcUnread;
+          badge.style.display = '';
+        }
       } else {
         var container = document.getElementById('gcMessages');
         if (container.querySelector('.text-center')) container.innerHTML = '';
+        var wasAtBottom = _gcIsAtBottom(container);
         var isSent = msg.sender_id === _gcUserId;
         var cls = isSent ? 'sent' : 'received';
         var time = new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -3014,8 +3168,18 @@ if (typeof io !== 'undefined') {
         }
         var deleteBtn = isSent ? '<span class="gc-msg-delete" onclick="event.stopPropagation(); deleteGcMsg(' + msg.id + ')" title="Delete"><i class="bi bi-trash"></i></span>' : '';
         var senderName = !isSent ? '<div class="gc-msg-sender">' + _escHtmlGc(msg.sender_name) + '</div>' : '';
+        // Insert unread divider before this msg if not already present, scrolled-up, and from someone else
+        if (isFromOther && !wasAtBottom && !container.querySelector('[data-gc-unread-divider]')) {
+          container.insertAdjacentHTML('beforeend', _gcUnreadDividerHtml());
+        }
         container.insertAdjacentHTML('beforeend', '<div class="msg-bubble ' + cls + '" data-gc-msg-id="' + msg.id + '">' + deleteBtn + senderName + '<div class="msg-content">' + content + '</div><div class="msg-footer"><span class="msg-time">' + time + '</span></div></div>');
-        container.scrollTop = container.scrollHeight;
+        if (wasAtBottom && !document.hidden) {
+          container.scrollTop = container.scrollHeight;
+          _gcSetLastRead(msg.id);
+        } else if (isFromOther) {
+          _gcBumpScrollBadge();
+        }
+        _gcUpdateScrollBtn();
       }
     });
 
@@ -3088,6 +3252,16 @@ if (typeof io !== 'undefined') {
       renderGcPresence();
     });
   }
+
+  // Scroll listener for scroll-to-bottom button + auto-mark-read + load-more
+  document.getElementById('gcMessages')?.addEventListener('scroll', function() {
+    _gcUpdateScrollBtn();
+    if (this.scrollTop < 60) _gcLoadMore();
+  });
+  // When tab becomes visible while at bottom, mark read
+  document.addEventListener('visibilitychange', function() {
+    if (!document.hidden && !_gcCollapsed) _gcUpdateScrollBtn();
+  });
 
   // Load on page load
   loadGcMessages();
