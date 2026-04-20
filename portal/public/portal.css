@@ -4772,6 +4772,39 @@ html.sidebar-expanded .portal-main {
 .gc-msg-react:hover { opacity: 1; visibility: visible; }
 .gc-msg-react:hover { background: rgba(250,204,21,0.9); color: #000; }
 .gc-messages .msg-bubble.sent .gc-msg-delete { right: 68px; }
+/* Edit button */
+.gc-msg-edit {
+  position: absolute; top: 4px; right: 68px; cursor: pointer;
+  opacity: 0; visibility: hidden; color: #fff;
+  background: rgba(0,0,0,0.6); width: 26px; height: 26px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 4px; font-size: 0.85rem; line-height: 1; z-index: 2;
+  transition: opacity 0.15s, visibility 0.15s, background 0.15s;
+}
+.gc-messages .msg-bubble:hover .gc-msg-edit,
+.gc-msg-edit:hover { opacity: 1; visibility: visible; }
+.gc-msg-edit:hover { background: rgba(34,197,94,0.9); }
+.gc-edited-label { font-size: 0.6rem; opacity: 0.55; margin-left: 5px; font-style: italic; }
+.gc-editor textarea {
+  font-size: 0.8rem; resize: none; background: rgba(0,0,0,0.25); color: inherit;
+  border: 1px solid rgba(255,255,255,0.2);
+}
+.gc-editor .gc-editor-actions {
+  margin-top: 4px; display: flex; gap: 4px; justify-content: flex-end;
+}
+.gc-editor button { padding: 1px 8px; font-size: 0.7rem; }
+/* Full-page edit */
+.gc-fullpage-messages .gc-msg-edit {
+  position: absolute; top: 6px; right: 78px; cursor: pointer;
+  opacity: 0; visibility: hidden; color: #fff;
+  background: rgba(0,0,0,0.6); width: 30px; height: 30px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 6px; transition: opacity 0.15s, background 0.15s;
+  font-size: 0.9rem; line-height: 1; z-index: 2;
+}
+.gc-fullpage-messages .msg-bubble:hover .gc-msg-edit,
+.gc-fullpage-messages .gc-msg-edit:hover { opacity: 1; visibility: visible; }
+.gc-fullpage-messages .gc-msg-edit:hover { background: rgba(34,197,94,0.9); }
 /* Full-page react */
 .gc-fullpage-messages .gc-msg-react {
   position: absolute; top: 6px; right: 6px; cursor: pointer;

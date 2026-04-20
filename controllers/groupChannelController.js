@@ -82,6 +82,22 @@ class GroupChannelController {
     }
   }
 
+  static async editMessage(req, res) {
+    try {
+      const messageId = parseInt(req.params.messageId);
+      const { content } = req.body;
+      if (!content || !content.trim()) return ApiResponse.error(res, 'Message cannot be empty', 400);
+      const result = await GroupChannel.editMessage(messageId, req.user.id, content.trim());
+      if (result.error) return ApiResponse.error(res, result.error, 403);
+      const { getIO } = require('../config/socket');
+      try { getIO().emit('channel:message:edit', result.message); } catch (_) {}
+      return ApiResponse.success(res, { message: result.message }, 'Message updated');
+    } catch (err) {
+      console.error('GroupChannel editMessage error:', err);
+      return ApiResponse.error(res, 'Failed to update message');
+    }
+  }
+
   static async deleteMessage(req, res) {
     try {
       const messageId = parseInt(req.params.messageId);

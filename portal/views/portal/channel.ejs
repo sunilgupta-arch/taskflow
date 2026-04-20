@@ -146,6 +146,24 @@
 .gc-fullpage-messages .gc-msg-react:hover { opacity: 1; visibility: visible; }
 .gc-fullpage-messages .gc-msg-react:hover { background: rgba(250,204,21,0.9); color: #000; }
 .gc-fullpage-messages .msg-bubble.sent .gc-msg-delete { right: 78px; }
+.gc-fullpage-messages .gc-msg-edit {
+  position: absolute; top: 6px; right: 78px; cursor: pointer;
+  opacity: 0; visibility: hidden; color: #fff;
+  background: rgba(0,0,0,0.6); width: 30px; height: 30px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 6px; transition: opacity 0.15s, background 0.15s;
+  font-size: 0.9rem; line-height: 1; z-index: 2;
+}
+.gc-fullpage-messages .msg-bubble:hover .gc-msg-edit,
+.gc-fullpage-messages .gc-msg-edit:hover { opacity: 1; visibility: visible; }
+.gc-fullpage-messages .gc-msg-edit:hover { background: rgba(34,197,94,0.9); }
+.gc-edited-label { font-size: 0.65rem; opacity: 0.55; margin-left: 6px; font-style: italic; }
+.gc-editor textarea {
+  font-size: 0.85rem; resize: none; background: rgba(0,0,0,0.25); color: inherit;
+  border: 1px solid rgba(255,255,255,0.2);
+}
+.gc-editor .gc-editor-actions { margin-top: 6px; display: flex; gap: 6px; justify-content: flex-end; }
+.gc-editor button { padding: 2px 10px; font-size: 0.75rem; }
 .gc-emoji-picker {
   position: absolute; background: var(--tf-surface-2, #1e293b);
   border: 1px solid var(--tf-border, #334155); border-radius: 8px;
@@ -402,6 +420,62 @@
     return false;
   }
 
+  // ── Edit own message ────────────────────────────
+  var _gcMsgRaw = {};
+  var GC_EDIT_WINDOW_MS = 15 * 60 * 1000;
+  function _gcCanEdit(m) {
+    if (!m || m.is_deleted) return false;
+    if (m.sender_id !== _userId) return false;
+    if (m.type !== 'text') return false;
+    return (Date.now() - new Date(m.created_at).getTime()) < GC_EDIT_WINDOW_MS;
+  }
+  function _gcEditBtnHtml(m) {
+    if (!_gcCanEdit(m)) return '';
+    return '<span class="gc-msg-edit" onclick="event.stopPropagation(); editGcFullMsg(' + m.id + ')" title="Edit"><i class="bi bi-pencil"></i></span>';
+  }
+  function _gcDeleteBtnHtmlShifted(m) {
+    if (m.is_deleted) return '';
+    var right = _gcCanEdit(m) ? 110 : 78;
+    return '<span class="gc-msg-delete" style="right:' + right + 'px" onclick="event.stopPropagation(); deleteGcFullMsg(' + m.id + ')" title="Delete"><i class="bi bi-trash"></i></span>';
+  }
+  window.editGcFullMsg = function(msgId) {
+    var bubble = document.querySelector('[data-gcf-msg-id="' + msgId + '"]');
+    if (!bubble) return;
+    var contentEl = bubble.querySelector('.msg-content');
+    if (!contentEl) return;
+    if (contentEl.querySelector('.gc-editor')) return;
+    var originalHtml = contentEl.innerHTML;
+    var originalRaw = _gcMsgRaw[msgId] || contentEl.textContent || '';
+    contentEl.innerHTML = '<div class="gc-editor">' +
+      '<textarea class="form-control form-control-sm" rows="2">' + _esc(originalRaw) + '</textarea>' +
+      '<div class="gc-editor-actions">' +
+        '<button class="btn btn-sm btn-outline-light" data-action="cancel">Cancel</button>' +
+        '<button class="btn btn-sm btn-primary" data-action="save">Save</button>' +
+      '</div></div>';
+    var ta = contentEl.querySelector('textarea');
+    var cancelBtn = contentEl.querySelector('[data-action="cancel"]');
+    var saveBtn = contentEl.querySelector('[data-action="save"]');
+    ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length);
+    function cancel() { contentEl.innerHTML = originalHtml; }
+    function save() {
+      var v = ta.value.trim();
+      if (!v) return;
+      if (v === originalRaw) { cancel(); return; }
+      fetch(_baseUrl + '/messages/' + msgId, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: v })
+      }).then(function(r) {
+        if (!r.ok) return r.json().then(function(j) { alert(j.message || 'Edit failed'); cancel(); });
+      });
+    }
+    cancelBtn.addEventListener('click', cancel);
+    saveBtn.addEventListener('click', save);
+    ta.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') { e.preventDefault(); cancel(); }
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); save(); }
+    });
+  };
+
   // ── Reactions ───────────────────────────────────
   var GC_EMOJI_LIST = ['👍','❤️','😂','😮','😢','🎉','🔥','👀'];
   function _gcRenderReactions(m) {
@@ -617,13 +691,16 @@
       if (m.is_deleted) { content = '<em class="text-muted" style="font-size:0.75rem"><i class="bi bi-ban me-1"></i>deleted</em>'; }
       else if (m.type === 'file' && m.attachment) { content = renderFile(m.attachment, m.id); }
       else { content = gcRenderWithMentions(m.content); }
-      var deleteBtn = isSent && !m.is_deleted ? '<span class="gc-msg-delete" onclick="event.stopPropagation(); deleteGcFullMsg(' + m.id + ')" title="Delete"><i class="bi bi-trash"></i></span>' : '';
+      _gcMsgRaw[m.id] = m.content;
+      var deleteBtn = isSent && !m.is_deleted ? _gcDeleteBtnHtmlShifted(m) : '';
+      var editBtn = _gcEditBtnHtml(m);
       var replyBtn = _gcReplyBtnHtml(m, isSent);
       var reactBtn = _gcReactBtnHtml(m);
       var replyQuote = _gcReplyQuoteHtml(m);
       var reactions = _gcRenderReactions(m);
       var senderName = !isSent ? '<div class="gc-msg-sender">' + escapeHtml(m.sender_name) + '</div>' : '';
-      return dateDivider + unreadDivider + '<div class="msg-bubble ' + cls + (m.is_deleted ? ' deleted' : '') + '" data-gcf-msg-id="' + m.id + '">' + deleteBtn + replyBtn + reactBtn + senderName + replyQuote + '<div class="msg-content">' + content + '</div>' + reactions + '<div class="msg-footer"><span class="msg-time">' + time + '</span></div></div>';
+      var editedLabel = m.edited_at ? '<span class="gc-edited-label">(edited)</span>' : '';
+      return dateDivider + unreadDivider + '<div class="msg-bubble ' + cls + (m.is_deleted ? ' deleted' : '') + '" data-gcf-msg-id="' + m.id + '">' + deleteBtn + editBtn + replyBtn + reactBtn + senderName + replyQuote + '<div class="msg-content">' + content + '</div>' + reactions + '<div class="msg-footer"><span class="msg-time">' + time + '</span>' + editedLabel + '</div></div>';
     }).join('');
     if (prepend) { container.insertAdjacentHTML('afterbegin', html); }
     else {
@@ -770,7 +847,9 @@
     var content = '';
     if (msg.type === 'file' && msg.attachment) { content = renderFile(msg.attachment, msg.id); }
     else { content = gcRenderWithMentions(msg.content); }
-    var deleteBtn = isSent ? '<span class="gc-msg-delete" onclick="event.stopPropagation(); deleteGcFullMsg(' + msg.id + ')" title="Delete"><i class="bi bi-trash"></i></span>' : '';
+    _gcMsgRaw[msg.id] = msg.content;
+    var deleteBtn = isSent ? _gcDeleteBtnHtmlShifted(msg) : '';
+    var editBtn = _gcEditBtnHtml(msg);
     var replyBtn = _gcReplyBtnHtml(msg, isSent);
     var reactBtn = _gcReactBtnHtml(msg);
     var replyQuote = _gcReplyQuoteHtml(msg);
@@ -778,7 +857,7 @@
     if (isFromOther && !wasAtBottom && !container.querySelector('[data-gc-unread-divider]')) {
       container.insertAdjacentHTML('beforeend', _gcUnreadDividerHtml());
     }
-    container.insertAdjacentHTML('beforeend', '<div class="msg-bubble ' + cls + '" data-gcf-msg-id="' + msg.id + '">' + deleteBtn + replyBtn + reactBtn + senderName + replyQuote + '<div class="msg-content">' + content + '</div><div class="msg-footer"><span class="msg-time">' + time + '</span></div></div>');
+    container.insertAdjacentHTML('beforeend', '<div class="msg-bubble ' + cls + '" data-gcf-msg-id="' + msg.id + '">' + deleteBtn + editBtn + replyBtn + reactBtn + senderName + replyQuote + '<div class="msg-content">' + content + '</div><div class="msg-footer"><span class="msg-time">' + time + '</span></div></div>');
     if (isFromOther && _gcMentionsMe(msg.content)) {
       var bubble = container.querySelector('[data-gcf-msg-id="' + msg.id + '"]');
       if (bubble) bubble.classList.add('gc-msg-mention-me');
@@ -790,6 +869,18 @@
       _gcBumpScrollBadge();
     }
     _gcUpdateScrollBtn();
+  });
+
+  mainSocket.on('channel:message:edit', function(msg) {
+    var bubble = document.querySelector('[data-gcf-msg-id="' + msg.id + '"]');
+    if (!bubble) return;
+    _gcMsgRaw[msg.id] = msg.content;
+    var contentEl = bubble.querySelector('.msg-content');
+    if (contentEl) contentEl.innerHTML = gcRenderWithMentions(msg.content);
+    var footer = bubble.querySelector('.msg-footer');
+    if (footer && !footer.querySelector('.gc-edited-label')) {
+      footer.insertAdjacentHTML('beforeend', '<span class="gc-edited-label">(edited)</span>');
+    }
   });
 
   mainSocket.on('channel:reaction', function(data) {

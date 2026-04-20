@@ -164,6 +164,7 @@ router.get('/channel/users', authenticate, GroupChannelController.getUsers);
 router.get('/channel/messages', authenticate, GroupChannelController.getMessages);
 router.post('/channel/messages', authenticate, GroupChannelController.sendMessage);
 router.post('/channel/file', authenticate, (req, res, next) => channelUpload.single('file')(req, res, (err) => handleChannelUploadError(err, req, res, next)), GroupChannelController.sendFile);
+router.put('/channel/messages/:messageId', authenticate, GroupChannelController.editMessage);
 router.delete('/channel/messages/:messageId', authenticate, GroupChannelController.deleteMessage);
 router.post('/channel/messages/:messageId/reactions', authenticate, GroupChannelController.toggleReaction);
 router.get('/channel/attachment/:messageId', authenticate, GroupChannelController.serveAttachment);

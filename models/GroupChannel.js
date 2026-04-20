@@ -120,6 +120,37 @@ class GroupChannel {
     );
   }
 
+  static async editMessage(messageId, senderId, newContent) {
+    const [rows] = await db.query(
+      'SELECT id, sender_id, type, is_deleted, created_at FROM group_channel_messages WHERE id = ?',
+      [messageId]
+    );
+    if (!rows.length) return { error: 'Message not found' };
+    const m = rows[0];
+    if (m.sender_id !== senderId) return { error: 'Not your message' };
+    if (m.is_deleted) return { error: 'Cannot edit a deleted message' };
+    if (m.type !== 'text') return { error: 'Only text messages can be edited' };
+    const ageMs = Date.now() - new Date(m.created_at).getTime();
+    if (ageMs > 15 * 60 * 1000) return { error: 'Edit window expired (15 min)' };
+
+    await db.query(
+      'UPDATE group_channel_messages SET content = ?, edited_at = NOW() WHERE id = ?',
+      [newContent, messageId]
+    );
+    const [updated] = await db.query(
+      `SELECT m.*, u.name AS sender_name, r.name AS sender_role,
+              pm.content AS reply_to_content, pm.type AS reply_to_type, pm.is_deleted AS reply_to_is_deleted,
+              pu.name AS reply_to_sender_name
+       FROM group_channel_messages m
+       JOIN users u ON u.id = m.sender_id
+       JOIN roles r ON u.role_id = r.id
+       LEFT JOIN group_channel_messages pm ON pm.id = m.reply_to_id
+       LEFT JOIN users pu ON pu.id = pm.sender_id
+       WHERE m.id = ?`, [messageId]
+    );
+    return { message: updated[0] };
+  }
+
   static async deleteMessage(messageId, senderId) {
     const [rows] = await db.query('SELECT * FROM group_channel_messages WHERE id = ? AND sender_id = ?', [messageId, senderId]);
     if (!rows.length) return null;
