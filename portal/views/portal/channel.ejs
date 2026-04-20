@@ -11,7 +11,16 @@
   </div>
   <button class="gc-scroll-btn" id="gcScrollBtn" onclick="gcScrollToBottom()" style="display:none" title="Jump to latest"><i class="bi bi-chevron-double-down"></i><span class="gc-scroll-btn-badge" id="gcScrollBtnBadge" style="display:none">0</span></button>
   <div class="gc-typing-bar" id="gcFullTypingBar" style="display:none"></div>
-  <div class="gc-fullpage-input">
+  <div class="gc-reply-compose-bar" id="gcReplyBar" style="display:none">
+    <i class="bi bi-reply-fill" style="color:#2563eb"></i>
+    <div class="gc-reply-compose-text">
+      <span class="gc-reply-compose-sender" id="gcReplyBarSender"></span>
+      <span class="gc-reply-compose-content" id="gcReplyBarContent"></span>
+    </div>
+    <i class="bi bi-x-lg gc-reply-compose-close" onclick="cancelGcFullReply()" title="Cancel reply"></i>
+  </div>
+  <div class="gc-fullpage-input" style="position:relative">
+    <div class="gc-mention-popup" id="gcMentionPopup" style="display:none"></div>
     <input type="file" id="gcFullFileInput" style="display:none" onchange="sendGcFullFile()">
     <div class="d-flex gap-2 align-items-stretch">
       <textarea class="form-control" id="gcFullInput" placeholder="Type a message..." rows="2" oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px'"></textarea>
@@ -62,6 +71,69 @@
   text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;
   position: relative; display: inline-block;
 }
+.gc-fullpage-messages .gc-msg-reply {
+  position: absolute; top: 6px; cursor: pointer;
+  opacity: 0; visibility: hidden; color: #fff;
+  background: rgba(0,0,0,0.6); width: 30px; height: 30px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 6px; transition: opacity 0.15s, background 0.15s;
+  font-size: 0.9rem; line-height: 1; z-index: 2;
+}
+.gc-fullpage-messages .msg-bubble:hover .gc-msg-reply,
+.gc-fullpage-messages .gc-msg-reply:hover { opacity: 1; visibility: visible; }
+.gc-fullpage-messages .gc-msg-reply:hover { background: rgba(37,99,235,0.9); }
+.gc-fullpage-messages .gc-reply-quote {
+  border-left: 3px solid var(--tf-accent, #60a5fa);
+  background: rgba(255,255,255,0.06); padding: 6px 10px;
+  margin-bottom: 6px; border-radius: 4px; font-size: 0.75rem;
+  cursor: pointer; overflow: hidden;
+}
+.gc-fullpage-messages .gc-reply-quote:hover { background: rgba(255,255,255,0.12); }
+.gc-fullpage-messages .msg-bubble.sent .gc-reply-quote { background: rgba(0,0,0,0.2); border-left-color: rgba(255,255,255,0.6); }
+.gc-fullpage-messages .gc-reply-quote-sender { font-weight: 600; color: var(--tf-accent, #60a5fa); }
+.gc-fullpage-messages .msg-bubble.sent .gc-reply-quote-sender { color: rgba(255,255,255,0.9); }
+.gc-fullpage-messages .gc-reply-quote-content { color: var(--tf-text-muted, #94a3b8); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gc-fullpage-messages .msg-bubble.sent .gc-reply-quote-content { color: rgba(255,255,255,0.75); }
+.gc-reply-compose-bar {
+  padding: 6px 16px; background: rgba(37,99,235,0.1);
+  border-top: 1px solid rgba(37,99,235,0.3); border-left: 3px solid #2563eb;
+  display: flex; align-items: center; gap: 10px; font-size: 0.8rem;
+}
+.gc-reply-compose-text { flex: 1; overflow: hidden; }
+.gc-reply-compose-sender { font-weight: 600; color: var(--tf-accent, #60a5fa); margin-right: 6px; }
+.gc-reply-compose-content { color: var(--tf-text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: inline; }
+.gc-reply-compose-close { cursor: pointer; color: var(--tf-text-muted); font-size: 0.9rem; }
+.gc-reply-compose-close:hover { color: #ef4444; }
+@keyframes gcJumpFlash { 0%,100% { box-shadow: none; } 50% { box-shadow: 0 0 0 3px rgba(59,130,246,0.6); } }
+.gc-msg-jump-highlight { animation: gcJumpFlash 1.2s ease; }
+.gc-mention {
+  background: rgba(37,99,235,0.25); color: #60a5fa; padding: 0 4px;
+  border-radius: 3px; font-weight: 500;
+}
+.gc-mention-self { background: rgba(239,68,68,0.25); color: #fca5a5; }
+.gc-fullpage-messages .msg-bubble.sent .gc-mention { background: rgba(255,255,255,0.2); color: #fff; }
+.gc-fullpage-messages .msg-bubble.sent .gc-mention-self { background: rgba(252,165,165,0.4); color: #fff; }
+.gc-mention-popup {
+  position: absolute; bottom: 100%; left: 16px; right: 16px; margin-bottom: 4px;
+  max-height: 240px; overflow-y: auto;
+  background: var(--tf-surface-2, #1e293b); border: 1px solid var(--tf-border, #334155);
+  border-radius: 6px; z-index: 20; padding: 3px;
+  box-shadow: 0 -4px 12px rgba(0,0,0,0.4);
+}
+.gc-mention-item {
+  padding: 6px 12px; cursor: pointer; font-size: 0.8rem; border-radius: 4px;
+  display: flex; align-items: center; gap: 8px;
+}
+.gc-mention-item.active, .gc-mention-item:hover { background: rgba(37,99,235,0.3); }
+.gc-mention-item .gc-mention-avatar {
+  width: 24px; height: 24px; border-radius: 50%;
+  background: #2563eb; color: #fff; font-size: 0.7rem; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+}
+.gc-mention-item .gc-mention-name { flex: 1; color: var(--tf-text); }
+.gc-mention-item .gc-mention-role { font-size: 0.65rem; color: var(--tf-text-muted); }
+@keyframes gcMentionPulse { 0%,100% { box-shadow: none; } 50% { box-shadow: 0 0 0 3px rgba(239,68,68,0.5); } }
+.gc-msg-mention-me { animation: gcMentionPulse 1.6s ease 2; }
 
 .gc-fullpage-header {
   padding: 14px 24px;
@@ -211,6 +283,134 @@
   function _gcUnreadDividerHtml() {
     return '<div class="gc-unread-divider" data-gc-unread-divider><span><i class="bi bi-arrow-down-circle me-1"></i>New messages</span></div>';
   }
+  // ── @mentions ───────────────────────────────────
+  var _gcUserName = PORTAL_USER.name;
+  function _esc(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+  function gcRenderWithMentions(text) {
+    var html = _esc(text || '');
+    return html.replace(/@\[([^\]]+)\]/g, function(_, name) {
+      var cls = (name === _gcUserName) ? 'gc-mention gc-mention-self' : 'gc-mention';
+      return '<span class="' + cls + '">@' + _esc(name) + '</span>';
+    });
+  }
+  function _gcMentionsMe(text) {
+    if (!text) return false;
+    var re = /@\[([^\]]+)\]/g, m;
+    while ((m = re.exec(text)) !== null) { if (m[1] === _gcUserName) return true; }
+    return false;
+  }
+  var _gcMentionActive = false, _gcMentionQuery = '', _gcMentionStart = -1, _gcMentionIdx = 0;
+  function _gcHideMention() {
+    _gcMentionActive = false; _gcMentionStart = -1; _gcMentionQuery = '';
+    var p = document.getElementById('gcMentionPopup'); if (p) p.style.display = 'none';
+  }
+  function _gcMentionCandidates() {
+    var q = _gcMentionQuery.toLowerCase();
+    return (typeof _allUsers !== 'undefined' ? _allUsers : []).filter(function(u) {
+      return u.id !== _userId && u.name.toLowerCase().indexOf(q) !== -1;
+    }).slice(0, 8);
+  }
+  function _gcRenderMentionPopup() {
+    var p = document.getElementById('gcMentionPopup');
+    if (!p) return;
+    var list = _gcMentionCandidates();
+    if (!list.length) { _gcHideMention(); return; }
+    if (_gcMentionIdx >= list.length) _gcMentionIdx = 0;
+    p.innerHTML = list.map(function(u, i) {
+      return '<div class="gc-mention-item' + (i === _gcMentionIdx ? ' active' : '') + '" onmousedown="_gcSelectMention(' + i + ')">' +
+        '<div class="gc-mention-avatar">' + _esc(u.name.charAt(0).toUpperCase()) + '</div>' +
+        '<div class="gc-mention-name">' + _esc(u.name) + '</div>' +
+        '<div class="gc-mention-role">' + _esc((u.role_name || '').replace(/^LOCAL_|^CLIENT_/, '')) + '</div>' +
+      '</div>';
+    }).join('');
+    p.style.display = '';
+  }
+  window._gcSelectMention = function(idx) {
+    var list = _gcMentionCandidates();
+    if (!list[idx]) return;
+    var input = document.getElementById('gcFullInput');
+    if (!input) return;
+    var v = input.value, caret = input.selectionStart;
+    var before = v.substring(0, _gcMentionStart);
+    var after = v.substring(caret);
+    var insert = '@[' + list[idx].name + '] ';
+    input.value = before + insert + after;
+    var newCaret = before.length + insert.length;
+    input.setSelectionRange(newCaret, newCaret);
+    input.focus();
+    _gcHideMention();
+  };
+  function _gcMentionInputHandler() {
+    var input = document.getElementById('gcFullInput');
+    if (!input) return;
+    var val = input.value, caret = input.selectionStart;
+    var at = -1;
+    for (var i = caret - 1; i >= 0; i--) {
+      var c = val.charAt(i);
+      if (c === '@') { at = i; break; }
+      if (/\s/.test(c) || c === '[' || c === ']') break;
+    }
+    if (at === -1 || (at > 0 && !/\s/.test(val.charAt(at - 1)))) { _gcHideMention(); return; }
+    _gcMentionActive = true;
+    _gcMentionStart = at;
+    _gcMentionQuery = val.substring(at + 1, caret);
+    _gcMentionIdx = 0;
+    _gcRenderMentionPopup();
+  }
+  function _gcMentionKeyHandler(e) {
+    if (!_gcMentionActive) return false;
+    var list = _gcMentionCandidates();
+    if (!list.length) return false;
+    if (e.key === 'ArrowDown') { e.preventDefault(); _gcMentionIdx = (_gcMentionIdx + 1) % list.length; _gcRenderMentionPopup(); return true; }
+    if (e.key === 'ArrowUp') { e.preventDefault(); _gcMentionIdx = (_gcMentionIdx - 1 + list.length) % list.length; _gcRenderMentionPopup(); return true; }
+    if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); _gcSelectMention(_gcMentionIdx); return true; }
+    if (e.key === 'Escape') { e.preventDefault(); _gcHideMention(); return true; }
+    return false;
+  }
+
+  // ── Reply-to-message ─────────────────────────────
+  var _gcReplyingTo = null;
+  window.replyToGcFullMsg = function(msgId) {
+    var bubble = document.querySelector('[data-gcf-msg-id="' + msgId + '"]');
+    if (!bubble) return;
+    var senderEl = bubble.querySelector('.gc-msg-sender');
+    var senderName = senderEl ? senderEl.textContent : 'You';
+    var contentEl = bubble.querySelector('.msg-content');
+    var preview = contentEl ? (contentEl.textContent || '').trim() : '';
+    if (!preview) preview = '📎 attachment';
+    if (preview.length > 140) preview = preview.substring(0, 140) + '…';
+    _gcReplyingTo = { id: msgId, sender_name: senderName, preview: preview };
+    document.getElementById('gcReplyBarSender').textContent = senderName;
+    document.getElementById('gcReplyBarContent').textContent = preview;
+    document.getElementById('gcReplyBar').style.display = '';
+    document.getElementById('gcFullInput')?.focus();
+  };
+  window.cancelGcFullReply = function() {
+    _gcReplyingTo = null;
+    document.getElementById('gcReplyBar').style.display = 'none';
+  };
+  window.gcFullJumpToMsg = function(msgId) {
+    var bubble = document.querySelector('[data-gcf-msg-id="' + msgId + '"]');
+    if (!bubble) return;
+    bubble.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    bubble.classList.add('gc-msg-jump-highlight');
+    setTimeout(function() { bubble.classList.remove('gc-msg-jump-highlight'); }, 1300);
+  };
+  function _gcReplyQuoteHtml(m) {
+    if (!m.reply_to_id) return '';
+    var sender = escapeHtml(m.reply_to_sender_name || '');
+    var preview = '';
+    if (m.reply_to_is_deleted) preview = '<em>deleted message</em>';
+    else if (m.reply_to_type === 'file') preview = '📎 attachment';
+    else preview = escapeHtml((m.reply_to_content || '').substring(0, 140));
+    return '<div class="gc-reply-quote" onclick="event.stopPropagation(); gcFullJumpToMsg(' + m.reply_to_id + ')"><div class="gc-reply-quote-sender">' + sender + '</div><div class="gc-reply-quote-content">' + preview + '</div></div>';
+  }
+  function _gcReplyBtnHtml(m, isSent) {
+    if (m.is_deleted) return '';
+    var right = isSent ? 42 : 6;
+    return '<span class="gc-msg-reply" style="right:' + right + 'px" onclick="event.stopPropagation(); replyToGcFullMsg(' + m.id + ')" title="Reply"><i class="bi bi-reply-fill"></i></span>';
+  }
+
   // ── Browser notifications ────────────────────────
   var _gcNotifAsked = false;
   function _gcRequestNotifPerm() {
@@ -223,12 +423,16 @@
     if (!('Notification' in window)) return;
     if (Notification.permission !== 'granted') return;
     if (msg.sender_id === _userId) return;
-    if (!document.hidden) return;
-    var body = (msg.type === 'file' && msg.attachment) ? ('📎 ' + (msg.attachment.file_name || 'Sent a file')) : (msg.content || '');
+    var mentionsMe = _gcMentionsMe(msg.content);
+    if (!document.hidden && !mentionsMe) return;
+    var body = (msg.type === 'file' && msg.attachment)
+      ? ('📎 ' + (msg.attachment.file_name || 'Sent a file'))
+      : (msg.content || '').replace(/@\[([^\]]+)\]/g, '@$1');
+    var title = mentionsMe ? ('@ ' + msg.sender_name + ' mentioned you') : ('Group Channel — ' + msg.sender_name);
     try {
-      var n = new Notification('Group Channel — ' + msg.sender_name, { body: body, tag: 'gc-channel', renotify: true });
+      var n = new Notification(title, { body: body, tag: 'gc-channel', renotify: true, requireInteraction: mentionsMe });
       n.onclick = function() { window.focus(); n.close(); };
-      setTimeout(function() { try { n.close(); } catch (e) {} }, 8000);
+      setTimeout(function() { try { n.close(); } catch (e) {} }, mentionsMe ? 15000 : 8000);
     } catch (e) {}
   }
   document.addEventListener('click', function _gcAsk() { _gcRequestNotifPerm(); document.removeEventListener('click', _gcAsk); });
@@ -332,10 +536,12 @@
       var content = '';
       if (m.is_deleted) { content = '<em class="text-muted" style="font-size:0.75rem"><i class="bi bi-ban me-1"></i>deleted</em>'; }
       else if (m.type === 'file' && m.attachment) { content = renderFile(m.attachment, m.id); }
-      else { var div = document.createElement('div'); div.textContent = m.content; content = div.innerHTML; }
+      else { content = gcRenderWithMentions(m.content); }
       var deleteBtn = isSent && !m.is_deleted ? '<span class="gc-msg-delete" onclick="event.stopPropagation(); deleteGcFullMsg(' + m.id + ')" title="Delete"><i class="bi bi-trash"></i></span>' : '';
+      var replyBtn = _gcReplyBtnHtml(m, isSent);
+      var replyQuote = _gcReplyQuoteHtml(m);
       var senderName = !isSent ? '<div class="gc-msg-sender">' + escapeHtml(m.sender_name) + '</div>' : '';
-      return dateDivider + unreadDivider + '<div class="msg-bubble ' + cls + (m.is_deleted ? ' deleted' : '') + '" data-gcf-msg-id="' + m.id + '">' + deleteBtn + senderName + '<div class="msg-content">' + content + '</div><div class="msg-footer"><span class="msg-time">' + time + '</span></div></div>';
+      return dateDivider + unreadDivider + '<div class="msg-bubble ' + cls + (m.is_deleted ? ' deleted' : '') + '" data-gcf-msg-id="' + m.id + '">' + deleteBtn + replyBtn + senderName + replyQuote + '<div class="msg-content">' + content + '</div><div class="msg-footer"><span class="msg-time">' + time + '</span></div></div>';
     }).join('');
     if (prepend) { container.insertAdjacentHTML('afterbegin', html); }
     else {
@@ -351,10 +557,12 @@
     var input = document.getElementById('gcFullInput');
     var content = input.value.trim();
     if (!content) return;
+    var payload = { content: content };
+    if (_gcReplyingTo) payload.reply_to_id = _gcReplyingTo.id;
     fetch(_baseUrl + '/messages', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ content: content })
-    }).then(function() { input.value = ''; input.style.height = 'auto'; });
+      body: JSON.stringify(payload)
+    }).then(function() { input.value = ''; input.style.height = 'auto'; cancelGcFullReply(); });
   };
 
   function showUploadPlaceholder(filename) {
@@ -390,6 +598,7 @@
     }
     var placeholderId = showUploadPlaceholder(file.name);
     var fd = new FormData(); fd.append('file', file);
+    if (_gcReplyingTo) fd.append('reply_to_id', _gcReplyingTo.id);
     fileInput.value = '';
     fetch(_baseUrl + '/file', { method: 'POST', body: fd })
       .then(function(r) { return r.json().then(function(j) { return { ok: r.ok, body: j }; }); })
@@ -397,6 +606,7 @@
         if (res.ok) {
           var el = document.getElementById(placeholderId);
           if (el) el.remove();
+          cancelGcFullReply();
         } else {
           markUploadFailed(placeholderId, res.body.message);
         }
@@ -410,8 +620,11 @@
   };
 
   document.getElementById('gcFullInput').addEventListener('keydown', function(e) {
+    if (_gcMentionKeyHandler(e)) return;
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendGcFullMessage(); }
   });
+  document.getElementById('gcFullInput').addEventListener('input', _gcMentionInputHandler);
+  document.getElementById('gcFullInput').addEventListener('blur', function() { setTimeout(_gcHideMention, 150); });
 
   // Paste screenshot/image directly
   function uploadFileDirect(file) {
@@ -419,12 +632,14 @@
     var placeholderId = showUploadPlaceholder(file.name || 'pasted-image.png');
     var fd = new FormData();
     fd.append('file', file, file.name || ('pasted-' + Date.now() + '.png'));
+    if (_gcReplyingTo) fd.append('reply_to_id', _gcReplyingTo.id);
     fetch(_baseUrl + '/file', { method: 'POST', body: fd })
       .then(function(r) { return r.json().then(function(j) { return { ok: r.ok, body: j }; }); })
       .then(function(res) {
         if (res.ok) {
           var el = document.getElementById(placeholderId);
           if (el) el.remove();
+          cancelGcFullReply();
         } else {
           markUploadFailed(placeholderId, res.body.message);
         }
@@ -472,13 +687,19 @@
     var time = new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     var content = '';
     if (msg.type === 'file' && msg.attachment) { content = renderFile(msg.attachment, msg.id); }
-    else { var div = document.createElement('div'); div.textContent = msg.content; content = div.innerHTML; }
+    else { content = gcRenderWithMentions(msg.content); }
     var deleteBtn = isSent ? '<span class="gc-msg-delete" onclick="event.stopPropagation(); deleteGcFullMsg(' + msg.id + ')" title="Delete"><i class="bi bi-trash"></i></span>' : '';
+    var replyBtn = _gcReplyBtnHtml(msg, isSent);
+    var replyQuote = _gcReplyQuoteHtml(msg);
     var senderName = !isSent ? '<div class="gc-msg-sender">' + escapeHtml(msg.sender_name) + '</div>' : '';
     if (isFromOther && !wasAtBottom && !container.querySelector('[data-gc-unread-divider]')) {
       container.insertAdjacentHTML('beforeend', _gcUnreadDividerHtml());
     }
-    container.insertAdjacentHTML('beforeend', '<div class="msg-bubble ' + cls + '" data-gcf-msg-id="' + msg.id + '">' + deleteBtn + senderName + '<div class="msg-content">' + content + '</div><div class="msg-footer"><span class="msg-time">' + time + '</span></div></div>');
+    container.insertAdjacentHTML('beforeend', '<div class="msg-bubble ' + cls + '" data-gcf-msg-id="' + msg.id + '">' + deleteBtn + replyBtn + senderName + replyQuote + '<div class="msg-content">' + content + '</div><div class="msg-footer"><span class="msg-time">' + time + '</span></div></div>');
+    if (isFromOther && _gcMentionsMe(msg.content)) {
+      var bubble = container.querySelector('[data-gcf-msg-id="' + msg.id + '"]');
+      if (bubble) bubble.classList.add('gc-msg-mention-me');
+    }
     if (wasAtBottom && !document.hidden) {
       container.scrollTop = container.scrollHeight;
       _gcSetLastRead(msg.id);

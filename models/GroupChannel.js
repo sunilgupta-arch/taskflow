@@ -4,10 +4,14 @@ class GroupChannel {
 
   static async getMessages(limit = 50, beforeId = null) {
     let query = `
-      SELECT m.*, u.name AS sender_name, r.name AS sender_role
+      SELECT m.*, u.name AS sender_name, r.name AS sender_role,
+             pm.content AS reply_to_content, pm.type AS reply_to_type, pm.is_deleted AS reply_to_is_deleted,
+             pu.name AS reply_to_sender_name
       FROM group_channel_messages m
       JOIN users u ON u.id = m.sender_id
       JOIN roles r ON u.role_id = r.id
+      LEFT JOIN group_channel_messages pm ON pm.id = m.reply_to_id
+      LEFT JOIN users pu ON pu.id = pm.sender_id
 `;
     const params = [];
     if (beforeId) {
@@ -36,16 +40,20 @@ class GroupChannel {
     return messages.reverse();
   }
 
-  static async sendMessage({ sender_id, content, type = 'text' }) {
+  static async sendMessage({ sender_id, content, type = 'text', reply_to_id = null }) {
     const [result] = await db.query(
-      'INSERT INTO group_channel_messages (sender_id, content, type) VALUES (?, ?, ?)',
-      [sender_id, content, type]
+      'INSERT INTO group_channel_messages (sender_id, content, type, reply_to_id) VALUES (?, ?, ?, ?)',
+      [sender_id, content, type, reply_to_id || null]
     );
     const [rows] = await db.query(
-      `SELECT m.*, u.name AS sender_name, r.name AS sender_role
+      `SELECT m.*, u.name AS sender_name, r.name AS sender_role,
+              pm.content AS reply_to_content, pm.type AS reply_to_type, pm.is_deleted AS reply_to_is_deleted,
+              pu.name AS reply_to_sender_name
        FROM group_channel_messages m
        JOIN users u ON u.id = m.sender_id
        JOIN roles r ON u.role_id = r.id
+       LEFT JOIN group_channel_messages pm ON pm.id = m.reply_to_id
+       LEFT JOIN users pu ON pu.id = pm.sender_id
        WHERE m.id = ?`, [result.insertId]
     );
     return rows[0];

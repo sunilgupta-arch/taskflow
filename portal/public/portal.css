@@ -4691,6 +4691,74 @@ html.sidebar-expanded .portal-main {
   position: relative;
   display: inline-block;
 }
+/* Reply button on bubble */
+.gc-msg-reply {
+  position: absolute; top: 4px; cursor: pointer;
+  opacity: 0; visibility: hidden; color: #fff;
+  background: rgba(0,0,0,0.6); width: 26px; height: 26px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 4px; font-size: 0.85rem; line-height: 1; z-index: 2;
+  transition: opacity 0.15s, visibility 0.15s, background 0.15s;
+}
+.gc-messages .msg-bubble:hover .gc-msg-reply,
+.gc-msg-reply:hover { opacity: 1; visibility: visible; }
+.gc-msg-reply:hover { background: rgba(37,99,235,0.9); }
+/* Quoted reply block inside a bubble */
+.gc-reply-quote {
+  border-left: 3px solid var(--tf-accent, #60a5fa);
+  background: rgba(255,255,255,0.06); padding: 4px 8px;
+  margin-bottom: 4px; border-radius: 4px; font-size: 0.68rem;
+  cursor: pointer; overflow: hidden;
+}
+.gc-reply-quote:hover { background: rgba(255,255,255,0.12); }
+.msg-bubble.sent .gc-reply-quote { background: rgba(0,0,0,0.2); border-left-color: rgba(255,255,255,0.6); }
+.gc-reply-quote-sender { font-weight: 600; color: var(--tf-accent, #60a5fa); }
+.msg-bubble.sent .gc-reply-quote-sender { color: rgba(255,255,255,0.9); }
+.gc-reply-quote-content { color: var(--tf-text-muted, #94a3b8); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.msg-bubble.sent .gc-reply-quote-content { color: rgba(255,255,255,0.75); }
+/* Reply compose bar above input */
+.gc-reply-compose-bar {
+  padding: 4px 10px; background: rgba(37,99,235,0.1);
+  border-top: 1px solid rgba(37,99,235,0.3); border-left: 3px solid #2563eb;
+  display: flex; align-items: center; gap: 8px; font-size: 0.7rem;
+}
+.gc-reply-compose-text { flex: 1; overflow: hidden; }
+.gc-reply-compose-sender { font-weight: 600; color: var(--tf-accent, #60a5fa); margin-right: 4px; }
+.gc-reply-compose-content { color: var(--tf-text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+.gc-reply-compose-close { cursor: pointer; color: var(--tf-text-muted); font-size: 0.8rem; }
+.gc-reply-compose-close:hover { color: #ef4444; }
+/* Jump-to flash */
+@keyframes gcJumpFlash { 0%,100% { box-shadow: none; } 50% { box-shadow: 0 0 0 3px rgba(59,130,246,0.6); } }
+.gc-msg-jump-highlight { animation: gcJumpFlash 1.2s ease; }
+/* Mentions */
+.gc-mention {
+  background: rgba(37,99,235,0.25); color: #60a5fa; padding: 0 4px;
+  border-radius: 3px; font-weight: 500;
+}
+.gc-mention-self { background: rgba(239,68,68,0.25); color: #fca5a5; }
+.msg-bubble.sent .gc-mention { background: rgba(255,255,255,0.2); color: #fff; }
+.msg-bubble.sent .gc-mention-self { background: rgba(252,165,165,0.4); color: #fff; }
+.gc-mention-popup {
+  position: absolute; bottom: 100%; left: 8px; right: 8px; margin-bottom: 4px;
+  max-height: 200px; overflow-y: auto;
+  background: var(--tf-surface-2, #1e293b); border: 1px solid var(--tf-border, #334155);
+  border-radius: 6px; z-index: 20; padding: 3px;
+  box-shadow: 0 -4px 12px rgba(0,0,0,0.4);
+}
+.gc-mention-item {
+  padding: 5px 9px; cursor: pointer; font-size: 0.75rem; border-radius: 4px;
+  display: flex; align-items: center; gap: 6px;
+}
+.gc-mention-item.active, .gc-mention-item:hover { background: rgba(37,99,235,0.3); }
+.gc-mention-item .gc-mention-avatar {
+  width: 20px; height: 20px; border-radius: 50%;
+  background: #2563eb; color: #fff; font-size: 0.65rem; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+}
+.gc-mention-item .gc-mention-name { flex: 1; color: var(--tf-text); }
+.gc-mention-item .gc-mention-role { font-size: 0.6rem; color: var(--tf-text-muted); }
+@keyframes gcMentionPulse { 0%,100% { box-shadow: none; } 50% { box-shadow: 0 0 0 3px rgba(239,68,68,0.5); } }
+.gc-msg-mention-me { animation: gcMentionPulse 1.6s ease 2; }
 
 .gc-messages {
   flex: 1;

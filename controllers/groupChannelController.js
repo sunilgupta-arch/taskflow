@@ -18,12 +18,13 @@ class GroupChannelController {
 
   static async sendMessage(req, res) {
     try {
-      const { content } = req.body;
+      const { content, reply_to_id } = req.body;
       if (!content || !content.trim()) return ApiResponse.error(res, 'Message cannot be empty', 400);
 
       const message = await GroupChannel.sendMessage({
         sender_id: req.user.id,
-        content: content.trim()
+        content: content.trim(),
+        reply_to_id: reply_to_id ? parseInt(reply_to_id) : null
       });
 
       // Broadcast to everyone via main namespace
@@ -51,7 +52,8 @@ class GroupChannelController {
       const message = await GroupChannel.sendMessage({
         sender_id: req.user.id,
         content: req.file.originalname,
-        type: 'file'
+        type: 'file',
+        reply_to_id: req.body.reply_to_id ? parseInt(req.body.reply_to_id) : null
       });
 
       await GroupChannel.saveAttachment({
