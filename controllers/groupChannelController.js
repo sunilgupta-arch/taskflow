@@ -164,6 +164,19 @@ class GroupChannelController {
     }
   }
 
+  static async unfurl(req, res) {
+    try {
+      const url = (req.query.url || '').trim();
+      if (!url) return ApiResponse.error(res, 'url required', 400);
+      const { unfurl } = require('../services/linkUnfurl');
+      const preview = await unfurl(url);
+      return ApiResponse.success(res, { preview });
+    } catch (err) {
+      console.error('GroupChannel unfurl error:', err);
+      return ApiResponse.error(res, 'Unfurl failed');
+    }
+  }
+
   static async search(req, res) {
     try {
       const q = (req.query.q || '').trim();

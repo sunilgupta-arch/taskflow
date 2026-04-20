@@ -170,6 +170,7 @@ router.post('/channel/messages/:messageId/reactions', authenticate, GroupChannel
 router.post('/channel/messages/:messageId/pin', authenticate, GroupChannelController.togglePin);
 router.get('/channel/pinned', authenticate, GroupChannelController.getPinned);
 router.get('/channel/search', authenticate, GroupChannelController.search);
+router.get('/channel/unfurl', authenticate, GroupChannelController.unfurl);
 router.get('/channel/attachment/:messageId', authenticate, GroupChannelController.serveAttachment);
 
 // Announcements / Info Board

@@ -4849,6 +4849,29 @@ html.sidebar-expanded .portal-main {
 .gc-search-item-content { color: var(--tf-text); }
 .gc-search-item-content mark { background: rgba(234,179,8,0.35); color: inherit; padding: 0 2px; border-radius: 2px; }
 .gc-search-empty { padding: 10px; font-size: 0.72rem; text-align: center; color: var(--tf-text-muted); }
+.gc-link { color: inherit; text-decoration: underline; opacity: 0.9; word-break: break-all; }
+.gc-link:hover { opacity: 1; }
+.gc-link-preview {
+  display: flex; gap: 6px; margin-top: 6px; padding: 6px;
+  background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 6px; text-decoration: none; color: inherit;
+  overflow: hidden; max-width: 100%;
+}
+.gc-link-preview:hover { background: rgba(255,255,255,0.1); }
+.msg-bubble.sent .gc-link-preview { background: rgba(0,0,0,0.15); border-color: rgba(255,255,255,0.2); }
+.gc-link-preview-image { flex-shrink: 0; width: 48px; height: 48px; border-radius: 4px; overflow: hidden; background: rgba(0,0,0,0.2); }
+.gc-link-preview-image img { width: 100%; height: 100%; object-fit: cover; }
+.gc-link-preview-body { flex: 1; min-width: 0; font-size: 0.68rem; line-height: 1.25; }
+.gc-link-preview-site { color: var(--tf-accent); font-size: 0.58rem; text-transform: uppercase; letter-spacing: 0.3px; font-weight: 600; }
+.msg-bubble.sent .gc-link-preview-site { color: rgba(255,255,255,0.85); }
+.gc-link-preview-title { font-weight: 600; color: var(--tf-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; }
+.msg-bubble.sent .gc-link-preview-title { color: #fff; }
+.gc-link-preview-desc { color: var(--tf-text-muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-top: 1px; }
+.msg-bubble.sent .gc-link-preview-desc { color: rgba(255,255,255,0.8); }
+/* Larger preview for full-page */
+.gc-fullpage-messages .gc-link-preview-image { width: 72px; height: 72px; }
+.gc-fullpage-messages .gc-link-preview-body { font-size: 0.78rem; }
+.gc-fullpage-messages .gc-link-preview-site { font-size: 0.65rem; }
 /* Full-page pin */
 .gc-fullpage-messages .gc-msg-pin {
   position: absolute; top: 6px; right: 110px; cursor: pointer;
