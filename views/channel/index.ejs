@@ -233,12 +233,14 @@
 .gc-emoji-picker {
   position: absolute; background: var(--tf-surface-2, #1e293b);
   border: 1px solid var(--tf-border, #334155); border-radius: 8px;
-  padding: 4px; box-shadow: 0 4px 14px rgba(0,0,0,0.4);
-  display: flex; gap: 2px; z-index: 30;
+  padding: 6px; box-shadow: 0 4px 14px rgba(0,0,0,0.4);
+  display: grid; grid-template-columns: repeat(8, 32px); gap: 3px;
+  z-index: 10000; width: max-content;
 }
 .gc-emoji-pick {
-  cursor: pointer; padding: 4px 6px; border-radius: 4px;
-  font-size: 1.2rem; line-height: 1; transition: background 0.1s;
+  cursor: pointer; padding: 4px; border-radius: 4px;
+  font-size: 1.25rem; line-height: 1.1; text-align: center;
+  transition: background 0.1s;
 }
 .gc-emoji-pick:hover { background: rgba(37,99,235,0.3); }
 .gc-reactions { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
@@ -357,6 +359,7 @@
     </div>
   </div>
   <button class="gc-search-toggle" onclick="toggleGcSearch()" title="Search"><i class="bi bi-search"></i></button>
+  <button class="gc-help-toggle" onclick="openGcHelp()" title="Help"><i class="bi bi-question-circle"></i></button>
   <div class="gc-search-bar" id="gcSearchBar" style="display:none">
     <input type="text" class="form-control form-control-sm" id="gcSearchInput" placeholder="Search messages...">
     <i class="bi bi-x-lg gc-search-close" onclick="toggleGcSearch()" title="Close"></i>
@@ -724,7 +727,7 @@
   };
 
   // ── Reactions ───────────────────────────────────
-  var GC_EMOJI_LIST = ['👍','❤️','😂','😮','😢','🎉','🔥','👀'];
+  var GC_EMOJI_LIST = ['😀','😂','😊','😍','🥰','😎','🤔','🤩','😐','😢','😭','😤','😡','🤯','😱','🥳','👍','👎','👌','✌️','🤞','🙏','👏','🙌','❤️','🧡','💛','💚','💙','💜','🖤','💔','🎉','🔥','✨','💯','✅','❌','⚠️','💡','👀','💪','🚀','⚡','🌟','🎯','📌','📎'];
   function _gcRenderReactions(m) {
     if (!m.reactions || !m.reactions.length) return '';
     var html = m.reactions.map(function(r) {
@@ -752,9 +755,12 @@
     }).join('');
     document.body.appendChild(picker);
     var rect = evt.currentTarget.getBoundingClientRect();
-    var pickerWidth = 310;
-    picker.style.top = (rect.top - 48) + 'px';
-    picker.style.left = Math.max(10, Math.min(window.innerWidth - pickerWidth - 10, rect.right - pickerWidth)) + 'px';
+    var pw = picker.offsetWidth;
+    var ph = picker.offsetHeight;
+    var top = rect.top - ph - 8;
+    if (top < 8) top = Math.min(rect.bottom + 8, window.innerHeight - ph - 8);
+    picker.style.top = top + 'px';
+    picker.style.left = Math.max(10, Math.min(window.innerWidth - pw - 10, rect.right - pw)) + 'px';
     setTimeout(function() {
       document.addEventListener('click', function close(e) {
         if (!picker.contains(e.target)) { picker.remove(); document.removeEventListener('click', close); }

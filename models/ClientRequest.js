@@ -212,8 +212,10 @@ class ClientRequest {
   }
 
   // Used by portal: get instances for a specific org + date
-  static async getInstancesForOrg(orgId, dateStr) {
+  static async getInstancesForOrg(orgId, dateStr, userId = null, isSales = false) {
     await ClientRequest.autoMarkMissed(dateStr);
+    const salesFilter = isSales && userId ? ' AND cr.created_by = ?' : '';
+    const params = isSales && userId ? [dateStr, orgId, userId] : [dateStr, orgId];
     const [instances] = await db.query(
       `SELECT cri.*,
               cr.title, cr.task_type, cr.description, cr.priority,
@@ -226,11 +228,11 @@ class ClientRequest {
        JOIN users creator ON cr.created_by = creator.id
        LEFT JOIN users picker ON cri.picked_by = picker.id
        LEFT JOIN users completer ON cri.completed_by = completer.id
-       WHERE cri.instance_date = ? AND cr.org_id = ? AND cr.is_active = 1
+       WHERE cri.instance_date = ? AND cr.org_id = ? AND cr.is_active = 1${salesFilter}
        ORDER BY
          FIELD(cr.priority, 'urgent', 'high', 'normal') ASC,
          cr.due_time ASC`,
-      [dateStr, orgId]
+      params
     );
     return instances;
   }
@@ -254,17 +256,24 @@ class ClientRequest {
   }
 
   // Used by portal: list all requests for an org (template management)
-  static async getRequestsForOrg(orgId, includeInactive = false) {
+  static async getRequestsForOrg(orgId, includeInactive = false, userId = null, isSales = false) {
+    const salesFilter = isSales && userId ? ' AND cr.created_by = ?' : '';
+    const params = isSales && userId ? [orgId, userId] : [orgId];
     const [rows] = await db.query(
       `SELECT cr.*, u.name as created_by_name, assignee.name as assigned_to_name
        FROM client_requests cr
        JOIN users u ON cr.created_by = u.id
        LEFT JOIN users assignee ON cr.assigned_to = assignee.id
-       WHERE cr.org_id = ?${includeInactive ? '' : ' AND cr.is_active = 1'}
+       WHERE cr.org_id = ?${includeInactive ? '' : ' AND cr.is_active = 1'}${salesFilter}
        ORDER BY cr.created_at DESC`,
-      [orgId]
+      params
     );
     return rows;
+  }
+
+  static async getRequestById(requestId) {
+    const [[row]] = await db.query('SELECT * FROM client_requests WHERE id = ?', [requestId]);
+    return row || null;
   }
 
   static async deactivate(requestId, orgId) {
@@ -321,17 +330,47 @@ class ClientRequest {
     );
   }
 
-  // Badge count: open instances for today for an org
-  static async getOpenCountForOrg(orgId) {
+  // Badge count: open instances for today for an org (filtered by creator for CLIENT_SALES)
+  static async getOpenCountForOrg(orgId, userId = null, isSales = false) {
     const today = new Date().toISOString().split('T')[0];
+    const salesFilter = isSales && userId ? ' AND cr.created_by = ?' : '';
+    const params = isSales && userId ? [orgId, today, userId] : [orgId, today];
     const [[row]] = await db.query(
       `SELECT COUNT(*) as cnt
        FROM client_request_instances cri
        JOIN client_requests cr ON cri.request_id = cr.id
-       WHERE cr.org_id = ? AND cri.instance_date = ? AND cri.status = 'open'`,
-      [orgId, today]
+       WHERE cr.org_id = ? AND cri.instance_date = ? AND cri.status = 'open'${salesFilter}`,
+      params
     );
     return row.cnt;
+  }
+
+  static async addAttachment({ request_id, instance_id, uploaded_by, file_name, mime_type, drive_file_id, drive_view_link, file_size }) {
+    const [result] = await db.query(
+      `INSERT INTO client_request_attachments
+         (request_id, instance_id, uploaded_by, file_name, mime_type, drive_file_id, drive_view_link, file_size)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [request_id || null, instance_id || null, uploaded_by, file_name, mime_type || null,
+       drive_file_id, drive_view_link || null, file_size || null]
+    );
+    return result.insertId;
+  }
+
+  static async getAttachments(requestId, instanceId) {
+    const conditions = [];
+    const params = [];
+    if (requestId) { conditions.push('cra.request_id = ?'); params.push(requestId); }
+    if (instanceId) { conditions.push('cra.instance_id = ?'); params.push(instanceId); }
+    if (!conditions.length) return [];
+    const [rows] = await db.query(
+      `SELECT cra.*, u.name as uploaded_by_name
+       FROM client_request_attachments cra
+       JOIN users u ON cra.uploaded_by = u.id
+       WHERE ${conditions.join(' OR ')}
+       ORDER BY cra.created_at ASC`,
+      params
+    );
+    return rows;
   }
 
   // Get local users for assigning (LOCAL roles)

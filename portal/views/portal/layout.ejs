@@ -133,7 +133,7 @@
   </nav>
 
   <!-- Main Content -->
-  <div class="portal-main<%= (typeof section !== 'undefined' && section === 'channel') ? ' gc-collapsed' : '' %>">
+  <div class="portal-main<%= section === 'channel' ? ' gc-collapsed' : (user.role_name === 'CLIENT_SALES' ? ' gc-no-panel' : '') %>">
     <%- body %>
   </div>
 

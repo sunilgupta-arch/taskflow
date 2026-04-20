@@ -176,6 +176,7 @@ router.get('/channel/attachment/:messageId', authenticate, GroupChannelControlle
 // ── Client Queue (local team works client-dispatched tasks) ─
 const ClientQueueController = require('../controllers/clientQueueController');
 
+const queueAttachUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 25 * 1024 * 1024 } });
 router.get('/queue', authenticate, ClientQueueController.index);
 router.get('/queue/data', authenticate, ClientQueueController.getQueue);
 router.post('/queue/:id/pick', authenticate, ClientQueueController.pick);
@@ -183,6 +184,11 @@ router.post('/queue/:id/release', authenticate, ClientQueueController.release);
 router.post('/queue/:id/complete', authenticate, ClientQueueController.complete);
 router.get('/queue/:id/detail', authenticate, ClientQueueController.getDetail);
 router.post('/queue/:id/comments', authenticate, ClientQueueController.addComment);
+router.post('/queue/:id/attachments', authenticate, (req, res, next) => queueAttachUpload.single('file')(req, res, err => {
+  if (err && err.code === 'LIMIT_FILE_SIZE') return res.status(413).json({ success: false, message: 'Attachment too large. Max 25 MB.' });
+  if (err) return res.status(400).json({ success: false, message: err.message || 'Upload failed' });
+  next();
+}), ClientQueueController.uploadAttachment);
 
 // Announcements / Info Board
 router.get('/announcements', authenticate, requireRoles('LOCAL_ADMIN', 'LOCAL_MANAGER', 'LOCAL_USER', 'CLIENT_ADMIN', 'CLIENT_MANAGER'), AnnouncementController.index);

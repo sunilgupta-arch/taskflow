@@ -537,6 +537,12 @@ router.get('/tasks/attachment/:attachmentId', PortalTaskController.serveAttachme
 
 // ── Work Requests (client submits tasks to local team) ───
 const ClientRequestController = require('../controllers/clientRequestController');
+const reqAttachUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 25 * 1024 * 1024 } });
+const handleReqUploadError = (err, req, res, next) => {
+  if (err && err.code === 'LIMIT_FILE_SIZE') return res.status(413).json({ success: false, message: 'Attachment too large. Max 25 MB.' });
+  if (err) return res.status(400).json({ success: false, message: err.message || 'Upload failed' });
+  next();
+};
 
 router.get('/requests', ClientRequestController.index);
 router.get('/requests/instances', ClientRequestController.getInstances);
@@ -545,6 +551,7 @@ router.post('/requests', ClientRequestController.create);
 router.put('/requests/:id', ClientRequestController.update);
 router.patch('/requests/:id/deactivate', ClientRequestController.deactivate);
 router.get('/requests/task-types', ClientRequestController.getTaskTypes);
+router.post('/requests/:id/attachments', (req, res, next) => reqAttachUpload.single('file')(req, res, err => handleReqUploadError(err, req, res, next)), ClientRequestController.uploadAttachment);
 router.get('/requests/instances/:id', ClientRequestController.getDetail);
 router.patch('/requests/instances/:id/cancel', ClientRequestController.cancelInstance);
 router.post('/requests/instances/:id/comments', ClientRequestController.addComment);

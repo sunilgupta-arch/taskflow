@@ -217,6 +217,28 @@ class GoogleDriveService {
     return this.uploadToFolder(process.env.GC_DRIVE_FOLDER_ID, file);
   }
 
+  // Upload a client request attachment (uses CR_DRIVE_FOLDER_ID or root)
+  static async uploadRequestAttachment(file) {
+    const folderId = process.env.CR_DRIVE_FOLDER_ID || ROOT_FOLDER_ID;
+    if (!folderId) throw new Error('Drive folder ID not configured');
+
+    const stream = new Readable();
+    stream.push(file.buffer);
+    stream.push(null);
+
+    const res = await drive.files.create({
+      requestBody: {
+        name: `${Date.now()}_${file.originalname}`,
+        parents: [folderId]
+      },
+      media: { mimeType: file.mimetype, body: stream },
+      fields: 'id,name,mimeType,size,webViewLink',
+      ...SHARED_DRIVE_PARAMS
+    });
+
+    return res.data;
+  }
+
   // Copy a file to a target folder (used for "Save to Drive")
   static async copyFile(sourceFileId, targetFolderId, newName) {
     const res = await drive.files.copy({

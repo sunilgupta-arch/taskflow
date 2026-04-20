@@ -4614,6 +4614,83 @@ html.sidebar-expanded .portal-main {
   color: var(--tf-text);
   min-height: 44px;
 }
+.gc-header-actions { gap: 10px; }
+.gc-header-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  color: var(--tf-text);
+  background: transparent;
+  border: 0;
+  text-decoration: none;
+  cursor: pointer;
+  opacity: 0.75;
+  font-size: 0.8rem;
+  border-radius: 4px;
+  transition: opacity 0.15s, background 0.15s;
+}
+.gc-header-btn:hover {
+  opacity: 1;
+  background: rgba(127,127,127,0.18);
+  color: var(--tf-text);
+}
+/* Help modal */
+.gc-help-backdrop {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+  z-index: 10001; display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+}
+.gc-help-modal {
+  background: var(--tf-surface-2, #1e293b);
+  border: 1px solid var(--tf-border, #334155);
+  border-radius: 10px; max-width: 640px; width: 100%;
+  max-height: 85vh; overflow: hidden; display: flex; flex-direction: column;
+  color: var(--tf-text); box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+}
+.gc-help-header {
+  padding: 14px 20px; border-bottom: 1px solid var(--tf-border);
+  display: flex; align-items: center; justify-content: space-between;
+  flex-shrink: 0;
+}
+.gc-help-title { font-size: 1.05rem; font-weight: 700; display: flex; align-items: center; gap: 8px; color: var(--tf-text); }
+.gc-help-close { cursor: pointer; color: var(--tf-text-muted); background: transparent; border: 0; font-size: 1rem; padding: 4px 8px; border-radius: 4px; }
+.gc-help-close:hover { background: rgba(127,127,127,0.2); color: var(--tf-text); }
+.gc-help-body { padding: 16px 20px 20px; overflow-y: auto; font-size: 0.85rem; line-height: 1.45; }
+.gc-help-intro { color: var(--tf-text-muted); margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid var(--tf-border); }
+.gc-help-section-title {
+  font-size: 0.7rem; font-weight: 700; color: var(--tf-accent);
+  text-transform: uppercase; letter-spacing: 0.6px;
+  margin: 16px 0 6px; padding-top: 8px;
+}
+.gc-help-section-title:first-child { margin-top: 0; }
+.gc-help-item { display: flex; gap: 12px; padding: 8px 0; }
+.gc-help-icon {
+  flex-shrink: 0; width: 32px; height: 32px; border-radius: 6px;
+  background: rgba(37,99,235,0.15); color: var(--tf-accent);
+  display: flex; align-items: center; justify-content: center; font-size: 0.95rem;
+}
+.gc-help-content { flex: 1; min-width: 0; }
+.gc-help-feature { font-weight: 600; color: var(--tf-text); margin-bottom: 3px; font-size: 0.85rem; }
+.gc-help-desc { color: var(--tf-text-muted); font-size: 0.8rem; }
+.gc-help-desc code {
+  background: rgba(127,127,127,0.18); padding: 1px 5px; border-radius: 3px;
+  font-size: 0.75rem; color: var(--tf-text);
+}
+.gc-help-tips { padding-left: 18px; margin: 0; color: var(--tf-text-muted); font-size: 0.8rem; }
+.gc-help-tips li { margin-bottom: 4px; }
+/* Help toggle (full-page) */
+.gc-help-toggle {
+  position: absolute; top: 12px; right: 70px;
+  width: 36px; height: 36px; border-radius: 50%;
+  background: var(--tf-surface-2); border: 1px solid var(--tf-border);
+  color: var(--tf-text); cursor: pointer; z-index: 15;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s;
+}
+.gc-help-toggle:hover { background: rgba(37,99,235,0.3); }
 
 .gc-panel-body {
   display: flex;
@@ -4922,12 +4999,14 @@ html.sidebar-expanded .portal-main {
 .gc-emoji-picker {
   position: absolute; background: var(--tf-surface-2, #1e293b);
   border: 1px solid var(--tf-border, #334155); border-radius: 8px;
-  padding: 4px; box-shadow: 0 4px 14px rgba(0,0,0,0.4);
-  display: flex; gap: 2px; z-index: 30;
+  padding: 6px; box-shadow: 0 4px 14px rgba(0,0,0,0.4);
+  display: grid; grid-template-columns: repeat(8, 28px); gap: 2px;
+  z-index: 10000; width: max-content;
 }
 .gc-emoji-pick {
-  cursor: pointer; padding: 4px 6px; border-radius: 4px;
-  font-size: 1.1rem; line-height: 1; transition: background 0.1s;
+  cursor: pointer; padding: 3px; border-radius: 4px;
+  font-size: 1.15rem; line-height: 1.1; text-align: center;
+  transition: background 0.1s;
 }
 .gc-emoji-pick:hover { background: rgba(37,99,235,0.3); }
 /* Reactions row */
@@ -5212,7 +5291,8 @@ html.sidebar-expanded .portal-main {
   transition: margin-right 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.portal-main.gc-collapsed {
+.portal-main.gc-collapsed,
+.portal-main.gc-no-panel {
   margin-right: 0;
 }
 

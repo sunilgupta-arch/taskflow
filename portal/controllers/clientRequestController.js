@@ -1,6 +1,7 @@
 const ClientRequest = require('../../models/ClientRequest');
 const { ApiResponse } = require('../../utils/response');
 const { getIO } = require('../../config/socket');
+const GoogleDriveService = require('../../services/googleDriveService');
 
 class ClientRequestController {
 
@@ -13,9 +14,10 @@ class ClientRequestController {
       // Ensure instances are generated for this date
       await ClientRequest.getQueueForDate(dateStr);
 
+      const isSales = req.user.role_name === 'CLIENT_SALES';
       const [instances, requests, taskTypes, localUsers, stats] = await Promise.all([
-        ClientRequest.getInstancesForOrg(orgId, dateStr),
-        ClientRequest.getRequestsForOrg(orgId),
+        ClientRequest.getInstancesForOrg(orgId, dateStr, req.user.id, isSales),
+        ClientRequest.getRequestsForOrg(orgId, false, req.user.id, isSales),
         ClientRequest.getTaskTypes(orgId),
         ClientRequest.getLocalUsers(),
         ClientRequest.getDateStats(dateStr)
@@ -45,8 +47,9 @@ class ClientRequestController {
       const dateStr = req.query.date || today;
       const orgId = req.user.organization_id;
       await ClientRequest.getQueueForDate(dateStr);
+      const isSales = req.user.role_name === 'CLIENT_SALES';
       const [instances, stats] = await Promise.all([
-        ClientRequest.getInstancesForOrg(orgId, dateStr),
+        ClientRequest.getInstancesForOrg(orgId, dateStr, req.user.id, isSales),
         ClientRequest.getDateStats(dateStr)
       ]);
       return ApiResponse.success(res, { instances, stats, date: dateStr });
@@ -143,7 +146,8 @@ class ClientRequestController {
 
   static async getBadgeCount(req, res) {
     try {
-      const count = await ClientRequest.getOpenCountForOrg(req.user.organization_id);
+      const isSales = req.user.role_name === 'CLIENT_SALES';
+      const count = await ClientRequest.getOpenCountForOrg(req.user.organization_id, req.user.id, isSales);
       return ApiResponse.success(res, { count });
     } catch (err) {
       return ApiResponse.error(res, 'Failed');
@@ -165,14 +169,40 @@ class ClientRequestController {
       const instance = await ClientRequest.getInstanceById(instanceId);
       if (!instance) return ApiResponse.error(res, 'Not found', 404);
       if (instance.org_id !== req.user.organization_id) return ApiResponse.error(res, 'Not authorized', 403);
-      const [history, comments] = await Promise.all([
+      const [history, comments, attachments] = await Promise.all([
         ClientRequest.getReleaseHistory(instanceId),
-        ClientRequest.getComments(instanceId)
+        ClientRequest.getComments(instanceId),
+        ClientRequest.getAttachments(instance.request_id, instanceId)
       ]);
-      return ApiResponse.success(res, { instance, history, comments });
+      return ApiResponse.success(res, { instance, history, comments, attachments });
     } catch (err) {
       console.error('ClientRequest getDetail error:', err);
       return ApiResponse.error(res, 'Failed to load detail');
+    }
+  }
+
+  static async uploadAttachment(req, res) {
+    try {
+      const requestId = parseInt(req.params.id);
+      if (!req.file) return ApiResponse.error(res, 'No file provided', 400);
+      const request = await ClientRequest.getRequestById(requestId);
+      if (!request || request.org_id !== req.user.organization_id)
+        return ApiResponse.error(res, 'Not found', 404);
+      const driveFile = await GoogleDriveService.uploadRequestAttachment(req.file);
+      await ClientRequest.addAttachment({
+        request_id: requestId,
+        instance_id: null,
+        uploaded_by: req.user.id,
+        file_name: req.file.originalname,
+        mime_type: req.file.mimetype,
+        drive_file_id: driveFile.id,
+        drive_view_link: driveFile.webViewLink || null,
+        file_size: req.file.size
+      });
+      return ApiResponse.success(res, { file_name: req.file.originalname, drive_view_link: driveFile.webViewLink });
+    } catch (err) {
+      console.error('ClientRequest uploadAttachment error:', err);
+      return ApiResponse.error(res, 'Upload failed');
     }
   }
 

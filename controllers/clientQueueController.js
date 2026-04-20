@@ -1,6 +1,7 @@
 const ClientRequest = require('../models/ClientRequest');
 const { ApiResponse } = require('../utils/response');
 const { getIO } = require('../config/socket');
+const GoogleDriveService = require('../services/googleDriveService');
 
 class ClientQueueController {
 
@@ -87,14 +88,39 @@ class ClientQueueController {
       const instanceId = parseInt(req.params.id);
       const instance = await ClientRequest.getInstanceById(instanceId);
       if (!instance) return ApiResponse.error(res, 'Not found', 404);
-      const [history, comments] = await Promise.all([
+      const [history, comments, attachments] = await Promise.all([
         ClientRequest.getReleaseHistory(instanceId),
-        ClientRequest.getComments(instanceId)
+        ClientRequest.getComments(instanceId),
+        ClientRequest.getAttachments(instance.request_id, instanceId)
       ]);
-      return ApiResponse.success(res, { instance, history, comments });
+      return ApiResponse.success(res, { instance, history, comments, attachments });
     } catch (err) {
       console.error('ClientQueue getDetail error:', err);
       return ApiResponse.error(res, 'Failed to load detail');
+    }
+  }
+
+  static async uploadAttachment(req, res) {
+    try {
+      const instanceId = parseInt(req.params.id);
+      if (!req.file) return ApiResponse.error(res, 'No file provided', 400);
+      const instance = await ClientRequest.getInstanceById(instanceId);
+      if (!instance) return ApiResponse.error(res, 'Not found', 404);
+      const driveFile = await GoogleDriveService.uploadRequestAttachment(req.file);
+      await ClientRequest.addAttachment({
+        request_id: null,
+        instance_id: instanceId,
+        uploaded_by: req.user.id,
+        file_name: req.file.originalname,
+        mime_type: req.file.mimetype,
+        drive_file_id: driveFile.id,
+        drive_view_link: driveFile.webViewLink || null,
+        file_size: req.file.size
+      });
+      return ApiResponse.success(res, { file_name: req.file.originalname, drive_view_link: driveFile.webViewLink });
+    } catch (err) {
+      console.error('ClientQueue uploadAttachment error:', err);
+      return ApiResponse.error(res, 'Upload failed');
     }
   }
 

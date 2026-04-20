@@ -79,7 +79,7 @@ function statusBadge(s) {
           <th style="width:40px">#</th>
           <th style="width:44px"></th>
           <th>Title</th>
-          <th>Client</th>
+          <th>Created By</th>
           <th>Type</th>
           <th>Priority</th>
           <th>Due</th>
@@ -110,7 +110,7 @@ function statusBadge(s) {
             </a>
             <% if (isOverdue) { %><span class="badge bg-danger ms-1">Overdue</span><% } %>
           </td>
-          <td class="text-muted small"><%= inst.org_name %></td>
+          <td class="text-muted small"><%= inst.created_by_name %></td>
           <td><span class="badge bg-info text-dark"><%= inst.task_type %></span></td>
           <td><%- priorityBadge(inst.priority) %></td>
           <td class="small text-muted"><%= inst.due_time ? inst.due_time.substring(0,5) : '—' %></td>
@@ -259,7 +259,7 @@ function statusBadge(s) {
   });
 
   function renderDetail(d) {
-    const { instance: inst, history, comments } = d;
+    const { instance: inst, history, comments, attachments } = d;
     document.getElementById('queueDetailTitle').textContent = inst.title;
 
     const recLabels = { none: 'One-time', daily: 'Daily', weekly: 'Weekly', monthly: 'Monthly' };
@@ -294,6 +294,25 @@ function statusBadge(s) {
     if (inst.description) {
       html += `<div class="mb-3"><div class="small text-muted mb-1">Description</div><div class="p-2 rounded" style="background:var(--tf-surface-2);white-space:pre-wrap">${escHtml(inst.description)}</div></div>`;
     }
+
+    html += `<div class="mb-3"><div class="small text-muted mb-1 fw-semibold">Attachments</div>`;
+    if (!attachments || attachments.length === 0) {
+      html += `<p class="text-muted small mb-1">No attachments.</p>`;
+    } else {
+      attachments.forEach(a => {
+        html += `<div class="d-flex align-items-center gap-2 mb-1 small">
+          <i class="bi bi-paperclip text-muted"></i>
+          <a href="${escHtml(a.drive_view_link || '#')}" target="_blank" rel="noopener">${escHtml(a.file_name)}</a>
+          <span class="text-muted">(${escHtml(a.uploaded_by_name)})</span>
+        </div>`;
+      });
+    }
+    html += `<div class="d-flex gap-2 align-items-center mt-2">
+      <input type="file" id="queueAttachFile" class="form-control form-control-sm flex-grow-1">
+      <button class="btn btn-sm btn-outline-secondary" onclick="uploadQueueAttachment(${inst.id})" style="white-space:nowrap">
+        <i class="bi bi-paperclip me-1"></i>Upload
+      </button>
+    </div></div>`;
 
     if (history.length > 0) {
       html += `<div class="mb-3"><div class="small text-muted mb-1">Release History</div><ul class="list-group list-group-flush">`;
@@ -359,6 +378,24 @@ function statusBadge(s) {
     if (!s) return '';
     return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
+
+  window.uploadQueueAttachment = async function(instanceId) {
+    const fileInput = document.getElementById('queueAttachFile');
+    if (!fileInput || !fileInput.files[0]) { alert('Select a file first'); return; }
+    const fd = new FormData();
+    fd.append('file', fileInput.files[0]);
+    try {
+      const r = await fetch('/queue/' + instanceId + '/attachments', {
+        method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' }, body: fd
+      });
+      const data = await r.json();
+      if (data.success) {
+        const r2 = await fetch('/queue/' + instanceId + '/detail', { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+        const d2 = await r2.json();
+        if (d2.success) renderDetail(d2.data);
+      } else alert(data.message || 'Upload failed');
+    } catch { alert('Upload error'); }
+  };
 
   // Socket.IO live updates
   if (typeof io !== 'undefined') {
