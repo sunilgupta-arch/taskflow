@@ -36,10 +36,11 @@
         <span class="ab-label">Tasks</span>
         <span class="ab-tooltip">Tasks</span>
       </a>
-      <a href="/portal/requests" class="activity-bar-item <%= section === 'requests' ? 'active' : '' %>">
+      <a href="/portal/requests" class="activity-bar-item <%= section === 'requests' ? 'active' : '' %>" style="position:relative;">
         <i class="bi bi-inbox-fill"></i>
         <span class="ab-label">Requests</span>
         <span class="ab-tooltip">Work Requests</span>
+        <span class="activity-bar-badge req-nav-badge" style="display:none"></span>
       </a>
       <a href="/portal/notes" class="activity-bar-item <%= section === 'notes' ? 'active' : '' %>">
         <i class="bi bi-journal-text"></i>
@@ -2385,5 +2386,28 @@
 
   <script src="/portal/portal.js"></script>
   <%- script %>
+
+  <!-- Requests badge (runs on every portal page) -->
+  <script>
+  (function() {
+    function updateReqBadge() {
+      fetch('/portal/requests/badge', { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+        .then(r => r.json()).then(data => {
+          if (!data.success) return;
+          const badge = document.querySelector('.req-nav-badge');
+          if (!badge) return;
+          badge.textContent = data.data.count || '';
+          badge.style.display = data.data.count > 0 ? '' : 'none';
+        }).catch(() => {});
+    }
+    updateReqBadge();
+    // Also update badge when queue:updated fires globally
+    if (typeof io !== 'undefined') {
+      const _reqSocket = io('/portal');
+      _reqSocket.on('queue:updated', updateReqBadge);
+      _reqSocket.on('queue:new_request', updateReqBadge);
+    }
+  })();
+  </script>
 </body>
 </html>

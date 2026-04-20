@@ -540,10 +540,13 @@ const ClientRequestController = require('../controllers/clientRequestController'
 
 router.get('/requests', ClientRequestController.index);
 router.get('/requests/instances', ClientRequestController.getInstances);
+router.get('/requests/badge', ClientRequestController.getBadgeCount);
 router.post('/requests', ClientRequestController.create);
+router.put('/requests/:id', ClientRequestController.update);
 router.patch('/requests/:id/deactivate', ClientRequestController.deactivate);
 router.get('/requests/task-types', ClientRequestController.getTaskTypes);
 router.get('/requests/instances/:id', ClientRequestController.getDetail);
+router.patch('/requests/instances/:id/cancel', ClientRequestController.cancelInstance);
 router.post('/requests/instances/:id/comments', ClientRequestController.addComment);
 
 // ── Help & Training ──────────────────────────────────────

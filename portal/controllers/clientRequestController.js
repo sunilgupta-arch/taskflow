@@ -60,28 +60,28 @@ class ClientRequestController {
       const { title, task_type, description, priority, recurrence, recurrence_days,
               start_date, recurrence_end_date, due_time, assigned_to } = req.body;
       if (!title || !title.trim()) return ApiResponse.error(res, 'Title is required', 400);
-      if (!start_date) return ApiResponse.error(res, 'Start date is required', 400);
+      const effectiveStartDate = start_date || new Date().toISOString().split('T')[0];
+      const effectiveTaskType = (task_type && task_type.trim()) ? task_type.trim() : 'General';
 
       const id = await ClientRequest.create({
         org_id: req.user.organization_id,
         created_by: req.user.id,
         title: title.trim(),
-        task_type: (task_type || 'General').trim(),
+        task_type: effectiveTaskType,
         description: description || null,
         priority: priority || 'normal',
         recurrence: recurrence || 'none',
         recurrence_days: recurrence === 'weekly' ? (recurrence_days || null) : null,
-        start_date,
+        start_date: effectiveStartDate,
         recurrence_end_date: recurrence !== 'none' ? (recurrence_end_date || null) : null,
         due_time: due_time || null,
         assigned_to: assigned_to ? parseInt(assigned_to) : null
       });
 
-      // Immediately generate instance for start_date if it matches today or future
-      await ClientRequest.getQueueForDate(start_date);
+      await ClientRequest.getQueueForDate(effectiveStartDate);
 
       const io = req.app.get('io');
-      if (io) io.emit('queue:new_request', { id, title: title.trim(), date: start_date });
+      if (io) io.emit('queue:new_request', { id, title: title.trim(), date: effectiveStartDate });
 
       return ApiResponse.success(res, { id }, 'Request created');
     } catch (err) {
@@ -101,6 +101,57 @@ class ClientRequestController {
     } catch (err) {
       console.error('ClientRequest deactivate error:', err);
       return ApiResponse.error(res, 'Failed to deactivate');
+    }
+  }
+
+  static async update(req, res) {
+    try {
+      const requestId = parseInt(req.params.id);
+      const orgId = req.user.organization_id;
+      const isAdmin = ['CLIENT_ADMIN', 'CLIENT_TOP_MGMT', 'CLIENT_MGMT', 'CLIENT_MANAGER'].includes(req.user.role_name);
+      if (!isAdmin) return ApiResponse.error(res, 'Not authorized', 403);
+      const { title, task_type, description, priority, due_time, recurrence_end_date, assigned_to } = req.body;
+      if (title !== undefined && !title.trim()) return ApiResponse.error(res, 'Title cannot be empty', 400);
+      await ClientRequest.update(requestId, orgId, {
+        ...(title !== undefined && { title: title.trim() }),
+        ...(task_type !== undefined && { task_type: task_type.trim() || 'General' }),
+        ...(description !== undefined && { description }),
+        ...(priority !== undefined && { priority }),
+        ...(due_time !== undefined && { due_time }),
+        ...(recurrence_end_date !== undefined && { recurrence_end_date }),
+        ...(assigned_to !== undefined && { assigned_to: assigned_to || null })
+      });
+      const io = req.app.get('io');
+      if (io) io.emit('queue:new_request', {});
+      return ApiResponse.success(res, {}, 'Request updated');
+    } catch (err) {
+      console.error('ClientRequest update error:', err);
+      return ApiResponse.error(res, err.message || 'Failed to update');
+    }
+  }
+
+  static async cancelInstance(req, res) {
+    try {
+      const instanceId = parseInt(req.params.id);
+      await ClientRequest.cancelInstance(instanceId, req.user.organization_id);
+      const io = req.app.get('io');
+      if (io) {
+        io.emit('queue:updated', { cancelled: instanceId });
+        io.of('/portal').emit('queue:updated', { cancelled: instanceId });
+      }
+      return ApiResponse.success(res, {}, 'Request cancelled');
+    } catch (err) {
+      console.error('ClientRequest cancelInstance error:', err);
+      return ApiResponse.error(res, err.message || 'Failed to cancel', 400);
+    }
+  }
+
+  static async getBadgeCount(req, res) {
+    try {
+      const count = await ClientRequest.getOpenCountForOrg(req.user.organization_id);
+      return ApiResponse.success(res, { count });
+    } catch (err) {
+      return ApiResponse.error(res, 'Failed');
     }
   }
 

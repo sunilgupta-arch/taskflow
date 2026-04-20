@@ -22,6 +22,18 @@ function matchesDate(req, dateStr) {
 
 class ClientRequest {
 
+  // Auto-mark open/picked instances on past dates as 'missed'
+  static async autoMarkMissed(dateStr) {
+    const today = new Date().toISOString().split('T')[0];
+    if (dateStr >= today) return;
+    await db.query(
+      `UPDATE client_request_instances
+       SET status = 'missed'
+       WHERE instance_date = ? AND status IN ('open', 'picked')`,
+      [dateStr]
+    );
+  }
+
   // Ensure instances exist for all active requests on a given date, return full list
   static async getQueueForDate(dateStr) {
     const [requests] = await db.query(
@@ -39,13 +51,15 @@ class ClientRequest {
     const applicable = requests.filter(r => matchesDate(r, dateStr));
 
     if (applicable.length > 0) {
-      const values = applicable.map(r => [r.id, dateStr, r.assigned_to ? 'open' : 'open']);
+      const values = applicable.map(r => [r.id, dateStr, 'open']);
       await db.query(
         `INSERT IGNORE INTO client_request_instances (request_id, instance_date, status)
          VALUES ?`,
         [values]
       );
     }
+
+    await ClientRequest.autoMarkMissed(dateStr);
 
     const [instances] = await db.query(
       `SELECT cri.*,
@@ -66,7 +80,8 @@ class ClientRequest {
        WHERE cri.instance_date = ? AND cr.is_active = 1
        ORDER BY
          CASE WHEN cri.status IN ('open','picked') AND ? < CURDATE() THEN 0 ELSE 1 END ASC,
-         CASE cri.status WHEN 'open' THEN 0 WHEN 'picked' THEN 1 WHEN 'done' THEN 2 WHEN 'missed' THEN 3 END ASC,
+         CASE cri.status WHEN 'open' THEN 0 WHEN 'picked' THEN 1 WHEN 'done' THEN 2
+                         WHEN 'missed' THEN 3 WHEN 'cancelled' THEN 4 END ASC,
          FIELD(cr.priority, 'urgent', 'high', 'normal') ASC,
          cr.due_time ASC`,
       [dateStr, dateStr]
@@ -198,6 +213,7 @@ class ClientRequest {
 
   // Used by portal: get instances for a specific org + date
   static async getInstancesForOrg(orgId, dateStr) {
+    await ClientRequest.autoMarkMissed(dateStr);
     const [instances] = await db.query(
       `SELECT cri.*,
               cr.title, cr.task_type, cr.description, cr.priority,
@@ -265,6 +281,57 @@ class ClientRequest {
       [orgId]
     );
     return rows.map(r => r.task_type);
+  }
+
+  // Edit a request template (portal admin)
+  static async update(requestId, orgId, fields) {
+    const allowed = ['title', 'task_type', 'description', 'priority', 'due_time',
+                     'recurrence_end_date', 'assigned_to'];
+    const sets = [];
+    const vals = [];
+    for (const key of allowed) {
+      if (key in fields) {
+        sets.push(`${key} = ?`);
+        vals.push(fields[key] === '' ? null : fields[key]);
+      }
+    }
+    if (!sets.length) return;
+    vals.push(requestId, orgId);
+    await db.query(
+      `UPDATE client_requests SET ${sets.join(', ')} WHERE id = ? AND org_id = ?`,
+      vals
+    );
+  }
+
+  // Cancel a specific instance (portal side, only when open)
+  static async cancelInstance(instanceId, orgId) {
+    const [[inst]] = await db.query(
+      `SELECT cri.status, cr.org_id
+       FROM client_request_instances cri
+       JOIN client_requests cr ON cri.request_id = cr.id
+       WHERE cri.id = ?`,
+      [instanceId]
+    );
+    if (!inst) throw new Error('Not found');
+    if (inst.org_id !== orgId) throw new Error('Not authorized');
+    if (inst.status !== 'open') throw new Error('Only open tasks can be cancelled');
+    await db.query(
+      `UPDATE client_request_instances SET status = 'cancelled' WHERE id = ?`,
+      [instanceId]
+    );
+  }
+
+  // Badge count: open instances for today for an org
+  static async getOpenCountForOrg(orgId) {
+    const today = new Date().toISOString().split('T')[0];
+    const [[row]] = await db.query(
+      `SELECT COUNT(*) as cnt
+       FROM client_request_instances cri
+       JOIN client_requests cr ON cri.request_id = cr.id
+       WHERE cr.org_id = ? AND cri.instance_date = ? AND cri.status = 'open'`,
+      [orgId, today]
+    );
+    return row.cnt;
   }
 
   // Get local users for assigning (LOCAL roles)

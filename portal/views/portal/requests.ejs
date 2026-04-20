@@ -37,11 +37,12 @@ const canCreate = ['CLIENT_ADMIN', 'CLIENT_TOP_MGMT', 'CLIENT_MGMT', 'CLIENT_MAN
 const canDeactivate = ['CLIENT_ADMIN', 'CLIENT_TOP_MGMT'].includes(user.role_name);
 %>
 
+<div class="portal-requests-wrap">
 <div class="portal-page-header">
-  <h5 class="mb-0">Work Requests</h5>
+  <h5>Work Requests</h5>
   <% if (canCreate) { %>
-  <button class="btn btn-sm btn-primary" onclick="showCreateRequestModal()">
-    <i class="bi bi-plus-lg"></i> New Request
+  <button class="btn btn-sm btn-primary me-1" onclick="showCreateRequestModal()" style="margin-top:2px;">
+    <i class="bi bi-plus-lg me-1"></i>New Request
   </button>
   <% } %>
 </div>
@@ -58,64 +59,11 @@ const canDeactivate = ['CLIENT_ADMIN', 'CLIENT_TOP_MGMT'].includes(user.role_nam
   <span class="ms-auto small text-muted"><strong><%= fmtDate(selectedDate) %></strong></span>
 </div>
 
-<!-- Stats -->
-<div class="d-flex flex-wrap gap-2 mb-3">
-  <span class="badge bg-secondary fs-sm"><%= stats.total %> Total</span>
-  <span class="badge bg-secondary fs-sm"><%= stats.open %> Pending</span>
-  <span class="badge bg-primary fs-sm"><%= stats.picked %> In Progress</span>
-  <span class="badge bg-success fs-sm"><%= stats.done %> Done</span>
-  <% if (stats.missed > 0) { %><span class="badge bg-danger fs-sm"><%= stats.missed %> Missed</span><% } %>
-  <% if (isPast) { %><span class="badge bg-warning text-dark ms-auto fs-sm">Past — read only</span><% } %>
-</div>
+<!-- Stats (rendered by JS) -->
+<div class="d-flex flex-wrap gap-2 mb-3" id="reqStatsBar"></div>
 
-<!-- Instances for this date -->
-<% if (instances.length === 0) { %>
-<div class="portal-empty-state">
-  <i class="bi bi-inbox fs-1 text-muted"></i>
-  <p class="mt-2 text-muted">No requests for <%= fmtDate(selectedDate) %></p>
-  <% if (canCreate && isToday) { %>
-  <button class="btn btn-sm btn-primary mt-1" onclick="showCreateRequestModal()">
-    <i class="bi bi-plus-lg me-1"></i>Create a Request
-  </button>
-  <% } %>
-</div>
-<% } else { %>
-<div class="portal-requests-table-wrap">
-  <table class="portal-table" id="requestsTable">
-    <thead>
-      <tr>
-        <th>#</th>
-        <th>Title</th>
-        <th>Type</th>
-        <th>Priority</th>
-        <th>Due Time</th>
-        <th>Status</th>
-        <th>Handled By</th>
-      </tr>
-    </thead>
-    <tbody>
-      <% instances.forEach(function(inst, idx) {
-        const isOverdue = isPast && ['open','picked'].includes(inst.status);
-      %>
-      <tr class="<%= isOverdue ? 'req-row-overdue' : '' %> req-row" data-id="<%= inst.id %>">
-        <td class="text-muted small"><%= idx + 1 %></td>
-        <td>
-          <a href="#" class="portal-req-detail-link text-decoration-none fw-semibold" data-id="<%= inst.id %>">
-            <%= inst.title %>
-          </a>
-          <% if (isOverdue) { %><span class="badge bg-danger ms-1 small">Overdue</span><% } %>
-        </td>
-        <td><span class="badge" style="background:var(--bs-info-bg-subtle);color:var(--bs-info-text-emphasis)"><%= inst.task_type %></span></td>
-        <td><%- priorityBadge(inst.priority) %></td>
-        <td class="small text-muted"><%= inst.due_time ? inst.due_time.substring(0,5) : '—' %></td>
-        <td><%- statusBadge(inst.status) %></td>
-        <td class="small"><%= inst.picked_by_name || (inst.completed_by_name ? inst.completed_by_name : '—') %></td>
-      </tr>
-      <% }); %>
-    </tbody>
-  </table>
-</div>
-<% } %>
+<!-- Instances for this date — rendered by JS (live-updatable) -->
+<div id="reqInstancesArea"></div>
 
 <!-- Recurring Requests List (management) -->
 <% if (canCreate && requests.length > 0) { %>
@@ -128,7 +76,7 @@ const canDeactivate = ['CLIENT_ADMIN', 'CLIENT_TOP_MGMT'].includes(user.role_nam
   </div>
   <div class="collapse" id="recurringList">
     <table class="portal-table portal-table-sm">
-      <thead><tr><th>Title</th><th>Type</th><th>Recurrence</th><th>Start</th><th>Ends</th><% if (canDeactivate) { %><th></th><% } %></tr></thead>
+      <thead><tr><th>Title</th><th>Type</th><th>Recurrence</th><th>Start</th><th>Ends</th><th></th></tr></thead>
       <tbody>
         <% requests.filter(r => r.recurrence !== 'none').forEach(function(r) { %>
         <tr>
@@ -137,9 +85,25 @@ const canDeactivate = ['CLIENT_ADMIN', 'CLIENT_TOP_MGMT'].includes(user.role_nam
           <td><%= r.recurrence %></td>
           <td><%= r.start_date %></td>
           <td><%= r.recurrence_end_date || 'Ongoing' %></td>
-          <% if (canDeactivate) { %>
-          <td><button class="btn btn-xs btn-outline-danger req-deactivate-btn" data-id="<%= r.id %>" title="Stop this recurring request">Stop</button></td>
-          <% } %>
+          <td class="text-end" style="white-space:nowrap">
+            <% if (canCreate) { %>
+            <button class="btn btn-xs btn-outline-secondary req-edit-btn me-1"
+              data-id="<%= r.id %>"
+              data-title="<%= r.title %>"
+              data-type="<%= r.task_type %>"
+              data-priority="<%= r.priority %>"
+              data-desc="<%= (r.description||'').replace(/"/g,'&quot;') %>"
+              data-duetime="<%= r.due_time||'' %>"
+              data-enddate="<%= r.recurrence_end_date||'' %>"
+              data-assignto="<%= r.assigned_to||'' %>"
+              title="Edit">
+              <i class="bi bi-pencil"></i>
+            </button>
+            <% } %>
+            <% if (canDeactivate) { %>
+            <button class="btn btn-xs btn-outline-danger req-deactivate-btn" data-id="<%= r.id %>" title="Stop recurring">Stop</button>
+            <% } %>
+          </td>
         </tr>
         <% }); %>
       </tbody>
@@ -147,6 +111,8 @@ const canDeactivate = ['CLIENT_ADMIN', 'CLIENT_TOP_MGMT'].includes(user.role_nam
   </div>
 </div>
 <% } %>
+
+</div><!-- /portal-requests-wrap -->
 
 <!-- Detail Modal -->
 <div class="modal fade" id="reqDetailModal" tabindex="-1">
@@ -179,8 +145,8 @@ const canDeactivate = ['CLIENT_ADMIN', 'CLIENT_TOP_MGMT'].includes(user.role_nam
             <input type="text" class="form-control form-control-sm" id="crTitle" placeholder="Brief description of the task">
           </div>
           <div class="col-md-6">
-            <label class="form-label small fw-semibold">Task Type <span class="text-danger">*</span></label>
-            <input type="text" class="form-control form-control-sm" id="crTaskType" list="crTaskTypeList" placeholder="e.g. Data Entry, PO Ordering...">
+            <label class="form-label small fw-semibold">Task Type</label>
+            <input type="text" class="form-control form-control-sm" id="crTaskType" list="crTaskTypeList" placeholder="e.g. Data Entry, PO Ordering..." value="General">
             <datalist id="crTaskTypeList">
               <% taskTypes.forEach(t => { %><option value="<%= t %>"><% }); %>
             </datalist>
@@ -198,7 +164,7 @@ const canDeactivate = ['CLIENT_ADMIN', 'CLIENT_TOP_MGMT'].includes(user.role_nam
             <textarea class="form-control form-control-sm" id="crDescription" rows="3" placeholder="Full details, instructions, attachments context..."></textarea>
           </div>
           <div class="col-md-6">
-            <label class="form-label small fw-semibold">Start Date <span class="text-danger">*</span></label>
+            <label class="form-label small fw-semibold">Start Date</label>
             <input type="date" class="form-control form-control-sm" id="crStartDate" value="<%= today %>">
           </div>
           <div class="col-md-6">
@@ -251,13 +217,77 @@ const canDeactivate = ['CLIENT_ADMIN', 'CLIENT_TOP_MGMT'].includes(user.role_nam
 </div>
 <% } %>
 
+<!-- Edit Request Modal -->
+<% if (canCreate) { %>
+<div class="modal fade" id="editRequestModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-pencil me-2"></i>Edit Request</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="erRequestId">
+        <div class="row g-3">
+          <div class="col-12">
+            <label class="form-label small fw-semibold">Title <span class="text-danger">*</span></label>
+            <input type="text" class="form-control form-control-sm" id="erTitle">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label small fw-semibold">Task Type</label>
+            <input type="text" class="form-control form-control-sm" id="erTaskType" list="crTaskTypeList">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label small fw-semibold">Priority</label>
+            <select class="form-select form-select-sm" id="erPriority">
+              <option value="normal">Normal</option>
+              <option value="high">High</option>
+              <option value="urgent">Urgent</option>
+            </select>
+          </div>
+          <div class="col-12">
+            <label class="form-label small fw-semibold">Description</label>
+            <textarea class="form-control form-control-sm" id="erDescription" rows="3"></textarea>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label small fw-semibold">Due Time <span class="text-muted fw-normal">(optional)</span></label>
+            <input type="time" class="form-control form-control-sm" id="erDueTime">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label small fw-semibold">End Date <span class="text-muted fw-normal">(optional)</span></label>
+            <input type="date" class="form-control form-control-sm" id="erEndDate">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label small fw-semibold">Assign To</label>
+            <select class="form-select form-select-sm" id="erAssignTo">
+              <option value="">Open Queue (anyone can pick)</option>
+              <% localUsers.forEach(function(u) { %>
+              <option value="<%= u.id %>"><%= u.name %> (<%= u.role_name %>)</option>
+              <% }); %>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary btn-sm" onclick="submitEditRequest()">
+          <i class="bi bi-check-lg me-1"></i>Save Changes
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+<% } %>
+
 <style>
-.portal-page-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:1rem; }
+.portal-requests-wrap { padding: 20px 24px; height:100%; overflow-y:auto; box-sizing:border-box; }
+.portal-page-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:1.25rem; }
+.portal-page-header h5 { font-size:1rem; font-weight:500; color:var(--tf-text); margin:0; }
 .portal-empty-state { text-align:center; padding:3rem 1rem; }
 .portal-requests-table-wrap { overflow-x:auto; }
 .portal-table { width:100%; border-collapse:collapse; }
-.portal-table th, .portal-table td { padding:8px 12px; border-bottom:1px solid var(--tf-border); font-size:0.875rem; }
-.portal-table th { font-weight:600; font-size:0.75rem; text-transform:uppercase; letter-spacing:.04em; color:var(--tf-muted); }
+.portal-table th { padding:7px 12px; border-bottom:1px solid var(--tf-border); font-size:0.7rem; font-weight:500; text-transform:uppercase; letter-spacing:.06em; color:var(--tf-muted); }
+.portal-table td { padding:9px 12px; border-bottom:1px solid var(--tf-border); font-size:0.875rem; font-weight:400; }
 .portal-table-sm th, .portal-table-sm td { padding:5px 10px; font-size:0.8rem; }
 .req-row:hover td { background:var(--tf-surface-2); cursor:pointer; }
 .req-row-overdue td { background:rgba(220,53,69,0.08); }
@@ -269,7 +299,114 @@ const canDeactivate = ['CLIENT_ADMIN', 'CLIENT_TOP_MGMT'].includes(user.role_nam
 
 <script>
 (function() {
-  // Open create modal
+  const PAGE_DATE = '<%= selectedDate %>';
+  const IS_PAST   = '<%= isPast %>' === 'true';
+  const CAN_CREATE = '<%= canCreate %>' === 'true';
+
+  function escHtml(s) {
+    if (!s) return '';
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function statusBadge(s) {
+    if (s === 'done')      return '<span class="badge bg-success">Done</span>';
+    if (s === 'picked')    return '<span class="badge bg-primary">In Progress</span>';
+    if (s === 'missed')    return '<span class="badge bg-danger">Missed</span>';
+    if (s === 'cancelled') return '<span class="badge bg-secondary">Cancelled</span>';
+    return '<span class="badge bg-secondary">Pending</span>';
+  }
+  function priorityBadge(p) {
+    if (p === 'urgent') return '<span class="badge bg-danger">Urgent</span>';
+    if (p === 'high')   return '<span class="badge bg-warning text-dark">High</span>';
+    return '<span class="badge bg-secondary">Normal</span>';
+  }
+
+  // ── Render instances table ──────────────────────────────
+  function renderInstances(instances) {
+    const area = document.getElementById('reqInstancesArea');
+    if (!instances || instances.length === 0) {
+      area.innerHTML = `<div class="portal-empty-state">
+        <i class="bi bi-inbox" style="font-size:2rem;color:var(--tf-muted)"></i>
+        <p class="mt-2 text-muted">No requests for this date</p>
+        ${CAN_CREATE && !IS_PAST ? '<button class="btn btn-sm btn-primary mt-1" onclick="showCreateRequestModal()"><i class="bi bi-plus-lg me-1"></i>Create a Request</button>' : ''}
+      </div>`;
+      return;
+    }
+    let rows = '';
+    instances.forEach((inst, idx) => {
+      const isOverdue = IS_PAST && ['open','picked'].includes(inst.status);
+      const cancelBtn = CAN_CREATE && !IS_PAST && inst.status === 'open'
+        ? `<button class="btn btn-xs btn-outline-danger req-cancel-btn ms-2" data-id="${inst.id}" title="Cancel this request" onclick="event.stopPropagation()">✕</button>`
+        : '';
+      rows += `<tr class="${isOverdue ? 'req-row-overdue' : ''} req-row" data-id="${inst.id}">
+        <td class="text-muted small">${idx + 1}</td>
+        <td>
+          <a href="#" class="portal-req-detail-link" data-id="${inst.id}" onclick="event.stopPropagation()">${escHtml(inst.title)}</a>
+          ${isOverdue ? '<span class="badge bg-danger ms-1 small">Overdue</span>' : ''}
+          ${cancelBtn}
+        </td>
+        <td><span class="badge" style="background:var(--bs-info-bg-subtle);color:var(--bs-info-text-emphasis)">${escHtml(inst.task_type)}</span></td>
+        <td>${priorityBadge(inst.priority)}</td>
+        <td class="small text-muted">${inst.due_time ? inst.due_time.substring(0,5) : '—'}</td>
+        <td>${statusBadge(inst.status)}</td>
+        <td class="small">${escHtml(inst.picked_by_name || inst.completed_by_name || '—')}</td>
+      </tr>`;
+    });
+    area.innerHTML = `<div class="portal-requests-table-wrap">
+      <table class="portal-table" id="requestsTable">
+        <thead><tr><th>#</th><th>Title</th><th>Type</th><th>Priority</th><th>Due Time</th><th>Status</th><th>Handled By</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+  }
+
+  // ── Update stats bar ────────────────────────────────────
+  function renderStats(stats) {
+    const bar = document.getElementById('reqStatsBar');
+    if (!bar) return;
+    bar.innerHTML = `
+      <span class="badge bg-secondary" style="font-size:0.75rem;font-weight:400">${stats.total} Total</span>
+      <span class="badge bg-secondary" style="font-size:0.75rem;font-weight:400">${stats.open} Pending</span>
+      <span class="badge bg-primary"   style="font-size:0.75rem;font-weight:400">${stats.picked} In Progress</span>
+      <span class="badge bg-success"   style="font-size:0.75rem;font-weight:400">${stats.done} Done</span>
+      ${stats.missed > 0 ? `<span class="badge bg-danger" style="font-size:0.75rem;font-weight:400">${stats.missed} Missed</span>` : ''}
+      ${IS_PAST ? '<span class="badge bg-warning text-dark ms-auto" style="font-size:0.75rem;font-weight:400">Past — read only</span>' : ''}`;
+  }
+
+  // ── Load instances from API (live update) ───────────────
+  async function loadInstances(date) {
+    try {
+      const r = await fetch('/portal/requests/instances?date=' + date, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+      const data = await r.json();
+      if (data.success) {
+        renderInstances(data.data.instances);
+        renderStats(data.data.stats);
+        updateBadge();
+      }
+    } catch (err) { console.error('loadInstances error', err); }
+  }
+
+  // ── Badge count update ──────────────────────────────────
+  async function updateBadge() {
+    try {
+      const r = await fetch('/portal/requests/badge', { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+      const data = await r.json();
+      if (data.success) {
+        const badge = document.querySelector('.req-nav-badge');
+        if (badge) {
+          badge.textContent = data.data.count || '';
+          badge.style.display = data.data.count > 0 ? '' : 'none';
+        }
+      }
+    } catch {}
+  }
+
+  // Initial render from server-side data
+  const _initInstances = <%- JSON.stringify(instances) %>;
+  const _initStats     = <%- JSON.stringify(stats) %>;
+  renderInstances(_initInstances);
+
+  // ── Create request ──────────────────────────────────────
   window.showCreateRequestModal = function() {
     new bootstrap.Modal(document.getElementById('createRequestModal')).show();
   };
@@ -285,8 +422,6 @@ const canDeactivate = ['CLIENT_ADMIN', 'CLIENT_TOP_MGMT'].includes(user.role_nam
     const task_type = document.getElementById('crTaskType').value.trim() || 'General';
     const start_date = document.getElementById('crStartDate').value;
     if (!title) { alert('Title is required'); return; }
-    if (!start_date) { alert('Start date is required'); return; }
-
     const recurrence = document.getElementById('crRecurrence').value;
     let recurrence_days = null;
     if (recurrence === 'weekly') {
@@ -294,7 +429,6 @@ const canDeactivate = ['CLIENT_ADMIN', 'CLIENT_TOP_MGMT'].includes(user.role_nam
       if (checked.length === 0) { alert('Select at least one day for weekly recurrence'); return; }
       recurrence_days = checked.join(',');
     }
-
     const payload = {
       title, task_type, start_date, recurrence, recurrence_days,
       description: document.getElementById('crDescription').value.trim() || null,
@@ -303,7 +437,6 @@ const canDeactivate = ['CLIENT_ADMIN', 'CLIENT_TOP_MGMT'].includes(user.role_nam
       recurrence_end_date: document.getElementById('crEndDate').value || null,
       assigned_to: document.getElementById('crAssignTo').value || null
     };
-
     try {
       const r = await fetch('/portal/requests', {
         method: 'POST',
@@ -313,20 +446,77 @@ const canDeactivate = ['CLIENT_ADMIN', 'CLIENT_TOP_MGMT'].includes(user.role_nam
       const data = await r.json();
       if (data.success) {
         bootstrap.Modal.getInstance(document.getElementById('createRequestModal')).hide();
-        window.location.reload();
-      } else {
-        alert(data.message || 'Failed to create request');
-      }
+        loadInstances(PAGE_DATE);
+      } else alert(data.message || 'Failed to create request');
     } catch (err) { alert('Error: ' + err.message); }
   };
 
-  // Detail modal
+  // ── Edit request ────────────────────────────────────────
+  document.addEventListener('click', function(e) {
+    const btn = e.target.closest('.req-edit-btn');
+    if (!btn) return;
+    e.stopPropagation();
+    document.getElementById('erRequestId').value   = btn.dataset.id;
+    document.getElementById('erTitle').value        = btn.dataset.title || '';
+    document.getElementById('erTaskType').value     = btn.dataset.type || 'General';
+    document.getElementById('erPriority').value     = btn.dataset.priority || 'normal';
+    document.getElementById('erDescription').value  = btn.dataset.desc || '';
+    document.getElementById('erDueTime').value      = btn.dataset.duetime || '';
+    document.getElementById('erEndDate').value      = btn.dataset.enddate || '';
+    document.getElementById('erAssignTo').value     = btn.dataset.assignto || '';
+    new bootstrap.Modal(document.getElementById('editRequestModal')).show();
+  });
+
+  window.submitEditRequest = async function() {
+    const id = document.getElementById('erRequestId').value;
+    const title = document.getElementById('erTitle').value.trim();
+    if (!title) { alert('Title cannot be empty'); return; }
+    const payload = {
+      title,
+      task_type:           document.getElementById('erTaskType').value.trim() || 'General',
+      priority:            document.getElementById('erPriority').value,
+      description:         document.getElementById('erDescription').value.trim() || '',
+      due_time:            document.getElementById('erDueTime').value || '',
+      recurrence_end_date: document.getElementById('erEndDate').value || '',
+      assigned_to:         document.getElementById('erAssignTo').value || ''
+    };
+    try {
+      const r = await fetch('/portal/requests/' + id, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+        body: JSON.stringify(payload)
+      });
+      const data = await r.json();
+      if (data.success) {
+        bootstrap.Modal.getInstance(document.getElementById('editRequestModal')).hide();
+        loadInstances(PAGE_DATE);
+      } else alert(data.message || 'Failed to update');
+    } catch (err) { alert('Error: ' + err.message); }
+  };
+
+  // ── Cancel instance ─────────────────────────────────────
   document.addEventListener('click', async function(e) {
-    const link = e.target.closest('.portal-req-detail-link, .req-row');
+    const btn = e.target.closest('.req-cancel-btn');
+    if (!btn) return;
+    e.stopPropagation();
+    if (!confirm('Cancel this request? The local team will no longer see it.')) return;
+    const id = btn.dataset.id;
+    try {
+      const r = await fetch('/portal/requests/instances/' + id + '/cancel', {
+        method: 'PATCH', headers: { 'X-Requested-With': 'XMLHttpRequest' }
+      });
+      const data = await r.json();
+      if (data.success) loadInstances(PAGE_DATE);
+      else alert(data.message || 'Failed to cancel');
+    } catch {}
+  });
+
+  // ── Detail modal ────────────────────────────────────────
+  document.addEventListener('click', async function(e) {
+    const link = e.target.closest('.portal-req-detail-link');
     if (!link) return;
     e.preventDefault();
-    const id = link.dataset.id || link.closest('tr').dataset.id;
-    if (!id) return;
+    const id = link.dataset.id;
     document.getElementById('reqDetailTitle').textContent = 'Loading...';
     document.getElementById('reqDetailBody').innerHTML = '<div class="text-center py-4"><div class="spinner-border spinner-border-sm"></div></div>';
     new bootstrap.Modal(document.getElementById('reqDetailModal')).show();
@@ -338,26 +528,38 @@ const canDeactivate = ['CLIENT_ADMIN', 'CLIENT_TOP_MGMT'].includes(user.role_nam
     } catch { document.getElementById('reqDetailBody').innerHTML = '<p class="text-danger">Error</p>'; }
   });
 
+  // Row click → detail (but not if clicking a button/link inside)
+  document.addEventListener('click', async function(e) {
+    const row = e.target.closest('.req-row');
+    if (!row) return;
+    if (e.target.closest('button,a')) return;
+    const id = row.dataset.id;
+    document.getElementById('reqDetailTitle').textContent = 'Loading...';
+    document.getElementById('reqDetailBody').innerHTML = '<div class="text-center py-4"><div class="spinner-border spinner-border-sm"></div></div>';
+    new bootstrap.Modal(document.getElementById('reqDetailModal')).show();
+    try {
+      const r = await fetch('/portal/requests/instances/' + id, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+      const data = await r.json();
+      if (data.success) renderReqDetail(data.data);
+    } catch {}
+  });
+
   function renderReqDetail(d) {
     const { instance: inst, history, comments } = d;
     document.getElementById('reqDetailTitle').textContent = inst.title;
     const recLabels = { none: 'One-time', daily: 'Daily', weekly: 'Weekly', monthly: 'Monthly' };
     let html = `<div class="row g-3 mb-3">
-      <div class="col-6"><div class="small text-muted mb-1">Task Type</div><span class="badge bg-info text-dark">${inst.task_type}</span></div>
-      <div class="col-6"><div class="small text-muted mb-1">Priority</div>${inst.priority === 'urgent' ? '<span class="badge bg-danger">Urgent</span>' : inst.priority === 'high' ? '<span class="badge bg-warning text-dark">High</span>' : '<span class="badge bg-secondary">Normal</span>'}</div>
+      <div class="col-6"><div class="small text-muted mb-1">Task Type</div><span class="badge bg-info text-dark">${escHtml(inst.task_type)}</span></div>
+      <div class="col-6"><div class="small text-muted mb-1">Priority</div>${priorityBadge(inst.priority)}</div>
       <div class="col-6"><div class="small text-muted mb-1">Recurrence</div>${recLabels[inst.recurrence] || inst.recurrence}</div>
       <div class="col-6"><div class="small text-muted mb-1">Due Time</div>${inst.due_time ? inst.due_time.substring(0,5) : '—'}</div>
-      <div class="col-6"><div class="small text-muted mb-1">Status</div>${inst.status === 'done' ? '<span class="badge bg-success">Done</span>' : inst.status === 'picked' ? '<span class="badge bg-primary">In Progress</span>' : '<span class="badge bg-secondary">Pending</span>'}</div>
-      <div class="col-6"><div class="small text-muted mb-1">Handled By</div>${inst.picked_by_name || inst.completed_by_name || '—'}</div>
+      <div class="col-6"><div class="small text-muted mb-1">Status</div>${statusBadge(inst.status)}</div>
+      <div class="col-6"><div class="small text-muted mb-1">Handled By</div>${escHtml(inst.picked_by_name || inst.completed_by_name || '—')}</div>
     </div>`;
-    if (inst.description) {
-      html += `<div class="mb-3"><div class="small text-muted mb-1">Description</div><div class="p-2 rounded" style="background:var(--tf-surface-2);white-space:pre-wrap">${escHtml(inst.description)}</div></div>`;
-    }
+    if (inst.description) html += `<div class="mb-3"><div class="small text-muted mb-1">Description</div><div class="p-2 rounded" style="background:var(--tf-surface-2);white-space:pre-wrap">${escHtml(inst.description)}</div></div>`;
     if (history.length > 0) {
       html += `<div class="mb-3"><div class="small text-muted mb-2 fw-semibold">Timeline</div><ul class="list-group list-group-flush">`;
-      history.forEach(h => {
-        html += `<li class="list-group-item px-0 py-1 small"><span class="text-muted">${new Date(h.released_at).toLocaleString()}</span> — returned to queue by <strong>${h.released_by_name}</strong>${h.reason ? ': ' + escHtml(h.reason) : ''}</li>`;
-      });
+      history.forEach(h => { html += `<li class="list-group-item px-0 py-1 small"><span class="text-muted">${new Date(h.released_at).toLocaleString()}</span> — returned by <strong>${escHtml(h.released_by_name)}</strong>${h.reason ? ': ' + escHtml(h.reason) : ''}</li>`; });
       html += `</ul></div>`;
     }
     html += `<hr><div class="mb-2 small fw-semibold">Comments</div>`;
@@ -365,8 +567,7 @@ const canDeactivate = ['CLIENT_ADMIN', 'CLIENT_TOP_MGMT'].includes(user.role_nam
     comments.forEach(c => {
       const isClient = c.role_name && c.role_name.startsWith('CLIENT');
       html += `<div class="d-flex gap-2 mb-2">
-        <div class="flex-shrink-0 rounded-circle d-flex align-items-center justify-content-center text-white small fw-bold"
-             style="width:32px;height:32px;background:${isClient ? '#0d6efd' : '#198754'}">${c.user_name[0]}</div>
+        <div class="flex-shrink-0 rounded-circle d-flex align-items-center justify-content-center text-white small fw-bold" style="width:32px;height:32px;background:${isClient?'#0d6efd':'#198754'}">${c.user_name[0]}</div>
         <div><div class="small fw-semibold">${escHtml(c.user_name)} <span class="text-muted fw-normal">${new Date(c.created_at).toLocaleString()}</span></div>
         <div class="small" style="white-space:pre-wrap">${escHtml(c.body)}</div></div>
       </div>`;
@@ -399,32 +600,28 @@ const canDeactivate = ['CLIENT_ADMIN', 'CLIENT_TOP_MGMT'].includes(user.role_nam
     } catch { } finally { input.disabled = false; }
   };
 
-  // Deactivate recurring request
+  // ── Deactivate recurring ────────────────────────────────
   document.addEventListener('click', async function(e) {
     const btn = e.target.closest('.req-deactivate-btn');
     if (!btn) return;
-    if (!confirm('Stop this recurring request? It will no longer generate new daily instances.')) return;
+    if (!confirm('Stop this recurring request? No new daily instances will be created.')) return;
     const id = btn.dataset.id;
     try {
-      const r = await fetch('/portal/requests/' + id + '/deactivate', {
-        method: 'PATCH',
-        headers: { 'X-Requested-With': 'XMLHttpRequest' }
-      });
+      const r = await fetch('/portal/requests/' + id + '/deactivate', { method: 'PATCH', headers: { 'X-Requested-With': 'XMLHttpRequest' } });
       const data = await r.json();
       if (data.success) window.location.reload();
       else alert(data.message || 'Failed');
-    } catch { }
+    } catch {}
   });
 
-  // Socket.IO: live done notifications
+  // ── Socket.IO: live update without full reload ──────────
   if (typeof io !== 'undefined') {
     const socket = io('/portal');
-    socket.on('queue:updated', function() { window.location.reload(); });
+    socket.on('queue:updated', function() { loadInstances(PAGE_DATE); });
+    socket.on('queue:new_request', function() { loadInstances(PAGE_DATE); });
   }
 
-  function escHtml(s) {
-    if (!s) return '';
-    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-  }
+  // Fetch initial badge count
+  updateBadge();
 })();
 </script>
