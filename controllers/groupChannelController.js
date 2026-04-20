@@ -146,6 +146,34 @@ class GroupChannelController {
     }
   }
 
+  static async togglePin(req, res) {
+    try {
+      const role = req.user.role_name || '';
+      if (role !== 'LOCAL_ADMIN' && role !== 'CLIENT_ADMIN') {
+        return ApiResponse.error(res, 'Only admins can pin messages', 403);
+      }
+      const messageId = parseInt(req.params.messageId);
+      const result = await GroupChannel.togglePin(messageId, req.user.id);
+      if (result.error) return ApiResponse.error(res, result.error, 400);
+      const { getIO } = require('../config/socket');
+      try { getIO().emit('channel:message:pin', { message: result.message, pinned: result.pinned }); } catch (_) {}
+      return ApiResponse.success(res, { message: result.message, pinned: result.pinned });
+    } catch (err) {
+      console.error('GroupChannel togglePin error:', err);
+      return ApiResponse.error(res, 'Failed to update pin');
+    }
+  }
+
+  static async getPinned(req, res) {
+    try {
+      const messages = await GroupChannel.getPinnedMessages();
+      return ApiResponse.success(res, { messages });
+    } catch (err) {
+      console.error('GroupChannel getPinned error:', err);
+      return ApiResponse.error(res, 'Failed to load pinned messages');
+    }
+  }
+
   static async toggleReaction(req, res) {
     try {
       const messageId = parseInt(req.params.messageId);

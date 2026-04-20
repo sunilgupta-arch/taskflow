@@ -146,6 +146,14 @@
     </div>
     <div class="gc-panel-body" id="gcPanelBody">
       <div class="gc-presence-strip" id="gcPresenceStrip"></div>
+      <div class="gc-pinned-bar" id="gcPinnedBar" style="display:none">
+        <div class="gc-pinned-bar-header" onclick="toggleGcPinnedList()">
+          <i class="bi bi-pin-angle-fill"></i>
+          <span id="gcPinnedBarTitle">0 pinned</span>
+          <i class="bi bi-chevron-down gc-pinned-bar-chev" id="gcPinnedBarChev"></i>
+        </div>
+        <div class="gc-pinned-bar-list" id="gcPinnedBarList" style="display:none"></div>
+      </div>
       <div class="gc-messages" id="gcMessages">
         <div class="text-center text-muted py-3 small">Loading...</div>
       </div>
@@ -1413,6 +1421,53 @@
     return false;
   }
 
+  // ── Pinned messages ─────────────────────────────
+  var _gcIsAdmin = (PORTAL_USER.role === 'CLIENT_ADMIN' || PORTAL_USER.role === 'LOCAL_ADMIN');
+  function _gcPinBtnHtml(m) {
+    if (m.is_deleted) return '';
+    if (!_gcIsAdmin) return '';
+    var cls = m.is_pinned ? 'gc-msg-pin pinned' : 'gc-msg-pin';
+    return '<span class="' + cls + '" onclick="event.stopPropagation(); togglePinGcMsg(' + m.id + ')" title="' + (m.is_pinned ? 'Unpin' : 'Pin') + '"><i class="bi bi-pin-angle-fill"></i></span>';
+  }
+  function _gcPinIndicatorHtml(m) {
+    if (!m.is_pinned) return '';
+    return '<span class="gc-pin-indicator" title="Pinned"><i class="bi bi-pin-angle-fill"></i></span>';
+  }
+  window.togglePinGcMsg = function(msgId) {
+    fetch(_gcBaseUrl + '/messages/' + msgId + '/pin', { method: 'POST' })
+      .then(function(r) { if (!r.ok) return r.json().then(function(j) { alert(j.message || 'Pin failed'); }); });
+  };
+  function loadGcPinned() {
+    fetch(_gcBaseUrl + '/pinned').then(function(r) { return r.json(); }).then(function(res) {
+      if (!res.success) return;
+      renderGcPinnedBar(res.data.messages || []);
+    });
+  }
+  function renderGcPinnedBar(pins) {
+    var bar = document.getElementById('gcPinnedBar');
+    var title = document.getElementById('gcPinnedBarTitle');
+    var list = document.getElementById('gcPinnedBarList');
+    if (!bar || !title || !list) return;
+    if (!pins.length) { bar.style.display = 'none'; return; }
+    bar.style.display = '';
+    title.textContent = pins.length + ' pinned';
+    list.innerHTML = pins.map(function(p) {
+      var preview = p.type === 'file' ? '📎 attachment' : (p.content || '').substring(0, 80);
+      return '<div class="gc-pinned-item" onclick="gcJumpToMsg(' + p.id + ')">' +
+        '<div class="gc-pinned-item-sender">' + escapeHtml(p.sender_name) + '</div>' +
+        '<div class="gc-pinned-item-content">' + escapeHtml(preview) + '</div>' +
+      '</div>';
+    }).join('');
+  }
+  window.toggleGcPinnedList = function() {
+    var bar = document.getElementById('gcPinnedBar');
+    var list = document.getElementById('gcPinnedBarList');
+    if (!bar || !list) return;
+    var open = list.style.display !== 'none';
+    list.style.display = open ? 'none' : '';
+    bar.classList.toggle('expanded', !open);
+  };
+
   // ── Edit own message ────────────────────────────
   var _gcMsgRaw = {};
   var GC_EDIT_WINDOW_MS = 15 * 60 * 1000;
@@ -1743,11 +1798,13 @@
       var editBtn = _gcEditBtnHtml(m);
       var replyBtn = _gcReplyBtnHtml(m, isSent);
       var reactBtn = _gcReactBtnHtml(m);
+      var pinBtn = _gcPinBtnHtml(m);
+      var pinInd = _gcPinIndicatorHtml(m);
       var replyQuote = _gcReplyQuoteHtml(m);
       var reactions = _gcRenderReactions(m);
       var senderName = !isSent ? '<div class="gc-msg-sender">' + escapeHtml(m.sender_name) + '</div>' : '';
       var editedLabel = m.edited_at ? '<span class="gc-edited-label">(edited)</span>' : '';
-      return dateDivider + unreadDivider + '<div class="msg-bubble ' + cls + (m.is_deleted ? ' deleted' : '') + '" data-gc-msg-id="' + m.id + '">' + deleteBtn + editBtn + replyBtn + reactBtn + senderName + replyQuote + '<div class="msg-content">' + content + '</div>' + reactions + '<div class="msg-footer"><span class="msg-time">' + time + '</span>' + editedLabel + '</div></div>';
+      return dateDivider + unreadDivider + '<div class="msg-bubble ' + cls + (m.is_deleted ? ' deleted' : '') + (m.is_pinned ? ' pinned' : '') + '" data-gc-msg-id="' + m.id + '">' + pinInd + deleteBtn + editBtn + pinBtn + replyBtn + reactBtn + senderName + replyQuote + '<div class="msg-content">' + content + '</div>' + reactions + '<div class="msg-footer"><span class="msg-time">' + time + '</span>' + editedLabel + '</div></div>';
     }).join('');
     if (prepend) {
       container.insertAdjacentHTML('afterbegin', html);
@@ -1940,6 +1997,25 @@
     }
   });
 
+  mainSocket.on('channel:message:pin', function(data) {
+    var bubble = document.querySelector('[data-gc-msg-id="' + data.message.id + '"]');
+    if (bubble) {
+      bubble.classList.toggle('pinned', !!data.pinned);
+      var existingInd = bubble.querySelector('.gc-pin-indicator');
+      if (data.pinned && !existingInd) {
+        bubble.insertAdjacentHTML('afterbegin', '<span class="gc-pin-indicator" title="Pinned"><i class="bi bi-pin-angle-fill"></i></span>');
+      } else if (!data.pinned && existingInd) {
+        existingInd.remove();
+      }
+      var pinBtn = bubble.querySelector('.gc-msg-pin');
+      if (pinBtn) {
+        pinBtn.classList.toggle('pinned', !!data.pinned);
+        pinBtn.title = data.pinned ? 'Unpin' : 'Pin';
+      }
+    }
+    loadGcPinned();
+  });
+
   mainSocket.on('channel:message:edit', function(msg) {
     var bubble = document.querySelector('[data-gc-msg-id="' + msg.id + '"]');
     if (!bubble) return;
@@ -2048,6 +2124,7 @@
   // Load on page load
   loadGcMessages();
   loadGcUsers();
+  loadGcPinned();
   </script>
   <% } %>
 

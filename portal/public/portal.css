@@ -4785,6 +4785,61 @@ html.sidebar-expanded .portal-main {
 .gc-msg-edit:hover { opacity: 1; visibility: visible; }
 .gc-msg-edit:hover { background: rgba(34,197,94,0.9); }
 .gc-edited-label { font-size: 0.6rem; opacity: 0.55; margin-left: 5px; font-style: italic; }
+/* Pin */
+.gc-msg-pin {
+  position: absolute; top: 4px; right: 100px; cursor: pointer;
+  opacity: 0; visibility: hidden; color: #fff;
+  background: rgba(0,0,0,0.6); width: 26px; height: 26px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 4px; font-size: 0.85rem; line-height: 1; z-index: 2;
+  transition: opacity 0.15s, visibility 0.15s, background 0.15s;
+}
+.gc-messages .msg-bubble:hover .gc-msg-pin,
+.gc-msg-pin:hover { opacity: 1; visibility: visible; }
+.gc-msg-pin:hover { background: rgba(234,179,8,0.9); }
+.gc-msg-pin.pinned { opacity: 1; visibility: visible; background: rgba(234,179,8,0.85); }
+.gc-pin-indicator {
+  position: absolute; top: -7px; left: 10px;
+  background: #eab308; color: #000; border-radius: 50%;
+  width: 18px; height: 18px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.6rem; z-index: 1;
+  border: 2px solid var(--tf-bg, #0f172a);
+}
+.gc-pinned-bar {
+  background: rgba(234,179,8,0.08);
+  border-bottom: 1px solid rgba(234,179,8,0.3);
+  flex-shrink: 0;
+}
+.gc-pinned-bar-header {
+  padding: 6px 10px; display: flex; align-items: center; gap: 6px;
+  cursor: pointer; font-size: 0.7rem; color: #eab308; font-weight: 600;
+}
+.gc-pinned-bar-header:hover { background: rgba(234,179,8,0.12); }
+.gc-pinned-bar-header > span { flex: 1; }
+.gc-pinned-bar-chev { font-size: 0.7rem; transition: transform 0.2s; }
+.gc-pinned-bar.expanded .gc-pinned-bar-chev { transform: rotate(180deg); }
+.gc-pinned-bar-list { max-height: 200px; overflow-y: auto; }
+.gc-pinned-item {
+  padding: 6px 10px; font-size: 0.7rem; cursor: pointer;
+  border-top: 1px solid rgba(234,179,8,0.2);
+}
+.gc-pinned-item:hover { background: rgba(234,179,8,0.1); }
+.gc-pinned-item-sender { font-weight: 600; color: var(--tf-accent); font-size: 0.65rem; }
+.gc-pinned-item-content { color: var(--tf-text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Full-page pin */
+.gc-fullpage-messages .gc-msg-pin {
+  position: absolute; top: 6px; right: 110px; cursor: pointer;
+  opacity: 0; visibility: hidden; color: #fff;
+  background: rgba(0,0,0,0.6); width: 30px; height: 30px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 6px; transition: opacity 0.15s, background 0.15s;
+  font-size: 0.9rem; line-height: 1; z-index: 2;
+}
+.gc-fullpage-messages .msg-bubble:hover .gc-msg-pin,
+.gc-fullpage-messages .gc-msg-pin:hover { opacity: 1; visibility: visible; }
+.gc-fullpage-messages .gc-msg-pin:hover { background: rgba(234,179,8,0.9); }
+.gc-fullpage-messages .gc-msg-pin.pinned { opacity: 1; visibility: visible; background: rgba(234,179,8,0.85); }
 .gc-editor textarea {
   font-size: 0.8rem; resize: none; background: rgba(0,0,0,0.25); color: inherit;
   border: 1px solid rgba(255,255,255,0.2);

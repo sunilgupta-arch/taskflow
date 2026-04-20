@@ -673,6 +673,8 @@ router.post('/channel/file', gcExcludeSales, (req, res, next) => gcUpload.single
 router.put('/channel/messages/:messageId', gcExcludeSales, GroupChannelController.editMessage);
 router.delete('/channel/messages/:messageId', gcExcludeSales, GroupChannelController.deleteMessage);
 router.post('/channel/messages/:messageId/reactions', gcExcludeSales, GroupChannelController.toggleReaction);
+router.post('/channel/messages/:messageId/pin', gcExcludeSales, GroupChannelController.togglePin);
+router.get('/channel/pinned', gcExcludeSales, GroupChannelController.getPinned);
 router.get('/channel/attachment/:messageId', gcExcludeSales, GroupChannelController.serveAttachment);
 
 // ── Change Password (all portal users) ───────────────────

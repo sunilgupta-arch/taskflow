@@ -77,6 +77,45 @@ class GroupChannel {
     return this.getReactionSummary(messageId);
   }
 
+  static async togglePin(messageId, userId) {
+    const [rows] = await db.query(
+      'SELECT id, is_pinned, is_deleted FROM group_channel_messages WHERE id = ?',
+      [messageId]
+    );
+    if (!rows.length) return { error: 'Not found' };
+    if (rows[0].is_deleted) return { error: 'Cannot pin a deleted message' };
+    const newPinned = rows[0].is_pinned ? 0 : 1;
+    await db.query(
+      'UPDATE group_channel_messages SET is_pinned = ?, pinned_at = ?, pinned_by = ? WHERE id = ?',
+      [newPinned, newPinned ? new Date() : null, newPinned ? userId : null, messageId]
+    );
+    const [updated] = await db.query(
+      `SELECT m.*, u.name AS sender_name, r.name AS sender_role,
+              pm.content AS reply_to_content, pm.type AS reply_to_type, pm.is_deleted AS reply_to_is_deleted,
+              pu.name AS reply_to_sender_name
+       FROM group_channel_messages m
+       JOIN users u ON u.id = m.sender_id
+       JOIN roles r ON u.role_id = r.id
+       LEFT JOIN group_channel_messages pm ON pm.id = m.reply_to_id
+       LEFT JOIN users pu ON pu.id = pm.sender_id
+       WHERE m.id = ?`, [messageId]
+    );
+    return { message: updated[0], pinned: !!newPinned };
+  }
+
+  static async getPinnedMessages() {
+    const [messages] = await db.query(
+      `SELECT m.id, m.sender_id, m.content, m.type, m.is_deleted, m.created_at, m.pinned_at,
+              u.name AS sender_name
+       FROM group_channel_messages m
+       JOIN users u ON u.id = m.sender_id
+       WHERE m.is_pinned = 1 AND m.is_deleted = 0
+       ORDER BY m.pinned_at DESC
+       LIMIT 20`
+    );
+    return messages;
+  }
+
   static async getReactionSummary(messageId) {
     const [rows] = await db.query(
       `SELECT r.emoji, r.user_id, u.name

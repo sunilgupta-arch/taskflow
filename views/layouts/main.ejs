@@ -1117,6 +1117,49 @@
     .gc-msg-edit:hover { opacity: 1; visibility: visible; }
     .gc-msg-edit:hover { background: rgba(34,197,94,0.9); }
     .gc-edited-label { font-size: 0.6rem; opacity: 0.55; margin-left: 5px; font-style: italic; }
+    /* Pin */
+    .gc-msg-pin {
+      position: absolute; top: 4px; right: 100px; cursor: pointer;
+      opacity: 0; visibility: hidden; color: #fff;
+      background: rgba(0,0,0,0.6); width: 26px; height: 26px;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 4px; font-size: 0.85rem; line-height: 1; z-index: 2;
+      transition: opacity 0.15s, visibility 0.15s, background 0.15s;
+    }
+    .gc-messages .msg-bubble:hover .gc-msg-pin,
+    .gc-msg-pin:hover { opacity: 1; visibility: visible; }
+    .gc-msg-pin:hover { background: rgba(234,179,8,0.9); }
+    .gc-msg-pin.pinned { opacity: 1; visibility: visible; background: rgba(234,179,8,0.85); }
+    .gc-pin-indicator {
+      position: absolute; top: -7px; left: 10px;
+      background: #eab308; color: #000; border-radius: 50%;
+      width: 18px; height: 18px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.6rem; z-index: 1;
+      border: 2px solid var(--tf-bg, #0f172a);
+    }
+    /* Pinned bar */
+    .gc-pinned-bar {
+      background: rgba(234,179,8,0.08);
+      border-bottom: 1px solid rgba(234,179,8,0.3);
+      flex-shrink: 0;
+    }
+    .gc-pinned-bar-header {
+      padding: 6px 10px; display: flex; align-items: center; gap: 6px;
+      cursor: pointer; font-size: 0.7rem; color: #eab308; font-weight: 600;
+    }
+    .gc-pinned-bar-header:hover { background: rgba(234,179,8,0.12); }
+    .gc-pinned-bar-header > span { flex: 1; }
+    .gc-pinned-bar-chev { font-size: 0.7rem; transition: transform 0.2s; }
+    .gc-pinned-bar.expanded .gc-pinned-bar-chev { transform: rotate(180deg); }
+    .gc-pinned-bar-list { max-height: 200px; overflow-y: auto; }
+    .gc-pinned-item {
+      padding: 6px 10px; font-size: 0.7rem; cursor: pointer;
+      border-top: 1px solid rgba(234,179,8,0.2);
+    }
+    .gc-pinned-item:hover { background: rgba(234,179,8,0.1); }
+    .gc-pinned-item-sender { font-weight: 600; color: var(--tf-accent); font-size: 0.65rem; }
+    .gc-pinned-item-content { color: var(--tf-text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .gc-editor textarea {
       font-size: 0.8rem; resize: none; background: rgba(0,0,0,0.25); color: inherit;
       border: 1px solid rgba(255,255,255,0.2);
@@ -1570,6 +1613,14 @@
   </div>
   <div class="gc-panel-body" id="gcPanelBody">
     <div class="gc-presence-strip" id="gcPresenceStrip"></div>
+    <div class="gc-pinned-bar" id="gcPinnedBar" style="display:none">
+      <div class="gc-pinned-bar-header" onclick="toggleGcPinnedList()">
+        <i class="bi bi-pin-angle-fill"></i>
+        <span id="gcPinnedBarTitle">0 pinned</span>
+        <i class="bi bi-chevron-down gc-pinned-bar-chev" id="gcPinnedBarChev"></i>
+      </div>
+      <div class="gc-pinned-bar-list" id="gcPinnedBarList" style="display:none"></div>
+    </div>
     <div class="gc-messages" id="gcMessages">
       <div class="text-center text-muted py-3 small">Loading...</div>
     </div>
@@ -2927,6 +2978,8 @@ if (typeof io !== 'undefined') {
 (function() {
   var _gcUserId = <%= typeof user !== 'undefined' ? user.id : 0 %>;
   var _gcUserName = '<%- typeof user !== "undefined" ? user.name.replace(/\x27/g, "\\x27") : "" %>';
+  var _gcUserRole = '<%= typeof user !== "undefined" ? user.role_name : "" %>';
+  var _gcIsAdmin = (_gcUserRole === 'LOCAL_ADMIN' || _gcUserRole === 'CLIENT_ADMIN');
   var _gcCollapsed = localStorage.getItem('gc-collapsed') === '1';
   var _gcUnread = 0;
   var _gcBaseUrl = '/channel';
@@ -3096,6 +3149,55 @@ if (typeof io !== 'undefined') {
     if (e.key === 'Escape') { e.preventDefault(); _gcHideMention(); return true; }
     return false;
   }
+
+  // ── Pinned messages ─────────────────────────────
+  function _gcPinBtnHtml(m) {
+    if (m.is_deleted) return '';
+    if (!_gcIsAdmin) return '';
+    var cls = m.is_pinned ? 'gc-msg-pin pinned' : 'gc-msg-pin';
+    return '<span class="' + cls + '" onclick="event.stopPropagation(); togglePinGcMsg(' + m.id + ')" title="' + (m.is_pinned ? 'Unpin' : 'Pin') + '"><i class="bi bi-pin-angle-fill"></i></span>';
+  }
+  function _gcPinIndicatorHtml(m) {
+    if (!m.is_pinned) return '';
+    return '<span class="gc-pin-indicator" title="Pinned"><i class="bi bi-pin-angle-fill"></i></span>';
+  }
+  window.togglePinGcMsg = function(msgId) {
+    $.ajax({
+      url: _gcBaseUrl + '/messages/' + msgId + '/pin',
+      method: 'POST',
+      error: function(xhr) { alert((xhr.responseJSON && xhr.responseJSON.message) || 'Pin failed'); }
+    });
+  };
+  function loadGcPinned() {
+    $.get(_gcBaseUrl + '/pinned', function(res) {
+      if (!res.success) return;
+      renderGcPinnedBar(res.data.messages || []);
+    });
+  }
+  function renderGcPinnedBar(pins) {
+    var bar = document.getElementById('gcPinnedBar');
+    var title = document.getElementById('gcPinnedBarTitle');
+    var list = document.getElementById('gcPinnedBarList');
+    if (!bar || !title || !list) return;
+    if (!pins.length) { bar.style.display = 'none'; return; }
+    bar.style.display = '';
+    title.textContent = pins.length + ' pinned';
+    list.innerHTML = pins.map(function(p) {
+      var preview = p.type === 'file' ? '📎 attachment' : (p.content || '').substring(0, 80);
+      return '<div class="gc-pinned-item" onclick="gcJumpToMsg(' + p.id + ')">' +
+        '<div class="gc-pinned-item-sender">' + _escHtmlGc(p.sender_name) + '</div>' +
+        '<div class="gc-pinned-item-content">' + _escHtmlGc(preview) + '</div>' +
+      '</div>';
+    }).join('');
+  }
+  window.toggleGcPinnedList = function() {
+    var bar = document.getElementById('gcPinnedBar');
+    var list = document.getElementById('gcPinnedBarList');
+    if (!bar || !list) return;
+    var open = list.style.display !== 'none';
+    list.style.display = open ? 'none' : '';
+    bar.classList.toggle('expanded', !open);
+  };
 
   // ── Edit own message ────────────────────────────
   var _gcMsgRaw = {}; // cache: msgId → raw text content
@@ -3393,11 +3495,13 @@ if (typeof io !== 'undefined') {
       var editBtn = _gcEditBtnHtml(m);
       var replyBtn = _gcReplyBtnHtml(m, isSent);
       var reactBtn = _gcReactBtnHtml(m);
+      var pinBtn = _gcPinBtnHtml(m);
+      var pinInd = _gcPinIndicatorHtml(m);
       var replyQuote = _gcReplyQuoteHtml(m);
       var reactions = _gcRenderReactions(m);
       var senderName = !isSent ? '<div class="gc-msg-sender">' + _escHtmlGc(m.sender_name) + '</div>' : '';
       var editedLabel = m.edited_at ? '<span class="gc-edited-label">(edited)</span>' : '';
-      return dateDivider + unreadDivider + '<div class="msg-bubble ' + cls + (m.is_deleted ? ' deleted' : '') + '" data-gc-msg-id="' + m.id + '">' + deleteBtn + editBtn + replyBtn + reactBtn + senderName + replyQuote + '<div class="msg-content">' + content + '</div>' + reactions + '<div class="msg-footer"><span class="msg-time">' + time + '</span>' + editedLabel + '</div></div>';
+      return dateDivider + unreadDivider + '<div class="msg-bubble ' + cls + (m.is_deleted ? ' deleted' : '') + (m.is_pinned ? ' pinned' : '') + '" data-gc-msg-id="' + m.id + '">' + pinInd + deleteBtn + editBtn + pinBtn + replyBtn + reactBtn + senderName + replyQuote + '<div class="msg-content">' + content + '</div>' + reactions + '<div class="msg-footer"><span class="msg-time">' + time + '</span>' + editedLabel + '</div></div>';
     }).join('');
     if (prepend) {
       container.insertAdjacentHTML('afterbegin', html);
@@ -3591,6 +3695,27 @@ if (typeof io !== 'undefined') {
       }
     });
 
+    _gcSocket.on('channel:message:pin', function(data) {
+      // Update bubble's pinned state
+      var bubble = document.querySelector('[data-gc-msg-id="' + data.message.id + '"]');
+      if (bubble) {
+        bubble.classList.toggle('pinned', !!data.pinned);
+        var existingInd = bubble.querySelector('.gc-pin-indicator');
+        if (data.pinned && !existingInd) {
+          bubble.insertAdjacentHTML('afterbegin', '<span class="gc-pin-indicator" title="Pinned"><i class="bi bi-pin-angle-fill"></i></span>');
+        } else if (!data.pinned && existingInd) {
+          existingInd.remove();
+        }
+        var pinBtn = bubble.querySelector('.gc-msg-pin');
+        if (pinBtn) {
+          pinBtn.classList.toggle('pinned', !!data.pinned);
+          pinBtn.title = data.pinned ? 'Unpin' : 'Pin';
+        }
+      }
+      // Refresh pinned bar
+      loadGcPinned();
+    });
+
     _gcSocket.on('channel:message:edit', function(msg) {
       var bubble = document.querySelector('[data-gc-msg-id="' + msg.id + '"]');
       if (!bubble) return;
@@ -3699,6 +3824,7 @@ if (typeof io !== 'undefined') {
   // Load on page load
   loadGcMessages();
   loadGcUsers();
+  loadGcPinned();
 })();
 </script>
 <% } %>

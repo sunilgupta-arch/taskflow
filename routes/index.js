@@ -167,6 +167,8 @@ router.post('/channel/file', authenticate, (req, res, next) => channelUpload.sin
 router.put('/channel/messages/:messageId', authenticate, GroupChannelController.editMessage);
 router.delete('/channel/messages/:messageId', authenticate, GroupChannelController.deleteMessage);
 router.post('/channel/messages/:messageId/reactions', authenticate, GroupChannelController.toggleReaction);
+router.post('/channel/messages/:messageId/pin', authenticate, GroupChannelController.togglePin);
+router.get('/channel/pinned', authenticate, GroupChannelController.getPinned);
 router.get('/channel/attachment/:messageId', authenticate, GroupChannelController.serveAttachment);
 
 // Announcements / Info Board
