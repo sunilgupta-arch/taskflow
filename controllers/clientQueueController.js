@@ -1,5 +1,6 @@
 const ClientRequest = require('../models/ClientRequest');
 const { ApiResponse } = require('../utils/response');
+const { getIO } = require('../config/socket');
 
 class ClientQueueController {
 
@@ -46,8 +47,7 @@ class ClientQueueController {
       const instanceId = parseInt(req.params.id);
       await ClientRequest.pick(instanceId, req.user.id);
       const instance = await ClientRequest.getInstanceById(instanceId);
-      const io = req.app.get('io');
-      if (io) io.emit('queue:updated', { instance });
+      try { const io = getIO(); io.emit('queue:updated', { instance }); io.of('/portal').emit('queue:updated', { instance }); } catch (_) {}
       return ApiResponse.success(res, { instance });
     } catch (err) {
       console.error('ClientQueue pick error:', err);
@@ -61,8 +61,7 @@ class ClientQueueController {
       const { reason } = req.body;
       await ClientRequest.release(instanceId, req.user.id, reason);
       const instance = await ClientRequest.getInstanceById(instanceId);
-      const io = req.app.get('io');
-      if (io) io.emit('queue:updated', { instance });
+      try { const io = getIO(); io.emit('queue:updated', { instance }); io.of('/portal').emit('queue:updated', { instance }); } catch (_) {}
       return ApiResponse.success(res, { instance });
     } catch (err) {
       console.error('ClientQueue release error:', err);
@@ -75,11 +74,7 @@ class ClientQueueController {
       const instanceId = parseInt(req.params.id);
       await ClientRequest.complete(instanceId, req.user.id);
       const instance = await ClientRequest.getInstanceById(instanceId);
-      const io = req.app.get('io');
-      if (io) {
-        io.emit('queue:updated', { instance });
-        io.of('/portal').emit('queue:updated', { instance });
-      }
+      try { const io = getIO(); io.emit('queue:updated', { instance }); io.of('/portal').emit('queue:updated', { instance }); } catch (_) {}
       return ApiResponse.success(res, { instance });
     } catch (err) {
       console.error('ClientQueue complete error:', err);

@@ -335,13 +335,31 @@ const canDeactivate = ['CLIENT_ADMIN', 'CLIENT_TOP_MGMT'].includes(user.role_nam
     let rows = '';
     instances.forEach((inst, idx) => {
       const isOverdue = IS_PAST && ['open','picked'].includes(inst.status);
+      const recLabel = inst.recurrence !== 'none' ? 'recurring' : 'one-time';
+      const editBtn = CAN_CREATE
+        ? `<button class="btn btn-xs btn-link p-0 ms-2 req-edit-btn" style="opacity:0.5;vertical-align:baseline"
+             data-id="${inst.request_id}"
+             data-title="${escHtml(inst.title)}"
+             data-type="${escHtml(inst.task_type)}"
+             data-priority="${inst.priority}"
+             data-desc="${escHtml(inst.description||'')}"
+             data-duetime="${inst.due_time||''}"
+             data-enddate=""
+             data-assignto="${inst.default_assigned_to||''}"
+             title="Edit request"><i class="bi bi-pencil" style="font-size:0.7rem"></i></button>
+           <button class="btn btn-xs btn-link p-0 ms-1 req-deactivate-btn" style="opacity:0.5;color:var(--bs-danger);vertical-align:baseline"
+             data-id="${inst.request_id}"
+             data-recurrence="${inst.recurrence}"
+             title="${inst.recurrence !== 'none' ? 'Stop recurring request' : 'Delete request'}"><i class="bi bi-trash" style="font-size:0.7rem"></i></button>`
+        : '';
       const cancelBtn = CAN_CREATE && !IS_PAST && inst.status === 'open'
-        ? `<button class="btn btn-xs btn-outline-danger req-cancel-btn ms-2" data-id="${inst.id}" title="Cancel this request" onclick="event.stopPropagation()">✕</button>`
+        ? `<button class="btn btn-xs btn-outline-danger req-cancel-btn ms-1" data-id="${inst.id}" title="Cancel this request">✕</button>`
         : '';
       rows += `<tr class="${isOverdue ? 'req-row-overdue' : ''} req-row" data-id="${inst.id}">
         <td class="text-muted small">${idx + 1}</td>
         <td>
-          <a href="#" class="portal-req-detail-link" data-id="${inst.id}" onclick="event.stopPropagation()">${escHtml(inst.title)}</a>
+          <a href="#" class="portal-req-detail-link" data-id="${inst.id}">${escHtml(inst.title)}</a>
+          ${editBtn}
           ${isOverdue ? '<span class="badge bg-danger ms-1 small">Overdue</span>' : ''}
           ${cancelBtn}
         </td>
@@ -528,11 +546,11 @@ const canDeactivate = ['CLIENT_ADMIN', 'CLIENT_TOP_MGMT'].includes(user.role_nam
     } catch { document.getElementById('reqDetailBody').innerHTML = '<p class="text-danger">Error</p>'; }
   });
 
-  // Row click → detail (but not if clicking a button/link inside)
+  // Row click → detail (but not if clicking a button or the detail link itself)
   document.addEventListener('click', async function(e) {
     const row = e.target.closest('.req-row');
     if (!row) return;
-    if (e.target.closest('button,a')) return;
+    if (e.target.closest('button,.portal-req-detail-link')) return;
     const id = row.dataset.id;
     document.getElementById('reqDetailTitle').textContent = 'Loading...';
     document.getElementById('reqDetailBody').innerHTML = '<div class="text-center py-4"><div class="spinner-border spinner-border-sm"></div></div>';
@@ -600,16 +618,21 @@ const canDeactivate = ['CLIENT_ADMIN', 'CLIENT_TOP_MGMT'].includes(user.role_nam
     } catch { } finally { input.disabled = false; }
   };
 
-  // ── Deactivate recurring ────────────────────────────────
+  // ── Deactivate / delete request ─────────────────────────
   document.addEventListener('click', async function(e) {
     const btn = e.target.closest('.req-deactivate-btn');
     if (!btn) return;
-    if (!confirm('Stop this recurring request? No new daily instances will be created.')) return;
+    e.stopPropagation();
+    const isRecurring = btn.dataset.recurrence && btn.dataset.recurrence !== 'none';
+    const msg = isRecurring
+      ? 'Stop this recurring request? No new instances will be created after today.'
+      : 'Delete this request? It will be removed from the queue.';
+    if (!confirm(msg)) return;
     const id = btn.dataset.id;
     try {
       const r = await fetch('/portal/requests/' + id + '/deactivate', { method: 'PATCH', headers: { 'X-Requested-With': 'XMLHttpRequest' } });
       const data = await r.json();
-      if (data.success) window.location.reload();
+      if (data.success) loadInstances(PAGE_DATE);
       else alert(data.message || 'Failed');
     } catch {}
   });

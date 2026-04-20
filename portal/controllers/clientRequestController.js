@@ -1,5 +1,6 @@
 const ClientRequest = require('../../models/ClientRequest');
 const { ApiResponse } = require('../../utils/response');
+const { getIO } = require('../../config/socket');
 
 class ClientRequestController {
 
@@ -80,8 +81,7 @@ class ClientRequestController {
 
       await ClientRequest.getQueueForDate(effectiveStartDate);
 
-      const io = req.app.get('io');
-      if (io) io.emit('queue:new_request', { id, title: title.trim(), date: effectiveStartDate });
+      try { const io = getIO(); io.emit('queue:new_request', { id, date: effectiveStartDate }); io.of('/portal').emit('queue:new_request', { id, date: effectiveStartDate }); } catch (_) {}
 
       return ApiResponse.success(res, { id }, 'Request created');
     } catch (err) {
@@ -121,8 +121,7 @@ class ClientRequestController {
         ...(recurrence_end_date !== undefined && { recurrence_end_date }),
         ...(assigned_to !== undefined && { assigned_to: assigned_to || null })
       });
-      const io = req.app.get('io');
-      if (io) io.emit('queue:new_request', {});
+      try { const io = getIO(); io.emit('queue:new_request', {}); io.of('/portal').emit('queue:new_request', {}); } catch (_) {}
       return ApiResponse.success(res, {}, 'Request updated');
     } catch (err) {
       console.error('ClientRequest update error:', err);
@@ -134,11 +133,7 @@ class ClientRequestController {
     try {
       const instanceId = parseInt(req.params.id);
       await ClientRequest.cancelInstance(instanceId, req.user.organization_id);
-      const io = req.app.get('io');
-      if (io) {
-        io.emit('queue:updated', { cancelled: instanceId });
-        io.of('/portal').emit('queue:updated', { cancelled: instanceId });
-      }
+      try { const io = getIO(); io.emit('queue:updated', { cancelled: instanceId }); io.of('/portal').emit('queue:updated', { cancelled: instanceId }); } catch (_) {}
       return ApiResponse.success(res, {}, 'Request cancelled');
     } catch (err) {
       console.error('ClientRequest cancelInstance error:', err);
