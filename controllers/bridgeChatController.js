@@ -241,6 +241,16 @@ class BridgeChatController {
       return ApiResponse.error(res, 'Failed to load conversations');
     }
   }
+
+  // List bridge conversations for a portal (client) user — inline chat
+  static async getMyConversationsForPortal(req, res) {
+    try {
+      const convs = await BridgeChat.getConversationsForClientUser(req.user.id);
+      return ApiResponse.success(res, { conversations: convs });
+    } catch (err) {
+      return ApiResponse.error(res, 'Failed to load conversations');
+    }
+  }
 }
 
 module.exports = BridgeChatController;

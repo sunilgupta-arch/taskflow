@@ -643,6 +643,7 @@ router.get('/team-status/employee-tasks/:userId', requireRoles('CLIENT_ADMIN', '
 
 // ── Bridge Chat (Client <-> Local) ───────────────────────
 const BridgeChatController = require('../../controllers/bridgeChatController');
+router.get('/bridge/conversations', BridgeChatController.getMyConversationsForPortal);
 router.post('/bridge/conversations', BridgeChatController.getOrCreateConversation);
 router.get('/bridge/conversations/:id/messages', BridgeChatController.getMessages);
 router.post('/bridge/conversations/:id/messages', BridgeChatController.sendMessage);

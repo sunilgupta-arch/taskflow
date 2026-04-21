@@ -179,6 +179,7 @@ const ClientQueueController = require('../controllers/clientQueueController');
 const queueAttachUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 25 * 1024 * 1024 } });
 router.get('/queue', authenticate, ClientQueueController.index);
 router.get('/queue/data', authenticate, ClientQueueController.getQueue);
+router.get('/queue/badge', authenticate, ClientQueueController.getBadgeCount);
 router.post('/queue/:id/pick', authenticate, ClientQueueController.pick);
 router.post('/queue/:id/release', authenticate, ClientQueueController.release);
 router.post('/queue/:id/complete', authenticate, ClientQueueController.complete);

@@ -56,12 +56,23 @@
     }
 
     * { box-sizing: border-box; }
+
+    /* Thin custom scrollbars */
+    * {
+      scrollbar-width: thin;
+      scrollbar-color: rgba(100, 116, 139, 0.4) transparent;
+    }
+    *::-webkit-scrollbar { width: 5px; height: 5px; }
+    *::-webkit-scrollbar-track { background: transparent; }
+    *::-webkit-scrollbar-thumb { background: rgba(100, 116, 139, 0.4); border-radius: 10px; }
+    *::-webkit-scrollbar-thumb:hover { background: rgba(100, 116, 139, 0.7); }
     
     body {
       font-family: var(--tf-font);
       background: var(--tf-bg);
       color: var(--tf-text);
-      min-height: 100vh;
+      height: 100vh;
+      overflow: hidden;
     }
 
     /* Sidebar */
@@ -135,6 +146,33 @@
 
     .nav-item a i { font-size: 1rem; width: 20px; text-align: center; }
 
+    .nav-queue-badge {
+      margin-left: auto;
+      background: #ef4444;
+      color: #fff;
+      font-size: 0.6rem;
+      font-weight: 700;
+      min-width: 18px;
+      height: 18px;
+      border-radius: 9px;
+      padding: 0 5px;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--tf-font-mono);
+      line-height: 1;
+    }
+    @keyframes queueBadgePop {
+      0%   { transform: scale(0.5); }
+      65%  { transform: scale(1.3); }
+      100% { transform: scale(1); }
+    }
+    .nav-queue-badge.pop { animation: queueBadgePop 0.28s ease; }
+    .nav-queue-alert {
+      border-left-color: #ef4444 !important;
+      background: rgba(239, 68, 68, 0.08) !important;
+      color: var(--tf-text) !important;
+    }
+
     .sidebar-footer {
       padding: 1rem 1.25rem;
       border-top: 1px solid var(--tf-border);
@@ -160,7 +198,8 @@
     /* Main Content */
     #main-content {
       margin-left: var(--tf-sidebar-width);
-      min-height: 100vh;
+      height: 100vh;
+      overflow-y: auto;
       display: flex;
       flex-direction: column;
     }
@@ -357,25 +396,26 @@
       bottom: 20px;
       right: calc(var(--gc-panel-width) + 20px);
       z-index: 9998;
-      transition: right 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     }
-    body.gc-is-collapsed .bridge-widget { right: 20px; }
 
     .bridge-fab {
-      width: 50px; height: 50px;
+      width: 40px; height: 40px;
       border-radius: 50%;
       background: linear-gradient(135deg, var(--tf-accent), #7c3aed);
       border: none;
       color: #fff;
-      font-size: 1.2rem;
+      font-size: 1rem;
       display: flex; align-items: center; justify-content: center;
-      cursor: pointer;
+      cursor: grab;
       box-shadow: 0 4px 15px rgba(0,0,0,0.3);
       position: relative;
       transition: transform 0.2s;
     }
 
     .bridge-fab:hover { transform: scale(1.1); }
+    .bridge-widget.is-dragging .bridge-fab { cursor: grabbing; transform: scale(1.05); }
+    .bridge-panel.panel-top  { bottom: auto; top: 60px; }
+    .bridge-panel.panel-left { right: auto; left: 0; }
 
     .bridge-fab-badge {
       position: absolute;
@@ -1458,8 +1498,9 @@
 
     <% if (['LOCAL_ADMIN', 'LOCAL_MANAGER', 'LOCAL_USER'].includes(user.role_name)) { %>
     <div class="nav-item">
-      <a href="/queue" class="<%= typeof section !== 'undefined' && section === 'queue' ? 'active' : '' %>">
+      <a href="/queue" id="queueNavLink" class="<%= typeof section !== 'undefined' && section === 'queue' ? 'active' : '' %>">
         <i class="bi bi-list-task"></i> Client Queue
+        <span id="queueNavBadge" class="nav-queue-badge" style="display:none">0</span>
       </a>
     </div>
     <% } %>
@@ -1913,10 +1954,10 @@
 <!-- Toast Container -->
 <div id="toast-container"></div>
 
-<!-- Bridge Chat Floating Widget (LOCAL users only) -->
-<% if (typeof user !== 'undefined' && user.role_name && user.role_name.startsWith('LOCAL_')) { %>
+<!-- Bridge Chat Floating Widget (LOCAL_ADMIN and LOCAL_MANAGER only) -->
+<% if (typeof user !== 'undefined' && user.role_name && ['LOCAL_ADMIN', 'LOCAL_MANAGER'].includes(user.role_name)) { %>
 <div id="bridgeWidget" class="bridge-widget">
-  <button class="bridge-fab" id="bridgeFab" onclick="toggleBridgeWidget()">
+  <button class="bridge-fab" id="bridgeFab">
     <i class="bi bi-chat-dots-fill"></i>
     <span class="bridge-fab-badge" id="bridgeFabBadge" style="display:none"></span>
   </button>
@@ -2858,16 +2899,103 @@ function submitLogoutWithReason() {
 
 <!-- Idle auto-logout removed — users are no longer logged out for inactivity -->
 
-<% if (typeof user !== 'undefined' && user.role_name && user.role_name.startsWith('LOCAL_')) { %>
+<% if (typeof user !== 'undefined' && user.role_name && ['LOCAL_ADMIN', 'LOCAL_MANAGER'].includes(user.role_name)) { %>
 <script>
 // ── Bridge Chat Floating Widget ────────────────────────────
 var bridgeWidgetConvId = null;
 var bridgeWidgetUserId = <%= user.id %>;
 
+// ── Draggable FAB ──────────────────────────────────────────
+(function() {
+  var widget = document.getElementById('bridgeWidget');
+  var fab    = document.getElementById('bridgeFab');
+  if (!widget || !fab) return;
+
+  function updatePanelQuadrant() {
+    var panel = document.getElementById('bridgePanel');
+    if (!panel) return;
+    var rect = widget.getBoundingClientRect();
+    panel.classList.toggle('panel-top',  rect.top  < window.innerHeight / 2);
+    panel.classList.toggle('panel-left', rect.left < window.innerWidth  / 2);
+  }
+
+  function applyPos(left, top) {
+    widget.style.left   = left + 'px';
+    widget.style.top    = top  + 'px';
+    widget.style.right  = 'auto';
+    widget.style.bottom = 'auto';
+    updatePanelQuadrant();
+  }
+
+  function savePos() {
+    var rect = widget.getBoundingClientRect();
+    localStorage.setItem('bridge-fab-pos', JSON.stringify({ left: rect.left, top: rect.top }));
+  }
+
+  // Restore saved position
+  var saved = localStorage.getItem('bridge-fab-pos');
+  if (saved) {
+    try { var p = JSON.parse(saved); applyPos(p.left, p.top); } catch(e) {}
+  }
+
+  var dragging = false, dragMoved = false;
+  var startX, startY, startLeft, startTop;
+
+  function dragStart(cx, cy) {
+    var rect  = widget.getBoundingClientRect();
+    dragging  = true;
+    dragMoved = false;
+    startX    = cx; startY    = cy;
+    startLeft = rect.left; startTop = rect.top;
+    widget.style.right  = 'auto';
+    widget.style.bottom = 'auto';
+    widget.classList.add('is-dragging');
+  }
+
+  function dragMove(cx, cy) {
+    if (!dragging) return;
+    var dx = cx - startX, dy = cy - startY;
+    if (Math.abs(dx) > 4 || Math.abs(dy) > 4) dragMoved = true;
+    widget.style.left = Math.max(0, Math.min(startLeft + dx, window.innerWidth  - 40)) + 'px';
+    widget.style.top  = Math.max(0, Math.min(startTop  + dy, window.innerHeight - 40)) + 'px';
+  }
+
+  function dragEnd() {
+    if (!dragging) return;
+    dragging = false;
+    widget.classList.remove('is-dragging');
+    if (dragMoved) savePos();
+  }
+
+  fab.addEventListener('mousedown', function(e) { if (e.button === 0) { dragStart(e.clientX, e.clientY); e.preventDefault(); } });
+  document.addEventListener('mousemove', function(e) { dragMove(e.clientX, e.clientY); });
+  document.addEventListener('mouseup',   function()  { dragEnd(); });
+
+  fab.addEventListener('touchstart', function(e) { dragStart(e.touches[0].clientX, e.touches[0].clientY); }, { passive: true });
+  document.addEventListener('touchmove',  function(e) { if (dragging) dragMove(e.touches[0].clientX, e.touches[0].clientY); }, { passive: true });
+  document.addEventListener('touchend',   function()  { dragEnd(); });
+
+  fab.addEventListener('click', function() { if (!dragMoved) toggleBridgeWidget(); });
+
+  // Keep FAB on-screen if window is resized
+  window.addEventListener('resize', function() {
+    var rect = widget.getBoundingClientRect();
+    var newLeft = Math.min(rect.left, window.innerWidth  - 40);
+    var newTop  = Math.min(rect.top,  window.innerHeight - 40);
+    if (newLeft !== rect.left || newTop !== rect.top) applyPos(newLeft, newTop);
+    updatePanelQuadrant();
+  });
+})();
+
 function toggleBridgeWidget() {
   var panel = document.getElementById('bridgePanel');
   if (panel.style.display === 'none') {
     panel.style.display = 'flex';
+    // Flip panel direction based on which corner the FAB is in
+    var widget = document.getElementById('bridgeWidget');
+    var rect   = widget.getBoundingClientRect();
+    panel.classList.toggle('panel-top',  rect.top  < window.innerHeight / 2);
+    panel.classList.toggle('panel-left', rect.left < window.innerWidth  / 2);
     loadBridgeConvList();
   } else {
     panel.style.display = 'none';
@@ -4937,6 +5065,66 @@ callSocket.on('call:busy', function() {
   _callCleanup();
 });
 </script>
+
+<% if (typeof user !== 'undefined' && ['LOCAL_ADMIN', 'LOCAL_MANAGER', 'LOCAL_USER'].includes(user.role_name)) { %>
+<script>
+(function() {
+  var _onQueuePage = <%= typeof section !== 'undefined' && section === 'queue' ? 'true' : 'false' %>;
+  var _badge = document.getElementById('queueNavBadge');
+  var _link  = document.getElementById('queueNavLink');
+
+  function setQueueBadge(n) {
+    if (!_badge) return;
+    if (n > 0 && !_onQueuePage) {
+      var prev = parseInt(_badge.textContent || '0', 10);
+      _badge.textContent = n > 99 ? '99+' : String(n);
+      _badge.style.display = 'flex';
+      if (n > prev) {
+        _badge.classList.remove('pop');
+        void _badge.offsetWidth;
+        _badge.classList.add('pop');
+      }
+      if (_link) _link.classList.add('nav-queue-alert');
+    } else {
+      _badge.style.display = 'none';
+      if (_link) _link.classList.remove('nav-queue-alert');
+    }
+  }
+
+  function fetchQueueBadge() {
+    $.get('/queue/badge', function(res) {
+      if (res && res.success) setQueueBadge(res.data.count || 0);
+    });
+  }
+
+  function playQueueAlert() {
+    if (_onQueuePage) return;
+    try {
+      var ctx = new (window.AudioContext || window.webkitAudioContext)();
+      var now = ctx.currentTime;
+      [523, 659, 784].forEach(function(freq, i) {
+        var o = ctx.createOscillator(), g = ctx.createGain();
+        o.type = 'triangle'; o.frequency.value = freq;
+        o.connect(g); g.connect(ctx.destination);
+        var t = now + i * 0.1;
+        g.gain.setValueAtTime(0, t);
+        g.gain.linearRampToValueAtTime(0.15, t + 0.03);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
+        o.start(t); o.stop(t + 0.3);
+      });
+    } catch(e) {}
+  }
+
+  fetchQueueBadge();
+
+  var _qSock = typeof io !== 'undefined' ? io('/', { withCredentials: true }) : null;
+  if (_qSock) {
+    _qSock.on('queue:new_request', function() { playQueueAlert(); fetchQueueBadge(); });
+    _qSock.on('queue:updated',     function() { fetchQueueBadge(); });
+  }
+})();
+</script>
+<% } %>
 
 </body>
 </html>

@@ -207,6 +207,24 @@ class BridgeChat {
     return { id: messageId, conversation_id: rows[0].conversation_id };
   }
 
+  // Get all bridge conversations for a client user (for inline chat in portal)
+  static async getConversationsForClientUser(userId) {
+    const [rows] = await db.query(
+      `SELECT bc.id, bc.client_user_id, bc.local_user_id, bc.updated_at,
+              lu.name as local_user_name,
+              (SELECT content FROM bridge_messages WHERE conversation_id = bc.id ORDER BY created_at DESC LIMIT 1) as last_message,
+              (SELECT created_at FROM bridge_messages WHERE conversation_id = bc.id ORDER BY created_at DESC LIMIT 1) as last_message_at,
+              (SELECT COUNT(*) FROM bridge_messages WHERE conversation_id = bc.id AND is_read = 0 AND sender_id != ?) as unread_count
+       FROM bridge_conversations bc
+       JOIN users lu ON lu.id = bc.local_user_id
+       WHERE bc.client_user_id = ?
+       HAVING last_message IS NOT NULL
+       ORDER BY last_message_at DESC`,
+      [userId, userId]
+    );
+    return rows;
+  }
+
   // Get attachment
   static async getAttachment(messageId) {
     const [rows] = await db.query(

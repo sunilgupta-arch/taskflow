@@ -25,6 +25,30 @@
         <button class="btn btn-sm btn-link" onclick="showConversations()"><i class="bi bi-arrow-left"></i> Back</button>
         <span>New Chat</span>
       </div>
+      <% if ((localAdmin || delegateSupport) && user.role_name !== 'CLIENT_SALES') { %>
+        <div class="contacts-section-label"><i class="bi bi-headset me-1"></i>Support Team</div>
+        <% if (localAdmin) { %>
+          <div class="contact-item" onclick="startBridgeChat(<%= localAdmin.id %>, '<%= localAdmin.name.replace(/'/g, "\\'") %>')">
+            <div class="contact-avatar support-avatar"><i class="bi bi-headset"></i></div>
+            <div class="contact-info">
+              <span class="contact-name"><%= localAdmin.name %></span>
+              <span class="contact-role">Primary Support</span>
+            </div>
+          </div>
+        <% } %>
+        <% if (delegateSupport) { %>
+          <div class="contact-item" onclick="startBridgeChat(<%= delegateSupport.id %>, '<%= delegateSupport.name.replace(/'/g, "\\'") %>')">
+            <div class="contact-avatar support-avatar"><i class="bi bi-person-badge"></i></div>
+            <div class="contact-info">
+              <span class="contact-name"><%= delegateSupport.name %></span>
+              <span class="contact-role">Secondary Support</span>
+            </div>
+          </div>
+        <% } %>
+        <% if (contacts.length) { %>
+          <div class="contacts-section-label"><i class="bi bi-people me-1"></i>Team Members</div>
+        <% } %>
+      <% } %>
       <% contacts.forEach(c => { %>
         <div class="contact-item" data-user-id="<%= c.id %>" onclick="startDirectChat(<%= c.id %>, '<%= c.name %>')">
           <div class="contact-avatar"><%= c.name.charAt(0).toUpperCase() %></div>

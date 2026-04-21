@@ -3,6 +3,7 @@
 // ═══════════════════════════════════════════════════════════
 
 let currentConversationId = null;
+let currentConvIsBridge = false;
 let currentTaskId = null;
 let typingTimeout = null;
 let onlineUserIds = new Set();
@@ -10,12 +11,16 @@ let onlineUserIds = new Set();
 // ── CHAT ───────────────────────────────────────────────────
 
 function loadConversations() {
-  fetch('/portal/chat/conversations')
-    .then(r => r.json())
-    .then(res => {
-      if (!res.success) return;
-      renderConversations(res.data.conversations);
-    });
+  const safeGet = url => fetch(url).then(r => r.json()).catch(() => ({ success: false }));
+  Promise.all([safeGet('/portal/chat/conversations'), safeGet('/portal/bridge/conversations')])
+  .then(([chatRes, bridgeRes]) => {
+    const portalConvs = chatRes.success ? chatRes.data.conversations.map(c => ({ ...c, _isBridge: false })) : [];
+    const bridgeConvs = bridgeRes.success ? bridgeRes.data.conversations.map(c => ({ ...c, _isBridge: true })) : [];
+    const all = [...portalConvs, ...bridgeConvs].sort((a, b) =>
+      new Date(b.last_message_at || b.updated_at || 0) - new Date(a.last_message_at || a.updated_at || 0)
+    );
+    renderConversations(all);
+  });
 }
 
 function renderConversations(conversations) {
@@ -28,12 +33,33 @@ function renderConversations(conversations) {
   }
 
   list.innerHTML = conversations.map(c => {
+    if (c._isBridge) {
+      const name = c.local_user_name || 'Support';
+      const lastMsg = c.last_message || '';
+      const time = c.last_message_at ? timeAgo(c.last_message_at) : '';
+      const unread = c.unread_count > 0 ? `<span class="conv-unread">${c.unread_count}</span>` : '';
+      const activeClass = (currentConvIsBridge && c.id === currentConversationId) ? 'active' : '';
+      return `<div class="conv-item ${activeClass}" onclick="openBridgeConversation(${c.id}, '${name.replace(/'/g, "\\'")}')">
+        <div class="conv-avatar-wrap">
+          <div class="conv-avatar support-conv-avatar"><i class="bi bi-headset" style="font-size:0.85rem"></i></div>
+        </div>
+        <div class="conv-info">
+          <span class="conv-name">${name} <span class="conv-support-badge">Support</span></span>
+          <span class="conv-last-msg">${lastMsg}</span>
+        </div>
+        <div class="conv-meta">
+          <span class="conv-time">${time}</span>
+          ${unread}
+        </div>
+      </div>`;
+    }
+
     const name = c.type === 'direct' ? (c.other_user?.name || 'Unknown') : c.name;
     const initial = name.charAt(0).toUpperCase();
     const lastMsg = c.last_message || '';
     const time = c.last_message_at ? timeAgo(c.last_message_at) : '';
     const unread = c.unread_count > 0 ? `<span class="conv-unread">${c.unread_count}</span>` : '';
-    const activeClass = c.id === currentConversationId ? 'active' : '';
+    const activeClass = (!currentConvIsBridge && c.id === currentConversationId) ? 'active' : '';
     const isDirect = c.type === 'direct' && c.other_user;
     const isOnline = isDirect && onlineUserIds.has(c.other_user.id);
     const statusDot = isDirect ? '<span class="' + (isOnline ? 'online-dot' : 'offline-dot') + '"></span>' : '';
@@ -117,8 +143,45 @@ function createGroup() {
 
 let currentChatPeerId = null;
 
+function startBridgeChat(localUserId, localUserName) {
+  fetch('/portal/bridge/conversations', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ local_user_id: localUserId })
+  })
+    .then(r => r.json())
+    .then(res => {
+      if (res.success) {
+        showConversations();
+        openBridgeConversation(res.data.conversation.id, localUserName);
+        loadConversations();
+      }
+    });
+}
+
+function openBridgeConversation(convId, name) {
+  currentConversationId = convId;
+  currentConvIsBridge = true;
+  currentChatPeerId = null;
+  currentConvType = 'bridge';
+
+  document.getElementById('chatPlaceholder').style.display = 'none';
+  document.getElementById('chatWindow').style.display = 'flex';
+  document.getElementById('chatHeaderName').textContent = name;
+  document.getElementById('chatHeaderStatus').innerHTML = '<span class="chat-support-label"><i class="bi bi-headset me-1"></i>Support</span>';
+  document.getElementById('chatHeaderStatus').className = 'chat-header-status';
+  document.getElementById('groupInfoBtn').style.display = 'none';
+
+  document.querySelectorAll('.conv-item').forEach(el => el.classList.remove('active'));
+  document.getElementById('chatSidebar').classList.add('hidden');
+
+  loadMessages(convId);
+  fetch(`/portal/bridge/conversations/${convId}/read`, { method: 'POST' });
+}
+
 function openConversation(convId, name, type, peerId) {
   currentConversationId = convId;
+  currentConvIsBridge = false;
   currentChatPeerId = peerId || null;
 
   // Update UI
@@ -169,8 +232,10 @@ let loadingOlderMessages = false;
 let noMoreMessages = false;
 
 function loadMessages(convId, beforeId) {
-  let url = `/portal/chat/conversations/${convId}/messages`;
-  if (beforeId) url += `?before=${beforeId}`;
+  const base = currentConvIsBridge
+    ? `/portal/bridge/conversations/${convId}/messages`
+    : `/portal/chat/conversations/${convId}/messages`;
+  let url = beforeId ? `${base}?before=${beforeId}` : base;
 
   if (!beforeId) {
     noMoreMessages = false;
@@ -186,9 +251,18 @@ function loadMessages(convId, beforeId) {
       if (beforeId && res.data.messages.length === 0) {
         noMoreMessages = true;
       }
-      renderMessages(res.data.messages, beforeId ? 'prepend' : 'replace');
+      const msgs = currentConvIsBridge ? normalizeBridgeMessages(res.data.messages) : res.data.messages;
+      renderMessages(msgs, beforeId ? 'prepend' : 'replace');
       loadingOlderMessages = false;
     });
+}
+
+function normalizeBridgeMessages(messages) {
+  return messages.map(m => ({
+    ...m,
+    read_status: m.is_read ? 'read' : 'sent',
+    is_edited: false
+  }));
 }
 
 // mode: 'replace' (full load), 'append' (new message), 'prepend' (older messages)
@@ -216,7 +290,8 @@ function renderMessages(messages, replaceOrMode = true) {
 
     let content = '';
     if (m.type === 'file' && m.attachment) {
-      content = renderFileContent(m.attachment, m.id, '/portal/chat/attachment');
+      const attachBase = currentConvIsBridge ? '/portal/bridge/attachment' : '/portal/chat/attachment';
+      content = renderFileContent(m.attachment, m.id, attachBase);
     } else if (m.type === 'system') {
       return `<div class="text-center small text-muted my-2">${m.content}</div>`;
     } else if (m.is_deleted) {
@@ -273,7 +348,11 @@ function sendMessage() {
   const content = input.value.trim();
   if (!content || !currentConversationId) return;
 
-  fetch(`/portal/chat/conversations/${currentConversationId}/messages`, {
+  const msgUrl = currentConvIsBridge
+    ? `/portal/bridge/conversations/${currentConversationId}/messages`
+    : `/portal/chat/conversations/${currentConversationId}/messages`;
+
+  fetch(msgUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ content })
@@ -315,7 +394,10 @@ function uploadChatFileDirect(file) {
   const placeholderId = showChatUploadPlaceholder(file.name || 'pasted-image.png');
   const formData = new FormData();
   formData.append('file', file, file.name || ('pasted-' + Date.now() + '.png'));
-  fetch(`/portal/chat/conversations/${currentConversationId}/file`, {
+  const fileUrl = currentConvIsBridge
+    ? `/portal/bridge/conversations/${currentConversationId}/file`
+    : `/portal/chat/conversations/${currentConversationId}/file`;
+  fetch(fileUrl, {
     method: 'POST',
     body: formData
   })
@@ -1071,6 +1153,43 @@ portalSocket.on('portal:read', (data) => {
     });
   }
 });
+
+// Bridge message handler — renders inline when support conv is open in the chat window
+if (typeof mainSocket !== 'undefined') {
+  mainSocket.on('bridge:message', (msg) => {
+    if (currentConvIsBridge && msg.conversation_id === currentConversationId) {
+      const normalized = normalizeBridgeMessages([msg]);
+      renderMessages(normalized, 'append');
+      fetch(`/portal/bridge/conversations/${currentConversationId}/read`, { method: 'POST' });
+      loadConversations();
+      return;
+    }
+    // Conv not open — just refresh list so unread badge updates
+    loadConversations();
+    updateUnreadBadge();
+  });
+
+  mainSocket.on('bridge:read', (data) => {
+    if (currentConvIsBridge && data.conversation_id === currentConversationId) {
+      document.querySelectorAll('.msg-bubble.sent').forEach(el => {
+        const tickEl = el.querySelector('.msg-ticks');
+        if (tickEl) { tickEl.classList.add('read'); tickEl.innerHTML = '<i class="bi bi-check-all"></i>'; }
+      });
+    }
+  });
+
+  mainSocket.on('bridge:message:delete', (data) => {
+    if (currentConvIsBridge && data.conversation_id === currentConversationId) {
+      const bubble = document.querySelector(`[data-msg-id="${data.id}"]`);
+      if (bubble) {
+        bubble.classList.add('deleted');
+        const contentEl = bubble.querySelector('.msg-content');
+        if (contentEl) contentEl.innerHTML = '<i class="bi bi-ban me-1"></i>This message was deleted';
+      }
+    }
+    loadConversations();
+  });
+}
 
 // Typing indicators
 let typingUsers = {};

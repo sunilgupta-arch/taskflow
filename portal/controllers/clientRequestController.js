@@ -3,6 +3,12 @@ const { ApiResponse } = require('../../utils/response');
 const { getIO } = require('../../config/socket');
 const GoogleDriveService = require('../../services/googleDriveService');
 
+function statsFromInstances(instances) {
+  const s = { total: 0, open: 0, picked: 0, done: 0, missed: 0, cancelled: 0 };
+  for (const inst of instances) { s.total++; if (inst.status in s) s[inst.status]++; }
+  return s;
+}
+
 class ClientRequestController {
 
   static async index(req, res) {
@@ -15,16 +21,16 @@ class ClientRequestController {
       await ClientRequest.getQueueForDate(dateStr);
 
       const isSales = req.user.role_name === 'CLIENT_SALES';
-      const [instances, requests, taskTypes, localUsers, stats] = await Promise.all([
+      const [instances, requests, taskTypes, localUsers] = await Promise.all([
         ClientRequest.getInstancesForOrg(orgId, dateStr, req.user.id, isSales),
         ClientRequest.getRequestsForOrg(orgId, false, req.user.id, isSales),
         ClientRequest.getTaskTypes(orgId),
-        ClientRequest.getLocalUsers(),
-        ClientRequest.getDateStats(dateStr)
+        ClientRequest.getLocalUsers()
       ]);
+      const stats = statsFromInstances(instances);
 
       res.render('portal/requests', {
-        title: 'Work Requests',
+        title: 'Requests Queue',
         layout: 'portal/layout',
         section: 'requests',
         instances,
@@ -48,10 +54,8 @@ class ClientRequestController {
       const orgId = req.user.organization_id;
       await ClientRequest.getQueueForDate(dateStr);
       const isSales = req.user.role_name === 'CLIENT_SALES';
-      const [instances, stats] = await Promise.all([
-        ClientRequest.getInstancesForOrg(orgId, dateStr, req.user.id, isSales),
-        ClientRequest.getDateStats(dateStr)
-      ]);
+      const instances = await ClientRequest.getInstancesForOrg(orgId, dateStr, req.user.id, isSales);
+      const stats = statsFromInstances(instances);
       return ApiResponse.success(res, { instances, stats, date: dateStr });
     } catch (err) {
       console.error('ClientRequest getInstances error:', err);
@@ -113,8 +117,11 @@ class ClientRequestController {
       const orgId = req.user.organization_id;
       const isAdmin = ['CLIENT_ADMIN', 'CLIENT_TOP_MGMT', 'CLIENT_MGMT', 'CLIENT_MANAGER'].includes(req.user.role_name);
       if (!isAdmin) return ApiResponse.error(res, 'Not authorized', 403);
-      const { title, task_type, description, priority, due_time, recurrence_end_date, assigned_to } = req.body;
+      const { title, task_type, description, priority, due_time, recurrence_end_date, assigned_to, recurrence, recurrence_days } = req.body;
       if (title !== undefined && !title.trim()) return ApiResponse.error(res, 'Title cannot be empty', 400);
+      if (recurrence === 'weekly' && recurrence_days !== undefined && !recurrence_days) {
+        return ApiResponse.error(res, 'Select at least one day for weekly recurrence', 400);
+      }
       await ClientRequest.update(requestId, orgId, {
         ...(title !== undefined && { title: title.trim() }),
         ...(task_type !== undefined && { task_type: task_type.trim() || 'General' }),
@@ -122,8 +129,13 @@ class ClientRequestController {
         ...(priority !== undefined && { priority }),
         ...(due_time !== undefined && { due_time }),
         ...(recurrence_end_date !== undefined && { recurrence_end_date }),
-        ...(assigned_to !== undefined && { assigned_to: assigned_to || null })
+        ...(assigned_to !== undefined && { assigned_to: assigned_to || null }),
+        ...(recurrence !== undefined && { recurrence }),
+        ...(recurrence_days !== undefined && { recurrence_days: recurrence_days || null })
       });
+      if (recurrence !== undefined || recurrence_days !== undefined) {
+        await ClientRequest.deleteFutureOpenInstances(requestId);
+      }
       try { const io = getIO(); io.emit('queue:new_request', {}); io.of('/portal').emit('queue:new_request', {}); } catch (_) {}
       return ApiResponse.success(res, {}, 'Request updated');
     } catch (err) {

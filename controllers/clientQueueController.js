@@ -83,6 +83,16 @@ class ClientQueueController {
     }
   }
 
+  static async getBadgeCount(req, res) {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const stats = await ClientRequest.getDateStats(today);
+      return ApiResponse.success(res, { count: stats.open || 0 });
+    } catch (err) {
+      return ApiResponse.error(res, 'Failed');
+    }
+  }
+
   static async getDetail(req, res) {
     try {
       const instanceId = parseInt(req.params.id);

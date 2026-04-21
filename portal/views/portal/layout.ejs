@@ -38,8 +38,8 @@
       </a>
       <a href="/portal/requests" class="activity-bar-item <%= section === 'requests' ? 'active' : '' %>" style="position:relative;">
         <i class="bi bi-inbox-fill"></i>
-        <span class="ab-label">Requests</span>
-        <span class="ab-tooltip">Work Requests</span>
+        <span class="ab-label">Requests Queue</span>
+        <span class="ab-tooltip">Requests Queue</span>
         <span class="activity-bar-badge req-nav-badge" style="display:none"></span>
       </a>
       <a href="/portal/notes" class="activity-bar-item <%= section === 'notes' ? 'active' : '' %>">
@@ -872,6 +872,9 @@
 
     // Listen for bridge messages (both admin + delegate)
     mainSocket.on('bridge:message', function(msg) {
+      // If the chat window is already showing this bridge conv inline, let portal.js handle it
+      if (typeof currentConvIsBridge !== 'undefined' && currentConvIsBridge && currentConversationId === msg.conversation_id) return;
+
       // Admin chat
       if (adminChatConvId && msg.conversation_id === adminChatConvId) {
         var container = document.getElementById('adminChatMessages');

@@ -22,14 +22,20 @@ function matchesDate(req, dateStr) {
 
 class ClientRequest {
 
-  // Auto-mark open/picked instances on past dates as 'missed'
+  // Auto-mark past instances as 'missed'.
+  // One-time open instances are intentionally excluded — they carry forward until picked/done.
   static async autoMarkMissed(dateStr) {
     const today = new Date().toISOString().split('T')[0];
     if (dateStr >= today) return;
     await db.query(
-      `UPDATE client_request_instances
-       SET status = 'missed'
-       WHERE instance_date = ? AND status IN ('open', 'picked')`,
+      `UPDATE client_request_instances cri
+       JOIN client_requests cr ON cri.request_id = cr.id
+       SET cri.status = 'missed'
+       WHERE cri.instance_date = ?
+         AND (
+           cri.status = 'picked'
+           OR (cri.status = 'open' AND cr.recurrence != 'none')
+         )`,
       [dateStr]
     );
   }
@@ -61,6 +67,13 @@ class ClientRequest {
 
     await ClientRequest.autoMarkMissed(dateStr);
 
+    const today = new Date().toISOString().split('T')[0];
+    // When viewing today, also surface one-time open instances from past dates (carry-forward)
+    const carryForward = dateStr === today
+      ? `OR (cri.instance_date < ? AND cri.status = 'open' AND cr.recurrence = 'none')`
+      : '';
+    const queryParams = dateStr === today ? [dateStr, dateStr] : [dateStr];
+
     const [instances] = await db.query(
       `SELECT cri.*,
               cr.title, cr.task_type, cr.description, cr.priority,
@@ -77,14 +90,14 @@ class ClientRequest {
        LEFT JOIN users picker ON cri.picked_by = picker.id
        LEFT JOIN users completer ON cri.completed_by = completer.id
        LEFT JOIN users defaultAssignee ON cr.assigned_to = defaultAssignee.id
-       WHERE cri.instance_date = ? AND cr.is_active = 1
+       WHERE (cri.instance_date = ? ${carryForward}) AND cr.is_active = 1
        ORDER BY
-         CASE WHEN cri.status IN ('open','picked') AND ? < CURDATE() THEN 0 ELSE 1 END ASC,
+         CASE WHEN cri.status IN ('open','picked') AND cri.instance_date < CURDATE() THEN 0 ELSE 1 END ASC,
          CASE cri.status WHEN 'open' THEN 0 WHEN 'picked' THEN 1 WHEN 'done' THEN 2
                          WHEN 'missed' THEN 3 WHEN 'cancelled' THEN 4 END ASC,
          FIELD(cr.priority, 'urgent', 'high', 'normal') ASC,
          cr.due_time ASC`,
-      [dateStr, dateStr]
+      queryParams
     );
 
     return instances;
@@ -214,8 +227,20 @@ class ClientRequest {
   // Used by portal: get instances for a specific org + date
   static async getInstancesForOrg(orgId, dateStr, userId = null, isSales = false) {
     await ClientRequest.autoMarkMissed(dateStr);
+    const today = new Date().toISOString().split('T')[0];
     const salesFilter = isSales && userId ? ' AND cr.created_by = ?' : '';
-    const params = isSales && userId ? [dateStr, orgId, userId] : [dateStr, orgId];
+    // When viewing today, also surface one-time open instances from past dates (carry-forward)
+    const carryForward = dateStr === today
+      ? `OR (cri.instance_date < ? AND cri.status = 'open' AND cr.recurrence = 'none' AND cr.org_id = ? AND cr.is_active = 1${salesFilter})`
+      : '';
+    let params;
+    if (dateStr === today) {
+      params = isSales && userId
+        ? [dateStr, orgId, userId, today, orgId, userId]
+        : [dateStr, orgId, today, orgId];
+    } else {
+      params = isSales && userId ? [dateStr, orgId, userId] : [dateStr, orgId];
+    }
     const [instances] = await db.query(
       `SELECT cri.*,
               cr.title, cr.task_type, cr.description, cr.priority,
@@ -228,8 +253,9 @@ class ClientRequest {
        JOIN users creator ON cr.created_by = creator.id
        LEFT JOIN users picker ON cri.picked_by = picker.id
        LEFT JOIN users completer ON cri.completed_by = completer.id
-       WHERE cri.instance_date = ? AND cr.org_id = ? AND cr.is_active = 1${salesFilter}
+       WHERE (cri.instance_date = ? AND cr.org_id = ? AND cr.is_active = 1${salesFilter} ${carryForward})
        ORDER BY
+         CASE WHEN cri.status IN ('open','picked') AND cri.instance_date < CURDATE() THEN 0 ELSE 1 END ASC,
          FIELD(cr.priority, 'urgent', 'high', 'normal') ASC,
          cr.due_time ASC`,
       params
@@ -295,7 +321,7 @@ class ClientRequest {
   // Edit a request template (portal admin)
   static async update(requestId, orgId, fields) {
     const allowed = ['title', 'task_type', 'description', 'priority', 'due_time',
-                     'recurrence_end_date', 'assigned_to'];
+                     'recurrence_end_date', 'assigned_to', 'recurrence', 'recurrence_days'];
     const sets = [];
     const vals = [];
     for (const key of allowed) {
@@ -309,6 +335,15 @@ class ClientRequest {
     await db.query(
       `UPDATE client_requests SET ${sets.join(', ')} WHERE id = ? AND org_id = ?`,
       vals
+    );
+  }
+
+  // Purge future open instances so the new recurrence schedule takes effect cleanly
+  static async deleteFutureOpenInstances(requestId) {
+    const today = new Date().toISOString().split('T')[0];
+    await db.query(
+      `DELETE FROM client_request_instances WHERE request_id = ? AND instance_date > ? AND status = 'open'`,
+      [requestId, today]
     );
   }
 

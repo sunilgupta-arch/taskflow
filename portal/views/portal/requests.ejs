@@ -40,7 +40,7 @@ const isSalesUser = user.role_name === 'CLIENT_SALES';
 
 <div class="portal-requests-wrap">
 <div class="portal-page-header">
-  <h5>Work Requests</h5>
+  <h5>Requests Queue</h5>
   <% if (canCreate) { %>
   <div class="d-flex gap-2">
     <% if (!isSalesUser) { %>
@@ -104,6 +104,8 @@ const isSalesUser = user.role_name === 'CLIENT_SALES';
               data-duetime="<%= r.due_time||'' %>"
               data-enddate="<%= r.recurrence_end_date||'' %>"
               data-assignto="<%= r.assigned_to||'' %>"
+              data-recurrence="<%= r.recurrence %>"
+              data-recurrencedays="<%= r.recurrence_days||'' %>"
               title="Edit">
               <i class="bi bi-pencil"></i>
             </button>
@@ -284,46 +286,87 @@ const isSalesUser = user.role_name === 'CLIENT_SALES';
       <div class="modal-body">
         <input type="hidden" id="erRequestId">
         <div class="row g-3">
-          <div class="col-12">
-            <label class="form-label small fw-semibold">Title <span class="text-danger">*</span></label>
-            <input type="text" class="form-control form-control-sm" id="erTitle">
-          </div>
+          <!-- Left column: core fields -->
           <div class="col-md-6">
-            <label class="form-label small fw-semibold">Task Type</label>
-            <input type="text" class="form-control form-control-sm" id="erTaskType" list="crTaskTypeList">
+            <div class="row g-2">
+              <div class="col-12">
+                <label class="form-label small fw-semibold">Title <span class="text-danger">*</span></label>
+                <input type="text" class="form-control form-control-sm" id="erTitle">
+              </div>
+              <div class="col-12" id="erLockNotice" style="display:none">
+                <div class="alert alert-warning py-2 px-3 mb-0 small">
+                  <i class="bi bi-lock-fill me-1"></i>Task is in progress — schedule fields are locked.
+                </div>
+              </div>
+              <div class="col-6" id="erTaskTypeCol">
+                <label class="form-label small fw-semibold">Task Type</label>
+                <input type="text" class="form-control form-control-sm" id="erTaskType" list="crTaskTypeList">
+              </div>
+              <div class="col-6">
+                <label class="form-label small fw-semibold">Priority</label>
+                <select class="form-select form-select-sm" id="erPriority">
+                  <option value="normal">Normal</option>
+                  <option value="high">High</option>
+                  <option value="urgent">Urgent</option>
+                </select>
+              </div>
+              <div class="col-6" id="erDueTimeCol">
+                <label class="form-label small fw-semibold">Due Time <span class="text-muted fw-normal">(opt.)</span></label>
+                <input type="time" class="form-control form-control-sm" id="erDueTime">
+              </div>
+              <div class="col-6" id="erEndDateCol">
+                <label class="form-label small fw-semibold">End Date <span class="text-muted fw-normal">(opt.)</span></label>
+                <input type="date" class="form-control form-control-sm" id="erEndDate">
+              </div>
+              <div class="col-12">
+                <label class="form-label small fw-semibold">Assign To</label>
+                <select class="form-select form-select-sm" id="erAssignTo">
+                  <option value="">Open Queue (anyone can pick)</option>
+                  <% localUsers.forEach(function(u) { %>
+                  <option value="<%= u.id %>"><%= u.name %> (<%= u.role_name %>)</option>
+                  <% }); %>
+                </select>
+              </div>
+              <div class="col-12">
+                <label class="form-label small fw-semibold">Description</label>
+                <textarea class="form-control form-control-sm" id="erDescription" rows="3" style="resize:vertical"></textarea>
+              </div>
+              <div class="col-12" id="erAttachRow" style="display:none">
+                <label class="form-label small fw-semibold">Add Attachment <span class="text-muted fw-normal">(optional)</span></label>
+                <input type="file" class="form-control form-control-sm" id="erAttachFile">
+              </div>
+            </div>
           </div>
-          <div class="col-md-6">
-            <label class="form-label small fw-semibold">Priority</label>
-            <select class="form-select form-select-sm" id="erPriority">
-              <option value="normal">Normal</option>
-              <option value="high">High</option>
-              <option value="urgent">Urgent</option>
-            </select>
-          </div>
-          <div class="col-12">
-            <label class="form-label small fw-semibold">Description</label>
-            <textarea class="form-control form-control-sm" id="erDescription" rows="3"></textarea>
-          </div>
-          <div class="col-md-6">
-            <label class="form-label small fw-semibold">Due Time <span class="text-muted fw-normal">(optional)</span></label>
-            <input type="time" class="form-control form-control-sm" id="erDueTime">
-          </div>
-          <div class="col-md-6">
-            <label class="form-label small fw-semibold">End Date <span class="text-muted fw-normal">(optional)</span></label>
-            <input type="date" class="form-control form-control-sm" id="erEndDate">
-          </div>
-          <div class="col-md-6">
-            <label class="form-label small fw-semibold">Assign To</label>
-            <select class="form-select form-select-sm" id="erAssignTo">
-              <option value="">Open Queue (anyone can pick)</option>
-              <% localUsers.forEach(function(u) { %>
-              <option value="<%= u.id %>"><%= u.name %> (<%= u.role_name %>)</option>
-              <% }); %>
-            </select>
-          </div>
-          <div class="col-12" id="erAttachRow" style="display:none">
-            <label class="form-label small fw-semibold">Add Attachment <span class="text-muted fw-normal">(optional)</span></label>
-            <input type="file" class="form-control form-control-sm" id="erAttachFile">
+          <!-- Right column: schedule -->
+          <div class="col-md-6 d-flex flex-column gap-2">
+            <div id="erRecurrenceInfoRow" style="display:none">
+              <div class="alert alert-info py-2 px-3 mb-0 small">
+                <i class="bi bi-info-circle me-1"></i>Schedule changes apply from tomorrow. Past history is preserved.
+              </div>
+            </div>
+            <div id="erRecurrenceTypeRow" style="display:none">
+              <label class="form-label small fw-semibold">Recurrence</label>
+              <select class="form-select form-select-sm" id="erRecurrence" onchange="toggleErRecurrenceFields()">
+                <option value="daily">Daily</option>
+                <option value="weekly">Weekly</option>
+                <option value="monthly">Monthly (same date each month)</option>
+              </select>
+            </div>
+            <div id="erWeekDaysRow" style="display:none">
+              <label class="form-label small fw-semibold">Repeat on Days</label>
+              <div class="d-flex gap-2 flex-wrap mt-1">
+                <% ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].forEach(function(day, i) { %>
+                <div class="form-check form-check-inline me-0">
+                  <input class="form-check-input er-day-check" type="checkbox" id="erDay<%= i %>" value="<%= i %>">
+                  <label class="form-check-label small" for="erDay<%= i %>"><%= day %></label>
+                </div>
+                <% }); %>
+              </div>
+            </div>
+            <div id="erSeriesEndRow" style="display:none">
+              <label class="form-label small fw-semibold">Series End Date <span class="text-muted fw-normal">(optional — leave blank to run indefinitely)</span></label>
+              <input type="date" class="form-control form-control-sm" id="erSeriesEndDate">
+            </div>
           </div>
         </div>
       </div>
@@ -381,6 +424,8 @@ const isSalesUser = user.role_name === 'CLIENT_SALES';
     return '<span class="badge bg-secondary">Normal</span>';
   }
 
+  const recLabels = { none: 'One-time', daily: 'Daily', weekly: 'Weekly', monthly: 'Monthly' };
+
   // ── Render instances table ──────────────────────────────
   function renderInstances(instances) {
     const area = document.getElementById('reqInstancesArea');
@@ -396,7 +441,8 @@ const isSalesUser = user.role_name === 'CLIENT_SALES';
     instances.forEach((inst, idx) => {
       const isOverdue = IS_PAST && ['open','picked'].includes(inst.status);
       const recLabel = inst.recurrence !== 'none' ? 'recurring' : 'one-time';
-      const editBtn = CAN_CREATE
+      const canEdit = CAN_CREATE && ['open', 'picked'].includes(inst.status);
+      const editBtn = canEdit
         ? `<button class="btn btn-xs btn-link p-0 ms-2 req-edit-btn" style="opacity:0.5;vertical-align:baseline"
              data-id="${inst.request_id}"
              data-title="${escHtml(inst.title)}"
@@ -407,8 +453,11 @@ const isSalesUser = user.role_name === 'CLIENT_SALES';
              data-enddate=""
              data-assignto="${inst.default_assigned_to||''}"
              data-recurrence="${inst.recurrence||'none'}"
-             title="Edit request"><i class="bi bi-pencil" style="font-size:0.7rem"></i></button>
-           <button class="btn btn-xs btn-link p-0 ms-1 req-deactivate-btn" style="opacity:0.5;color:var(--bs-danger);vertical-align:baseline"
+             data-status="${inst.status}"
+             title="Edit request"><i class="bi bi-pencil" style="font-size:0.7rem"></i></button>`
+        : '';
+      const deleteBtn = CAN_CREATE && inst.status === 'open'
+        ? `<button class="btn btn-xs btn-link p-0 ms-1 req-deactivate-btn" style="opacity:0.5;color:var(--bs-danger);vertical-align:baseline"
              data-id="${inst.request_id}"
              data-recurrence="${inst.recurrence}"
              title="${inst.recurrence !== 'none' ? 'Stop recurring request' : 'Delete request'}"><i class="bi bi-trash" style="font-size:0.7rem"></i></button>`
@@ -420,11 +469,12 @@ const isSalesUser = user.role_name === 'CLIENT_SALES';
         <td class="text-muted small">${idx + 1}</td>
         <td>
           <a href="#" class="portal-req-detail-link" data-id="${inst.id}">${escHtml(inst.title)}</a>
-          ${editBtn}
+          ${editBtn}${deleteBtn}
           ${isOverdue ? '<span class="badge bg-danger ms-1 small">Overdue</span>' : ''}
           ${cancelBtn}
         </td>
         <td><span class="badge" style="background:var(--bs-info-bg-subtle);color:var(--bs-info-text-emphasis)">${escHtml(inst.task_type)}</span></td>
+        <td class="small text-muted">${recLabels[inst.recurrence] || inst.recurrence}</td>
         <td>${priorityBadge(inst.priority)}</td>
         <td class="small text-muted">${inst.due_time ? inst.due_time.substring(0,5) : '—'}</td>
         <td>${statusBadge(inst.status)}</td>
@@ -433,7 +483,7 @@ const isSalesUser = user.role_name === 'CLIENT_SALES';
     });
     area.innerHTML = `<div class="portal-requests-table-wrap">
       <table class="portal-table" id="requestsTable">
-        <thead><tr><th>#</th><th>Title</th><th>Type</th><th>Priority</th><th>Due Time</th><th>Status</th><th>Handled By</th></tr></thead>
+        <thead><tr><th>#</th><th>Title</th><th>Type</th><th>Frequency</th><th>Priority</th><th>Due Time</th><th>Status</th><th>Handled By</th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
     </div>`;
@@ -598,25 +648,72 @@ const isSalesUser = user.role_name === 'CLIENT_SALES';
     document.getElementById('erDueTime').value      = btn.dataset.duetime || '';
     document.getElementById('erEndDate').value      = btn.dataset.enddate || '';
     document.getElementById('erAssignTo').value     = btn.dataset.assignto || '';
+    const isPicked = btn.dataset.status === 'picked';
+    document.getElementById('erLockNotice').style.display   = isPicked ? '' : 'none';
+    document.getElementById('erTaskTypeCol').style.display  = isPicked ? 'none' : '';
+    document.getElementById('erDueTimeCol').style.display   = isPicked ? 'none' : '';
+    document.getElementById('erEndDateCol').style.display   = isPicked ? 'none' : '';
+
     const isOneTime = (btn.dataset.recurrence || 'none') === 'none';
-    document.getElementById('erAttachRow').style.display = isOneTime ? '' : 'none';
+    document.getElementById('erAttachRow').style.display = (!isPicked && isOneTime) ? '' : 'none';
     if (document.getElementById('erAttachFile')) document.getElementById('erAttachFile').value = '';
+
+    // Show recurrence fields only when opened from the Recurring Requests list
+    // (those buttons carry data-recurrencedays; instance-table buttons do not)
+    const hasRecurrenceData = btn.dataset.recurrencedays !== undefined;
+    document.getElementById('erRecurrenceInfoRow').style.display = hasRecurrenceData ? '' : 'none';
+    document.getElementById('erRecurrenceTypeRow').style.display = hasRecurrenceData ? '' : 'none';
+    // Template edit: hide Due Time + left-col End Date; show Series End Date in right column
+    document.getElementById('erDueTimeCol').style.display  = hasRecurrenceData ? 'none' : (isPicked ? 'none' : '');
+    document.getElementById('erEndDateCol').style.display  = hasRecurrenceData ? 'none' : (isPicked ? 'none' : '');
+    document.getElementById('erSeriesEndRow').style.display = hasRecurrenceData ? '' : 'none';
+    if (hasRecurrenceData) {
+      document.getElementById('erSeriesEndDate').value = btn.dataset.enddate || '';
+      const rec = btn.dataset.recurrence || 'daily';
+      document.getElementById('erRecurrence').value = rec;
+      const activeDays = (btn.dataset.recurrencedays || '').split(',').map(Number).filter(n => n >= 0 && n <= 6);
+      document.querySelectorAll('.er-day-check').forEach(cb => {
+        cb.checked = activeDays.includes(parseInt(cb.value));
+      });
+      toggleErRecurrenceFields();
+    }
+
     new bootstrap.Modal(document.getElementById('editRequestModal')).show();
   });
+
+  window.toggleErRecurrenceFields = function() {
+    const val = document.getElementById('erRecurrence').value;
+    document.getElementById('erWeekDaysRow').style.display = val === 'weekly' ? '' : 'none';
+  };
 
   window.submitEditRequest = async function() {
     const id = document.getElementById('erRequestId').value;
     const title = document.getElementById('erTitle').value.trim();
     if (!title) { alert('Title cannot be empty'); return; }
+    const isTemplateEdit = document.getElementById('erRecurrenceTypeRow').style.display !== 'none';
     const payload = {
       title,
-      task_type:           document.getElementById('erTaskType').value.trim() || 'General',
       priority:            document.getElementById('erPriority').value,
       description:         document.getElementById('erDescription').value.trim() || '',
-      due_time:            document.getElementById('erDueTime').value || '',
-      recurrence_end_date: document.getElementById('erEndDate').value || '',
       assigned_to:         document.getElementById('erAssignTo').value || ''
     };
+    if (!isTemplateEdit) {
+      payload.task_type           = document.getElementById('erTaskType').value.trim() || 'General';
+      payload.due_time            = document.getElementById('erDueTime').value || '';
+      payload.recurrence_end_date = document.getElementById('erEndDate').value || '';
+    } else {
+      payload.recurrence_end_date = document.getElementById('erSeriesEndDate').value || '';
+    }
+    if (isTemplateEdit) {
+      payload.recurrence = document.getElementById('erRecurrence').value;
+      if (payload.recurrence === 'weekly') {
+        const checked = [...document.querySelectorAll('.er-day-check:checked')].map(c => c.value);
+        if (checked.length === 0) { alert('Select at least one day for weekly recurrence'); return; }
+        payload.recurrence_days = checked.join(',');
+      } else {
+        payload.recurrence_days = null;
+      }
+    }
     try {
       const r = await fetch('/portal/requests/' + id, {
         method: 'PUT',
@@ -693,7 +790,6 @@ const isSalesUser = user.role_name === 'CLIENT_SALES';
   function renderReqDetail(d) {
     const { instance: inst, history, comments, attachments } = d;
     document.getElementById('reqDetailTitle').textContent = inst.title;
-    const recLabels = { none: 'One-time', daily: 'Daily', weekly: 'Weekly', monthly: 'Monthly' };
     let html = `<div class="row g-3 mb-3">
       <div class="col-6"><div class="small text-muted mb-1">Task Type</div><span class="badge bg-info text-dark">${escHtml(inst.task_type)}</span></div>
       <div class="col-6"><div class="small text-muted mb-1">Priority</div>${priorityBadge(inst.priority)}</div>
