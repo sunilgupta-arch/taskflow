@@ -53,7 +53,7 @@ class UserModel {
     const fields = [];
     const values = [];
 
-    const allowedFields = ['name', 'email', 'organization_id', 'role_id', 'weekly_off_day', 'shift_start', 'shift_hours', 'leave_status', 'is_active', 'avatar'];
+    const allowedFields = ['name', 'email', 'organization_id', 'role_id', 'weekly_off_day', 'shift_start', 'shift_hours', 'leave_status', 'is_active', 'avatar', 'visible_to_client'];
     allowedFields.forEach(f => {
       if (data[f] !== undefined) {
         fields.push(`${f} = ?`);
@@ -111,7 +111,7 @@ class UserModel {
     const offset = (page - 1) * limit;
 
     const [rows] = await db.query(
-      `SELECT u.id, u.name, u.email, u.organization_id, u.role_id, u.weekly_off_day, u.shift_start, u.shift_hours, u.leave_status, u.is_active, u.created_at,
+      `SELECT u.id, u.name, u.email, u.organization_id, u.role_id, u.weekly_off_day, u.shift_start, u.shift_hours, u.leave_status, u.is_active, u.visible_to_client, u.created_at,
               r.name as role_name, o.name as org_name, o.org_type
        FROM users u
        JOIN roles r ON u.role_id = r.id

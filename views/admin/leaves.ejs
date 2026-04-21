@@ -1,0 +1,449 @@
+<style>
+/* ── Topbar ───────────────────────────────────────────────── */
+.lvm-topbar { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:14px; }
+
+/* ── Filter tabs ──────────────────────────────────────────── */
+.lvm-tabs { display:flex; gap:4px; background:var(--adm-surface); border:1px solid var(--adm-border); border-radius:10px; padding:3px; width:fit-content; }
+.lvm-tab  { height:30px; padding:0 14px; border-radius:7px; border:none; background:transparent; color:var(--adm-muted); cursor:pointer; font-size:0.8rem; font-weight:600; font-family:var(--adm-font); transition:all 0.15s; display:inline-flex; align-items:center; gap:7px; white-space:nowrap; }
+.lvm-tab.active { background:var(--adm-surface-2); color:var(--adm-text); }
+.lvm-tab-cnt { font-family:var(--adm-mono); font-size:0.65rem; padding:1px 6px; border-radius:4px; background:var(--adm-border); color:var(--adm-muted); transition:all 0.15s; }
+.lvm-tab.active .lvm-tab-cnt { background:var(--adm-border-2); color:var(--adm-text-2); }
+.lvm-tab-cnt.has-items { background:rgba(245,158,11,0.25); color:#f59e0b; }
+
+/* ── Grant button ─────────────────────────────────────────── */
+.lvm-grant-btn { height:36px; padding:0 16px; border-radius:9px; border:1px solid rgba(139,92,246,0.4); background:rgba(139,92,246,0.08); color:#a78bfa; font-size:0.82rem; font-weight:600; font-family:var(--adm-font); cursor:pointer; display:inline-flex; align-items:center; gap:6px; transition:all 0.15s; white-space:nowrap; }
+.lvm-grant-btn:hover { background:rgba(139,92,246,0.16); border-color:rgba(139,92,246,0.6); }
+
+/* ── Stats bar ────────────────────────────────────────────── */
+.lvm-stats { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; align-items:center; }
+.lvm-stat { display:flex; align-items:center; gap:8px; padding:8px 14px; background:var(--adm-surface); border:1px solid var(--adm-border); border-radius:10px; }
+.lvm-stat-num { font-family:var(--adm-mono); font-size:1rem; font-weight:700; line-height:1; }
+.lvm-stat-label { font-size:0.72rem; color:var(--adm-muted); }
+.lvm-stat.total   .lvm-stat-num { color:var(--adm-text-2); }
+.lvm-stat.pending { border-color:rgba(245,158,11,0.25); background:rgba(245,158,11,0.04); }
+.lvm-stat.pending .lvm-stat-num { color:#f59e0b; }
+.lvm-stat.approved { border-color:rgba(16,185,129,0.25); background:rgba(16,185,129,0.04); }
+.lvm-stat.approved .lvm-stat-num { color:#10b981; }
+.lvm-stat.rejected { border-color:rgba(239,68,68,0.2); }
+.lvm-stat.rejected .lvm-stat-num { color:#ef4444; }
+
+/* ── Table wrapper ────────────────────────────────────────── */
+.lvm-wrap { background:var(--adm-surface); border:1px solid var(--adm-border); border-radius:14px; overflow:hidden; }
+.lvm-table { width:100%; border-collapse:collapse; }
+.lvm-table thead th {
+  font-family:var(--adm-mono); font-size:0.65rem; font-weight:700;
+  text-transform:uppercase; letter-spacing:0.6px; color:var(--adm-muted);
+  padding:10px 14px; border-bottom:1px solid var(--adm-border);
+  text-align:left; white-space:nowrap; background:var(--adm-surface-2);
+}
+.lvm-table tbody tr { border-bottom:1px solid var(--adm-border); transition:background 0.1s; }
+.lvm-table tbody tr:last-child { border-bottom:none; }
+.lvm-table tbody tr.lvm-row-pending  { border-left:3px solid rgba(245,158,11,0.7); }
+.lvm-table tbody tr.lvm-row-approved { border-left:3px solid rgba(16,185,129,0.5); }
+.lvm-table tbody tr.lvm-row-rejected { border-left:3px solid rgba(239,68,68,0.4); opacity:0.72; }
+.lvm-table tbody tr:hover { background:rgba(255,255,255,0.015); }
+.lvm-table tbody td { padding:11px 14px; font-size:0.85rem; color:var(--adm-text); vertical-align:middle; }
+
+/* User cell */
+.lvm-user { display:flex; align-items:center; gap:10px; }
+.lvm-avatar { width:32px; height:32px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:0.72rem; font-weight:700; color:#fff; font-family:var(--adm-mono); }
+.lvm-uname { font-size:0.86rem; font-weight:500; color:var(--adm-text); }
+
+/* Date range */
+.lvm-dates { white-space:nowrap; }
+.lvm-date  { font-size:0.8rem; font-family:var(--adm-mono); color:var(--adm-text-2); }
+.lvm-arrow { font-size:0.7rem; color:var(--adm-muted); margin:0 5px; }
+.lvm-days  { display:inline-flex; align-items:center; padding:2px 7px; border-radius:5px; font-size:0.65rem; font-weight:700; font-family:var(--adm-mono); background:var(--adm-surface-2); color:var(--adm-muted); border:1px solid var(--adm-border); margin-top:4px; }
+
+/* Reason */
+.lvm-reason { font-size:0.8rem; color:var(--adm-text-2); max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; cursor:default; }
+
+/* Status badge */
+.lvm-badge { display:inline-flex; align-items:center; padding:3px 10px; border-radius:20px; font-size:0.65rem; font-weight:700; font-family:var(--adm-mono); text-transform:uppercase; letter-spacing:0.4px; white-space:nowrap; }
+.lvm-badge.pending  { background:rgba(245,158,11,0.12);  color:#f59e0b;  border:1px solid rgba(245,158,11,0.25); }
+.lvm-badge.approved { background:rgba(16,185,129,0.12);  color:#10b981;  border:1px solid rgba(16,185,129,0.25); }
+.lvm-badge.rejected { background:rgba(239,68,68,0.12);   color:#ef4444;  border:1px solid rgba(239,68,68,0.25); }
+
+/* Reviewer */
+.lvm-reviewer { font-size:0.78rem; color:var(--adm-text-2); }
+.lvm-rev-date  { font-size:0.67rem; color:var(--adm-muted); margin-top:2px; }
+.lvm-remark    { font-size:0.68rem; color:var(--adm-muted); margin-top:3px; font-style:italic; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:140px; cursor:default; }
+
+/* Action buttons */
+.lvm-actions { display:flex; gap:6px; align-items:center; }
+.lvm-btn { height:28px; padding:0 12px; border-radius:7px; border:1px solid; background:transparent; font-size:0.72rem; font-weight:600; font-family:var(--adm-font); cursor:pointer; transition:all 0.15s; white-space:nowrap; display:inline-flex; align-items:center; gap:4px; }
+.lvm-btn.approve { color:#10b981; border-color:rgba(16,185,129,0.4); }
+.lvm-btn.approve:hover { background:rgba(16,185,129,0.1); }
+.lvm-btn.reject  { color:#ef4444; border-color:rgba(239,68,68,0.4); }
+.lvm-btn.reject:hover  { background:rgba(239,68,68,0.08); }
+
+/* ── Empty state ──────────────────────────────────────────── */
+.lvm-empty { display:flex; flex-direction:column; align-items:center; padding:60px 20px; color:var(--adm-muted); text-align:center; }
+.lvm-empty i { font-size:2.5rem; margin-bottom:10px; opacity:0.2; }
+.lvm-empty p { font-size:0.85rem; }
+
+/* ── Modals ───────────────────────────────────────────────── */
+.lvm-modal-bg { position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:1050; display:flex; align-items:center; justify-content:center; backdrop-filter:blur(4px); padding:16px; }
+.lvm-modal { background:var(--adm-surface,#0e1d30); border:1px solid var(--adm-border,#1a3050); border-radius:16px; padding:26px; width:460px; max-width:100%; box-shadow:0 24px 70px rgba(0,0,0,0.55); }
+.lvm-modal-title { font-family:var(--adm-mono); font-size:0.95rem; font-weight:700; color:var(--adm-text,#dceaf8); margin-bottom:20px; display:flex; align-items:center; gap:9px; }
+.lvm-modal label { display:block; font-size:0.67rem; color:var(--adm-muted,#445e78); font-family:var(--adm-mono); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:5px; }
+.lvm-modal input, .lvm-modal select, .lvm-modal textarea {
+  width:100%; border-radius:9px; padding:9px 12px;
+  background:var(--adm-surface-2,#132540); border:1px solid var(--adm-border,#1a3050);
+  color:var(--adm-text,#dceaf8); font-size:0.85rem; font-family:var(--adm-font,sans-serif);
+  box-sizing:border-box; margin-bottom:14px; resize:vertical;
+}
+.lvm-modal textarea { min-height:80px; }
+.lvm-modal input:focus, .lvm-modal select:focus, .lvm-modal textarea:focus { outline:none; border-color:#8b5cf6; }
+.lvm-modal-2col { display:grid; grid-template-columns:1fr 1fr; gap:0 14px; }
+.lvm-days-hint { font-size:0.75rem; font-family:var(--adm-mono); padding:6px 10px; border-radius:7px; background:rgba(139,92,246,0.1); color:#a78bfa; margin-bottom:14px; display:none; }
+.lvm-modal-footer { display:flex; gap:8px; justify-content:flex-end; margin-top:8px; padding-top:8px; border-top:1px solid var(--adm-border,#1a3050); }
+.lvm-mbt { height:36px; padding:0 18px; border-radius:9px; cursor:pointer; font-size:0.82rem; font-weight:600; font-family:var(--adm-font,sans-serif); border:1px solid var(--adm-border,#1a3050); transition:all 0.15s; display:inline-flex; align-items:center; gap:6px; }
+.lvm-mbt.cancel  { background:transparent; color:var(--adm-text-2,#a8c0d8); }
+.lvm-mbt.cancel:hover { border-color:var(--adm-border-2,#1e3860); }
+.lvm-mbt.approve { background:#10b981; color:#fff; border-color:#10b981; }
+.lvm-mbt.approve:hover { background:#059669; }
+.lvm-mbt.reject  { background:#ef4444; color:#fff; border-color:#ef4444; }
+.lvm-mbt.reject:hover  { background:#dc2626; }
+.lvm-mbt.grant   { background:#8b5cf6; color:#fff; border-color:#8b5cf6; }
+.lvm-mbt.grant:hover   { background:#7c3aed; }
+</style>
+
+<!-- ── Review modal ───────────────────────────────────────────────────── -->
+<div id="lvmReviewModal" class="lvm-modal-bg" style="display:none">
+  <div class="lvm-modal">
+    <div class="lvm-modal-title" id="lvmReviewTitle"><i class="bi bi-check-circle"></i> Approve Leave</div>
+    <p style="font-size:0.8rem;color:var(--adm-muted);margin-bottom:16px" id="lvmReviewInfo"></p>
+    <input type="hidden" id="lvmReviewId">
+    <input type="hidden" id="lvmReviewAction">
+    <label>Remark <span style="opacity:0.5;font-size:0.62rem">(optional)</span></label>
+    <textarea id="lvmReviewRemark" placeholder="Add a note for the employee…"></textarea>
+    <div class="lvm-modal-footer">
+      <button class="lvm-mbt cancel" onclick="document.getElementById('lvmReviewModal').style.display='none'">Cancel</button>
+      <button class="lvm-mbt" id="lvmReviewSubmit" onclick="lvmSubmitReview()"><i class="bi bi-check-lg"></i> Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Grant leave modal ──────────────────────────────────────────────── -->
+<div id="lvmGrantModal" class="lvm-modal-bg" style="display:none">
+  <div class="lvm-modal">
+    <div class="lvm-modal-title"><i class="bi bi-calendar-plus" style="color:#a78bfa"></i> Grant Leave</div>
+    <p style="font-size:0.78rem;color:var(--adm-muted);margin-bottom:16px">Creates an already-approved leave for a team member.</p>
+    <label>Employee *</label>
+    <select id="lvmGrantUser">
+      <option value="">Select team member…</option>
+      <% leaveUsers.forEach(function(u) { %>
+        <option value="<%= u.id %>"><%= u.name %></option>
+      <% }) %>
+    </select>
+    <div class="lvm-modal-2col">
+      <div>
+        <label>From Date *</label>
+        <input type="date" id="lvmGrantFrom" onchange="lvmUpdateGrantDays()">
+      </div>
+      <div>
+        <label>To Date *</label>
+        <input type="date" id="lvmGrantTo" onchange="lvmUpdateGrantDays()">
+      </div>
+    </div>
+    <div class="lvm-days-hint" id="lvmGrantDaysHint"></div>
+    <label>Reason *</label>
+    <textarea id="lvmGrantReason" placeholder="Reason for leave…"></textarea>
+    <div class="lvm-modal-footer">
+      <button class="lvm-mbt cancel" onclick="document.getElementById('lvmGrantModal').style.display='none'">Cancel</button>
+      <button class="lvm-mbt grant" onclick="lvmSubmitGrant()"><i class="bi bi-check-lg"></i> Grant Leave</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Top bar ───────────────────────────────────────────────────────── -->
+<div class="lvm-topbar">
+  <div class="lvm-tabs" id="lvmTabs">
+    <button class="lvm-tab active" data-filter="all"      onclick="lvmSetFilter('all')">All      <span class="lvm-tab-cnt" id="lvmCntAll">0</span></button>
+    <button class="lvm-tab"        data-filter="pending"  onclick="lvmSetFilter('pending')">Pending  <span class="lvm-tab-cnt" id="lvmCntPending">0</span></button>
+    <button class="lvm-tab"        data-filter="approved" onclick="lvmSetFilter('approved')">Approved <span class="lvm-tab-cnt" id="lvmCntApproved">0</span></button>
+    <button class="lvm-tab"        data-filter="rejected" onclick="lvmSetFilter('rejected')">Rejected <span class="lvm-tab-cnt" id="lvmCntRejected">0</span></button>
+  </div>
+  <button class="lvm-grant-btn" onclick="lvmOpenGrant()">
+    <i class="bi bi-person-plus"></i> Grant Leave
+  </button>
+</div>
+
+<!-- ── Stats bar ─────────────────────────────────────────────────────── -->
+<div class="lvm-stats">
+  <div class="lvm-stat total">
+    <div><div class="lvm-stat-num" id="lvmStatTotal">0</div><div class="lvm-stat-label">Total</div></div>
+  </div>
+  <div class="lvm-stat pending">
+    <div><div class="lvm-stat-num" id="lvmStatPending">0</div><div class="lvm-stat-label">Pending</div></div>
+  </div>
+  <div class="lvm-stat approved">
+    <div><div class="lvm-stat-num" id="lvmStatApproved">0</div><div class="lvm-stat-label">Approved</div></div>
+  </div>
+  <div class="lvm-stat rejected">
+    <div><div class="lvm-stat-num" id="lvmStatRejected">0</div><div class="lvm-stat-label">Rejected</div></div>
+  </div>
+</div>
+
+<!-- ── Table area ────────────────────────────────────────────────────── -->
+<div id="lvmTableArea"></div>
+
+<script>
+(function () {
+  // Teleport modals
+  ['lvmReviewModal','lvmGrantModal'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) document.body.appendChild(el);
+  });
+
+  // ── Bootstrap data ────────────────────────────────────────────────────
+  var _raw = <%- JSON.stringify(leaves.map(function(lv) {
+    return {
+      id:            lv.id,
+      user_id:       lv.user_id,
+      user_name:     lv.user_name,
+      from_date:     lv.from_date instanceof Date ? lv.from_date.toISOString().split('T')[0] : String(lv.from_date).split('T')[0],
+      to_date:       lv.to_date   instanceof Date ? lv.to_date.toISOString().split('T')[0]   : String(lv.to_date).split('T')[0],
+      reason:        lv.reason,
+      status:        lv.status,
+      reviewer_name: lv.reviewer_name || null,
+      review_remark: lv.review_remark || null,
+      reviewed_at:   lv.reviewed_at   ? (lv.reviewed_at instanceof Date ? lv.reviewed_at.toISOString() : String(lv.reviewed_at)) : null
+    };
+  })).replace(/<\//g, '<\\/') %>;
+
+  var _leaves = _raw;
+  var _filter = 'all';
+
+  // ── Helpers ───────────────────────────────────────────────────────────
+  function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+  function avatarColor(name) {
+    var c = ['#3b82f6','#8b5cf6','#10b981','#f59e0b','#ef4444','#06b6d4','#f97316','#a78bfa'];
+    var i = 0; for (var ch of (name||'?')) i = (i + ch.charCodeAt(0)) % c.length;
+    return c[i];
+  }
+
+  function initials(name) {
+    return (name||'?').split(' ').map(function(w){ return w.charAt(0); }).slice(0,2).join('').toUpperCase();
+  }
+
+  var MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  function fmtDate(d) {
+    if (!d) return '—';
+    var p = d.split('-');
+    return MON[parseInt(p[1])-1] + ' ' + parseInt(p[2]) + ', ' + p[0];
+  }
+
+  function daysBetween(from, to) {
+    return Math.round((new Date(to+'T12:00:00') - new Date(from+'T12:00:00')) / 86400000) + 1;
+  }
+
+  function fmtReviewDate(iso) {
+    if (!iso) return '';
+    var d = new Date(iso);
+    return MON[d.getMonth()] + ' ' + d.getDate() + ', ' + d.getFullYear();
+  }
+
+  // ── Compute stats ─────────────────────────────────────────────────────
+  function computeStats() {
+    var total = _leaves.length, pending = 0, approved = 0, rejected = 0;
+    _leaves.forEach(function(l) {
+      if (l.status === 'pending')  pending++;
+      if (l.status === 'approved') approved++;
+      if (l.status === 'rejected') rejected++;
+    });
+    document.getElementById('lvmStatTotal').textContent    = total;
+    document.getElementById('lvmStatPending').textContent  = pending;
+    document.getElementById('lvmStatApproved').textContent = approved;
+    document.getElementById('lvmStatRejected').textContent = rejected;
+    document.getElementById('lvmCntAll').textContent      = total;
+    document.getElementById('lvmCntPending').textContent  = pending;
+    document.getElementById('lvmCntApproved').textContent = approved;
+    document.getElementById('lvmCntRejected').textContent = rejected;
+    // Highlight pending tab count if there are items
+    var pCnt = document.getElementById('lvmCntPending');
+    pCnt.classList.toggle('has-items', pending > 0);
+  }
+
+  // ── Render table ──────────────────────────────────────────────────────
+  function render() {
+    computeStats();
+    var filtered = _filter === 'all' ? _leaves : _leaves.filter(function(l){ return l.status === _filter; });
+
+    var area = document.getElementById('lvmTableArea');
+
+    if (!filtered.length) {
+      var msgs = { all:'No leave requests found', pending:'No pending requests', approved:'No approved leaves', rejected:'No rejected requests' };
+      area.innerHTML = '<div class="lvm-wrap"><div class="lvm-empty"><i class="bi bi-calendar-x"></i><p>'+msgs[_filter]+'</p></div></div>';
+      return;
+    }
+
+    var rows = filtered.map(function(lv) {
+      var color = avatarColor(lv.user_name);
+      var inits = initials(lv.user_name);
+      var days  = daysBetween(lv.from_date, lv.to_date);
+      var reasonShort = lv.reason.length > 55 ? lv.reason.slice(0,55)+'…' : lv.reason;
+
+      var statusCell = '<span class="lvm-badge '+lv.status+'">'+lv.status+'</span>';
+
+      var reviewerCell = '—';
+      if (lv.reviewer_name) {
+        reviewerCell = '<div class="lvm-reviewer">'+esc(lv.reviewer_name)+'</div>'
+          +'<div class="lvm-rev-date">'+fmtReviewDate(lv.reviewed_at)+'</div>'
+          +(lv.review_remark ? '<div class="lvm-remark" title="'+esc(lv.review_remark)+'">'+esc(lv.review_remark)+'</div>' : '');
+      }
+
+      var actionsCell = '<span style="color:var(--adm-muted);font-size:0.75rem">—</span>';
+      if (lv.status === 'pending') {
+        actionsCell = '<div class="lvm-actions">'
+          +'<button class="lvm-btn approve" onclick="lvmOpenReview('+lv.id+',\'approve\',\''+esc(lv.user_name)+'\',\''+lv.from_date+'\',\''+lv.to_date+'\')"><i class="bi bi-check-lg"></i> Approve</button>'
+          +'<button class="lvm-btn reject"  onclick="lvmOpenReview('+lv.id+',\'reject\',\''+esc(lv.user_name)+'\',\''+lv.from_date+'\',\''+lv.to_date+'\')"><i class="bi bi-x-lg"></i> Reject</button>'
+          +'</div>';
+      }
+
+      return '<tr class="lvm-row-'+lv.status+'">'
+        +'<td><div class="lvm-user"><div class="lvm-avatar" style="background:'+color+'">'+inits+'</div><div class="lvm-uname">'+esc(lv.user_name)+'</div></div></td>'
+        +'<td class="lvm-dates">'
+          +'<div><span class="lvm-date">'+fmtDate(lv.from_date)+'</span><span class="lvm-arrow">→</span><span class="lvm-date">'+fmtDate(lv.to_date)+'</span></div>'
+          +'<span class="lvm-days">'+days+' day'+(days!==1?'s':'')+'</span>'
+        +'</td>'
+        +'<td><div class="lvm-reason" title="'+esc(lv.reason)+'">'+esc(reasonShort)+'</div></td>'
+        +'<td>'+statusCell+'</td>'
+        +'<td>'+reviewerCell+'</td>'
+        +'<td>'+actionsCell+'</td>'
+        +'</tr>';
+    }).join('');
+
+    area.innerHTML = '<div class="lvm-wrap"><table class="lvm-table">'
+      +'<thead><tr>'
+      +'<th>Employee</th><th>Date Range</th><th>Reason</th>'
+      +'<th>Status</th><th>Reviewed By</th><th>Actions</th>'
+      +'</tr></thead>'
+      +'<tbody>'+rows+'</tbody></table></div>';
+  }
+
+  // ── Filter switch ─────────────────────────────────────────────────────
+  window.lvmSetFilter = function(f) {
+    _filter = f;
+    document.querySelectorAll('.lvm-tab').forEach(function(btn) {
+      btn.classList.toggle('active', btn.dataset.filter === f);
+    });
+    render();
+  };
+
+  // ── Review modal ──────────────────────────────────────────────────────
+  window.lvmOpenReview = function(id, action, userName, from, to) {
+    document.getElementById('lvmReviewId').value     = id;
+    document.getElementById('lvmReviewAction').value = action;
+    document.getElementById('lvmReviewRemark').value = '';
+    var isApprove = action === 'approve';
+    var titleEl   = document.getElementById('lvmReviewTitle');
+    var submitBtn = document.getElementById('lvmReviewSubmit');
+    titleEl.innerHTML = isApprove
+      ? '<i class="bi bi-check-circle" style="color:#10b981"></i> Approve Leave'
+      : '<i class="bi bi-x-circle"     style="color:#ef4444"></i> Reject Leave';
+    document.getElementById('lvmReviewInfo').textContent =
+      (isApprove ? 'Approve' : 'Reject') + ' leave for ' + userName + ' — ' + fmtDate(from) + ' to ' + fmtDate(to) + '?';
+    submitBtn.className = 'lvm-mbt ' + (isApprove ? 'approve' : 'reject');
+    submitBtn.innerHTML = '<i class="bi bi-check-lg"></i> ' + (isApprove ? 'Approve' : 'Reject');
+    document.getElementById('lvmReviewModal').style.display = 'flex';
+  };
+
+  window.lvmSubmitReview = function() {
+    var id     = document.getElementById('lvmReviewId').value;
+    var action = document.getElementById('lvmReviewAction').value;
+    var remark = document.getElementById('lvmReviewRemark').value.trim();
+    var btn    = document.getElementById('lvmReviewSubmit');
+    btn.disabled = true;
+    fetch('/leaves/'+id+'/'+action, {
+      method: 'PATCH',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ review_remark: remark })
+    }).then(function(r){ return r.json(); }).then(function(res) {
+      if (res.success) {
+        document.getElementById('lvmReviewModal').style.display = 'none';
+        // Update local data
+        var lv = _leaves.find(function(x){ return x.id == id; });
+        if (lv) {
+          lv.status        = action === 'approve' ? 'approved' : 'rejected';
+          lv.review_remark = remark || null;
+          lv.reviewed_at   = new Date().toISOString();
+        }
+        render();
+      } else {
+        alert(res.message || 'Failed');
+      }
+      btn.disabled = false;
+    }).catch(function(){ alert('Network error'); btn.disabled = false; });
+  };
+
+  // ── Grant modal ───────────────────────────────────────────────────────
+  window.lvmOpenGrant = function() {
+    var today = new Date().toISOString().split('T')[0];
+    document.getElementById('lvmGrantUser').value   = '';
+    document.getElementById('lvmGrantFrom').value   = today;
+    document.getElementById('lvmGrantTo').value     = today;
+    document.getElementById('lvmGrantReason').value = '';
+    document.getElementById('lvmGrantDaysHint').style.display = 'none';
+    document.getElementById('lvmGrantModal').style.display = 'flex';
+  };
+
+  window.lvmUpdateGrantDays = function() {
+    var from = document.getElementById('lvmGrantFrom').value;
+    var to   = document.getElementById('lvmGrantTo').value;
+    var hint = document.getElementById('lvmGrantDaysHint');
+    if (from && to && to >= from) {
+      var d = daysBetween(from, to);
+      hint.textContent = d + ' day' + (d!==1?'s':'') + ' of leave';
+      hint.style.display = 'block';
+      document.getElementById('lvmGrantTo').min = from;
+    } else {
+      hint.style.display = 'none';
+    }
+  };
+
+  window.lvmSubmitGrant = function() {
+    var user_id   = document.getElementById('lvmGrantUser').value;
+    var from_date = document.getElementById('lvmGrantFrom').value;
+    var to_date   = document.getElementById('lvmGrantTo').value;
+    var reason    = document.getElementById('lvmGrantReason').value.trim();
+    if (!user_id)   { alert('Please select a team member.'); return; }
+    if (!from_date || !to_date) { alert('Please select both dates.'); return; }
+    if (to_date < from_date)    { alert('To date must be after from date.'); return; }
+    if (!reason)    { alert('Please enter a reason.'); return; }
+    var btn = document.querySelector('#lvmGrantModal .lvm-mbt.grant');
+    btn.disabled = true;
+    fetch('/leaves/grant', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ user_id: parseInt(user_id), from_date, to_date, reason })
+    }).then(function(r){ return r.json(); }).then(function(res) {
+      if (res.success) {
+        document.getElementById('lvmGrantModal').style.display = 'none';
+        // Add to local data and re-render
+        _leaves.unshift({
+          id:            res.data && res.data.id,
+          user_id:       parseInt(user_id),
+          user_name:     document.getElementById('lvmGrantUser').options[document.getElementById('lvmGrantUser').selectedIndex].text,
+          from_date,
+          to_date,
+          reason,
+          status:        'approved',
+          reviewer_name: null,
+          review_remark: null,
+          reviewed_at:   new Date().toISOString()
+        });
+        render();
+      } else {
+        alert(res.message || 'Failed to grant leave');
+      }
+      btn.disabled = false;
+    }).catch(function(){ alert('Network error'); btn.disabled = false; });
+  };
+
+  // ── Initial render ────────────────────────────────────────────────────
+  render();
+})();
+</script>

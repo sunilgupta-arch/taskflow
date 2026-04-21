@@ -8,6 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <%- style %>
   <style>
     /* ── Reset & base ─────────────────────────────────── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -308,7 +309,7 @@
     /* Content */
     .adm-content {
       flex: 1;
-      padding: 32px;
+      padding: 20px 28px;
     }
 
     /* ── Hub page shared ──────────────────────────────── */
@@ -532,6 +533,279 @@
       .adm-cards { grid-template-columns: 1fr; }
       .adm-section-cards { grid-template-columns: 1fr; }
     }
+
+    /* ── Bridge Chat Slide-over ──────────────────────── */
+    /* ── Queue notification button ───────────────────── */
+    .adm-queue-btn {
+      position: relative;
+      height: 34px;
+      padding: 0 10px;
+      border-radius: 9px;
+      background: transparent;
+      border: 1px solid var(--adm-border);
+      color: var(--adm-muted);
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+      font-size: 0.78rem; font-weight: 600;
+      text-decoration: none;
+      transition: all 0.15s;
+      flex-shrink: 0;
+      white-space: nowrap;
+    }
+    .adm-queue-btn:hover { border-color: #f97316; color: #f97316; text-decoration: none; }
+    .adm-queue-btn.has-open {
+      border-color: #f97316;
+      color: #f97316;
+      background: rgba(249,115,22,0.08);
+    }
+    @keyframes admQueuePulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(249,115,22,0.5); }
+      50%       { box-shadow: 0 0 0 5px rgba(249,115,22,0); }
+    }
+    .adm-queue-btn.has-open { animation: admQueuePulse 2.5s ease-in-out infinite; }
+    .adm-queue-count {
+      background: #f97316;
+      color: #fff;
+      font-size: 0.65rem; font-weight: 700;
+      padding: 1px 6px; border-radius: 8px;
+      min-width: 18px; text-align: center;
+    }
+
+    .adm-bridge-btn {
+      position: relative;
+      width: 34px; height: 34px;
+      border-radius: 9px;
+      background: transparent;
+      border: 1px solid var(--adm-border);
+      color: var(--adm-muted);
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.9rem;
+      transition: all 0.15s;
+      flex-shrink: 0;
+    }
+    .adm-bridge-btn:hover, .adm-bridge-btn.has-unread { border-color: #f59e0b; color: #f59e0b; }
+    .adm-bridge-badge {
+      position: absolute; top: -4px; right: -4px;
+      background: #ef4444; color: #fff;
+      font-size: 0.55rem; font-weight: 700;
+      padding: 1px 5px; border-radius: 8px;
+      min-width: 16px; text-align: center; pointer-events: none;
+    }
+    .adm-bridge-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.4);
+      z-index: 99;
+      backdrop-filter: blur(2px);
+    }
+    .adm-bridge-drawer {
+      position: fixed; top: 0; right: 0;
+      width: 380px; height: 100vh;
+      background: var(--adm-surface);
+      border-left: 1px solid var(--adm-border);
+      box-shadow: -8px 0 30px rgba(0,0,0,0.3);
+      z-index: 100;
+      display: flex; flex-direction: column;
+      transform: translateX(100%);
+      transition: transform 0.25s cubic-bezier(0.4,0,0.2,1);
+    }
+    .adm-bridge-drawer.open { transform: translateX(0); }
+    .adm-bridge-drawer-header {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--adm-border);
+      display: flex; align-items: center; justify-content: space-between;
+      flex-shrink: 0;
+    }
+    .adm-bridge-drawer-title {
+      font-weight: 600; font-size: 0.9rem; color: var(--adm-text);
+      display: flex; align-items: center; gap: 8px;
+    }
+    /* Bridge conv list inside drawer */
+    .adm-bridge-drawer .bdr-conv-list { flex: 1; overflow-y: auto; }
+    .adm-bridge-drawer .bdr-conv-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 14px; cursor: pointer;
+      transition: background 0.15s;
+      border-bottom: 1px solid var(--adm-border);
+    }
+    .adm-bridge-drawer .bdr-conv-item:hover { background: var(--adm-surface-2); }
+    .adm-bridge-drawer .bdr-conv-avatar {
+      width: 36px; height: 36px; border-radius: 8px;
+      background: linear-gradient(135deg, #0284c7, #7c3aed);
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 0.8rem; color: #fff; flex-shrink: 0;
+    }
+    .adm-bridge-drawer .bdr-conv-info { flex: 1; min-width: 0; }
+    .adm-bridge-drawer .bdr-conv-name { font-size: 0.82rem; font-weight: 600; display: block; color: var(--adm-text); }
+    .adm-bridge-drawer .bdr-conv-last { font-size: 0.7rem; color: var(--adm-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .adm-bridge-drawer .bdr-conv-unread {
+      background: var(--adm-accent); color: #fff;
+      font-size: 0.55rem; font-weight: 700;
+      padding: 2px 6px; border-radius: 10px; flex-shrink: 0;
+    }
+    /* Bridge chat view inside drawer */
+    .adm-bridge-drawer .bdr-chat-view { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    .adm-bridge-drawer .bdr-chat-header {
+      padding: 10px 12px; border-bottom: 1px solid var(--adm-border);
+      display: flex; align-items: center; gap: 8px; flex-shrink: 0;
+    }
+    .adm-bridge-drawer .bdr-back-btn {
+      background: none; border: none; color: var(--adm-text-2);
+      cursor: pointer; padding: 0 4px 0 0; font-size: 0.9rem; line-height: 1;
+    }
+    .adm-bridge-drawer .bdr-messages {
+      flex: 1; overflow-y: auto; padding: 10px;
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .adm-bridge-drawer .bdr-messages .bdr-bubble {
+      max-width: 80%; padding: 8px 12px;
+      font-size: 0.8rem; border-radius: 14px;
+      line-height: 1.4; word-wrap: break-word; position: relative;
+    }
+    .adm-bridge-drawer .bdr-messages .bdr-bubble.sent {
+      align-self: flex-end; background: #2563eb; color: #fff; border-bottom-right-radius: 4px;
+    }
+    .adm-bridge-drawer .bdr-messages .bdr-bubble.received {
+      align-self: flex-start; background: var(--adm-surface-2);
+      border: 1px solid var(--adm-border); color: var(--adm-text); border-bottom-left-radius: 4px;
+    }
+    .adm-bridge-drawer .bdr-messages .bdr-bubble.deleted {
+      opacity: 0.85; background: var(--adm-surface-2) !important;
+      border: 1px dashed var(--adm-border) !important; color: var(--adm-muted) !important;
+    }
+    .adm-bridge-drawer .bdr-sender-name { font-size: 0.65rem; font-weight: 600; color: #a78bfa; margin-bottom: 2px; }
+    .adm-bridge-drawer .bdr-bubble.sent .bdr-footer { color: rgba(255,255,255,0.6); }
+    .adm-bridge-drawer .bdr-bubble.received .bdr-footer { color: var(--adm-muted); }
+    .adm-bridge-drawer .bdr-time { font-size: 0.55rem; }
+    .adm-bridge-drawer .bdr-ticks { font-size: 0.75rem; opacity: 0.5; line-height: 1; }
+    .adm-bridge-drawer .bdr-ticks.read { color: #34b7f1; opacity: 1; }
+    .adm-bridge-drawer .bdr-delete-btn {
+      position: absolute; top: 3px; right: 5px;
+      font-size: 0.6rem; opacity: 0; cursor: pointer;
+      color: #ef4444; padding: 2px; transition: opacity 0.15s;
+      background: none; border: none;
+    }
+    .adm-bridge-drawer .bdr-bubble:hover .bdr-delete-btn { opacity: 0.6; }
+    .adm-bridge-drawer .bdr-delete-btn:hover { opacity: 1 !important; }
+    .adm-bridge-drawer .bdr-date-div {
+      text-align: center; margin: 8px 0;
+      font-size: 0.55rem; color: var(--adm-muted); position: relative;
+    }
+    .adm-bridge-drawer .bdr-date-div span {
+      background: var(--adm-surface); padding: 2px 10px;
+      border: 1px solid var(--adm-border); border-radius: 20px; position: relative; z-index: 1;
+    }
+    .adm-bridge-drawer .bdr-date-div::before {
+      content: ''; position: absolute; top: 50%; left: 0; right: 0;
+      height: 1px; background: var(--adm-border);
+    }
+    .adm-bridge-drawer .bdr-img { max-width: 100%; max-height: 160px; border-radius: 8px; display: block; cursor: pointer; }
+    .adm-bridge-drawer .bdr-file { display: flex; align-items: center; gap: 6px; color: inherit; text-decoration: none; font-size: 0.75rem; }
+    .adm-bridge-drawer .bdr-input-area {
+      padding: 10px 12px; border-top: 1px solid var(--adm-border); flex-shrink: 0;
+    }
+    .adm-bridge-drawer .bdr-input-row { display: flex; gap: 8px; align-items: stretch; }
+    .adm-bridge-drawer .bdr-textarea {
+      flex: 1; resize: none; min-height: 68px; max-height: 90px;
+      font-size: 0.85rem; padding: 8px 10px; border-radius: 10px;
+      background: var(--adm-surface-2); border: 1px solid var(--adm-border);
+      color: var(--adm-text); font-family: var(--adm-font);
+    }
+    .adm-bridge-drawer .bdr-textarea:focus { outline: none; border-color: var(--adm-accent); }
+    .adm-bridge-drawer .bdr-input-btns { display: flex; flex-direction: column; gap: 4px; }
+    .adm-bridge-drawer .bdr-icon-btn {
+      width: 36px; height: 32px; border-radius: 8px; flex-shrink: 0;
+      border: 1px solid var(--adm-border); background: transparent;
+      color: var(--adm-text-2); cursor: pointer;
+      display: flex; align-items: center; justify-content: center; font-size: 0.85rem;
+    }
+    .adm-bridge-drawer .bdr-send-btn {
+      width: 36px; flex: 1; border-radius: 8px; flex-shrink: 0;
+      border: none; background: #2563eb; color: #fff; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; font-size: 0.85rem;
+    }
+
+    /* ── Group Channel Drawer ─────────────────────────── */
+    .adm-gc-btn {
+      position: relative; width: 34px; height: 34px; border-radius: 9px;
+      background: transparent; border: 1px solid var(--adm-border);
+      color: var(--adm-muted); cursor: pointer;
+      display: flex; align-items: center; justify-content: center; font-size: 0.9rem;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .adm-gc-btn:hover, .adm-gc-btn.active { border-color: #a78bfa; color: #a78bfa; }
+    .adm-gc-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.4);
+      z-index: 1044; backdrop-filter: blur(2px);
+    }
+    .adm-gc-drawer {
+      position: fixed; top: 0; right: 0; height: 100vh; width: 380px;
+      background: var(--adm-bg); border-left: 1px solid var(--adm-border);
+      box-shadow: -8px 0 30px rgba(0,0,0,0.4); z-index: 1045;
+      display: flex; flex-direction: column;
+      transform: translateX(100%); transition: transform 0.25s cubic-bezier(0.4,0,0.2,1);
+    }
+    .adm-gc-drawer.open { transform: translateX(0); }
+    .adm-gc-drawer-header {
+      padding: 12px 14px; border-bottom: 1px solid var(--adm-border);
+      display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
+      background: var(--adm-surface);
+    }
+    .adm-gc-drawer-title {
+      font-weight: 600; font-size: 0.88rem; color: var(--adm-text);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .adm-gc-messages {
+      flex: 1; overflow-y: auto; padding: 12px 14px;
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .adm-gc-bubble {
+      max-width: 82%; display: flex; flex-direction: column; gap: 1px;
+    }
+    .adm-gc-bubble.sent   { align-self: flex-end; align-items: flex-end; }
+    .adm-gc-bubble.received { align-self: flex-start; align-items: flex-start; }
+    .adm-gc-sender { font-size: 0.62rem; font-weight: 600; color: #a78bfa; margin-bottom: 2px; padding-left: 2px; }
+    .adm-gc-content {
+      padding: 7px 10px; border-radius: 12px; font-size: 0.82rem; line-height: 1.45;
+      word-break: break-word; white-space: pre-wrap;
+    }
+    .adm-gc-bubble.sent   .adm-gc-content { background: #2563eb; color: #fff; border-bottom-right-radius: 4px; }
+    .adm-gc-bubble.received .adm-gc-content { background: var(--adm-surface-2); color: var(--adm-text); border-bottom-left-radius: 4px; }
+    .adm-gc-bubble.deleted .adm-gc-content { opacity: 0.5; font-style: italic; }
+    .adm-gc-footer { display: flex; align-items: center; gap: 4px; margin-top: 1px; padding: 0 2px; }
+    .adm-gc-time { font-size: 0.55rem; color: var(--adm-muted); }
+    .adm-gc-date-div {
+      display: flex; align-items: center; gap: 8px;
+      margin: 8px 0; color: var(--adm-muted); font-size: 0.62rem;
+    }
+    .adm-gc-date-div::before, .adm-gc-date-div::after {
+      content: ''; flex: 1; height: 1px; background: var(--adm-border);
+    }
+    .adm-gc-img { max-width: 100%; max-height: 160px; border-radius: 8px; display: block; cursor: pointer; }
+    .adm-gc-file { display: flex; align-items: center; gap: 6px; color: inherit; text-decoration: none; font-size: 0.75rem; }
+    .adm-gc-input-area {
+      padding: 10px 12px; border-top: 1px solid var(--adm-border); flex-shrink: 0;
+      background: var(--adm-surface);
+    }
+    .adm-gc-input-row { display: flex; gap: 8px; align-items: stretch; }
+    .adm-gc-textarea {
+      flex: 1; resize: none; border-radius: 9px; padding: 8px 10px; min-height: 58px;
+      background: var(--adm-surface-2); border: 1px solid var(--adm-border);
+      color: var(--adm-text); font-family: var(--adm-font); font-size: 0.82rem;
+    }
+    .adm-gc-textarea:focus { outline: none; border-color: #a78bfa; }
+    .adm-gc-input-btns { display: flex; flex-direction: column; gap: 4px; }
+    .adm-gc-icon-btn {
+      width: 36px; height: 27px; border-radius: 7px; flex-shrink: 0;
+      border: 1px solid var(--adm-border); background: var(--adm-surface-2);
+      color: var(--adm-muted); cursor: pointer;
+      display: flex; align-items: center; justify-content: center; font-size: 0.85rem;
+    }
+    .adm-gc-send-btn {
+      width: 36px; flex: 1; border-radius: 8px; flex-shrink: 0;
+      border: none; background: #a78bfa; color: #fff; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; font-size: 0.85rem;
+    }
   </style>
 </head>
 <body>
@@ -568,6 +842,8 @@
         <div class="adm-nav-icon"><i class="bi bi-people-fill"></i></div>
         <span>Team</span>
       </a>
+
+
 
       <a href="/admin/reports" data-s="reports"
          class="adm-nav-link <%= section === 'reports' ? 'active' : '' %>">
@@ -612,6 +888,18 @@
     <div class="adm-topbar">
       <div class="adm-topbar-title"><%= typeof title !== 'undefined' ? title : 'Admin' %></div>
       <span class="adm-clock" id="admClock"></span>
+      <a href="/admin/queue" class="adm-queue-btn" id="admQueueBtn" title="Client Queue — unpicked requests" style="display:none">
+        <i class="bi bi-inbox-fill"></i>
+        <span>Queue</span>
+        <span class="adm-queue-count" id="admQueueCount"></span>
+      </a>
+      <button class="adm-gc-btn" id="admGcBtn" onclick="toggleAdmGc()" title="Group Channel">
+        <i class="bi bi-people-fill"></i>
+      </button>
+      <button class="adm-bridge-btn" id="admBridgeBtn" onclick="toggleAdmBridge()" title="Client Messages">
+        <i class="bi bi-chat-dots-fill"></i>
+        <span class="adm-bridge-badge" id="admBridgeBadge" style="display:none"></span>
+      </button>
       <button class="adm-theme-btn" id="admThemeBtn" onclick="toggleAdmTheme()" title="Toggle theme"></button>
     </div>
     <div class="adm-content">
@@ -620,6 +908,68 @@
   </main>
 
 </div>
+<!-- Bridge Chat Slide-over Drawer -->
+<div class="adm-bridge-overlay" id="admBridgeOverlay" onclick="closeAdmBridge()" style="display:none"></div>
+<div class="adm-bridge-drawer" id="admBridgeDrawer">
+  <div class="adm-bridge-drawer-header">
+    <div class="adm-bridge-drawer-title">
+      <i class="bi bi-chat-dots-fill" style="color:#f59e0b"></i> Client Messages
+    </div>
+    <button class="adm-theme-btn" onclick="closeAdmBridge()" title="Close"><i class="bi bi-x-lg"></i></button>
+  </div>
+  <!-- Conversation list -->
+  <div class="bdr-conv-list" id="admBdrConvList">
+    <div class="text-center py-4 small" style="color:var(--adm-muted)">Loading…</div>
+  </div>
+  <!-- Chat view (hidden initially) -->
+  <div class="bdr-chat-view" id="admBdrChatView" style="display:none">
+    <div class="bdr-chat-header">
+      <button class="bdr-back-btn" onclick="admBdrBackToList()"><i class="bi bi-arrow-left"></i></button>
+      <div>
+        <div style="font-weight:600;font-size:0.875rem;color:var(--adm-text)" id="admBdrChatName"></div>
+        <div style="font-size:0.65rem;color:var(--adm-muted);min-height:14px" id="admBdrTyping"></div>
+      </div>
+    </div>
+    <div class="bdr-messages" id="admBdrMessages"></div>
+    <div class="bdr-input-area">
+      <input type="file" id="admBdrFile" style="display:none" onchange="admBdrSendFile()">
+      <div class="bdr-input-row">
+        <textarea class="bdr-textarea" id="admBdrInput" placeholder="Type a message…" rows="2"></textarea>
+        <div class="bdr-input-btns">
+          <button class="bdr-icon-btn" onclick="document.getElementById('admBdrFile').click()" title="Attach"><i class="bi bi-paperclip"></i></button>
+          <button class="bdr-send-btn" onclick="admBdrSend()"><i class="bi bi-send"></i></button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Group Channel Drawer -->
+<div class="adm-gc-overlay" id="admGcOverlay" onclick="closeAdmGc()" style="display:none"></div>
+<div class="adm-gc-drawer" id="admGcDrawer">
+  <div class="adm-gc-drawer-header">
+    <div class="adm-gc-drawer-title">
+      <i class="bi bi-people-fill" style="color:#a78bfa"></i> Group Channel
+    </div>
+    <button class="adm-theme-btn" onclick="closeAdmGc()" title="Close"><i class="bi bi-x-lg"></i></button>
+  </div>
+  <div class="adm-gc-messages" id="admGcMessages">
+    <div style="text-align:center;color:var(--adm-muted);padding:24px;font-size:0.82rem">Loading…</div>
+  </div>
+  <div class="adm-gc-input-area">
+    <input type="file" id="admGcFile" style="display:none" onchange="admGcSendFile()">
+    <div class="adm-gc-input-row">
+      <textarea class="adm-gc-textarea" id="admGcInput" placeholder="Message the team…" rows="2"></textarea>
+      <div class="adm-gc-input-btns">
+        <button class="adm-gc-icon-btn" onclick="document.getElementById('admGcFile').click()" title="Attach"><i class="bi bi-paperclip"></i></button>
+        <button class="adm-gc-send-btn" onclick="admGcSend()"><i class="bi bi-send"></i></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+<script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
 <script>
   // Clock
   (function() {
@@ -646,6 +996,355 @@
     applyAdmTheme(_admTheme);
   }
   applyAdmTheme(_admTheme);
+
+  // ── Bridge Chat Slide-over ────────────────────────────────
+  var admBdrConvId  = null;
+  var admBdrUserId  = <%= user.id %>;
+  var admBdrIsOpen  = false;
+
+  function toggleAdmBridge() { admBdrIsOpen ? closeAdmBridge() : openAdmBridge(); }
+
+  function openAdmBridge() {
+    admBdrIsOpen = true;
+    document.getElementById('admBridgeOverlay').style.display = '';
+    document.getElementById('admBridgeDrawer').classList.add('open');
+    admBdrLoadConvList();
+  }
+
+  function closeAdmBridge() {
+    admBdrIsOpen = false;
+    document.getElementById('admBridgeOverlay').style.display = 'none';
+    document.getElementById('admBridgeDrawer').classList.remove('open');
+  }
+
+  function admBdrLoadConvList() {
+    document.getElementById('admBdrConvList').style.display = '';
+    document.getElementById('admBdrChatView').style.display  = 'none';
+    fetch('/bridge/conversations').then(function(r){ return r.json(); }).then(function(res) {
+      var convs = (res.data && res.data.conversations) ? res.data.conversations : (res.data || []);
+      var list = document.getElementById('admBdrConvList');
+      if (!convs.length) {
+        list.innerHTML = '<div class="text-center py-4 small" style="color:var(--adm-muted)">No messages yet</div>';
+        return;
+      }
+      list.innerHTML = convs.map(function(c) {
+        var name   = c.client_user_name || c.other_user_name || 'Client';
+        var unread = c.unread_count > 0 ? '<span class="bdr-conv-unread">'+c.unread_count+'</span>' : '';
+        return '<div class="bdr-conv-item" onclick="admBdrOpenChat('+c.id+',\''+name.replace(/'/g,"\\'")+'\')">'+
+          '<div class="bdr-conv-avatar">'+name.charAt(0).toUpperCase()+'</div>'+
+          '<div class="bdr-conv-info"><span class="bdr-conv-name">'+admEsc(name)+'</span>'+
+          '<span class="bdr-conv-last">'+(c.last_message ? admEsc(c.last_message) : '')+'</span></div>'+unread+'</div>';
+      }).join('');
+    }).catch(function(){});
+  }
+
+  function admBdrOpenChat(convId, name) {
+    admBdrConvId = convId;
+    document.getElementById('admBdrConvList').style.display = 'none';
+    document.getElementById('admBdrChatView').style.display  = 'flex';
+    document.getElementById('admBdrChatName').textContent    = name;
+    document.getElementById('admBdrTyping').textContent      = '';
+    admBdrLoadMessages(convId);
+    fetch('/bridge/conversations/'+convId+'/read', {method:'POST'}).catch(function(){});
+    admBdrUpdateBadge();
+  }
+
+  function admBdrBackToList() { admBdrConvId = null; admBdrLoadConvList(); }
+
+  function admBdrLoadMessages(convId) {
+    fetch('/bridge/conversations/'+convId+'/messages').then(function(r){ return r.json(); }).then(function(res) {
+      admBdrRenderMessages((res.data && res.data.messages) ? res.data.messages : []);
+    }).catch(function(){});
+  }
+
+  var ADM_IMG_EXTS = ['jpg','jpeg','png','gif','webp','bmp','svg'];
+  function admBdrFileIcon(ext) {
+    var m = {pdf:{i:'bi-file-earmark-pdf-fill',c:'#ef4444'},doc:{i:'bi-file-earmark-word-fill',c:'#2b7bf0'},docx:{i:'bi-file-earmark-word-fill',c:'#2b7bf0'},xls:{i:'bi-file-earmark-excel-fill',c:'#16a34a'},xlsx:{i:'bi-file-earmark-excel-fill',c:'#16a34a'},zip:{i:'bi-file-earmark-zip-fill',c:'#eab308'},rar:{i:'bi-file-earmark-zip-fill',c:'#eab308'},txt:{i:'bi-file-earmark-text-fill',c:'#9ca3af'}};
+    return m[ext] || {i:'bi-file-earmark-fill',c:'#94a3b8'};
+  }
+  function admBdrRenderFile(att, msgId) {
+    var fn = att.file_name, ext = fn.split('.').pop().toLowerCase(), url = '/bridge/attachment/'+msgId;
+    if (ADM_IMG_EXTS.indexOf(ext) !== -1) return '<a href="'+url+'" target="_blank"><img src="'+url+'" class="bdr-img" alt="'+admEsc(fn)+'"></a>';
+    var short = fn.length>28?fn.substring(0,25)+'…':fn;
+    var sz = att.file_size ? (att.file_size<1048576?(att.file_size/1024).toFixed(1)+' KB':(att.file_size/1048576).toFixed(1)+' MB') : '';
+    var ic = admBdrFileIcon(ext);
+    return '<a class="bdr-file" href="'+url+'" target="_blank"><i class="bi '+ic.i+'" style="color:'+ic.c+';font-size:1.4rem"></i><div><span style="display:block;font-size:0.75rem">'+admEsc(short)+'</span>'+(sz?'<span style="display:block;font-size:0.6rem;opacity:0.6">'+sz+'</span>':'')+'</div></a>';
+  }
+  function admBdrDateLabel(ts) {
+    var d = new Date(ts), now = new Date(), yest = new Date(now);
+    yest.setDate(yest.getDate()-1);
+    if (d.toDateString()===now.toDateString())  return 'Today';
+    if (d.toDateString()===yest.toDateString()) return 'Yesterday';
+    return d.toLocaleDateString('en-US',{weekday:'long',month:'short',day:'numeric'});
+  }
+  function admBdrRenderMessages(msgs) {
+    var box = document.getElementById('admBdrMessages');
+    if (!msgs.length) { box.innerHTML = '<div class="text-center py-4 small" style="color:var(--adm-muted)">No messages yet</div>'; return; }
+    var lastDate = '', html = '';
+    msgs.forEach(function(m) {
+      var dl = admBdrDateLabel(m.created_at);
+      if (dl !== lastDate) { html += '<div class="bdr-date-div"><span>'+dl+'</span></div>'; lastDate = dl; }
+      var sent = m.sender_id === admBdrUserId, cls = sent ? 'sent' : 'received';
+      var t = new Date(m.created_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+      var content = '';
+      if (m.is_deleted) { content = '<i class="bi bi-ban me-1"></i><em>This message was deleted</em>'; }
+      else if (m.type==='file' && m.attachment) { content = admBdrRenderFile(m.attachment, m.id); }
+      else { var tmp = document.createElement('div'); tmp.textContent = m.content||''; content = tmp.innerHTML; }
+      var delBtn  = (sent && !m.is_deleted) ? '<button class="bdr-delete-btn" onclick="event.stopPropagation();admBdrDeleteMsg('+m.id+')" title="Delete"><i class="bi bi-trash"></i></button>' : '';
+      var sender  = (!sent && m.sender_name) ? '<div class="bdr-sender-name">'+admEsc(m.sender_name)+'</div>' : '';
+      var ticks   = '';
+      if (sent && !m.is_deleted) ticks = m.is_read ? '<span class="bdr-ticks read"><i class="bi bi-check-all"></i></span>' : '<span class="bdr-ticks"><i class="bi bi-check-all"></i></span>';
+      html += '<div class="bdr-bubble '+cls+(m.is_deleted?' deleted':'')+'" data-bdr-mid="'+m.id+'">'+delBtn+sender+'<div class="bdr-content">'+content+'</div><div class="bdr-footer"><span class="bdr-time">'+t+'</span>'+ticks+'</div></div>';
+    });
+    box.innerHTML = html;
+    box.scrollTop = box.scrollHeight;
+  }
+
+  window.admBdrSend = function() {
+    var inp = document.getElementById('admBdrInput'), txt = inp.value.trim();
+    if (!txt || !admBdrConvId) return;
+    inp.value = '';
+    fetch('/bridge/conversations/'+admBdrConvId+'/messages', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({content:txt})})
+      .then(function(){ fetch('/bridge/conversations/'+admBdrConvId+'/read',{method:'POST'}); })
+      .catch(function(){});
+  };
+
+  window.admBdrSendFile = function() {
+    var f = document.getElementById('admBdrFile').files[0];
+    if (!f || !admBdrConvId) return;
+    if (f.size > 10*1024*1024) { alert('File too large. Max 10 MB.'); return; }
+    var fd = new FormData(); fd.append('file', f);
+    fetch('/bridge/conversations/'+admBdrConvId+'/file', {method:'POST',body:fd})
+      .then(function(){ admBdrLoadMessages(admBdrConvId); fetch('/bridge/conversations/'+admBdrConvId+'/read',{method:'POST'}); })
+      .finally(function(){ document.getElementById('admBdrFile').value=''; });
+  };
+
+  window.admBdrDeleteMsg = function(msgId) {
+    if (!confirm('Delete this message?')) return;
+    fetch('/bridge/messages/'+msgId, {method:'DELETE'}).catch(function(){});
+  };
+
+  document.getElementById('admBdrInput').addEventListener('keydown', function(e) {
+    if (e.key==='Enter' && !e.shiftKey) { e.preventDefault(); admBdrSend(); }
+  });
+
+  function admBdrUpdateBadge() {
+    fetch('/bridge/unread-count').then(function(r){ return r.json(); }).then(function(res) {
+      if (!res.success) return;
+      var badge = document.getElementById('admBridgeBadge'), btn = document.getElementById('admBridgeBtn');
+      if (res.data.total > 0) { badge.textContent = res.data.total; badge.style.display = ''; btn.classList.add('has-unread'); }
+      else { badge.style.display = 'none'; btn.classList.remove('has-unread'); }
+    }).catch(function(){});
+  }
+
+  function admEsc(s) {
+    return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // ── Group Channel Drawer ─────────────────────────────
+  var admGcIsOpen  = false;
+  var admGcUserId  = <%= user.id %>;
+  var admGcLoaded  = false;
+
+  function toggleAdmGc() { admGcIsOpen ? closeAdmGc() : openAdmGc(); }
+
+  function openAdmGc() {
+    admGcIsOpen = true;
+    document.getElementById('admGcOverlay').style.display = '';
+    document.getElementById('admGcDrawer').classList.add('open');
+    document.getElementById('admGcBtn').classList.add('active');
+    if (!admGcLoaded) admGcLoad();
+  }
+
+  function closeAdmGc() {
+    admGcIsOpen = false;
+    document.getElementById('admGcOverlay').style.display = 'none';
+    document.getElementById('admGcDrawer').classList.remove('open');
+    document.getElementById('admGcBtn').classList.remove('active');
+  }
+
+  function admGcLoad() {
+    fetch('/channel/messages').then(function(r){ return r.json(); }).then(function(res) {
+      if (!res.success) return;
+      admGcLoaded = true;
+      admGcRenderMessages(res.data.messages.slice().reverse());
+    }).catch(function(){});
+  }
+
+  var GC_IMG_EXTS = ['jpg','jpeg','png','gif','webp'];
+  function admGcRenderFile(att, msgId) {
+    if (!att) return '<em style="opacity:0.5">File</em>';
+    var url = att.drive_view_link || '#';
+    var fn  = att.file_name || 'file';
+    var ext = fn.split('.').pop().toLowerCase();
+    if (GC_IMG_EXTS.indexOf(ext) !== -1) return '<a href="'+url+'" target="_blank"><img src="'+url+'" class="adm-gc-img" alt="'+admEsc(fn)+'"></a>';
+    var icons = {pdf:'bi-file-earmark-pdf-fill',doc:'bi-file-earmark-word-fill',docx:'bi-file-earmark-word-fill',xls:'bi-file-earmark-excel-fill',xlsx:'bi-file-earmark-excel-fill',zip:'bi-file-earmark-zip-fill'};
+    var ic = icons[ext] || 'bi-file-earmark-fill';
+    return '<a class="adm-gc-file" href="'+url+'" target="_blank"><i class="bi '+ic+'" style="font-size:1.4rem"></i><span>'+admEsc(fn)+'</span></a>';
+  }
+
+  function admGcRenderMessages(messages) {
+    var box = document.getElementById('admGcMessages');
+    if (!messages.length) {
+      box.innerHTML = '<div style="text-align:center;color:var(--adm-muted);padding:24px;font-size:0.82rem">No messages yet. Say hello!</div>';
+      return;
+    }
+    var html = '', lastDate = '';
+    messages.forEach(function(m) {
+      var sent = m.sender_id === admGcUserId;
+      var cls  = sent ? 'sent' : 'received';
+      var t    = new Date(m.created_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+      var dl   = new Date(m.created_at).toLocaleDateString([],{month:'short',day:'numeric'});
+      if (dl !== lastDate) { html += '<div class="adm-gc-date-div"><span>'+dl+'</span></div>'; lastDate = dl; }
+      var content = m.is_deleted ? '<em>This message was deleted</em>'
+        : (m.type==='file' && m.attachment ? admGcRenderFile(m.attachment, m.id)
+          : (function(){ var d=document.createElement('div'); d.textContent=m.content||''; return d.innerHTML; })());
+      var sender = !sent ? '<div class="adm-gc-sender">'+admEsc(m.sender_name||'')+'</div>' : '';
+      html += '<div class="adm-gc-bubble '+cls+(m.is_deleted?' deleted':'')+'" data-gc-mid="'+m.id+'">'
+        +sender+'<div class="adm-gc-content">'+content+'</div>'
+        +'<div class="adm-gc-footer"><span class="adm-gc-time">'+t+'</span></div></div>';
+    });
+    box.innerHTML = html;
+    box.scrollTop = box.scrollHeight;
+  }
+
+  function admGcAppend(m) {
+    var box  = document.getElementById('admGcMessages');
+    var sent = m.sender_id === admGcUserId;
+    var cls  = sent ? 'sent' : 'received';
+    var t    = new Date(m.created_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+    var content = m.type==='file' && m.attachment ? admGcRenderFile(m.attachment, m.id)
+      : (function(){ var d=document.createElement('div'); d.textContent=m.content||''; return d.innerHTML; })();
+    var sender = !sent ? '<div class="adm-gc-sender">'+admEsc(m.sender_name||'')+'</div>' : '';
+    var el = document.createElement('div');
+    el.className = 'adm-gc-bubble '+cls;
+    el.setAttribute('data-gc-mid', m.id);
+    el.innerHTML = sender+'<div class="adm-gc-content">'+content+'</div>'
+      +'<div class="adm-gc-footer"><span class="adm-gc-time">'+t+'</span></div>';
+    var placeholder = box.querySelector('div[style*="No messages"]');
+    if (placeholder) box.innerHTML = '';
+    box.appendChild(el);
+    box.scrollTop = box.scrollHeight;
+  }
+
+  window.admGcSend = function() {
+    var inp = document.getElementById('admGcInput');
+    var txt = inp ? inp.value.trim() : '';
+    if (!txt) return;
+    inp.value = '';
+    fetch('/channel/messages', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({content:txt})})
+      .catch(function(){});
+  };
+
+  window.admGcSendFile = function() {
+    var f = document.getElementById('admGcFile').files[0];
+    if (!f) return;
+    if (f.size > 5*1024*1024) { alert('File too large. Max 5 MB.'); return; }
+    var fd = new FormData(); fd.append('file', f);
+    fetch('/channel/file', {method:'POST', body:fd}).catch(function(){});
+    document.getElementById('admGcFile').value = '';
+  };
+
+  document.getElementById('admGcInput').addEventListener('keydown', function(e) {
+    if (e.key==='Enter' && !e.shiftKey) { e.preventDefault(); admGcSend(); }
+  });
+
+  // ── Client Queue badge ───────────────────────────────────
+  function admQueueUpdateBadge() {
+    fetch('/queue/badge').then(function(r){ return r.json(); }).then(function(res) {
+      if (!res.success) return;
+      var count = res.data.count || 0;
+      var btn   = document.getElementById('admQueueBtn');
+      var badge = document.getElementById('admQueueCount');
+      if (count > 0) {
+        badge.textContent = count;
+        btn.style.display = '';
+        btn.classList.add('has-open');
+      } else {
+        btn.style.display = 'none';
+        btn.classList.remove('has-open');
+      }
+    }).catch(function(){});
+  }
+  admQueueUpdateBadge();
+
+  // Socket.IO live updates
+  if (typeof io !== 'undefined') {
+    var admBdrSock = io('/', {withCredentials:true});
+
+    admBdrSock.on('bridge:message', function(msg) {
+      // If drawer is open on this conversation, append message
+      if (admBdrIsOpen && msg.conversation_id === admBdrConvId) {
+        var box = document.getElementById('admBdrMessages');
+        if (box.querySelector('.text-center')) box.innerHTML = '';
+        var sent = msg.sender_id === admBdrUserId, cls = sent?'sent':'received';
+        var t = new Date(msg.created_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+        var content = '';
+        if (msg.type==='file'&&msg.attachment) content = admBdrRenderFile(msg.attachment, msg.id);
+        else { var tmp2=document.createElement('div'); tmp2.textContent=msg.content||''; content=tmp2.innerHTML; }
+        var sender = (!sent&&msg.sender_name)?'<div class="bdr-sender-name">'+admEsc(msg.sender_name)+'</div>':'';
+        var delBtn = sent?'<button class="bdr-delete-btn" onclick="event.stopPropagation();admBdrDeleteMsg('+msg.id+')" title="Delete"><i class="bi bi-trash"></i></button>':'';
+        box.insertAdjacentHTML('beforeend','<div class="bdr-bubble '+cls+'" data-bdr-mid="'+msg.id+'">'+delBtn+sender+'<div class="bdr-content">'+content+'</div><div class="bdr-footer"><span class="bdr-time">'+t+'</span></div></div>');
+        box.scrollTop = box.scrollHeight;
+        if (!sent) fetch('/bridge/conversations/'+admBdrConvId+'/read',{method:'POST'}).catch(function(){});
+      }
+
+      // Incoming message from client
+      if (msg.sender_id !== admBdrUserId) {
+        if (!admBdrIsOpen) {
+          admBdrUpdateBadge();
+          // Auto-open drawer and open the conversation
+          openAdmBridge();
+          admBdrOpenChat(msg.conversation_id, msg.sender_name || 'Client');
+        } else if (msg.conversation_id !== admBdrConvId) {
+          admBdrUpdateBadge();
+        }
+        // Play notification sound
+        try {
+          var ac = new (window.AudioContext||window.webkitAudioContext)();
+          var o = ac.createOscillator(), g = ac.createGain();
+          o.connect(g); g.connect(ac.destination);
+          o.type='sine'; o.frequency.setValueAtTime(880,ac.currentTime); o.frequency.setValueAtTime(1046,ac.currentTime+0.1);
+          g.gain.setValueAtTime(0.15,ac.currentTime); g.gain.exponentialRampToValueAtTime(0.001,ac.currentTime+0.3);
+          o.start(ac.currentTime); o.stop(ac.currentTime+0.3);
+        } catch(e) {}
+      }
+
+      // Refresh conv list if it's visible
+      if (admBdrIsOpen && document.getElementById('admBdrConvList').style.display !== 'none') {
+        admBdrLoadConvList();
+      }
+    });
+
+    admBdrSock.on('bridge:message:delete', function(data) {
+      if (data.conversation_id === admBdrConvId) {
+        var bubble = document.querySelector('#admBdrMessages [data-bdr-mid="'+data.id+'"]');
+        if (bubble) {
+          bubble.classList.add('deleted');
+          var ce = bubble.querySelector('.bdr-content');
+          if (ce) ce.innerHTML = '<i class="bi bi-ban me-1"></i><em>This message was deleted</em>';
+          var db = bubble.querySelector('.bdr-delete-btn');
+          if (db) db.remove();
+        }
+      }
+    });
+
+    admBdrUpdateBadge();
+
+    // Group Channel live events
+    admBdrSock.on('channel:message', function(msg) {
+      if (admGcLoaded) admGcAppend(msg);
+    });
+    admBdrSock.on('channel:message:delete', function(data) {
+      var bubble = document.querySelector('#admGcMessages [data-gc-mid="'+data.id+'"]');
+      if (bubble) { bubble.classList.add('deleted'); var c=bubble.querySelector('.adm-gc-content'); if(c) c.innerHTML='<em>This message was deleted</em>'; }
+    });
+
+    // Queue live events
+    admBdrSock.on('queue:new_request', function() { admQueueUpdateBadge(); if (typeof window.admqSocketCallback === 'function') window.admqSocketCallback(); });
+    admBdrSock.on('queue:updated',     function() { admQueueUpdateBadge(); if (typeof window.admqSocketCallback === 'function') window.admqSocketCallback(); });
+  }
 </script>
+<%- script %>
 </body>
 </html>

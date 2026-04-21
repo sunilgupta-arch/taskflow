@@ -1,0 +1,500 @@
+<style>
+@keyframes ntToastIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+/* ── Notes Hub ──────────────────────────────────────────── */
+.nt-topbar { display:flex; align-items:center; gap:12px; margin-bottom:20px; flex-wrap:wrap; }
+.nt-topbar-left { flex:1; min-width:0; }
+.nt-count-pill {
+  display:inline-flex; align-items:center; gap:5px;
+  background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.2);
+  color:#10b981; border-radius:20px; padding:3px 10px;
+  font-family:var(--adm-mono); font-size:0.68rem; font-weight:700;
+  letter-spacing:0.3px; margin-bottom:6px;
+}
+.nt-page-title { font-family:var(--adm-mono); font-size:1rem; font-weight:700; color:var(--adm-text); }
+.nt-page-sub { font-size:0.78rem; color:var(--adm-muted); margin-top:2px; }
+
+/* Toolbar (merged with stats) */
+.nt-toolbar { display:flex; align-items:center; gap:10px; margin-bottom:18px; flex-wrap:wrap; }
+.nt-stat-pill {
+  display:flex; align-items:center; gap:5px; flex-shrink:0;
+  background:var(--adm-surface); border:1px solid var(--adm-border);
+  border-radius:8px; padding:0 12px; height:34px;
+  font-family:var(--adm-mono); font-size:0.75rem; white-space:nowrap;
+}
+.nt-stat-pill .val { font-weight:700; color:#10b981; margin-right:2px; }
+.nt-stat-pill .lbl { color:var(--adm-muted); font-size:0.67rem; text-transform:uppercase; letter-spacing:0.4px; }
+.nt-stat-pill.pinned .val { color:#fbbf24; }
+.nt-search-wrap { flex:1; min-width:180px; position:relative; }
+.nt-search {
+  width:100%; background:var(--adm-surface); border:1px solid var(--adm-border);
+  border-radius:8px; padding:8px 12px 8px 34px; color:var(--adm-text);
+  font-family:var(--adm-font); font-size:0.82rem; outline:none; transition:border-color 0.15s;
+}
+.nt-search:focus { border-color:#10b981; }
+.nt-search::placeholder { color:var(--adm-muted); }
+.nt-search-icon { position:absolute; left:10px; top:50%; transform:translateY(-50%); color:var(--adm-muted); font-size:0.8rem; pointer-events:none; }
+.nt-view-btns { display:flex; gap:4px; }
+.nt-vbtn {
+  width:32px; height:32px; border-radius:7px; border:1px solid var(--adm-border);
+  background:transparent; color:var(--adm-muted); cursor:pointer;
+  display:flex; align-items:center; justify-content:center; font-size:0.85rem;
+  transition:all 0.15s;
+}
+.nt-vbtn.active { border-color:#10b981; color:#10b981; background:rgba(16,185,129,0.08); }
+.nt-new-btn {
+  display:flex; align-items:center; gap:7px; padding:8px 16px;
+  border-radius:8px; border:none;
+  background:linear-gradient(135deg,#10b981,#059669);
+  color:#fff; font-family:var(--adm-font); font-size:0.82rem; font-weight:600;
+  cursor:pointer; transition:opacity 0.15s; white-space:nowrap; flex-shrink:0;
+}
+.nt-new-btn:hover { opacity:0.86; }
+
+/* Card grid */
+.nt-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:14px; }
+.nt-card {
+  background:var(--adm-surface); border:1px solid var(--adm-border); border-radius:12px;
+  padding:16px; display:flex; flex-direction:column; position:relative;
+  transition:border-color 0.15s, box-shadow 0.15s;
+}
+.nt-card:hover { border-color:var(--adm-border-2); box-shadow:0 4px 18px rgba(0,0,0,0.22); }
+.nt-card.is-pinned {
+  border-color:rgba(251,191,36,0.35);
+  box-shadow:0 0 0 1px rgba(251,191,36,0.07), 0 2px 12px rgba(251,191,36,0.06);
+}
+.nt-pin-badge { position:absolute; top:10px; right:10px; color:#fbbf24; font-size:0.72rem; }
+.nt-card-title {
+  font-size:0.88rem; font-weight:600; color:var(--adm-text);
+  margin-bottom:8px; word-break:break-word;
+  padding-right:18px; line-height:1.4;
+}
+.nt-card-content {
+  font-size:0.78rem; color:var(--adm-text-2); flex:1;
+  white-space:pre-line; overflow:hidden;
+  display:-webkit-box; -webkit-line-clamp:4; -webkit-box-orient:vertical;
+  line-height:1.55; margin-bottom:12px; word-break:break-word;
+}
+.nt-card-content.empty { color:var(--adm-muted); font-style:italic; }
+.nt-card-foot { display:flex; align-items:center; justify-content:space-between; margin-top:auto; padding-top:10px; border-top:1px solid var(--adm-border); }
+.nt-card-date { font-family:var(--adm-mono); font-size:0.62rem; color:var(--adm-muted); }
+.nt-card-acts { display:flex; gap:4px; }
+.nt-act {
+  width:28px; height:28px; border-radius:6px; border:1px solid var(--adm-border);
+  background:transparent; color:var(--adm-muted); cursor:pointer;
+  display:flex; align-items:center; justify-content:center; font-size:0.78rem;
+  transition:all 0.15s;
+}
+.nt-act:hover { background:var(--adm-surface-2); }
+.nt-act.edit:hover  { color:#00d4ff; border-color:rgba(0,212,255,0.4); }
+.nt-act.del:hover   { color:#ef4444; border-color:rgba(239,68,68,0.4); }
+.nt-act.read:hover  { color:#a78bfa; border-color:rgba(167,139,250,0.4); }
+.nt-act.reading     { color:#a78bfa; border-color:rgba(167,139,250,0.5); background:rgba(167,139,250,0.08); }
+
+/* List view */
+.nt-list { display:none; border:1px solid var(--adm-border); border-radius:12px; overflow:hidden; }
+.nt-list-row {
+  display:grid; grid-template-columns:1fr auto auto; align-items:center; gap:14px;
+  padding:11px 16px; border-bottom:1px solid var(--adm-border);
+  background:var(--adm-surface); transition:background 0.1s;
+}
+.nt-list-row:last-child { border-bottom:none; }
+.nt-list-row:hover { background:var(--adm-surface-2); }
+.nt-list-row.is-pinned { border-left:2px solid rgba(251,191,36,0.6); }
+.nt-list-info { min-width:0; }
+.nt-list-title { font-size:0.84rem; font-weight:600; color:var(--adm-text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:flex; align-items:center; gap:6px; }
+.nt-list-prev { font-size:0.72rem; color:var(--adm-text-2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:2px; }
+.nt-list-date { font-family:var(--adm-mono); font-size:0.62rem; color:var(--adm-muted); white-space:nowrap; flex-shrink:0; }
+.nt-list-acts { display:flex; gap:4px; flex-shrink:0; }
+
+/* Empty */
+.nt-empty { text-align:center; padding:4rem 2rem; background:var(--adm-surface); border:1px solid var(--adm-border); border-radius:12px; }
+.nt-empty-icon { font-size:3rem; color:var(--adm-muted); opacity:0.3; display:block; margin-bottom:1rem; }
+.nt-empty-msg  { font-size:0.9rem; color:var(--adm-muted); margin-bottom:0.5rem; }
+.nt-empty-sub  { font-size:0.75rem; color:var(--adm-muted); opacity:0.55; }
+
+/* Modal overlay */
+.nt-overlay {
+  display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75);
+  z-index:1000; align-items:center; justify-content:center; padding:1rem;
+}
+.nt-overlay.open { display:flex; }
+.nt-modal {
+  background:var(--adm-surface); border:1px solid var(--adm-border-2); border-radius:14px;
+  padding:24px; width:100%; max-width:560px; max-height:90vh; overflow-y:auto;
+}
+.nt-modal-head { display:flex; align-items:center; gap:10px; margin-bottom:20px; }
+.nt-modal-ttl {
+  font-family:var(--adm-mono); font-size:0.82rem; font-weight:700;
+  color:#10b981; text-transform:uppercase; letter-spacing:0.5px; flex:1;
+}
+.nt-modal-close {
+  width:28px; height:28px; border-radius:7px; border:1px solid var(--adm-border);
+  background:transparent; color:var(--adm-muted); cursor:pointer; display:flex;
+  align-items:center; justify-content:center; font-size:0.85rem; transition:all 0.15s;
+}
+.nt-modal-close:hover { background:var(--adm-surface-2); color:var(--adm-text); }
+.nt-field { margin-bottom:14px; }
+.nt-lbl {
+  display:flex; align-items:center; justify-content:space-between;
+  font-size:0.67rem; color:var(--adm-muted); text-transform:uppercase;
+  letter-spacing:0.5px; margin-bottom:5px;
+}
+.nt-inp {
+  width:100%; background:var(--adm-surface-2); border:1px solid var(--adm-border);
+  border-radius:8px; padding:9px 12px; color:var(--adm-text);
+  font-family:var(--adm-font); font-size:0.85rem; outline:none; transition:border-color 0.15s;
+}
+.nt-inp:focus { border-color:#10b981; }
+.nt-ta {
+  width:100%; background:var(--adm-surface-2); border:1px solid var(--adm-border);
+  border-radius:8px; padding:9px 12px; color:var(--adm-text);
+  font-family:var(--adm-font); font-size:0.82rem; resize:vertical; min-height:140px;
+  outline:none; transition:border-color 0.15s; line-height:1.55;
+}
+.nt-ta:focus { border-color:#10b981; }
+.nt-voice-btn {
+  display:flex; align-items:center; gap:4px; padding:3px 9px;
+  border-radius:5px; border:1px solid var(--adm-border); background:transparent;
+  color:var(--adm-muted); font-size:0.65rem; cursor:pointer; transition:all 0.15s;
+}
+.nt-voice-btn.active { color:#ef4444; border-color:#ef4444; }
+.nt-modal-foot { display:flex; justify-content:flex-end; gap:10px; margin-top:20px; }
+.nt-btn { padding:8px 18px; border-radius:8px; border:none; font-family:var(--adm-font); font-size:0.82rem; font-weight:600; cursor:pointer; transition:opacity 0.15s; }
+.nt-btn-cancel { background:var(--adm-surface-2); border:1px solid var(--adm-border); color:var(--adm-text-2); }
+.nt-btn-cancel:hover { border-color:var(--adm-border-2); color:var(--adm-text); }
+.nt-btn-save   { background:linear-gradient(135deg,#10b981,#059669); color:#fff; }
+.nt-btn-save:hover { opacity:0.86; }
+</style>
+
+<!-- Page header -->
+<div class="nt-topbar">
+  <div class="nt-topbar-left">
+    <div class="nt-count-pill"><i class="bi bi-journal-text"></i> Notes</div>
+    <div class="nt-page-title">My Notes</div>
+    <div class="nt-page-sub">Personal notes, SOPs, and reference material — visible only to you</div>
+  </div>
+  <button class="nt-new-btn" onclick="ntOpenCreate()">
+    <i class="bi bi-plus-lg"></i> New Note
+  </button>
+</div>
+
+<!-- Toolbar + stats on one row -->
+<div class="nt-toolbar">
+  <div id="ntStats"></div>
+  <div class="nt-search-wrap">
+    <i class="bi bi-search nt-search-icon"></i>
+    <input class="nt-search" id="ntSearch" placeholder="Search notes…" oninput="ntRender()" autocomplete="off">
+  </div>
+  <div class="nt-view-btns">
+    <button class="nt-vbtn active" id="ntVbtnGrid" onclick="ntSetView('grid')" title="Card view"><i class="bi bi-grid-3x2-gap"></i></button>
+    <button class="nt-vbtn" id="ntVbtnList" onclick="ntSetView('list')" title="List view"><i class="bi bi-list-ul"></i></button>
+  </div>
+</div>
+
+<!-- Views -->
+<div id="ntViewGrid" class="nt-grid"></div>
+<div id="ntViewList" class="nt-list"></div>
+<div id="ntEmpty" class="nt-empty" style="display:none">
+  <i class="bi bi-journal-text nt-empty-icon"></i>
+  <div class="nt-empty-msg" id="ntEmptyMsg">No notes yet.</div>
+  <div class="nt-empty-sub">Click "New Note" to write your first one.</div>
+</div>
+
+<!-- Create / Edit modal -->
+<div class="nt-overlay" id="ntModal">
+  <div class="nt-modal">
+    <div class="nt-modal-head">
+      <div class="nt-modal-ttl" id="ntModalTtl">New Note</div>
+      <button class="nt-modal-close" onclick="ntCloseModal()"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <input type="hidden" id="ntEditId">
+    <div class="nt-field">
+      <div class="nt-lbl">
+        <span>Title *</span>
+        <button class="nt-voice-btn" id="ntVoiceTitleBtn" onclick="ntToggleVoice('title')">
+          <i class="bi bi-mic" id="ntVoiceTitleIcon"></i><span id="ntVoiceTitleLbl">Dictate</span>
+        </button>
+      </div>
+      <input class="nt-inp" id="ntTitle" placeholder="Note title…">
+    </div>
+    <div class="nt-field">
+      <div class="nt-lbl">
+        <span>Content</span>
+        <button class="nt-voice-btn" id="ntVoiceContentBtn" onclick="ntToggleVoice('content')">
+          <i class="bi bi-mic" id="ntVoiceContentIcon"></i><span id="ntVoiceContentLbl">Dictate</span>
+        </button>
+      </div>
+      <textarea class="nt-ta" id="ntContent" placeholder="Write your note here, or use voice input…"></textarea>
+    </div>
+    <div class="nt-modal-foot">
+      <button class="nt-btn nt-btn-cancel" onclick="ntCloseModal()">Cancel</button>
+      <button class="nt-btn nt-btn-save" id="ntSaveBtn" onclick="ntSubmit()">Create</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ── inline toast ────────────────────────────────────── */
+function showToast(msg, type) {
+  var colors = { error:'#ef4444', info:'#00d4ff', success:'#10b981' };
+  var color = colors[type] || colors.success;
+  var t = document.createElement('div');
+  t.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:9999;' +
+    'background:#0e1d30;border:1px solid ' + color + ';border-radius:10px;' +
+    'padding:10px 18px;color:#dceaf8;font-size:0.82rem;font-family:"DM Sans",sans-serif;' +
+    'box-shadow:0 4px 20px rgba(0,0,0,0.5);max-width:320px;' +
+    'animation:ntToastIn 0.2s ease;pointer-events:none;';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(function(){ t.style.opacity='0'; t.style.transition='opacity 0.3s'; setTimeout(function(){ t.remove(); }, 300); }, 2800);
+}
+
+var _notes = <%- JSON.stringify(notes).replace(/<\//g, '<\/') %>;
+var _ntView = localStorage.getItem('adm-notes-view') || 'grid';
+
+/* ── helpers ─────────────────────────────────────────── */
+function ntFmtDate(n) {
+  var isEdited = new Date(n.updated_at).getTime() !== new Date(n.created_at).getTime();
+  var d = new Date(isEdited ? n.updated_at : n.created_at);
+  var s = d.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+  return (isEdited ? 'Edited ' : '') + s;
+}
+function ntEsc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function ntFiltered() {
+  var q = document.getElementById('ntSearch').value.toLowerCase().trim();
+  if (!q) return _notes.slice();
+  return _notes.filter(function(n) {
+    return (n.title||'').toLowerCase().includes(q) || (n.content||'').toLowerCase().includes(q);
+  });
+}
+function ntSetView(v) {
+  _ntView = v;
+  localStorage.setItem('adm-notes-view', v);
+  document.getElementById('ntVbtnGrid').classList.toggle('active', v === 'grid');
+  document.getElementById('ntVbtnList').classList.toggle('active', v === 'list');
+  ntRender();
+}
+
+/* ── stats ───────────────────────────────────────────── */
+function ntRenderStats() {
+  var total  = _notes.length;
+  var pinned = _notes.filter(function(n){ return n.is_pinned; }).length;
+  document.getElementById('ntStats').innerHTML =
+    '<div class="nt-stat-pill"><span class="val">' + total + '</span><span class="lbl">Notes</span></div>' +
+    (pinned ? '<div class="nt-stat-pill pinned" style="margin-left:6px"><span class="val">' + pinned + '</span><span class="lbl">Pinned</span></div>' : '');
+}
+
+/* ── render ──────────────────────────────────────────── */
+function ntRender() {
+  var list = ntFiltered();
+  var grid = document.getElementById('ntViewGrid');
+  var listEl = document.getElementById('ntViewList');
+  var empty = document.getElementById('ntEmpty');
+  var emptyMsg = document.getElementById('ntEmptyMsg');
+
+  if (!list.length) {
+    grid.style.display = 'none'; listEl.style.display = 'none'; empty.style.display = 'block';
+    emptyMsg.textContent = document.getElementById('ntSearch').value.trim()
+      ? 'No notes match your search.' : 'No notes yet.';
+    return;
+  }
+  empty.style.display = 'none';
+
+  if (_ntView === 'list') {
+    grid.style.display = 'none'; listEl.style.display = 'block';
+    listEl.innerHTML = list.map(function(n) {
+      return '<div class="nt-list-row' + (n.is_pinned ? ' is-pinned' : '') + '">' +
+        '<div class="nt-list-info">' +
+          '<div class="nt-list-title">' +
+            (n.is_pinned ? '<i class="bi bi-pin-fill" style="color:#fbbf24;font-size:0.7rem;"></i>' : '') +
+            ntEsc(n.title) +
+          '</div>' +
+          '<div class="nt-list-prev">' + (n.content ? ntEsc(n.content.slice(0,90)) : '<em>No content</em>') + '</div>' +
+        '</div>' +
+        '<div class="nt-list-date">' + ntFmtDate(n) + '</div>' +
+        '<div class="nt-list-acts">' + ntActBtns(n) + '</div>' +
+      '</div>';
+    }).join('');
+  } else {
+    listEl.style.display = 'none'; grid.style.display = 'grid';
+    grid.innerHTML = list.map(function(n) {
+      return '<div class="nt-card' + (n.is_pinned ? ' is-pinned' : '') + '">' +
+        (n.is_pinned ? '<i class="bi bi-pin-fill nt-pin-badge"></i>' : '') +
+        '<div class="nt-card-title">' + ntEsc(n.title) + '</div>' +
+        '<div class="nt-card-content' + (!n.content ? ' empty' : '') + '">' +
+          (n.content ? ntEsc(n.content) : 'No content') +
+        '</div>' +
+        '<div class="nt-card-foot">' +
+          '<div class="nt-card-date">' + ntFmtDate(n) + '</div>' +
+          '<div class="nt-card-acts">' + ntActBtns(n) + '</div>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+  }
+}
+function ntActBtns(n) {
+  return '<button class="nt-act read" id="ntReadBtn' + n.id + '" onclick="ntRead(' + n.id + ')" title="Read aloud"><i class="bi bi-volume-up"></i></button>' +
+    '<button class="nt-act edit" onclick="ntOpenEdit(' + n.id + ')" title="Edit"><i class="bi bi-pencil"></i></button>' +
+    '<button class="nt-act del" onclick="ntDelete(' + n.id + ')" title="Delete"><i class="bi bi-trash3"></i></button>';
+}
+
+/* ── CRUD ────────────────────────────────────────────── */
+function ntOpenCreate() {
+  document.getElementById('ntModalTtl').textContent = 'New Note';
+  document.getElementById('ntEditId').value = '';
+  document.getElementById('ntSaveBtn').textContent = 'Create';
+  var now = new Date();
+  document.getElementById('ntTitle').value =
+    now.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'}) +
+    ' — ' + now.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
+  document.getElementById('ntContent').value = '';
+  document.getElementById('ntModal').classList.add('open');
+  setTimeout(function(){ document.getElementById('ntTitle').focus(); document.getElementById('ntTitle').select(); }, 80);
+}
+function ntOpenEdit(id) {
+  var n = _notes.find(function(x){ return x.id === id; });
+  if (!n) return;
+  document.getElementById('ntModalTtl').textContent = 'Edit Note';
+  document.getElementById('ntEditId').value = id;
+  document.getElementById('ntSaveBtn').textContent = 'Save';
+  document.getElementById('ntTitle').value = n.title || '';
+  document.getElementById('ntContent').value = n.content || '';
+  document.getElementById('ntModal').classList.add('open');
+  setTimeout(function(){ document.getElementById('ntTitle').focus(); }, 80);
+}
+function ntCloseModal() {
+  ntStopVoice();
+  document.getElementById('ntModal').classList.remove('open');
+}
+async function ntSubmit() {
+  var id      = document.getElementById('ntEditId').value;
+  var title   = document.getElementById('ntTitle').value.trim();
+  var content = document.getElementById('ntContent').value;
+  if (!title) { showToast('Title is required', 'error'); return; }
+  try {
+    var resp = await fetch(id ? '/notes/' + id : '/notes', {
+      method: id ? 'PUT' : 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: title, content: content })
+    });
+    var json = await resp.json();
+    if (!json.success) throw new Error(json.message || 'Error saving note');
+    if (id) {
+      var idx = _notes.findIndex(function(x){ return x.id === parseInt(id); });
+      if (idx !== -1) { _notes[idx].title = json.data.title; _notes[idx].content = json.data.content; _notes[idx].updated_at = json.data.updated_at; }
+      showToast('Note updated');
+    } else {
+      _notes.unshift(json.data);
+      showToast('Note created');
+    }
+    ntCloseModal();
+    ntRenderStats();
+    ntRender();
+  } catch(e) {
+    showToast(e.message || 'Error saving note', 'error');
+  }
+}
+async function ntDelete(id) {
+  if (!confirm('Delete this note? This cannot be undone.')) return;
+  try {
+    var resp = await fetch('/notes/' + id, { method: 'DELETE' });
+    var json = await resp.json();
+    if (!json.success) throw new Error(json.message || 'Error deleting note');
+    _notes = _notes.filter(function(x){ return x.id !== id; });
+    showToast('Note deleted');
+    ntRenderStats();
+    ntRender();
+  } catch(e) {
+    showToast(e.message || 'Error deleting note', 'error');
+  }
+}
+
+/* ── Voice input ─────────────────────────────────────── */
+var _ntRecog = null;
+var _ntVoiceField = null;
+
+function ntToggleVoice(field) {
+  if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+    showToast('Voice input not supported in this browser', 'error'); return;
+  }
+  if (_ntRecog && _ntVoiceField === field) { ntStopVoice(); return; }
+  if (_ntRecog) ntStopVoice();
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  _ntRecog = new SR();
+  _ntRecog.continuous = (field === 'content');
+  _ntRecog.interimResults = true;
+  _ntRecog.lang = 'en-US';
+  _ntVoiceField = field;
+  var inp = document.getElementById(field === 'title' ? 'ntTitle' : 'ntContent');
+  var existing = inp.value;
+  _ntRecog.onresult = function(e) {
+    var interim = '', final = '';
+    for (var i = e.resultIndex; i < e.results.length; i++) {
+      if (e.results[i].isFinal) final += e.results[i][0].transcript;
+      else interim += e.results[i][0].transcript;
+    }
+    if (final) { existing += (existing ? ' ' : '') + final; inp.value = existing; }
+    if (interim) inp.value = existing + (existing ? ' ' : '') + interim;
+  };
+  _ntRecog.onerror = function(e) { if (e.error !== 'aborted') showToast('Voice error: ' + e.error, 'error'); ntStopVoice(); };
+  _ntRecog.onend = function() {
+    if (_ntRecog && _ntVoiceField === field && field === 'content') {
+      try { _ntRecog.start(); } catch(e) { ntStopVoice(); }
+    } else { ntStopVoice(); }
+  };
+  _ntRecog.start();
+  ntSetVoiceState(field, true);
+  showToast('Listening… speak now', 'info');
+}
+function ntStopVoice() {
+  var f = _ntVoiceField;
+  if (_ntRecog) { _ntVoiceField = null; try { _ntRecog.stop(); } catch(e){} _ntRecog = null; }
+  if (f) ntSetVoiceState(f, false);
+}
+function ntSetVoiceState(field, active) {
+  var pfx = field === 'title' ? 'ntVoiceTitle' : 'ntVoiceContent';
+  var btn  = document.getElementById(pfx + 'Btn');
+  var icon = document.getElementById(pfx + 'Icon');
+  var lbl  = document.getElementById(pfx + 'Lbl');
+  if (!btn) return;
+  icon.className = active ? 'bi bi-mic-fill' : 'bi bi-mic';
+  lbl.textContent = active ? 'Stop' : 'Dictate';
+  btn.classList.toggle('active', active);
+}
+
+/* ── Read aloud ──────────────────────────────────────── */
+var _ntReadingId = null;
+function ntRead(id) {
+  if (!('speechSynthesis' in window)) { showToast('Text-to-speech not supported', 'error'); return; }
+  if (window.speechSynthesis.speaking && _ntReadingId === id) {
+    window.speechSynthesis.cancel(); _ntReadingId = null;
+    var b = document.getElementById('ntReadBtn' + id); if (b) b.classList.remove('reading');
+    showToast('Stopped', 'info'); return;
+  }
+  window.speechSynthesis.cancel();
+  if (_ntReadingId) {
+    var prev = document.getElementById('ntReadBtn' + _ntReadingId); if (prev) prev.classList.remove('reading');
+  }
+  var n = _notes.find(function(x){ return x.id === id; });
+  if (!n) return;
+  var utt = new SpeechSynthesisUtterance(n.title + '. ' + (n.content || 'No content'));
+  _ntReadingId = id;
+  var btn = document.getElementById('ntReadBtn' + id); if (btn) btn.classList.add('reading');
+  utt.onend = utt.onerror = function(){ _ntReadingId = null; var b = document.getElementById('ntReadBtn' + id); if (b) b.classList.remove('reading'); };
+  showToast('Reading… click again to stop', 'info');
+  window.speechSynthesis.speak(utt);
+}
+
+/* ── Close modal on overlay click ───────────────────── */
+document.getElementById('ntModal').addEventListener('click', function(e){ if (e.target === this) ntCloseModal(); });
+
+/* ── Keyboard shortcut Escape ───────────────────────── */
+document.addEventListener('keydown', function(e){ if (e.key === 'Escape') ntCloseModal(); });
+
+/* ── Init ────────────────────────────────────────────── */
+ntSetView(_ntView);
+ntRenderStats();
+ntRender();
+</script>

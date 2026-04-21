@@ -1,0 +1,599 @@
+<style>
+/* Date nav */
+.admq-date-nav { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.admq-nav-btn {
+  height: 38px; padding: 0 16px; border-radius: 9px;
+  border: 1px solid var(--adm-border); background: var(--adm-surface);
+  color: var(--adm-text-2); cursor: pointer; font-size: 0.88rem;
+  display: inline-flex; align-items: center; gap: 6px;
+  transition: all 0.15s; font-family: var(--adm-font);
+}
+.admq-nav-btn:hover { border-color: var(--adm-accent); color: var(--adm-accent); background: var(--adm-surface-2); }
+.admq-date-input {
+  height: 38px; padding: 0 12px; border-radius: 9px;
+  border: 1px solid var(--adm-border); background: var(--adm-surface-2);
+  color: var(--adm-text); font-size: 0.8rem;
+  font-family: var(--adm-mono); cursor: pointer;
+}
+.admq-date-input:focus { outline: none; border-color: var(--adm-accent); }
+
+/* Stats bar */
+.admq-stats {
+  display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
+}
+.admq-stat {
+  display: flex; align-items: center; gap: 6px;
+  padding: 5px 12px; border-radius: 8px;
+  border: 1px solid var(--adm-border); background: var(--adm-surface);
+  font-size: 0.75rem; font-weight: 500; color: var(--adm-text-2);
+}
+.admq-stat-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.admq-stat-count { font-family: var(--adm-mono); font-weight: 700; font-size: 0.92rem; }
+.admq-stat.s-open   { border-color: rgba(249,115,22,0.3); background: rgba(249,115,22,0.06); color: #f97316; }
+.admq-stat.s-picked { border-color: rgba(59,130,246,0.3);  background: rgba(59,130,246,0.06);  color: #3b82f6; }
+.admq-stat.s-done   { border-color: rgba(16,185,129,0.3);  background: rgba(16,185,129,0.06);  color: #10b981; }
+.admq-stat.s-missed { border-color: rgba(239,68,68,0.3);   background: rgba(239,68,68,0.06);   color: #ef4444; }
+.admq-past-notice {
+  display: flex; align-items: center; gap: 6px;
+  padding: 8px 14px; border-radius: 10px;
+  border: 1px solid rgba(100,116,139,0.3);
+  font-size: 0.75rem; color: var(--adm-muted);
+}
+
+/* Empty / loading */
+.admq-empty {
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; padding: 60px 20px; color: var(--adm-muted); text-align: center;
+}
+.admq-empty i { font-size: 2.5rem; margin-bottom: 10px; opacity: 0.3; }
+.admq-empty-title { font-size: 0.9rem; font-weight: 600; margin-bottom: 4px; color: var(--adm-text-2); }
+.admq-empty-sub { font-size: 0.78rem; }
+.admq-loading { display: flex; align-items: center; justify-content: center; padding: 60px; }
+
+/* Table */
+.admq-table-wrap {
+  background: var(--adm-surface); border: 1px solid var(--adm-border);
+  border-radius: 14px; overflow: hidden;
+}
+.admq-table { width: 100%; border-collapse: collapse; }
+.admq-table thead th {
+  font-family: var(--adm-mono); font-size: 0.68rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.6px;
+  color: var(--adm-muted); padding: 10px 14px;
+  border-bottom: 1px solid var(--adm-border);
+  text-align: left; white-space: nowrap;
+  background: var(--adm-surface-2);
+}
+.admq-table tbody tr {
+  border-bottom: 1px solid var(--adm-border);
+  transition: background 0.12s; cursor: pointer;
+}
+.admq-table tbody tr:last-child { border-bottom: none; }
+.admq-table tbody tr:hover { background: var(--adm-surface-2); }
+.admq-table tbody td { padding: 10px 14px; font-size: 0.88rem; color: var(--adm-text); vertical-align: middle; font-weight: 400; }
+
+/* Row left-border color by status */
+.admq-table tbody tr td:first-child { border-left: 3px solid transparent; }
+.admq-table tbody tr.row-open   td:first-child { border-left-color: #f97316; }
+.admq-table tbody tr.row-picked td:first-child { border-left-color: #3b82f6; }
+.admq-table tbody tr.row-done   td:first-child { border-left-color: #10b981; }
+.admq-table tbody tr.row-missed td:first-child { border-left-color: #ef4444; }
+.admq-table tbody tr.row-overdue td:first-child { border-left-color: #ef4444; }
+
+/* Cell helpers */
+.admq-title-cell { color: var(--adm-text); font-weight: 500; max-width: 240px; }
+.admq-title-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; max-width: 240px; }
+.admq-org        { font-size: 0.72rem; color: var(--adm-muted); margin-top: 2px; display: block; }
+.admq-overdue-chip {
+  display: inline-block; font-size: 0.58rem; font-weight: 700;
+  font-family: var(--adm-mono); text-transform: uppercase;
+  padding: 1px 6px; border-radius: 6px;
+  background: rgba(239,68,68,0.12); color: #ef4444;
+  border: 1px solid rgba(239,68,68,0.3); margin-left: 5px; vertical-align: middle;
+}
+.admq-rec-icon { font-size: 0.75rem; color: var(--adm-muted); margin-right: 2px; }
+
+/* Status badge */
+.admq-status {
+  display: inline-flex; align-items: center;
+  padding: 3px 9px; border-radius: 20px;
+  font-size: 0.67rem; font-weight: 600; font-family: var(--adm-mono);
+  text-transform: uppercase; letter-spacing: 0.3px; white-space: nowrap;
+}
+.admq-status.s-open     { background: rgba(249,115,22,0.12); color: #f97316; }
+.admq-status.s-picked   { background: rgba(59,130,246,0.12);  color: #3b82f6; }
+.admq-status.s-done     { background: rgba(16,185,129,0.12);  color: #10b981; }
+.admq-status.s-missed   { background: rgba(239,68,68,0.12);   color: #ef4444; }
+.admq-status.s-cancelled{ background: rgba(100,116,139,0.12); color: #94a3b8; }
+
+/* Priority */
+.admq-priority { display: inline-flex; align-items: center; gap: 5px; font-size: 0.75rem; font-weight: 500; }
+.admq-priority-dot { width: 7px; height: 7px; border-radius: 50%; }
+.p-high   .admq-priority-dot { background: #ef4444; }
+.p-medium .admq-priority-dot { background: #f97316; }
+.p-low    .admq-priority-dot { background: #10b981; }
+
+/* Action buttons in table */
+.admq-actions { display: flex; gap: 5px; white-space: nowrap; }
+.admq-btn {
+  height: 28px; padding: 0 10px; border-radius: 7px;
+  border: 1px solid var(--adm-border); background: transparent;
+  color: var(--adm-text-2); cursor: pointer; font-size: 0.72rem; font-weight: 600;
+  display: inline-flex; align-items: center; gap: 4px; transition: all 0.15s;
+  font-family: var(--adm-font);
+}
+.admq-btn.pick    { border-color: rgba(249,115,22,0.4); color: #f97316; }
+.admq-btn.pick:hover    { background: rgba(249,115,22,0.1); }
+.admq-btn.done    { border-color: rgba(16,185,129,0.4);  color: #10b981; }
+.admq-btn.done:hover    { background: rgba(16,185,129,0.1); }
+.admq-btn.release { border-color: rgba(59,130,246,0.4);  color: #3b82f6; }
+.admq-btn.release:hover { background: rgba(59,130,246,0.1); }
+
+/* ── Detail drawer (appended to body by JS) ───────────────── */
+.admq-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.45);
+  z-index: 1040; backdrop-filter: blur(2px); display: none;
+}
+.admq-drawer {
+  position: fixed; top: 0; right: 0; height: 100vh; width: 500px;
+  background: var(--adm-bg, #060d18); border-left: 1px solid var(--adm-border, #1a3050);
+  box-shadow: -8px 0 30px rgba(0,0,0,0.4); z-index: 1041;
+  display: flex; flex-direction: column;
+  transform: translateX(100%); transition: transform 0.25s cubic-bezier(0.4,0,0.2,1);
+}
+.admq-drawer.open { transform: translateX(0); }
+.admq-drawer-header {
+  padding: 14px 18px; border-bottom: 1px solid var(--adm-border, #1a3050);
+  display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
+  background: var(--adm-surface, #0e1d30);
+}
+.admq-drawer-title {
+  font-weight: 600; font-size: 0.88rem; color: var(--adm-text, #dceaf8);
+  display: flex; align-items: center; gap: 8px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 380px;
+}
+.admq-close-btn {
+  background: none; border: none; color: var(--adm-muted, #445e78);
+  cursor: pointer; font-size: 1rem; padding: 2px; line-height: 1; flex-shrink: 0;
+  transition: color 0.15s;
+}
+.admq-close-btn:hover { color: var(--adm-text, #dceaf8); }
+.admq-drawer-body {
+  flex: 1; overflow-y: auto; padding: 18px;
+  display: flex; flex-direction: column; gap: 18px;
+  background: var(--adm-bg, #060d18);
+}
+.admq-drawer-actions {
+  display: flex; gap: 8px; padding: 12px 18px;
+  border-top: 1px solid var(--adm-border, #1a3050);
+  flex-shrink: 0; background: var(--adm-surface, #0e1d30);
+}
+.admq-drawer-btn {
+  flex: 1; height: 36px; border-radius: 9px;
+  border: 1px solid var(--adm-border, #1a3050); background: transparent;
+  color: var(--adm-text-2, #a8c0d8); cursor: pointer; font-size: 0.8rem; font-weight: 600;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  transition: all 0.15s; font-family: var(--adm-font, 'DM Sans', sans-serif);
+}
+.admq-drawer-btn.pick    { border-color: rgba(249,115,22,0.4); color: #f97316; }
+.admq-drawer-btn.pick:hover    { background: rgba(249,115,22,0.1); }
+.admq-drawer-btn.done    { border-color: rgba(16,185,129,0.4);  color: #10b981; }
+.admq-drawer-btn.done:hover    { background: rgba(16,185,129,0.1); }
+.admq-drawer-btn.release { border-color: rgba(59,130,246,0.4);  color: #3b82f6; }
+.admq-drawer-btn.release:hover { background: rgba(59,130,246,0.1); }
+
+/* Detail sections */
+.admq-section-label {
+  font-size: 0.6rem; font-family: var(--adm-mono, monospace); font-weight: 700;
+  text-transform: uppercase; letter-spacing: 1px; color: var(--adm-muted, #445e78);
+  padding-bottom: 8px; border-bottom: 1px solid var(--adm-border, #1a3050); margin-bottom: 2px;
+}
+.admq-info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.admq-info-item { display: flex; flex-direction: column; gap: 3px; }
+.admq-info-key { font-size: 0.65rem; color: var(--adm-muted, #445e78); font-family: var(--adm-mono); text-transform: uppercase; letter-spacing: 0.5px; }
+.admq-info-val { font-size: 0.82rem; font-weight: 500; color: var(--adm-text, #dceaf8); }
+.admq-description {
+  font-size: 0.82rem; line-height: 1.6; color: var(--adm-text-2, #a8c0d8);
+  background: var(--adm-surface-2, #132540); border: 1px solid var(--adm-border, #1a3050);
+  border-radius: 10px; padding: 10px 12px; white-space: pre-wrap; word-break: break-word;
+}
+.admq-attach-list { display: flex; flex-direction: column; gap: 6px; }
+.admq-attach-item {
+  display: flex; align-items: center; gap: 10px; padding: 8px 12px;
+  background: var(--adm-surface-2, #132540); border: 1px solid var(--adm-border, #1a3050);
+  border-radius: 9px; text-decoration: none; color: var(--adm-text-2, #a8c0d8);
+  font-size: 0.78rem; transition: border-color 0.15s;
+}
+.admq-attach-item:hover { border-color: var(--adm-accent, #00d4ff); text-decoration: none; color: var(--adm-text, #dceaf8); }
+.admq-upload-label {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 30px; padding: 0 12px; border-radius: 7px;
+  border: 1px dashed var(--adm-border, #1a3050); color: var(--adm-muted, #445e78);
+  font-size: 0.75rem; cursor: pointer; transition: all 0.15s; margin-top: 4px;
+}
+.admq-upload-label:hover { border-color: var(--adm-accent, #00d4ff); color: var(--adm-accent, #00d4ff); }
+.admq-history-list { display: flex; flex-direction: column; gap: 8px; }
+.admq-history-item { display: flex; gap: 8px; align-items: flex-start; font-size: 0.78rem; color: var(--adm-text-2, #a8c0d8); }
+.admq-history-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--adm-muted, #445e78); margin-top: 5px; flex-shrink: 0; }
+.admq-history-time { font-size: 0.68rem; color: var(--adm-muted, #445e78); margin-top: 2px; }
+.admq-comments-list { display: flex; flex-direction: column; gap: 12px; }
+.admq-comment { display: flex; gap: 10px; }
+.admq-comment-avatar {
+  width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.7rem; font-weight: 700; color: #fff; font-family: var(--adm-mono);
+}
+.admq-comment-meta { font-size: 0.65rem; color: var(--adm-muted, #445e78); margin-bottom: 3px; }
+.admq-comment-body { font-size: 0.8rem; color: var(--adm-text-2, #a8c0d8); line-height: 1.5; white-space: pre-wrap; }
+.admq-comment-input-row { display: flex; gap: 8px; align-items: flex-end; margin-top: 6px; }
+.admq-comment-textarea {
+  flex: 1; resize: none; border-radius: 9px; padding: 8px 10px; min-height: 58px;
+  background: var(--adm-surface-2, #132540); border: 1px solid var(--adm-border, #1a3050);
+  color: var(--adm-text, #dceaf8); font-family: var(--adm-font, sans-serif); font-size: 0.82rem;
+}
+.admq-comment-textarea:focus { outline: none; border-color: var(--adm-accent, #00d4ff); }
+.admq-comment-send {
+  width: 36px; height: 36px; border-radius: 9px; flex-shrink: 0;
+  border: none; background: #2563eb; color: #fff; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; font-size: 0.85rem;
+}
+
+/* ── Release modal (appended to body by JS) ───────────────── */
+.admq-modal-backdrop {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+  z-index: 1050; display: flex; align-items: center; justify-content: center;
+  backdrop-filter: blur(4px);
+}
+.admq-modal {
+  background: var(--adm-surface, #0e1d30); border: 1px solid var(--adm-border, #1a3050);
+  border-radius: 16px; padding: 24px; width: 420px; max-width: 92vw;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+}
+.admq-modal-title { font-family: var(--adm-mono); font-size: 1rem; font-weight: 700; color: var(--adm-text, #dceaf8); margin-bottom: 5px; }
+.admq-modal-sub   { font-size: 0.78rem; color: var(--adm-muted, #445e78); margin-bottom: 16px; line-height: 1.5; }
+.admq-modal-textarea {
+  width: 100%; resize: vertical; min-height: 80px; border-radius: 10px;
+  padding: 10px 12px; background: var(--adm-surface-2, #132540);
+  border: 1px solid var(--adm-border, #1a3050); color: var(--adm-text, #dceaf8);
+  font-family: var(--adm-font, sans-serif); font-size: 0.85rem; box-sizing: border-box;
+}
+.admq-modal-textarea:focus { outline: none; border-color: var(--adm-accent, #00d4ff); }
+.admq-modal-footer { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+.admq-modal-cancel {
+  height: 36px; padding: 0 16px; border-radius: 9px;
+  border: 1px solid var(--adm-border, #1a3050); background: transparent;
+  color: var(--adm-text-2, #a8c0d8); cursor: pointer; font-size: 0.82rem;
+  font-family: var(--adm-font, sans-serif);
+}
+.admq-modal-confirm {
+  height: 36px; padding: 0 16px; border-radius: 9px; border: none;
+  background: #3b82f6; color: #fff; cursor: pointer;
+  font-size: 0.82rem; font-weight: 600; font-family: var(--adm-font, sans-serif);
+}
+.admq-modal-cancel:hover  { border-color: var(--adm-border-2, #1e3860); color: var(--adm-text, #dceaf8); }
+.admq-modal-confirm:hover { background: #2563eb; }
+
+/* Spinner */
+@keyframes admqSpin { to { transform: rotate(360deg); } }
+.admq-spinner {
+  width: 20px; height: 20px; border-radius: 50%;
+  border: 2px solid var(--adm-border, #1a3050);
+  border-top-color: var(--adm-accent, #00d4ff);
+  animation: admqSpin 0.7s linear infinite; display: inline-block;
+}
+</style>
+
+<!-- Top bar: date nav + stats -->
+<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px">
+  <div class="admq-date-nav">
+    <button class="admq-nav-btn" id="admqPrev"><i class="bi bi-chevron-left"></i></button>
+    <input type="date" class="admq-date-input" id="admqDatePicker" value="<%= selectedDate %>">
+    <button class="admq-nav-btn" id="admqToday"><i class="bi bi-calendar-check"></i> Today</button>
+    <button class="admq-nav-btn" id="admqNext"><i class="bi bi-chevron-right"></i></button>
+  </div>
+  <div class="admq-stats" id="admqStats"></div>
+</div>
+
+<!-- Table -->
+<div id="admqTableArea">
+  <div class="admq-loading"><div class="admq-spinner"></div></div>
+</div>
+
+<!-- Detail drawer & release modal — moved to <body> by JS -->
+<div id="admqOverlay"  class="admq-overlay"  style="display:none" onclick="admqCloseDetail()"></div>
+<div id="admqDrawer"   class="admq-drawer">
+  <div class="admq-drawer-header">
+    <div class="admq-drawer-title" id="admqDrawerTitle"><i class="bi bi-clipboard2-check"></i> Request Detail</div>
+    <button class="admq-close-btn" onclick="admqCloseDetail()"><i class="bi bi-x-lg"></i></button>
+  </div>
+  <div class="admq-drawer-body" id="admqDrawerBody">
+    <div class="admq-loading"><div class="admq-spinner"></div></div>
+  </div>
+  <div class="admq-drawer-actions" id="admqDrawerActions" style="display:none"></div>
+</div>
+<div id="admqReleaseModal" class="admq-modal-backdrop" style="display:none">
+  <div class="admq-modal">
+    <div class="admq-modal-title"><i class="bi bi-arrow-counterclockwise"></i> Release Task</div>
+    <div class="admq-modal-sub">The task returns to the open queue for others to pick up.</div>
+    <textarea class="admq-modal-textarea" id="admqReleaseReason" placeholder="Reason for releasing (optional)…" rows="3"></textarea>
+    <div class="admq-modal-footer">
+      <button class="admq-modal-cancel" onclick="admqCloseRelease()">Cancel</button>
+      <button class="admq-modal-confirm" onclick="admqConfirmRelease()"><i class="bi bi-check-lg"></i> Release</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  // ── Teleport fixed elements to <body> to escape overflow containers ──
+  ['admqOverlay','admqDrawer','admqReleaseModal'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) document.body.appendChild(el);
+  });
+
+  // ── Bootstrap data (closing-tag sequences in JSON escaped to avoid early parse end) ──
+  var _raw = <%- JSON.stringify({ instances: instances, stats: stats, selectedDate: selectedDate, today: today }).replace(/<\//g, '<\\/') %>;
+  var _date      = _raw.selectedDate;
+  var _today     = _raw.today;
+  var _userId    = <%= user.id %>;
+  var _role      = '<%= user.role_name %>';
+  var _detailId  = null;
+  var _releaseId = null;
+
+  // ── Helpers ──────────────────────────────────────────────────────────
+  function isPast(d)  { return d < _today; }
+  function isAdmin()  { return ['LOCAL_ADMIN','LOCAL_MANAGER'].includes(_role); }
+  function esc(s)     { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  function fmtDate(d) {
+    if (!d) return '—';
+    var p = d.split('-'), m = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return m[parseInt(p[1])-1]+' '+parseInt(p[2])+', '+p[0];
+  }
+  function fmtTs(ts) {
+    if (!ts) return '';
+    return new Date(ts).toLocaleString([],{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',hour12:false});
+  }
+  function recIcon(r) {
+    var map = {daily:'bi-arrow-repeat',weekly:'bi-calendar-week',monthly:'bi-calendar-month'};
+    return (r && r!=='none') ? '<i class="bi '+map[r]+' admq-rec-icon" title="'+r+'"></i>' : '';
+  }
+  function priorityHtml(p) {
+    var lbl = {high:'High',medium:'Medium',low:'Low'};
+    return '<span class="admq-priority p-'+(p||'low')+'"><span class="admq-priority-dot"></span>'+(lbl[p]||p||'—')+'</span>';
+  }
+  function statusHtml(s) {
+    var lbl = {open:'Open',picked:'In Progress',done:'Done',missed:'Missed',cancelled:'Cancelled'};
+    return '<span class="admq-status s-'+(s||'open')+'">'+(lbl[s]||s||'—')+'</span>';
+  }
+  function fileIcon(fname) {
+    var ext = (fname||'').split('.').pop().toLowerCase();
+    var m = {pdf:'bi-file-earmark-pdf-fill',doc:'bi-file-earmark-word-fill',docx:'bi-file-earmark-word-fill',xls:'bi-file-earmark-excel-fill',xlsx:'bi-file-earmark-excel-fill',png:'bi-file-earmark-image-fill',jpg:'bi-file-earmark-image-fill',jpeg:'bi-file-earmark-image-fill',zip:'bi-file-earmark-zip-fill'};
+    return m[ext]||'bi-file-earmark-fill';
+  }
+
+  // ── Stats ────────────────────────────────────────────────────────────
+  function renderStats(stats, date) {
+    document.getElementById('admqStats').innerHTML =
+      '<div class="admq-stat"><span class="admq-stat-count">'+(stats.total||0)+'</span>&nbsp;Total</div>'
+      +'<div class="admq-stat s-open"><span class="admq-stat-dot" style="background:#f97316"></span><span class="admq-stat-count">'+(stats.open||0)+'</span>&nbsp;Open</div>'
+      +'<div class="admq-stat s-picked"><span class="admq-stat-dot" style="background:#3b82f6"></span><span class="admq-stat-count">'+(stats.picked||0)+'</span>&nbsp;In Progress</div>'
+      +'<div class="admq-stat s-done"><span class="admq-stat-dot" style="background:#10b981"></span><span class="admq-stat-count">'+(stats.done||0)+'</span>&nbsp;Done</div>'
+      +'<div class="admq-stat s-missed"><span class="admq-stat-dot" style="background:#ef4444"></span><span class="admq-stat-count">'+(stats.missed||0)+'</span>&nbsp;Missed</div>'
+      +(isPast(date)?'<div class="admq-past-notice"><i class="bi bi-lock"></i> Past date — read only</div>':'');
+  }
+
+  // ── Table ────────────────────────────────────────────────────────────
+  function renderTable(instances, date) {
+    var area = document.getElementById('admqTableArea');
+    if (!instances||!instances.length) {
+      area.innerHTML = '<div class="admq-empty"><i class="bi bi-inbox"></i><div class="admq-empty-title">Queue is empty</div><div class="admq-empty-sub">No requests for '+fmtDate(date)+'</div></div>';
+      return;
+    }
+    var past = isPast(date);
+    var rows = instances.map(function(inst) {
+      var overdue = inst.instance_date < _today && inst.status === 'open';
+      var rowCls  = overdue ? 'row-overdue' : 'row-'+inst.status;
+      var badge   = overdue ? '<span class="admq-overdue-chip">Overdue</span>' : '';
+      var actions = '';
+      if (!past) {
+        if (inst.status === 'open') {
+          actions = '<button class="admq-btn pick" onclick="event.stopPropagation();admqPick('+inst.id+')"><i class="bi bi-hand-index"></i> Pick</button>';
+        } else if (inst.status === 'picked') {
+          if (inst.picked_by_id === _userId) {
+            actions = '<button class="admq-btn done" onclick="event.stopPropagation();admqDone('+inst.id+')"><i class="bi bi-check-lg"></i> Done</button>'
+                    + '<button class="admq-btn release" onclick="event.stopPropagation();admqOpenRelease('+inst.id+')"><i class="bi bi-arrow-counterclockwise"></i> Release</button>';
+          } else if (isAdmin()) {
+            actions = '<button class="admq-btn done" onclick="event.stopPropagation();admqDone('+inst.id+')"><i class="bi bi-check-lg"></i> Done</button>';
+          } else {
+            actions = '<span style="font-size:0.72rem;color:var(--adm-muted)">'+esc(inst.picked_by_name||'')+'</span>';
+          }
+        } else if (inst.status === 'done') {
+          actions = '<i class="bi bi-check-circle-fill" style="color:#10b981;font-size:1rem"></i>';
+        }
+      }
+      var recLabels = {none:'One-time',daily:'Daily',weekly:'Weekly',monthly:'Monthly'};
+      var freqLabel = recLabels[inst.recurrence] || inst.recurrence || '—';
+      return '<tr class="'+rowCls+'" onclick="admqOpenDetail('+inst.id+')">'
+        +'<td class="admq-title-cell"><span class="admq-title-text">'+recIcon(inst.recurrence)+esc(inst.title)+badge+'</span><span class="admq-org">'+esc(inst.org_name||inst.client_org_name||'')+'</span></td>'
+        +'<td style="white-space:nowrap">'+esc(inst.task_type||'—')+'</td>'
+        +'<td>'+priorityHtml(inst.priority)+'</td>'
+        +'<td style="font-family:var(--adm-mono);font-size:0.82rem">'+(inst.due_time||'—')+'</td>'
+        +'<td style="white-space:nowrap">'+freqLabel+'</td>'
+        +'<td>'+(inst.created_by_name?esc(inst.created_by_name):'<span style="color:var(--adm-muted)">—</span>')+'</td>'
+        +'<td>'+statusHtml(inst.status)+'</td>'
+        +'<td>'+(inst.picked_by_name?esc(inst.picked_by_name):'<span style="color:var(--adm-muted)">—</span>')+'</td>'
+        +'<td><div class="admq-actions">'+actions+'</div></td>'
+        +'</tr>';
+    }).join('');
+    area.innerHTML = '<div class="admq-table-wrap"><table class="admq-table"><thead><tr>'
+      +'<th>Request</th><th>Type</th><th>Priority</th><th>Due</th><th>Frequency</th><th>Created By</th><th>Status</th><th>Picked By</th><th></th>'
+      +'</tr></thead><tbody>'+rows+'</tbody></table></div>';
+  }
+
+  // ── Load date via API ────────────────────────────────────────────────
+  function loadDate(date) {
+    _date = date;
+    document.getElementById('admqDatePicker').value = date;
+    document.getElementById('admqTableArea').innerHTML = '<div class="admq-loading"><div class="admq-spinner"></div></div>';
+    fetch('/queue/data?date='+date).then(function(r){return r.json();}).then(function(res){
+      if (!res.success) return;
+      renderStats(res.data.stats, date);
+      renderTable(res.data.instances, date);
+    }).catch(function(){
+      document.getElementById('admqTableArea').innerHTML = '<div class="admq-empty"><i class="bi bi-exclamation-circle"></i><div class="admq-empty-title">Failed to load</div></div>';
+    });
+  }
+
+  // ── Date navigation ──────────────────────────────────────────────────
+  function shiftDate(d, days) { var dt=new Date(d+'T00:00:00'); dt.setDate(dt.getDate()+days); return dt.toISOString().split('T')[0]; }
+  document.getElementById('admqPrev').onclick    = function(){ loadDate(shiftDate(_date,-1)); };
+  document.getElementById('admqNext').onclick    = function(){ loadDate(shiftDate(_date, 1)); };
+  document.getElementById('admqToday').onclick   = function(){ loadDate(_today); };
+  document.getElementById('admqDatePicker').onchange = function(){ loadDate(this.value); };
+
+  // ── Pick / Done / Release ────────────────────────────────────────────
+  function postJson(url) {
+    return fetch(url,{method:'POST',headers:{'Content-Type':'application/json'}}).then(function(r){return r.json();});
+  }
+  window.admqPick = function(id) {
+    postJson('/queue/'+id+'/pick').then(function(res){
+      if (res.success) { loadDate(_date); if (_detailId===id) admqOpenDetail(id); }
+      else alert(res.message||'Failed to pick');
+    });
+  };
+  window.admqDone = function(id) {
+    postJson('/queue/'+id+'/complete').then(function(res){
+      if (res.success) { loadDate(_date); if (_detailId===id) admqCloseDetail(); }
+      else alert(res.message||'Failed');
+    });
+  };
+  window.admqOpenRelease = function(id) {
+    _releaseId = id;
+    document.getElementById('admqReleaseReason').value = '';
+    document.getElementById('admqReleaseModal').style.display = 'flex';
+  };
+  window.admqCloseRelease = function() {
+    document.getElementById('admqReleaseModal').style.display = 'none';
+    _releaseId = null;
+  };
+  window.admqConfirmRelease = function() {
+    if (!_releaseId) return;
+    var reason = document.getElementById('admqReleaseReason').value.trim();
+    fetch('/queue/'+_releaseId+'/release',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({reason:reason})})
+      .then(function(r){return r.json();}).then(function(res){
+        admqCloseRelease();
+        if (res.success) { loadDate(_date); if (_detailId===_releaseId) admqCloseDetail(); }
+        else alert(res.message||'Failed');
+      });
+  };
+
+  // ── Detail drawer ────────────────────────────────────────────────────
+  window.admqOpenDetail = function(id) {
+    _detailId = id;
+    document.getElementById('admqOverlay').style.display = '';
+    document.getElementById('admqDrawer').classList.add('open');
+    document.getElementById('admqDrawerBody').innerHTML = '<div class="admq-loading"><div class="admq-spinner"></div></div>';
+    document.getElementById('admqDrawerActions').style.display = 'none';
+    fetch('/queue/'+id+'/detail').then(function(r){return r.json();}).then(function(res){
+      if (!res.success) { document.getElementById('admqDrawerBody').innerHTML = '<div style="color:var(--adm-muted);padding:16px;font-size:0.85rem">Failed to load detail.</div>'; return; }
+      renderDetail(res.data);
+    });
+  };
+  window.admqCloseDetail = function() {
+    document.getElementById('admqOverlay').style.display = 'none';
+    document.getElementById('admqDrawer').classList.remove('open');
+    _detailId = null;
+  };
+
+  function renderDetail(data) {
+    var inst=data.instance, history=data.history||[], comments=data.comments||[], attachments=data.attachments||[];
+    var past = isPast(_date);
+
+    document.getElementById('admqDrawerTitle').innerHTML = '<i class="bi bi-clipboard2-check"></i>&nbsp;'+esc(inst.title);
+
+    // Action buttons
+    var actEl = document.getElementById('admqDrawerActions'), btns = '';
+    if (!past) {
+      if (inst.status==='open') {
+        btns = '<button class="admq-drawer-btn pick" onclick="admqPick('+inst.id+')"><i class="bi bi-hand-index"></i> Pick Up</button>';
+      } else if (inst.status==='picked') {
+        if (inst.picked_by_id===_userId) {
+          btns = '<button class="admq-drawer-btn done" onclick="admqDone('+inst.id+')"><i class="bi bi-check-lg"></i> Mark Done</button>'
+               + '<button class="admq-drawer-btn release" onclick="admqOpenRelease('+inst.id+')"><i class="bi bi-arrow-counterclockwise"></i> Release</button>';
+        } else if (isAdmin()) {
+          btns = '<button class="admq-drawer-btn done" onclick="admqDone('+inst.id+')"><i class="bi bi-check-lg"></i> Mark Done</button>';
+        }
+      }
+    }
+    if (btns) { actEl.innerHTML = btns; actEl.style.display = ''; } else { actEl.style.display = 'none'; }
+
+    // Info grid
+    var html = '<div><div class="admq-section-label">Details</div><div class="admq-info-grid">'
+      +'<div class="admq-info-item"><div class="admq-info-key">Status</div><div class="admq-info-val">'+statusHtml(inst.status)+'</div></div>'
+      +'<div class="admq-info-item"><div class="admq-info-key">Priority</div><div class="admq-info-val">'+priorityHtml(inst.priority)+'</div></div>'
+      +'<div class="admq-info-item"><div class="admq-info-key">Type</div><div class="admq-info-val">'+esc(inst.task_type||'—')+'</div></div>'
+      +'<div class="admq-info-item"><div class="admq-info-key">Due Time</div><div class="admq-info-val" style="font-family:var(--adm-mono);font-size:0.8rem">'+(inst.due_time||'—')+'</div></div>'
+      +'<div class="admq-info-item"><div class="admq-info-key">Client</div><div class="admq-info-val">'+esc(inst.client_org_name||'—')+'</div></div>'
+      +'<div class="admq-info-item"><div class="admq-info-key">Raised By</div><div class="admq-info-val">'+esc(inst.created_by_name||'—')+'</div></div>'
+      +(inst.picked_by_name?'<div class="admq-info-item"><div class="admq-info-key">Picked By</div><div class="admq-info-val">'+esc(inst.picked_by_name)+'</div></div>':'')
+      +'<div class="admq-info-item"><div class="admq-info-key">Date</div><div class="admq-info-val" style="font-family:var(--adm-mono);font-size:0.8rem">'+fmtDate(inst.instance_date)+'</div></div>'
+      +'</div></div>';
+
+    // Description
+    if (inst.description) {
+      html += '<div><div class="admq-section-label">Description</div><div class="admq-description">'+esc(inst.description)+'</div></div>';
+    }
+
+    // Attachments
+    var attItems = attachments.length
+      ? attachments.map(function(a){ return '<a class="admq-attach-item" href="'+(a.drive_view_link||'#')+'" target="_blank"><i class="bi '+fileIcon(a.file_name)+'" style="font-size:1.1rem;flex-shrink:0"></i><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(a.file_name)+'</span><i class="bi bi-box-arrow-up-right" style="font-size:0.7rem;color:var(--adm-muted)"></i></a>'; }).join('')
+      : '<div style="font-size:0.78rem;color:var(--adm-muted)">No attachments yet</div>';
+    var uploadBtn = !past ? '<input type="file" id="admqFileInput" style="display:none" onchange="admqUpload('+inst.id+')">'
+      +'<label class="admq-upload-label" for="admqFileInput"><i class="bi bi-paperclip"></i> Attach file</label>' : '';
+    html += '<div><div class="admq-section-label">Attachments</div><div class="admq-attach-list">'+attItems+'</div>'+uploadBtn+'</div>';
+
+    // Release history
+    if (history.length) {
+      html += '<div><div class="admq-section-label">Release History</div><div class="admq-history-list">'
+        +history.map(function(h){ return '<div class="admq-history-item"><div class="admq-history-dot"></div><div><div>Released by <strong>'+esc(h.released_by_name||'')+'</strong>'+(h.reason?' — '+esc(h.reason):'')+'</div><div class="admq-history-time">'+fmtTs(h.released_at)+'</div></div></div>'; }).join('')
+        +'</div></div>';
+    }
+
+    // Comments
+    var commentItems = comments.length
+      ? comments.map(function(c){ var bg=c.commenter_role&&c.commenter_role.startsWith('CLIENT')?'#2563eb':'#10b981'; return '<div class="admq-comment"><div class="admq-comment-avatar" style="background:'+bg+'">'+(c.commenter_name||'?').charAt(0).toUpperCase()+'</div><div style="flex:1"><div class="admq-comment-meta">'+esc(c.commenter_name||'')+'&nbsp;·&nbsp;'+fmtTs(c.created_at)+'</div><div class="admq-comment-body">'+esc(c.body||'')+'</div></div></div>'; }).join('')
+      : '<div style="font-size:0.78rem;color:var(--adm-muted)">No comments yet</div>';
+    html += '<div><div class="admq-section-label">Comments</div><div class="admq-comments-list">'+commentItems+'</div>'
+      +'<div class="admq-comment-input-row"><textarea class="admq-comment-textarea" id="admqCommentInput" placeholder="Add a comment…" rows="2"></textarea><button class="admq-comment-send" onclick="admqSubmitComment('+inst.id+')"><i class="bi bi-send"></i></button></div></div>';
+
+    document.getElementById('admqDrawerBody').innerHTML = html;
+  }
+
+  // ── Comment & Upload ─────────────────────────────────────────────────
+  window.admqSubmitComment = function(id) {
+    var ta = document.getElementById('admqCommentInput');
+    var body = ta ? ta.value.trim() : '';
+    if (!body) return;
+    ta.value = '';
+    fetch('/queue/'+id+'/comments',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({body:body})})
+      .then(function(r){return r.json();}).then(function(res){ if (res.success) admqOpenDetail(id); });
+  };
+  window.admqUpload = function(id) {
+    var inp = document.getElementById('admqFileInput');
+    if (!inp||!inp.files[0]) return;
+    var fd = new FormData(); fd.append('file', inp.files[0]);
+    fetch('/queue/'+id+'/attachments',{method:'POST',body:fd})
+      .then(function(r){return r.json();}).then(function(res){
+        if (res.success) admqOpenDetail(id); else alert(res.message||'Upload failed');
+      }).finally(function(){ if(inp) inp.value=''; });
+  };
+
+  // ── Socket live reload (called by layout.ejs socket block) ───────────
+  window.admqSocketCallback = function() { loadDate(_date); };
+
+  // ── Initial render ───────────────────────────────────────────────────
+  renderStats(_raw.stats, _date);
+  renderTable(_raw.instances, _date);
+
+})();
+</script>

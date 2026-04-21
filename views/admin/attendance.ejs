@@ -1,0 +1,820 @@
+<style>
+/* ── Tabs ───────────────────────────────────────────────── */
+.ata-tabs {
+  display: flex; gap: 4px; background: var(--adm-surface);
+  border: 1px solid var(--adm-border); border-radius: 10px;
+  padding: 3px; width: fit-content;
+}
+.ata-tab {
+  height: 30px; padding: 0 16px; border-radius: 7px; border: none;
+  background: transparent; color: var(--adm-muted); cursor: pointer;
+  font-size: 0.8rem; font-weight: 600; font-family: var(--adm-font);
+  transition: all 0.15s;
+}
+.ata-tab.active { background: var(--adm-surface-2); color: var(--adm-text); }
+
+/* ── Top bar ────────────────────────────────────────────── */
+.ata-topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; flex-wrap: wrap; margin-bottom: 12px;
+}
+.ata-nav { display: flex; align-items: center; gap: 6px; }
+.ata-nav-btn {
+  height: 38px; padding: 0 14px; border-radius: 9px;
+  border: 1px solid var(--adm-border); background: var(--adm-surface);
+  color: var(--adm-text-2); cursor: pointer; font-size: 0.85rem;
+  display: inline-flex; align-items: center; gap: 6px;
+  transition: all 0.15s; font-family: var(--adm-font);
+}
+.ata-nav-btn:hover { border-color: #8b5cf6; color: #8b5cf6; }
+.ata-date-input, .ata-month-input {
+  height: 38px; padding: 0 12px; border-radius: 9px;
+  border: 1px solid var(--adm-border); background: var(--adm-surface-2);
+  color: var(--adm-text); font-size: 0.82rem;
+  font-family: var(--adm-mono); cursor: pointer;
+}
+.ata-date-input:focus, .ata-month-input:focus { outline: none; border-color: #8b5cf6; }
+.ata-action-btn {
+  height: 38px; padding: 0 14px; border-radius: 9px;
+  border: 1px solid var(--adm-border); background: var(--adm-surface);
+  color: var(--adm-text-2); cursor: pointer; font-size: 0.82rem; font-weight: 600;
+  display: inline-flex; align-items: center; gap: 6px;
+  transition: all 0.15s; font-family: var(--adm-font);
+}
+.ata-action-btn:hover { border-color: #8b5cf6; color: #8b5cf6; }
+
+/* ── Stats ──────────────────────────────────────────────── */
+.ata-stats { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+.ata-stat {
+  display: flex; align-items: center; gap: 6px;
+  padding: 5px 12px; border-radius: 8px;
+  border: 1px solid var(--adm-border); background: var(--adm-surface);
+  font-size: 0.75rem; font-weight: 500; color: var(--adm-text-2);
+}
+.ata-stat-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.ata-stat-count { font-family: var(--adm-mono); font-weight: 700; font-size: 0.88rem; }
+.ata-stat.s-present { border-color: rgba(16,185,129,0.3);  background: rgba(16,185,129,0.06);  color: #10b981; }
+.ata-stat.s-absent  { border-color: rgba(239,68,68,0.3);   background: rgba(239,68,68,0.06);   color: #ef4444; }
+.ata-stat.s-late    { border-color: rgba(245,158,11,0.3);  background: rgba(245,158,11,0.06);  color: #f59e0b; }
+.ata-stat.s-leave   { border-color: rgba(59,130,246,0.3);  background: rgba(59,130,246,0.06);  color: #3b82f6; }
+.ata-stat.s-off     { border-color: rgba(100,116,139,0.3); background: rgba(100,116,139,0.06); color: #94a3b8; }
+
+/* ── Daily table ────────────────────────────────────────── */
+.ata-table-wrap { background: var(--adm-surface); border: 1px solid var(--adm-border); border-radius: 14px; overflow: hidden; }
+.ata-table { width: 100%; border-collapse: collapse; }
+.ata-table thead th {
+  font-family: var(--adm-mono); font-size: 0.68rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.6px; color: var(--adm-muted);
+  padding: 10px 14px; border-bottom: 1px solid var(--adm-border);
+  text-align: left; white-space: nowrap; background: var(--adm-surface-2);
+}
+.ata-table tbody tr { border-bottom: 1px solid var(--adm-border); }
+.ata-table tbody tr:last-child { border-bottom: none; }
+.ata-table tbody tr.ata-user-row { cursor: pointer; transition: background 0.12s; }
+.ata-table tbody tr.ata-user-row:hover { background: var(--adm-surface-2); }
+.ata-table tbody td { padding: 10px 14px; font-size: 0.88rem; color: var(--adm-text); vertical-align: middle; }
+.ata-sessions-row td { padding: 0 14px 10px; background: var(--adm-surface-2); }
+.ata-sessions-row.hidden { display: none; }
+
+/* User cell */
+.ata-user-cell { display: flex; align-items: center; gap: 10px; }
+.ata-avatar {
+  width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.72rem; font-weight: 700; color: #fff; font-family: var(--adm-mono);
+}
+.ata-user-name { font-weight: 500; font-size: 0.88rem; color: var(--adm-text); }
+.ata-shift-label { font-size: 0.68rem; color: var(--adm-muted); font-family: var(--adm-mono); }
+
+/* Status badge */
+.ata-badge {
+  display: inline-flex; align-items: center; padding: 3px 9px; border-radius: 20px;
+  font-size: 0.67rem; font-weight: 700; font-family: var(--adm-mono);
+  text-transform: uppercase; letter-spacing: 0.4px; white-space: nowrap;
+}
+.ata-badge.present      { background: rgba(16,185,129,0.12);  color: #10b981; }
+.ata-badge.absent       { background: rgba(239,68,68,0.12);   color: #ef4444; }
+.ata-badge.weekoff      { background: rgba(100,116,139,0.12); color: #94a3b8; }
+.ata-badge.holiday      { background: rgba(139,92,246,0.12);  color: #8b5cf6; }
+.ata-badge.approved_leave { background: rgba(59,130,246,0.12);  color: #3b82f6; }
+.ata-badge.pending_leave  { background: rgba(245,158,11,0.12);  color: #f59e0b; }
+.ata-badge.half_day     { background: rgba(249,115,22,0.12);  color: #f97316; }
+.ata-badge.official_duty{ background: rgba(20,184,166,0.12);  color: #14b8a6; }
+.ata-badge.work_from_home{ background: rgba(6,182,212,0.12);  color: #06b6d4; }
+
+/* Late chip */
+.ata-late-chip {
+  display: inline-flex; align-items: center; gap: 3px;
+  padding: 2px 7px; border-radius: 6px;
+  background: rgba(245,158,11,0.12); color: #f59e0b;
+  font-size: 0.62rem; font-weight: 700; font-family: var(--adm-mono);
+  text-transform: uppercase; white-space: nowrap; cursor: default;
+}
+.ata-open-dot {
+  width: 7px; height: 7px; border-radius: 50%; background: #10b981;
+  display: inline-block; animation: ata-pulse 1.5s infinite;
+}
+@keyframes ata-pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+/* Sessions expand */
+.ata-sessions-inner {
+  border: 1px solid var(--adm-border); border-radius: 10px; overflow: hidden;
+  font-size: 0.8rem;
+}
+.ata-session-row {
+  display: grid; grid-template-columns: 28px 1fr 1fr 1fr auto;
+  align-items: center; gap: 12px; padding: 8px 14px;
+  border-bottom: 1px solid var(--adm-border); color: var(--adm-text-2);
+}
+.ata-session-row:last-child { border-bottom: none; }
+.ata-session-num {
+  width: 20px; height: 20px; border-radius: 50%; background: var(--adm-border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.62rem; font-weight: 700; font-family: var(--adm-mono); color: var(--adm-muted);
+  flex-shrink: 0;
+}
+.ata-force-btn {
+  height: 26px; padding: 0 10px; border-radius: 6px;
+  border: 1px solid rgba(239,68,68,0.4); background: transparent;
+  color: #ef4444; cursor: pointer; font-size: 0.7rem; font-weight: 600;
+  font-family: var(--adm-font); white-space: nowrap; transition: all 0.15s;
+}
+.ata-force-btn:hover { background: rgba(239,68,68,0.1); }
+
+/* ── Monthly grid ───────────────────────────────────────── */
+.ata-grid-wrap {
+  background: var(--adm-surface); border: 1px solid var(--adm-border);
+  border-radius: 14px; overflow-x: auto;
+}
+.ata-grid { border-collapse: collapse; min-width: 100%; }
+.ata-grid th, .ata-grid td { border: 1px solid var(--adm-border); }
+.ata-grid thead th {
+  font-family: var(--adm-mono); font-size: 0.62rem; font-weight: 700;
+  text-transform: uppercase; color: var(--adm-muted);
+  padding: 8px 6px; text-align: center; white-space: nowrap;
+  background: var(--adm-surface-2); min-width: 32px;
+}
+.ata-grid thead th.ata-name-col { text-align: left; padding: 8px 14px; min-width: 160px; position: sticky; left: 0; z-index: 2; }
+.ata-grid tbody td.ata-name-col {
+  padding: 8px 14px; font-size: 0.82rem; font-weight: 500; color: var(--adm-text);
+  white-space: nowrap; position: sticky; left: 0; z-index: 1;
+  background: var(--adm-surface);
+}
+.ata-grid tbody tr:hover td.ata-name-col { background: var(--adm-surface-2); }
+.ata-grid tbody td.ata-day-cell {
+  text-align: center; padding: 4px 3px; cursor: pointer;
+  transition: background 0.1s;
+}
+.ata-grid tbody td.ata-day-cell:hover { background: var(--adm-surface-2); }
+.ata-day-dot {
+  width: 22px; height: 22px; border-radius: 6px; margin: 0 auto;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.58rem; font-weight: 700; font-family: var(--adm-mono);
+}
+.ata-day-dot.present       { background: rgba(16,185,129,0.2);  color: #10b981; }
+.ata-day-dot.absent        { background: rgba(239,68,68,0.2);   color: #ef4444; }
+.ata-day-dot.weekoff       { background: rgba(100,116,139,0.1); color: #64748b; }
+.ata-day-dot.holiday       { background: rgba(139,92,246,0.2);  color: #8b5cf6; }
+.ata-day-dot.approved_leave{ background: rgba(59,130,246,0.2);  color: #3b82f6; }
+.ata-day-dot.pending_leave { background: rgba(245,158,11,0.2);  color: #f59e0b; }
+.ata-day-dot.half_day      { background: rgba(249,115,22,0.2);  color: #f97316; }
+.ata-day-dot.official_duty { background: rgba(20,184,166,0.2);  color: #14b8a6; }
+.ata-day-dot.work_from_home{ background: rgba(6,182,212,0.2);   color: #06b6d4; }
+.ata-day-dot.future        { background: transparent; color: var(--adm-muted); opacity: 0.3; }
+.ata-today-col { background: rgba(139,92,246,0.04); }
+
+/* Legend */
+.ata-legend {
+  display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px;
+  padding: 12px 16px; background: var(--adm-surface); border: 1px solid var(--adm-border);
+  border-radius: 12px;
+}
+.ata-legend-item {
+  display: flex; align-items: center; gap: 7px;
+  padding: 5px 12px; border-radius: 8px;
+  background: var(--adm-surface-2); border: 1px solid var(--adm-border);
+  font-size: 0.75rem; font-weight: 600; color: var(--adm-text-2);
+  transition: border-color 0.15s;
+}
+.ata-legend-dot { width: 12px; height: 12px; border-radius: 4px; flex-shrink: 0; }
+
+/* ── Override modal ─────────────────────────────────────── */
+.ata-modal-backdrop {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+  z-index: 1050; display: flex; align-items: center; justify-content: center;
+  backdrop-filter: blur(4px);
+}
+.ata-modal {
+  background: var(--adm-surface, #0e1d30); border: 1px solid var(--adm-border, #1a3050);
+  border-radius: 16px; padding: 24px; width: 400px; max-width: 92vw;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+}
+.ata-modal-title { font-family: var(--adm-mono); font-size: 0.95rem; font-weight: 700; color: var(--adm-text, #dceaf8); margin-bottom: 4px; }
+.ata-modal-sub   { font-size: 0.75rem; color: var(--adm-muted, #445e78); margin-bottom: 18px; }
+.ata-modal label { display: block; font-size: 0.72rem; color: var(--adm-muted, #445e78); font-family: var(--adm-mono); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px; }
+.ata-modal select, .ata-modal input[type=text] {
+  width: 100%; border-radius: 9px; padding: 8px 12px;
+  background: var(--adm-surface-2, #132540); border: 1px solid var(--adm-border, #1a3050);
+  color: var(--adm-text, #dceaf8); font-size: 0.85rem;
+  font-family: var(--adm-font, sans-serif); box-sizing: border-box; margin-bottom: 14px;
+}
+.ata-modal select:focus, .ata-modal input:focus { outline: none; border-color: #8b5cf6; }
+.ata-modal-footer { display: flex; gap: 8px; justify-content: space-between; margin-top: 6px; }
+.ata-modal-left { display: flex; gap: 8px; }
+.ata-modal-btn {
+  height: 36px; padding: 0 16px; border-radius: 9px; cursor: pointer;
+  font-size: 0.82rem; font-weight: 600; font-family: var(--adm-font, sans-serif);
+  border: 1px solid var(--adm-border, #1a3050); transition: all 0.15s;
+}
+.ata-modal-btn.save   { background: #8b5cf6; color: #fff; border-color: #8b5cf6; }
+.ata-modal-btn.save:hover   { background: #7c3aed; }
+.ata-modal-btn.cancel { background: transparent; color: var(--adm-text-2, #a8c0d8); }
+.ata-modal-btn.cancel:hover { border-color: var(--adm-border-2, #1e3860); }
+.ata-modal-btn.remove { background: transparent; color: #ef4444; border-color: rgba(239,68,68,0.4); }
+.ata-modal-btn.remove:hover { background: rgba(239,68,68,0.1); }
+
+/* ── Holiday modal ──────────────────────────────────────── */
+.ata-hol-item {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 12px; border-radius: 8px;
+  background: var(--adm-surface-2, #132540); border: 1px solid var(--adm-border, #1a3050);
+  margin-bottom: 6px; font-size: 0.82rem; color: var(--adm-text, #dceaf8);
+}
+.ata-hol-del {
+  background: none; border: none; color: var(--adm-muted, #445e78);
+  cursor: pointer; font-size: 0.85rem; padding: 2px; line-height: 1;
+  transition: color 0.15s;
+}
+.ata-hol-del:hover { color: #ef4444; }
+.ata-hol-add-row { display: flex; gap: 8px; margin-top: 12px; }
+.ata-hol-add-row input {
+  flex: 1; border-radius: 8px; padding: 7px 10px;
+  background: var(--adm-surface-2, #132540); border: 1px solid var(--adm-border, #1a3050);
+  color: var(--adm-text, #dceaf8); font-size: 0.82rem; font-family: var(--adm-font, sans-serif);
+}
+.ata-hol-add-row input:focus { outline: none; border-color: #8b5cf6; }
+.ata-hol-add-btn {
+  height: 36px; padding: 0 14px; border-radius: 8px;
+  border: none; background: #8b5cf6; color: #fff;
+  cursor: pointer; font-size: 0.82rem; font-weight: 600; font-family: var(--adm-font, sans-serif);
+  white-space: nowrap;
+}
+.ata-hol-add-btn:hover { background: #7c3aed; }
+
+/* Spinner */
+@keyframes ataSpin { to { transform: rotate(360deg); } }
+.ata-spinner {
+  width: 20px; height: 20px; border-radius: 50%;
+  border: 2px solid var(--adm-border); border-top-color: #8b5cf6;
+  animation: ataSpin 0.7s linear infinite; display: inline-block;
+}
+.ata-loading { display: flex; align-items: center; justify-content: center; padding: 60px; }
+.ata-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 50px 20px; color: var(--adm-muted); text-align: center; }
+.ata-empty i { font-size: 2rem; margin-bottom: 8px; opacity: 0.3; }
+</style>
+
+<!-- Override modal -->
+<div id="ataOverrideModal" class="ata-modal-backdrop" style="display:none">
+  <div class="ata-modal">
+    <div class="ata-modal-title"><i class="bi bi-pencil-square"></i> Override Attendance</div>
+    <div class="ata-modal-sub" id="ataOverrideSub"></div>
+    <label>Status</label>
+    <select id="ataOverrideStatus">
+      <option value="present">Present</option>
+      <option value="half_day">Half Day</option>
+      <option value="work_from_home">Work From Home</option>
+      <option value="official_duty">Official Duty</option>
+      <option value="leave">Leave</option>
+      <option value="holiday">Holiday</option>
+    </select>
+    <label>Remark <span style="font-size:0.68rem;opacity:0.6">(optional)</span></label>
+    <input type="text" id="ataOverrideRemark" placeholder="e.g. Client visit, Medical leave…">
+    <div class="ata-modal-footer">
+      <div class="ata-modal-left">
+        <button class="ata-modal-btn save" onclick="ataSubmitOverride()"><i class="bi bi-check-lg"></i> Save</button>
+        <button class="ata-modal-btn cancel" onclick="ataCloseOverride()">Cancel</button>
+      </div>
+      <button class="ata-modal-btn remove" id="ataRemoveBtn" onclick="ataRemoveOverride()" style="display:none"><i class="bi bi-trash"></i> Remove</button>
+    </div>
+  </div>
+</div>
+
+<!-- Holiday manager modal -->
+<div id="ataHolidayModal" class="ata-modal-backdrop" style="display:none">
+  <div class="ata-modal" style="width:460px">
+    <div class="ata-modal-title"><i class="bi bi-calendar-heart"></i> Holidays — <span id="ataHolMonthLabel"></span></div>
+    <div class="ata-modal-sub">Holidays are shared across all team members.</div>
+    <div id="ataHolList" style="max-height:220px;overflow-y:auto;margin-bottom:4px"></div>
+    <div class="ata-hol-add-row">
+      <input type="date" id="ataHolDate">
+      <input type="text" id="ataHolName" placeholder="Holiday name…" style="flex:1.5">
+      <button class="ata-hol-add-btn" onclick="ataAddHoliday()"><i class="bi bi-plus-lg"></i> Add</button>
+    </div>
+    <div class="ata-modal-footer" style="margin-top:14px">
+      <div></div>
+      <button class="ata-modal-btn cancel" onclick="document.getElementById('ataHolidayModal').style.display='none'">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Page top bar -->
+<div class="ata-topbar">
+  <div style="display:flex;align-items:center;gap:10px">
+    <div class="ata-tabs">
+      <button class="ata-tab active" id="ataTabDaily"   onclick="ataSetTab('daily')"><i class="bi bi-list-ul"></i> Daily</button>
+      <button class="ata-tab"        id="ataTabMonthly" onclick="ataSetTab('monthly')"><i class="bi bi-calendar3"></i> Monthly</button>
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px" id="ataNavArea"></div>
+</div>
+
+<!-- Stats -->
+<div class="ata-stats" id="ataStats"></div>
+
+<!-- Content areas -->
+<div id="ataDailyArea"></div>
+<div id="ataMonthlyArea" style="display:none"></div>
+
+<script>
+(function () {
+  // ── Teleport modals to body ──────────────────────────────────────────
+  ['ataOverrideModal','ataHolidayModal'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) document.body.appendChild(el);
+  });
+
+  // ── Bootstrap data ───────────────────────────────────────────────────
+  var _d = <%- JSON.stringify({
+    users:       users,
+    dailyLogs:   dailyLogs,
+    calendarData: calendarData,
+    overrideMap:  overrideMap,
+    loginTimeMap: loginTimeMap,
+    holidays:     holidays,
+    month:        month,
+    year:         year,
+    mon:          mon,
+    lastDay:      lastDay,
+    prevMonth:    prevMonth,
+    nextMonth:    nextMonth,
+    selectedDate: selectedDate,
+    today:        today,
+    isAdmin:      isAdmin
+  }).replace(/<\//g, '<\\/') %>;
+
+  var _tab         = 'daily';
+  var _date        = _d.selectedDate;
+  var _today       = _d.today;
+  var _month       = _d.month;
+  var _year        = _d.year;
+  var _mon         = _d.mon;
+  var _lastDay     = _d.lastDay;
+  var _prevMonth   = _d.prevMonth;
+  var _nextMonth   = _d.nextMonth;
+  var _users       = _d.users;
+  var _dailyLogs   = _d.dailyLogs;
+  var _calData     = _d.calendarData;
+  var _overrides   = _d.overrideMap;
+  var _loginTimes  = _d.loginTimeMap;
+  var _holidays    = _d.holidays;
+  var _isAdmin     = _d.isAdmin;
+
+  // Override target
+  var _ovUserId = null;
+  var _ovDate   = null;
+
+  // ── Helpers ──────────────────────────────────────────────────────────
+  function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  function avatarColor(name) {
+    var colors = ['#3b82f6','#8b5cf6','#10b981','#f59e0b','#ef4444','#06b6d4','#f97316','#a78bfa'];
+    var i = 0; for (var c of (name||'?')) i = (i + c.charCodeAt(0)) % colors.length;
+    return colors[i];
+  }
+  function statusLabel(s) {
+    var m = {present:'Present',absent:'Absent',weekoff:'Week Off',holiday:'Holiday',
+             approved_leave:'On Leave',pending_leave:'Leave (Pending)',
+             half_day:'Half Day',official_duty:'Official Duty',work_from_home:'WFH',future:'—'};
+    return m[s] || s || '—';
+  }
+  function fmtDate(d) {
+    if (!d) return '—';
+    var p = d.split('-'), mn = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return mn[parseInt(p[1])-1]+' '+parseInt(p[2])+', '+p[0];
+  }
+  function shiftDate(d, days) {
+    var dt = new Date(d + 'T00:00:00'); dt.setDate(dt.getDate() + days);
+    return dt.toISOString().split('T')[0];
+  }
+  function monthLabel(m) {
+    var p = m.split('-');
+    var mn = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    return mn[parseInt(p[1])-1] + ' ' + p[0];
+  }
+  function dayOfWeek(dateStr) {
+    var dn = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    return dn[new Date(dateStr + 'T00:00:00').getDay()];
+  }
+
+  // ── Build daily user map ─────────────────────────────────────────────
+  function buildUserMap(logs, users) {
+    var map = {};
+    users.forEach(function(u) { map[u.id] = { user: u, sessions: [] }; });
+    logs.forEach(function(l) { if (map[l.user_id]) map[l.user_id].sessions.push(l); });
+    return map;
+  }
+
+  // ── Compute status for a user on daily view ──────────────────────────
+  function getUserDailyStatus(u, sessions, dateStr, calMap) {
+    if (sessions.length) {
+      var ov = _overrides[u.id + '-' + dateStr];
+      if (ov) return ov.status === 'leave' ? 'approved_leave' : ov.status;
+      return 'present';
+    }
+    // No sessions — use calendar data if available
+    var dayNum = parseInt(dateStr.split('-')[2]);
+    if (calMap && calMap[u.id] && calMap[u.id][dayNum] !== undefined) return calMap[u.id][dayNum];
+    return 'absent';
+  }
+
+  // ── Compute stats ────────────────────────────────────────────────────
+  function computeStats(userMap, dateStr) {
+    var present = 0, absent = 0, late = 0, onLeave = 0, off = 0;
+    _users.forEach(function(u) {
+      var entry = userMap[u.id];
+      var sessions = entry ? entry.sessions : [];
+      var status = getUserDailyStatus(u, sessions, dateStr, _calData);
+      if (status === 'present' || status === 'half_day' || status === 'work_from_home' || status === 'official_duty') present++;
+      else if (status === 'absent') absent++;
+      else if (status === 'approved_leave' || status === 'pending_leave') onLeave++;
+      else if (status === 'weekoff' || status === 'holiday') off++;
+      // Late detection: first session login vs shift_start
+      if (sessions.length && u.shift_start) {
+        var first = sessions[0];
+        if (first.login_time) {
+          var lt = new Date(first.login_time);
+          var parts = (u.shift_start||'10:00:00').split(':');
+          var shiftMins = parseInt(parts[0]) * 60 + parseInt(parts[1]);
+          var loginMins = lt.getUTCHours() * 60 + lt.getUTCMinutes();
+          if (loginMins > shiftMins + 5) late++;
+        }
+      }
+    });
+    return { total: _users.length, present: present, absent: absent, late: late, onLeave: onLeave, off: off };
+  }
+
+  // ── Render stats bar ─────────────────────────────────────────────────
+  function renderStats(s) {
+    document.getElementById('ataStats').innerHTML =
+      '<div class="ata-stat"><span class="ata-stat-count">'+s.total+'</span>&nbsp;Total</div>'
+     +'<div class="ata-stat s-present"><span class="ata-stat-dot" style="background:#10b981"></span><span class="ata-stat-count">'+s.present+'</span>&nbsp;Present</div>'
+     +'<div class="ata-stat s-absent"><span class="ata-stat-dot" style="background:#ef4444"></span><span class="ata-stat-count">'+s.absent+'</span>&nbsp;Absent</div>'
+     +'<div class="ata-stat s-late"><span class="ata-stat-dot" style="background:#f59e0b"></span><span class="ata-stat-count">'+s.late+'</span>&nbsp;Late</div>'
+     +'<div class="ata-stat s-leave"><span class="ata-stat-dot" style="background:#3b82f6"></span><span class="ata-stat-count">'+s.onLeave+'</span>&nbsp;On Leave</div>'
+     +'<div class="ata-stat s-off"><span class="ata-stat-dot" style="background:#94a3b8"></span><span class="ata-stat-count">'+s.off+'</span>&nbsp;Day Off</div>';
+  }
+
+  // ── Render daily nav ─────────────────────────────────────────────────
+  function renderDailyNav(date) {
+    document.getElementById('ataNavArea').innerHTML =
+      '<button class="ata-nav-btn" onclick="ataLoadDaily(\''+shiftDate(date,-1)+'\')"><i class="bi bi-chevron-left"></i></button>'
+     +'<input type="date" class="ata-date-input" id="ataDatePicker" value="'+date+'" onchange="ataLoadDaily(this.value)">'
+     +'<button class="ata-nav-btn" onclick="ataLoadDaily(\''+_today+'\')"><i class="bi bi-calendar-check"></i> Today</button>'
+     +'<button class="ata-nav-btn" onclick="ataLoadDaily(\''+shiftDate(date,1)+'\')"><i class="bi bi-chevron-right"></i></button>'
+     +(_isAdmin ? '<button class="ata-action-btn" onclick="ataOpenHolidayModal()"><i class="bi bi-calendar-heart"></i> Holidays</button>' : '');
+  }
+
+  // ── Render monthly nav ───────────────────────────────────────────────
+  function renderMonthlyNav() {
+    document.getElementById('ataNavArea').innerHTML =
+      '<button class="ata-nav-btn" onclick="ataLoadMonthly(\''+_prevMonth+'\')"><i class="bi bi-chevron-left"></i></button>'
+     +'<input type="month" class="ata-month-input" id="ataMonthPicker" value="'+_month+'" onchange="ataLoadMonthly(this.value)">'
+     +'<button class="ata-nav-btn" onclick="ataLoadMonthly(\''+_today.slice(0,7)+'\')"><i class="bi bi-calendar-check"></i> This Month</button>'
+     +'<button class="ata-nav-btn" onclick="ataLoadMonthly(\''+_nextMonth+'\')"><i class="bi bi-chevron-right"></i></button>'
+     +(_isAdmin ? '<button class="ata-action-btn" onclick="ataOpenHolidayModal()"><i class="bi bi-calendar-heart"></i> Holidays</button>' : '');
+  }
+
+  // ── Render daily table ───────────────────────────────────────────────
+  function renderDaily(logs, date) {
+    var userMap = buildUserMap(logs, _users);
+    var stats   = computeStats(userMap, date);
+    renderStats(stats);
+    renderDailyNav(date);
+
+    var area = document.getElementById('ataDailyArea');
+    if (!_users.length) {
+      area.innerHTML = '<div class="ata-empty"><i class="bi bi-people"></i><div>No team members found</div></div>';
+      return;
+    }
+
+    var rows = _users.map(function(u, idx) {
+      var entry    = userMap[u.id] || { user: u, sessions: [] };
+      var sessions = entry.sessions;
+      var status   = getUserDailyStatus(u, sessions, date, _calData);
+      var color    = avatarColor(u.name);
+      var initial  = (u.name || '?').charAt(0).toUpperCase();
+
+      // First in / last out / total duration
+      var firstIn = '—', lastOut = '—', totalDur = '—';
+      var hasOpen = false;
+      if (sessions.length) {
+        firstIn = sessions[0].loginFormatted || '—';
+        var last = sessions[sessions.length - 1];
+        if (last.logoutFormatted) { lastOut = last.logoutFormatted; }
+        else { lastOut = '<span class="ata-open-dot"></span>&nbsp;<span style="font-size:0.75rem;color:#10b981">Active</span>'; hasOpen = true; }
+        // Sum durations
+        var totalMins = 0;
+        sessions.forEach(function(s) {
+          if (s.duration) {
+            var p = String(s.duration).split(':');
+            totalMins += parseInt(p[0]||0)*60 + parseInt(p[1]||0);
+          }
+        });
+        if (totalMins > 0) {
+          var h = Math.floor(totalMins/60), m = totalMins % 60;
+          totalDur = h + 'h ' + String(m).padStart(2,'0') + 'm';
+        }
+      }
+
+      // Late detection
+      var lateHtml = '';
+      if (sessions.length && u.shift_start) {
+        var first = sessions[0];
+        if (first.login_time) {
+          var lt = new Date(first.login_time);
+          var parts = (u.shift_start||'10:00:00').split(':');
+          var shiftMins = parseInt(parts[0])*60 + parseInt(parts[1]);
+          var loginMins = lt.getUTCHours()*60 + lt.getUTCMinutes();
+          if (loginMins > shiftMins + 5) {
+            var lateBy = loginMins - shiftMins;
+            var lateTitle = first.late_login_reason ? esc(first.late_login_reason) : 'No reason given';
+            lateHtml = '<span class="ata-late-chip" title="'+lateTitle+'">'
+              +'<i class="bi bi-clock-history"></i> +'+Math.floor(lateBy/60)+'h'+String(lateBy%60).padStart(2,'0')+'m</span>';
+          }
+        }
+      }
+
+      var rowId = 'ata-sess-' + idx;
+      var sessCount = sessions.length;
+      var shiftLabel = u.shift_start ? u.shift_start.slice(0,5) + ' · ' + u.shift_hours + 'h' : '';
+      var overrideKey = u.id + '-' + date;
+      var hasOverride = !!_overrides[overrideKey];
+      var overrideIcon = hasOverride ? '<i class="bi bi-pencil-fill" style="font-size:0.6rem;color:#8b5cf6;margin-left:4px" title="Override active"></i>' : '';
+
+      var actionsHtml = '';
+      if (_isAdmin) {
+        actionsHtml = '<button class="ata-action-btn" style="height:28px;font-size:0.72rem;padding:0 10px" onclick="event.stopPropagation();ataOpenOverride('+u.id+',\''+date+'\')"><i class="bi bi-pencil"></i> Override</button>';
+      }
+
+      // Sessions detail row
+      var sessHtml = '';
+      if (sessions.length) {
+        var sessRows = sessions.map(function(s, si) {
+          var isOpen = !s.logoutFormatted;
+          var dur = '—';
+          if (s.duration) { var p = String(s.duration).split(':'); var sm=parseInt(p[0]||0)*60+parseInt(p[1]||0); if(sm>0){var sh=Math.floor(sm/60),smm=sm%60;dur=sh+'h'+String(smm).padStart(2,'0')+'m';} }
+          var logoutCell = isOpen
+            ? '<span class="ata-open-dot"></span>&nbsp;<span style="color:#10b981;font-size:0.75rem">Still active</span>'
+            : esc(s.logoutFormatted);
+          var reasonHtml = s.logout_reason ? '<span style="font-size:0.68rem;color:var(--adm-muted)">'+esc(s.logout_reason)+'</span>' : '';
+          var lateReasonHtml = si===0 && s.late_login_reason ? '<span style="font-size:0.68rem;color:#f59e0b;display:block">Late: '+esc(s.late_login_reason)+'</span>' : '';
+          var forceBtn = (isOpen && _isAdmin) ? '<button class="ata-force-btn" onclick="event.stopPropagation();ataForceLogout('+s.id+')"><i class="bi bi-box-arrow-right"></i> Force Logout</button>' : '<span style="color:var(--adm-muted);font-size:0.72rem">'+dur+'</span>';
+          return '<div class="ata-session-row"><div class="ata-session-num">'+(si+1)+'</div>'
+            +'<div>'+esc(s.loginFormatted||'—')+''+lateReasonHtml+'</div>'
+            +'<div>'+logoutCell+reasonHtml+'</div>'
+            +'<div style="font-family:var(--adm-mono);font-size:0.78rem">'+dur+'</div>'
+            +'<div>'+forceBtn+'</div></div>';
+        }).join('');
+        sessHtml = '<td colspan="7"><div class="ata-sessions-inner">'+sessRows+'</div></td>';
+      }
+
+      return '<tr class="ata-user-row" onclick="ataToggleSessions(\''+rowId+'\')">'
+        +'<td><div class="ata-user-cell"><div class="ata-avatar" style="background:'+color+'">'+initial+'</div><div><div class="ata-user-name">'+esc(u.name)+overrideIcon+'</div><div class="ata-shift-label">'+esc(shiftLabel)+'</div></div></div></td>'
+        +'<td><span class="ata-badge '+status+'">'+statusLabel(status)+'</span></td>'
+        +'<td style="font-family:var(--adm-mono);font-size:0.82rem">'+firstIn+'</td>'
+        +'<td style="font-family:var(--adm-mono);font-size:0.82rem">'+lastOut+'</td>'
+        +'<td style="font-family:var(--adm-mono);font-size:0.82rem;color:var(--adm-muted)">'+totalDur+'</td>'
+        +'<td>'+lateHtml+'</td>'
+        +'<td>'+actionsHtml+'</td>'
+        +'</tr>'
+        +(sessHtml ? '<tr class="ata-sessions-row hidden" id="'+rowId+'">'+sessHtml+'</tr>' : '');
+    }).join('');
+
+    area.innerHTML = '<div class="ata-table-wrap"><table class="ata-table">'
+      +'<thead><tr><th>Team Member</th><th>Status</th><th>First In</th><th>Last Out</th><th>Hours</th><th>Late</th><th></th></tr></thead>'
+      +'<tbody>'+rows+'</tbody></table></div>';
+  }
+
+  // ── Toggle sessions expand ───────────────────────────────────────────
+  window.ataToggleSessions = function(id) {
+    var row = document.getElementById(id);
+    if (row) row.classList.toggle('hidden');
+  };
+
+  // ── Render monthly grid ──────────────────────────────────────────────
+  function renderMonthly(calData, month, year, mon, lastDay) {
+    renderMonthlyNav();
+    var todayDay = (_today.slice(0,7) === month) ? parseInt(_today.split('-')[2]) : -1;
+
+    var dayHeaders = '<th class="ata-name-col">Member</th>';
+    for (var d = 1; d <= lastDay; d++) {
+      var dateStr = year+'-'+String(mon).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+      var dow = dayOfWeek(dateStr);
+      var isToday = (d === todayDay);
+      dayHeaders += '<th'+(isToday?' style="color:#8b5cf6"':'')+'>'+d+'<div style="font-size:0.52rem;opacity:0.6">'+dow+'</div></th>';
+    }
+
+    var rows = _users.map(function(u) {
+      var color = avatarColor(u.name);
+      var initial = (u.name||'?').charAt(0).toUpperCase();
+      var cells = '<td class="ata-name-col"><div style="display:flex;align-items:center;gap:8px"><div class="ata-avatar" style="background:'+color+';width:24px;height:24px;font-size:0.62rem">'+initial+'</div>'+esc(u.name)+'</div></td>';
+      for (var d = 1; d <= lastDay; d++) {
+        var status = (calData[u.id] && calData[u.id][d]) ? calData[u.id][d] : 'future';
+        var dotLabel = '';
+        if (status === 'present') dotLabel = '✓';
+        else if (status === 'absent') dotLabel = '✗';
+        else if (status === 'weekoff') dotLabel = 'W';
+        else if (status === 'holiday') dotLabel = 'H';
+        else if (status === 'approved_leave') dotLabel = 'L';
+        else if (status === 'pending_leave') dotLabel = 'L?';
+        else if (status === 'half_day') dotLabel = '½';
+        else if (status === 'work_from_home') dotLabel = 'W';
+        else if (status === 'official_duty') dotLabel = 'O';
+        var dateStr = year+'-'+String(mon).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+        var isToday = (d === todayDay);
+        var clickAttr = _isAdmin ? ' onclick="ataOpenOverride('+u.id+',\''+dateStr+'\')"' : '';
+        cells += '<td class="ata-day-cell'+(isToday?' ata-today-col':'')+'"'+clickAttr+' title="'+esc(u.name)+' — '+fmtDate(dateStr)+': '+statusLabel(status)+'">'
+          +'<div class="ata-day-dot '+status+'">'+dotLabel+'</div></td>';
+      }
+      return '<tr>'+cells+'</tr>';
+    }).join('');
+
+    var legendItems = [
+      {color:'#10b981',label:'Present'},{color:'#ef4444',label:'Absent'},
+      {color:'#64748b',label:'Week Off'},{color:'#8b5cf6',label:'Holiday'},
+      {color:'#3b82f6',label:'Leave'},{color:'#f59e0b',label:'Pending Leave'},
+      {color:'#f97316',label:'Half Day'},{color:'#06b6d4',label:'WFH'},
+      {color:'#14b8a6',label:'Official Duty'}
+    ];
+    var legend = legendItems.map(function(l){
+      return '<div class="ata-legend-item">'
+        +'<div class="ata-legend-dot" style="background:'+l.color+';box-shadow:0 0 6px '+l.color+'88"></div>'
+        +'<span style="color:'+l.color+'">'+l.label+'</span></div>';
+    }).join('');
+
+    document.getElementById('ataMonthlyArea').innerHTML =
+      '<div class="ata-grid-wrap"><table class="ata-grid"><thead><tr>'+dayHeaders+'</tr></thead><tbody>'+rows+'</tbody></table></div>'
+      +'<div class="ata-legend">'+legend+'</div>';
+  }
+
+  // ── Tab switch ───────────────────────────────────────────────────────
+  window.ataSetTab = function(tab) {
+    _tab = tab;
+    document.getElementById('ataTabDaily').classList.toggle('active', tab === 'daily');
+    document.getElementById('ataTabMonthly').classList.toggle('active', tab === 'monthly');
+    document.getElementById('ataDailyArea').style.display   = tab === 'daily'   ? '' : 'none';
+    document.getElementById('ataMonthlyArea').style.display = tab === 'monthly' ? '' : 'none';
+    if (tab === 'daily')   renderDailyNav(_date);
+    if (tab === 'monthly') renderMonthlyNav();
+  };
+
+  // ── Load daily via AJAX ──────────────────────────────────────────────
+  window.ataLoadDaily = function(date) {
+    _date = date;
+    renderDailyNav(date);
+    document.getElementById('ataDailyArea').innerHTML = '<div class="ata-loading"><div class="ata-spinner"></div></div>';
+    fetch('/admin/attendance/data?date='+date).then(function(r){return r.json();}).then(function(res){
+      if (!res.success) return;
+      _dailyLogs = res.data.dailyLogs;
+      _overrides = res.data.overrideMap;
+      _calData   = res.data.calendarData;
+      renderDaily(_dailyLogs, date);
+    }).catch(function(){
+      document.getElementById('ataDailyArea').innerHTML = '<div class="ata-empty"><i class="bi bi-exclamation-circle"></i><div>Failed to load</div></div>';
+    });
+  };
+
+  // ── Load monthly via AJAX ────────────────────────────────────────────
+  window.ataLoadMonthly = function(month) {
+    _month = month;
+    var p = month.split('-');
+    _year = parseInt(p[0]); _mon = parseInt(p[1]);
+    _lastDay   = new Date(_year, _mon, 0).getDate();
+    _prevMonth = _mon === 1  ? (_year-1)+'-12'                             : _year+'-'+String(_mon-1).padStart(2,'0');
+    _nextMonth = _mon === 12 ? (_year+1)+'-01'                             : _year+'-'+String(_mon+1).padStart(2,'0');
+    renderMonthlyNav();
+    document.getElementById('ataMonthlyArea').innerHTML = '<div class="ata-loading"><div class="ata-spinner"></div></div>';
+    fetch('/admin/attendance/monthly?month='+month).then(function(r){return r.json();}).then(function(res){
+      if (!res.success) return;
+      _calData   = res.data.calendarData;
+      _overrides = res.data.overrideMap;
+      _holidays  = res.data.holidays;
+      renderMonthly(_calData, month, _year, _mon, _lastDay);
+    }).catch(function(){
+      document.getElementById('ataMonthlyArea').innerHTML = '<div class="ata-empty"><i class="bi bi-exclamation-circle"></i><div>Failed to load</div></div>';
+    });
+  };
+
+  // ── Force logout ─────────────────────────────────────────────────────
+  window.ataForceLogout = function(sessionId) {
+    if (!confirm('Force logout this session?')) return;
+    fetch('/attendance/force-logout', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({attendance_id:sessionId})})
+      .then(function(r){return r.json();}).then(function(res){
+        if (res.success) ataLoadDaily(_date);
+        else alert(res.message || 'Failed');
+      });
+  };
+
+  // ── Override modal ───────────────────────────────────────────────────
+  window.ataOpenOverride = function(userId, date) {
+    _ovUserId = userId;
+    _ovDate   = date;
+    var u = _users.find(function(x){return x.id === userId;}) || {};
+    document.getElementById('ataOverrideSub').textContent = (u.name||'User') + ' — ' + fmtDate(date);
+    var existing = _overrides[userId + '-' + date];
+    document.getElementById('ataOverrideStatus').value  = existing ? existing.status  : 'present';
+    document.getElementById('ataOverrideRemark').value  = existing ? (existing.remark||'') : '';
+    document.getElementById('ataRemoveBtn').style.display = existing ? '' : 'none';
+    document.getElementById('ataOverrideModal').style.display = 'flex';
+  };
+
+  window.ataCloseOverride = function() {
+    document.getElementById('ataOverrideModal').style.display = 'none';
+    _ovUserId = null; _ovDate = null;
+  };
+
+  window.ataSubmitOverride = function() {
+    if (!_ovUserId || !_ovDate) return;
+    var status = document.getElementById('ataOverrideStatus').value;
+    var remark = document.getElementById('ataOverrideRemark').value.trim();
+    fetch('/attendance/override', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({user_id:_ovUserId,date:_ovDate,status:status,remark:remark})})
+      .then(function(r){return r.json();}).then(function(res){
+        ataCloseOverride();
+        if (res.success) { if (_tab==='daily') ataLoadDaily(_date); else ataLoadMonthly(_month); }
+        else alert(res.message || 'Failed');
+      });
+  };
+
+  window.ataRemoveOverride = function() {
+    if (!_ovUserId || !_ovDate) return;
+    fetch('/attendance/override', {method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({user_id:_ovUserId,date:_ovDate})})
+      .then(function(r){return r.json();}).then(function(res){
+        ataCloseOverride();
+        if (res.success) { if (_tab==='daily') ataLoadDaily(_date); else ataLoadMonthly(_month); }
+        else alert(res.message || 'Failed');
+      });
+  };
+
+  // ── Holiday modal ────────────────────────────────────────────────────
+  function renderHolidayList() {
+    var list = document.getElementById('ataHolList');
+    if (!_holidays.length) { list.innerHTML = '<div style="color:var(--adm-muted);font-size:0.82rem;padding:8px 0">No holidays this month</div>'; return; }
+    list.innerHTML = _holidays.map(function(h) {
+      return '<div class="ata-hol-item"><div><strong style="font-family:var(--adm-mono);font-size:0.8rem">'+esc(h.date)+'</strong>&nbsp;&nbsp;'+esc(h.name)+'</div>'
+        +'<button class="ata-hol-del" onclick="ataDeleteHoliday('+h.id+')" title="Remove"><i class="bi bi-trash"></i></button></div>';
+    }).join('');
+  }
+
+  window.ataOpenHolidayModal = function() {
+    document.getElementById('ataHolMonthLabel').textContent = monthLabel(_month);
+    document.getElementById('ataHolDate').value = '';
+    document.getElementById('ataHolName').value = '';
+    renderHolidayList();
+    document.getElementById('ataHolidayModal').style.display = 'flex';
+  };
+
+  window.ataAddHoliday = function() {
+    var date = document.getElementById('ataHolDate').value;
+    var name = document.getElementById('ataHolName').value.trim();
+    if (!date || !name) { alert('Please enter both date and holiday name.'); return; }
+    fetch('/attendance/holiday', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({date:date,name:name})})
+      .then(function(r){return r.json();}).then(function(res){
+        if (res.success) {
+          _holidays.push({id:res.data&&res.data.id, date:date, name:name});
+          renderHolidayList();
+          document.getElementById('ataHolDate').value = '';
+          document.getElementById('ataHolName').value = '';
+          if (_tab==='monthly') ataLoadMonthly(_month);
+        } else alert(res.message || 'Failed');
+      });
+  };
+
+  window.ataDeleteHoliday = function(id) {
+    if (!confirm('Remove this holiday?')) return;
+    fetch('/attendance/holiday', {method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:id})})
+      .then(function(r){return r.json();}).then(function(res){
+        if (res.success) {
+          _holidays = _holidays.filter(function(h){return h.id !== id;});
+          renderHolidayList();
+          if (_tab==='monthly') ataLoadMonthly(_month);
+          else ataLoadDaily(_date);
+        } else alert(res.message || 'Failed');
+      });
+  };
+
+  // ── Initial render ───────────────────────────────────────────────────
+  renderDaily(_dailyLogs, _date);
+  renderMonthly(_calData, _month, _year, _mon, _lastDay);
+  ataSetTab('daily');
+
+})();
+</script>

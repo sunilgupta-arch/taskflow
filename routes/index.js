@@ -176,12 +176,19 @@ router.get('/channel/attachment/:messageId', authenticate, GroupChannelControlle
 // ── Admin Hub (new clean UI for LOCAL_ADMIN / LOCAL_MANAGER) ─
 const AdminHubController = require('../controllers/adminHubController');
 const requireLocalAdmin = requireRoles('LOCAL_ADMIN', 'LOCAL_MANAGER');
-router.get('/admin',          authenticate, requireLocalAdmin, AdminHubController.dashboard);
-router.get('/admin/work',     authenticate, requireLocalAdmin, AdminHubController.work);
-router.get('/admin/team',     authenticate, requireLocalAdmin, AdminHubController.team);
-router.get('/admin/reports',  authenticate, requireLocalAdmin, AdminHubController.reports);
-router.get('/admin/comms',    authenticate, requireLocalAdmin, AdminHubController.comms);
-router.get('/admin/tools',    authenticate, requireLocalAdmin, AdminHubController.tools);
+router.get('/admin',                    authenticate, requireLocalAdmin, AdminHubController.dashboard);
+router.get('/admin/queue',              authenticate, requireLocalAdmin, AdminHubController.queue);
+router.get('/admin/work',               authenticate, requireLocalAdmin, AdminHubController.work);
+router.get('/admin/team',               authenticate, requireLocalAdmin, AdminHubController.team);
+router.get('/admin/users',              authenticate, requireLocalAdmin, AdminHubController.users);
+router.get('/admin/leaves',             authenticate, requireLocalAdmin, AdminHubController.leaves);
+router.get('/admin/attendance',         authenticate, requireLocalAdmin, AdminHubController.attendance);
+router.get('/admin/attendance/data',    authenticate, requireLocalAdmin, AdminHubController.attendanceDailyData);
+router.get('/admin/attendance/monthly', authenticate, requireLocalAdmin, AdminHubController.attendanceMonthlyData);
+router.get('/admin/reports',            authenticate, requireLocalAdmin, AdminHubController.reports);
+router.get('/admin/comms',              authenticate, requireLocalAdmin, AdminHubController.comms);
+router.get('/admin/notes',              authenticate, requireLocalAdmin, AdminHubController.notes);
+router.get('/admin/tools',              authenticate, requireLocalAdmin, AdminHubController.tools);
 
 // ── Client Queue (local team works client-dispatched tasks) ─
 const ClientQueueController = require('../controllers/clientQueueController');

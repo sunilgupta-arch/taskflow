@@ -1,0 +1,615 @@
+<style>
+/* ── Tabs ─────────────────────────────────────────────────── */
+.usr-tabs { display:flex; gap:4px; background:var(--adm-surface); border:1px solid var(--adm-border); border-radius:10px; padding:3px; width:fit-content; }
+.usr-tab  { height:30px; padding:0 16px; border-radius:7px; border:none; background:transparent; color:var(--adm-muted); cursor:pointer; font-size:0.8rem; font-weight:600; font-family:var(--adm-font); transition:all 0.15s; display:inline-flex; align-items:center; gap:6px; }
+.usr-tab.active { background:var(--adm-surface-2); color:var(--adm-text); }
+
+/* ── Topbar ───────────────────────────────────────────────── */
+.usr-topbar { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:14px; }
+.usr-topbar-left { display:flex; align-items:center; gap:10px; }
+.usr-topbar-right { display:flex; align-items:center; gap:8px; }
+.usr-search { height:36px; padding:0 12px 0 34px; border-radius:9px; border:1px solid var(--adm-border); background:var(--adm-surface-2); color:var(--adm-text); font-size:0.82rem; font-family:var(--adm-font); width:220px; }
+.usr-search:focus { outline:none; border-color:#8b5cf6; }
+.usr-search-wrap { position:relative; }
+.usr-search-wrap i { position:absolute; left:10px; top:50%; transform:translateY(-50%); color:var(--adm-muted); font-size:0.8rem; pointer-events:none; }
+.usr-count-pill { font-size:0.72rem; color:var(--adm-muted); font-family:var(--adm-mono); padding:3px 10px; border-radius:20px; border:1px solid var(--adm-border); background:var(--adm-surface); }
+.usr-add-btn { height:36px; padding:0 16px; border-radius:9px; border:none; background:#8b5cf6; color:#fff; font-size:0.82rem; font-weight:600; font-family:var(--adm-font); cursor:pointer; display:inline-flex; align-items:center; gap:6px; transition:background 0.15s; white-space:nowrap; }
+.usr-add-btn:hover { background:#7c3aed; }
+
+/* ── Delegate strip ───────────────────────────────────────── */
+.usr-delegate { display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap; padding:12px 16px; background:var(--adm-surface); border:1px solid var(--adm-border); border-radius:12px; margin-bottom:16px; }
+.usr-delegate-info { display:flex; align-items:center; gap:10px; }
+.usr-delegate-icon { width:34px; height:34px; border-radius:9px; background:rgba(139,92,246,0.12); border:1px solid rgba(139,92,246,0.25); display:flex; align-items:center; justify-content:center; color:#8b5cf6; font-size:0.9rem; flex-shrink:0; }
+.usr-delegate-title { font-size:0.82rem; font-weight:600; color:var(--adm-text-2); }
+.usr-delegate-sub { font-size:0.72rem; color:var(--adm-muted); margin-top:1px; }
+.usr-delegate-controls { display:flex; align-items:center; gap:8px; }
+.usr-delegate-sel { height:34px; padding:0 10px; border-radius:8px; border:1px solid var(--adm-border); background:var(--adm-surface-2); color:var(--adm-text); font-size:0.8rem; font-family:var(--adm-font); min-width:210px; }
+.usr-delegate-sel:focus { outline:none; border-color:#8b5cf6; }
+.usr-delegate-save { height:34px; padding:0 14px; border-radius:8px; border:1px solid rgba(139,92,246,0.35); background:transparent; color:#8b5cf6; font-size:0.8rem; font-weight:600; font-family:var(--adm-font); cursor:pointer; display:inline-flex; align-items:center; gap:5px; transition:all 0.15s; white-space:nowrap; }
+.usr-delegate-save:hover { background:rgba(139,92,246,0.12); }
+
+/* ── Cards grid ───────────────────────────────────────────── */
+.usr-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(310px, 1fr)); gap:12px; }
+
+/* ── User card ────────────────────────────────────────────── */
+.usr-card { background:var(--adm-surface); border:1px solid var(--adm-border); border-radius:14px; padding:16px; display:flex; flex-direction:column; gap:0; transition:border-color 0.15s, box-shadow 0.15s; }
+.usr-card:hover { border-color:var(--adm-border-2); box-shadow:0 4px 20px rgba(0,0,0,0.15); }
+.usr-card.inactive { opacity:0.65; }
+
+/* Card header row */
+.usr-card-head { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }
+.usr-identity   { display:flex; align-items:center; gap:11px; }
+.usr-avatar     { width:40px; height:40px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:0.85rem; font-weight:700; color:#fff; font-family:var(--adm-mono); letter-spacing:-0.5px; }
+.usr-name       { font-size:0.9rem; font-weight:600; color:var(--adm-text); line-height:1.25; }
+.usr-email      { font-size:0.7rem; color:var(--adm-muted); margin-top:2px; }
+.usr-role-badge { display:inline-flex; align-items:center; padding:2px 8px; border-radius:6px; font-size:0.6rem; font-weight:700; font-family:var(--adm-mono); text-transform:uppercase; letter-spacing:0.3px; margin-top:4px; white-space:nowrap; }
+.usr-status-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; margin-top:5px; }
+
+/* Divider */
+.usr-divider { height:1px; background:var(--adm-border); margin:12px 0; }
+
+/* Shift row */
+.usr-shift-row { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+.usr-chip { display:inline-flex; align-items:center; gap:4px; font-size:0.7rem; color:var(--adm-text-2); font-family:var(--adm-mono); background:var(--adm-surface-2); border:1px solid var(--adm-border); border-radius:6px; padding:2px 8px; }
+.usr-chip i { font-size:0.65rem; color:var(--adm-muted); }
+
+/* Action row */
+.usr-btn { height:28px; padding:0 11px; border-radius:7px; border:1px solid var(--adm-border); background:transparent; font-size:0.72rem; font-weight:600; font-family:var(--adm-font); cursor:pointer; transition:all 0.15s; white-space:nowrap; display:inline-flex; align-items:center; gap:4px; color:var(--adm-text-2); }
+.usr-btn:hover { border-color:var(--adm-border-2); color:var(--adm-text); }
+.usr-btn.edit  { color:#8b5cf6; border-color:rgba(139,92,246,0.3); }
+.usr-btn.edit:hover  { background:rgba(139,92,246,0.1); }
+.usr-btn.pwd   { color:#f59e0b; border-color:rgba(245,158,11,0.3); }
+.usr-btn.pwd:hover   { background:rgba(245,158,11,0.1); }
+.usr-btn.deact { color:#ef4444; border-color:rgba(239,68,68,0.3); }
+.usr-btn.deact:hover { background:rgba(239,68,68,0.08); }
+.usr-btn.act   { color:#10b981; border-color:rgba(16,185,129,0.3); }
+.usr-btn.act:hover   { background:rgba(16,185,129,0.08); }
+
+/* ── Visibility toggle ────────────────────────────────────── */
+.usr-actions { display:flex; align-items:center; justify-content:space-between; gap:6px; margin-top:12px; }
+.usr-actions-left { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+.usr-vis-wrap { display:inline-flex; align-items:center; gap:7px; cursor:pointer; user-select:none; }
+.usr-vis-label { font-size:0.68rem; font-weight:600; font-family:var(--adm-mono); color:var(--adm-muted); white-space:nowrap; transition:color 0.2s; }
+.usr-vis-wrap.on .usr-vis-label { color:#06b6d4; }
+.usr-toggle { position:relative; width:32px; height:18px; flex-shrink:0; }
+.usr-toggle input { opacity:0; width:0; height:0; position:absolute; }
+.usr-toggle-track { position:absolute; inset:0; border-radius:9px; background:var(--adm-border); border:1px solid var(--adm-border); transition:all 0.2s; }
+.usr-toggle input:checked ~ .usr-toggle-track { background:rgba(6,182,212,0.2); border-color:#06b6d4; }
+.usr-toggle-thumb { position:absolute; top:2px; left:2px; width:12px; height:12px; border-radius:50%; background:var(--adm-muted); transition:all 0.2s; }
+.usr-toggle input:checked ~ .usr-toggle-thumb { left:16px; background:#06b6d4; box-shadow:0 0 5px rgba(6,182,212,0.5); }
+
+/* ── Client org section ───────────────────────────────────── */
+.usr-org-section { margin-bottom:24px; }
+.usr-org-header  { display:flex; align-items:center; gap:10px; margin-bottom:12px; }
+.usr-org-pill    { display:inline-flex; align-items:center; gap:7px; padding:5px 14px; border-radius:8px; background:rgba(0,212,255,0.07); border:1px solid rgba(0,212,255,0.18); color:#00d4ff; font-size:0.75rem; font-weight:700; font-family:var(--adm-mono); }
+.usr-org-sub     { font-size:0.72rem; color:var(--adm-muted); }
+
+/* ── Empty state ──────────────────────────────────────────── */
+.usr-empty { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:56px 20px; color:var(--adm-muted); text-align:center; }
+.usr-empty i { font-size:2.5rem; margin-bottom:10px; opacity:0.25; }
+.usr-empty p { font-size:0.85rem; }
+
+/* ── Modals ───────────────────────────────────────────────── */
+.usr-modal-bg { position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:1050; display:flex; align-items:center; justify-content:center; backdrop-filter:blur(4px); padding:16px; }
+.usr-modal { background:var(--adm-surface,#0e1d30); border:1px solid var(--adm-border,#1a3050); border-radius:16px; padding:26px; width:500px; max-width:100%; max-height:90vh; overflow-y:auto; box-shadow:0 24px 70px rgba(0,0,0,0.55); }
+.usr-modal-sm { width:420px; }
+.usr-modal-title { font-family:var(--adm-mono); font-size:0.95rem; font-weight:700; color:var(--adm-text,#dceaf8); margin-bottom:20px; display:flex; align-items:center; gap:9px; }
+.usr-modal label { display:block; font-size:0.67rem; color:var(--adm-muted,#445e78); font-family:var(--adm-mono); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:5px; }
+.usr-modal input[type=text], .usr-modal input[type=email],
+.usr-modal input[type=password], .usr-modal input[type=time],
+.usr-modal input[type=number], .usr-modal select {
+  width:100%; border-radius:9px; padding:9px 12px;
+  background:var(--adm-surface-2,#132540); border:1px solid var(--adm-border,#1a3050);
+  color:var(--adm-text,#dceaf8); font-size:0.85rem; font-family:var(--adm-font,sans-serif);
+  box-sizing:border-box; margin-bottom:14px;
+}
+.usr-modal input:focus, .usr-modal select:focus { outline:none; border-color:#8b5cf6; }
+.usr-modal-2col { display:grid; grid-template-columns:1fr 1fr; gap:0 14px; }
+.usr-modal-3col { display:grid; grid-template-columns:1fr 1fr 1fr; gap:0 14px; }
+.usr-modal-footer { display:flex; gap:8px; justify-content:flex-end; margin-top:8px; padding-top:6px; border-top:1px solid var(--adm-border,#1a3050); }
+.usr-mbt { height:36px; padding:0 18px; border-radius:9px; cursor:pointer; font-size:0.82rem; font-weight:600; font-family:var(--adm-font,sans-serif); border:1px solid var(--adm-border,#1a3050); transition:all 0.15s; display:inline-flex; align-items:center; gap:6px; }
+.usr-mbt.save   { background:#8b5cf6; color:#fff; border-color:#8b5cf6; }
+.usr-mbt.save:hover   { background:#7c3aed; }
+.usr-mbt.warn   { background:#f59e0b; color:#000; border-color:#f59e0b; }
+.usr-mbt.warn:hover   { background:#d97706; }
+.usr-mbt.cancel { background:transparent; color:var(--adm-text-2,#a8c0d8); }
+.usr-mbt.cancel:hover { border-color:var(--adm-border-2,#1e3860); }
+</style>
+
+<!-- ── Create / Edit Modal ───────────────────────────────────────────── -->
+<div id="usrModal" class="usr-modal-bg" style="display:none">
+  <div class="usr-modal">
+    <div class="usr-modal-title"><i class="bi bi-person-gear"></i><span id="usrModalTitle">Add Member</span></div>
+    <input type="hidden" id="usrEditId">
+    <label>Full Name *</label>
+    <input type="text" id="usrName" placeholder="Full name">
+    <label>Email *</label>
+    <input type="email" id="usrEmail" placeholder="email@example.com">
+    <div id="usrPwdWrap">
+      <label>Password *</label>
+      <input type="password" id="usrPassword" placeholder="Min 6 characters">
+    </div>
+    <div class="usr-modal-2col">
+      <div>
+        <label>Organization *</label>
+        <select id="usrOrgId" onchange="usrFilterRoles()"></select>
+      </div>
+      <div>
+        <label>Role *</label>
+        <select id="usrRoleId" onchange="usrToggleShift()"></select>
+      </div>
+    </div>
+    <div id="usrShiftWrap">
+      <div class="usr-modal-3col">
+        <div>
+          <label>Weekly Off</label>
+          <select id="usrWeeklyOff">
+            <% ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'].forEach(d => { %><option><%= d %></option><% }) %>
+          </select>
+        </div>
+        <div>
+          <label>Shift Start</label>
+          <input type="time" id="usrShiftStart" value="10:00">
+        </div>
+        <div>
+          <label>Shift Hours</label>
+          <input type="number" id="usrShiftHours" value="8.5" min="1" max="24" step="0.5">
+        </div>
+      </div>
+    </div>
+    <div class="usr-modal-footer">
+      <button class="usr-mbt cancel" onclick="usrCloseModal()">Cancel</button>
+      <button class="usr-mbt save"   onclick="usrSubmit()"><i class="bi bi-check-lg"></i><span id="usrSaveLbl">Create</span></button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Reset Password Modal ──────────────────────────────────────────── -->
+<div id="usrPwdModal" class="usr-modal-bg" style="display:none">
+  <div class="usr-modal usr-modal-sm">
+    <div class="usr-modal-title"><i class="bi bi-key" style="color:#f59e0b"></i> Reset Password</div>
+    <p style="font-size:0.78rem;color:var(--adm-muted);margin-bottom:16px">Resetting password for <strong id="usrPwdName" style="color:var(--adm-text-2)"></strong></p>
+    <input type="hidden" id="usrPwdId">
+    <label>New Password *</label>
+    <input type="password" id="usrPwdNew" placeholder="Min 6 characters">
+    <label>Confirm Password *</label>
+    <input type="password" id="usrPwdConfirm" placeholder="Re-enter password">
+    <div class="usr-modal-footer">
+      <button class="usr-mbt cancel" onclick="document.getElementById('usrPwdModal').style.display='none'">Cancel</button>
+      <button class="usr-mbt warn"   onclick="usrSubmitPwd()"><i class="bi bi-check-lg"></i> Reset</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Page top bar ──────────────────────────────────────────────────── -->
+<div class="usr-topbar">
+  <div class="usr-topbar-left">
+    <div class="usr-tabs">
+      <button class="usr-tab active" id="usrTabLocal"  onclick="usrSetTab('local')"><i class="bi bi-people-fill"></i> Local Team</button>
+      <button class="usr-tab"        id="usrTabClient" onclick="usrSetTab('client')"><i class="bi bi-briefcase"></i> Client Users</button>
+    </div>
+    <span class="usr-count-pill" id="usrCountPill">—</span>
+  </div>
+  <div class="usr-topbar-right">
+    <div class="usr-search-wrap">
+      <i class="bi bi-search"></i>
+      <input class="usr-search" type="text" id="usrSearch" placeholder="Search…" oninput="usrRender()">
+    </div>
+    <button class="usr-add-btn" id="usrAddBtn" onclick="usrOpenCreate()">
+      <i class="bi bi-person-plus"></i><span id="usrAddLbl">Add Member</span>
+    </button>
+  </div>
+</div>
+
+<!-- ── Delegate support strip (admin, local tab only) ───────────────── -->
+<% if (user.role_name === 'LOCAL_ADMIN') { %>
+<div id="usrDelegateStrip" class="usr-delegate">
+  <div class="usr-delegate-info">
+    <div class="usr-delegate-icon"><i class="bi bi-headset"></i></div>
+    <div>
+      <div class="usr-delegate-title">Portal Support Delegation</div>
+      <div class="usr-delegate-sub">You are the <strong style="color:var(--adm-text-2)">Primary</strong> support contact in the client portal. Optionally assign a Secondary delegate.</div>
+    </div>
+  </div>
+  <div class="usr-delegate-controls">
+    <select class="usr-delegate-sel" id="usrDelegateSel">
+      <option value="">— No secondary support —</option>
+      <% users.filter(u => u.org_type === 'LOCAL' && u.role_name !== 'LOCAL_ADMIN' && u.is_active).forEach(u => { %>
+        <option value="<%= u.id %>" <%= delegatedSupportId === u.id ? 'selected' : '' %>><%= u.name %> (<%= u.role_name.replace('LOCAL_','') %>)</option>
+      <% }) %>
+    </select>
+    <button class="usr-delegate-save" onclick="usrSaveDelegate()"><i class="bi bi-check-lg"></i> Save</button>
+  </div>
+</div>
+<% } %>
+
+<!-- ── Content areas ─────────────────────────────────────────────────── -->
+<div id="usrLocalArea"></div>
+<div id="usrClientArea" style="display:none"></div>
+
+<script>
+(function () {
+  // Teleport modals
+  ['usrModal','usrPwdModal'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) document.body.appendChild(el);
+  });
+
+  // Bootstrap data
+  var _d = <%- JSON.stringify({
+    users:     users,
+    roles:     roles,
+    orgs:      orgs,
+    isAdmin:   user.role_name === 'LOCAL_ADMIN',
+    isMgr:     user.role_name === 'LOCAL_MANAGER'
+  }).replace(/<\//g, '<\\/') %>;
+
+  var _users   = _d.users;
+  var _roles   = _d.roles;
+  var _orgs    = _d.orgs;
+  var _isAdmin = _d.isAdmin;
+  var _isMgr   = _d.isMgr;
+  var _tab     = 'local';
+
+  var roleMap = {}, orgMap = {};
+  _roles.forEach(function(r) { roleMap[r.id] = r.name; });
+  _orgs.forEach(function(o)  { orgMap[o.id]  = { name: o.name, type: o.org_type }; });
+
+  // ── Helpers ──────────────────────────────────────────────────────────
+  function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+  function avatarColor(name) {
+    var c = ['#3b82f6','#8b5cf6','#10b981','#f59e0b','#ef4444','#06b6d4','#f97316','#a78bfa','#ec4899'];
+    var i = 0; for (var ch of (name||'?')) i = (i + ch.charCodeAt(0)) % c.length;
+    return c[i];
+  }
+
+  function initials(name) {
+    return (name||'?').split(' ').map(function(w){return w.charAt(0);}).slice(0,2).join('').toUpperCase();
+  }
+
+  function shiftEnd(start, hours) {
+    if (!start) return '—';
+    var p = String(start).split(':');
+    var m = parseInt(p[0])*60 + parseInt(p[1]) + Math.round(parseFloat(hours||8.5)*60);
+    return String(Math.floor(m/60)%24).padStart(2,'0')+':'+String(m%60).padStart(2,'0');
+  }
+
+  function roleBadgeStyle(r) {
+    if (r === 'LOCAL_ADMIN')    return 'background:rgba(139,92,246,0.15);color:#8b5cf6;border:1px solid rgba(139,92,246,0.3)';
+    if (r === 'LOCAL_MANAGER')  return 'background:rgba(59,130,246,0.15);color:#3b82f6;border:1px solid rgba(59,130,246,0.3)';
+    if (r === 'LOCAL_USER')     return 'background:rgba(16,185,129,0.12);color:#10b981;border:1px solid rgba(16,185,129,0.3)';
+    if (r === 'CLIENT_ADMIN')   return 'background:rgba(0,212,255,0.12);color:#00d4ff;border:1px solid rgba(0,212,255,0.3)';
+    if (r === 'CLIENT_MANAGER') return 'background:rgba(249,115,22,0.12);color:#f97316;border:1px solid rgba(249,115,22,0.3)';
+    if (r === 'CLIENT_SALES')   return 'background:rgba(236,72,153,0.12);color:#ec4899;border:1px solid rgba(236,72,153,0.3)';
+    return 'background:rgba(0,212,255,0.07);color:#67e8f9;border:1px solid rgba(0,212,255,0.2)';
+  }
+
+  function roleShortName(r) {
+    return r.replace('LOCAL_','').replace('CLIENT_','');
+  }
+
+  // ── Render one card ───────────────────────────────────────────────────
+  function renderCard(u) {
+    var color    = avatarColor(u.name);
+    var inits    = initials(u.name);
+    var roleName = u.role_name || roleMap[u.role_id] || '—';
+    var isLocal  = u.org_type === 'LOCAL';
+
+    // Shift info for local workers
+    var shiftHtml = '';
+    if (isLocal && ['LOCAL_USER','LOCAL_MANAGER'].includes(roleName)) {
+      var ss = u.shift_start ? String(u.shift_start).slice(0,5) : '10:00';
+      var se = shiftEnd(u.shift_start, u.shift_hours);
+      var sh = parseFloat(u.shift_hours || 8.5);
+      shiftHtml = '<div class="usr-divider"></div>'
+        +'<div class="usr-shift-row">'
+        +'<span class="usr-chip"><i class="bi bi-clock"></i>'+esc(ss)+'–'+esc(se)+'</span>'
+        +'<span class="usr-chip"><i class="bi bi-hourglass-split"></i>'+sh+'h</span>'
+        +'<span class="usr-chip"><i class="bi bi-calendar-x"></i>'+(u.weekly_off_day||'Sun').slice(0,3)+'</span>'
+        +'</div>';
+    }
+
+    // Actions
+    var actHtml = '';
+    if (_isAdmin) {
+      var toggleBtn = u.is_active
+        ? '<button class="usr-btn deact" onclick="usrToggle('+u.id+')" title="Deactivate"><i class="bi bi-person-slash"></i></button>'
+        : '<button class="usr-btn act"   onclick="usrToggle('+u.id+')" title="Activate"><i class="bi bi-person-check"></i></button>';
+      var isVisible = u.visible_to_client !== 0;
+      var visToggle = isLocal
+        ? '<label class="usr-vis-wrap'+(isVisible?' on':'')+'" id="usrVisWrap'+u.id+'" title="'+(isVisible?'Visible to clients':'Hidden from clients')+'">'
+            +'<span class="usr-vis-label">'+(isVisible?'Visible':'Hidden')+'</span>'
+            +'<span class="usr-toggle">'
+              +'<input type="checkbox"'+(isVisible?' checked':'')+' onchange="usrSetVisible('+u.id+', this.checked)">'
+              +'<span class="usr-toggle-track"></span>'
+              +'<span class="usr-toggle-thumb"></span>'
+            +'</span>'
+          +'</label>'
+        : '';
+      actHtml = '<div class="usr-actions">'
+        +'<div class="usr-actions-left">'
+          +'<button class="usr-btn edit" onclick="usrOpenEdit('+u.id+')"><i class="bi bi-pencil"></i> Edit</button>'
+          +'<button class="usr-btn pwd"  onclick="usrOpenPwd('+u.id+',\''+esc(u.name)+'\')"><i class="bi bi-key"></i> Pwd</button>'
+          +toggleBtn
+        +'</div>'
+        +visToggle
+        +'</div>';
+    }
+
+    return '<div class="usr-card'+(u.is_active?'':' inactive')+'">'
+      +'<div class="usr-card-head">'
+        +'<div class="usr-identity">'
+          +'<div class="usr-avatar" style="background:'+color+'">'+inits+'</div>'
+          +'<div>'
+            +'<div class="usr-name">'+esc(u.name)+'</div>'
+            +'<div class="usr-email">'+esc(u.email)+'</div>'
+            +'<span class="usr-role-badge" style="'+roleBadgeStyle(roleName)+'">'+roleShortName(roleName)+'</span>'
+          +'</div>'
+        +'</div>'
+        +'<div class="usr-status-dot" style="background:'+(u.is_active?'#10b981':'#ef4444')+';box-shadow:0 0 5px '+(u.is_active?'#10b981':'#ef4444')+'88" title="'+(u.is_active?'Active':'Inactive')+'"></div>'
+      +'</div>'
+      +shiftHtml
+      +actHtml
+      +'</div>';
+  }
+
+  // ── Render ────────────────────────────────────────────────────────────
+  window.usrRender = function() {
+    var q = (document.getElementById('usrSearch').value || '').toLowerCase();
+    var filtered = _users.filter(function(u) {
+      if (_tab === 'local'  && u.org_type !== 'LOCAL')  return false;
+      if (_tab === 'client' && u.org_type !== 'CLIENT') return false;
+      if (q) return (u.name||'').toLowerCase().includes(q) || (u.email||'').toLowerCase().includes(q) || (u.role_name||'').toLowerCase().includes(q);
+      return true;
+    });
+
+    document.getElementById('usrCountPill').textContent = filtered.length + ' user' + (filtered.length !== 1 ? 's' : '');
+
+    if (_tab === 'local') {
+      var area = document.getElementById('usrLocalArea');
+      if (!filtered.length) {
+        area.innerHTML = '<div class="usr-empty"><i class="bi bi-people"></i><p>No team members found</p></div>';
+        return;
+      }
+      // Sort: admin first, then managers, then users; active before inactive
+      filtered.sort(function(a,b) {
+        var order = {LOCAL_ADMIN:0,LOCAL_MANAGER:1,LOCAL_USER:2};
+        var ao = order[a.role_name]||3, bo = order[b.role_name]||3;
+        if (ao !== bo) return ao - bo;
+        if (b.is_active !== a.is_active) return b.is_active - a.is_active;
+        return (a.name||'').localeCompare(b.name||'');
+      });
+      area.innerHTML = '<div class="usr-grid">'+filtered.map(renderCard).join('')+'</div>';
+
+    } else {
+      var area = document.getElementById('usrClientArea');
+      if (!filtered.length) {
+        area.innerHTML = '<div class="usr-empty"><i class="bi bi-briefcase"></i><p>No client users found</p></div>';
+        return;
+      }
+      // Group by org
+      var groups = {};
+      filtered.forEach(function(u) {
+        var k = u.org_name || 'Unknown';
+        if (!groups[k]) groups[k] = [];
+        groups[k].push(u);
+      });
+      var html = '';
+      Object.keys(groups).sort().forEach(function(orgName) {
+        var members = groups[orgName];
+        members.sort(function(a,b){ return (a.name||'').localeCompare(b.name||''); });
+        html += '<div class="usr-org-section">'
+          +'<div class="usr-org-header">'
+            +'<span class="usr-org-pill"><i class="bi bi-briefcase"></i>'+esc(orgName)+'</span>'
+            +'<span class="usr-org-sub">'+members.length+' user'+(members.length!==1?'s':'')+'</span>'
+          +'</div>'
+          +'<div class="usr-grid">'+members.map(renderCard).join('')+'</div>'
+          +'</div>';
+      });
+      area.innerHTML = html;
+    }
+  };
+
+  // ── Tab switch ────────────────────────────────────────────────────────
+  window.usrSetTab = function(tab) {
+    _tab = tab;
+    document.getElementById('usrTabLocal').classList.toggle('active', tab === 'local');
+    document.getElementById('usrTabClient').classList.toggle('active', tab === 'client');
+    document.getElementById('usrLocalArea').style.display  = tab === 'local'  ? '' : 'none';
+    document.getElementById('usrClientArea').style.display = tab === 'client' ? '' : 'none';
+    var strip = document.getElementById('usrDelegateStrip');
+    if (strip) strip.style.display = tab === 'local' ? '' : 'none';
+    // Hide Add button on client tab for managers (they can't create client users)
+    var addBtn = document.getElementById('usrAddBtn');
+    if (addBtn) addBtn.style.display = (_isAdmin || tab === 'local') ? '' : 'none';
+    document.getElementById('usrAddLbl').textContent = tab === 'local' ? 'Add Member' : 'Add Client User';
+    document.getElementById('usrSearch').value = '';
+    usrRender();
+  };
+
+  // ── Modal: org + role selects ─────────────────────────────────────────
+  function populateOrgSelect(selectedId) {
+    var sel = document.getElementById('usrOrgId');
+    sel.innerHTML = '';
+    _orgs.forEach(function(o) {
+      if (_isMgr && o.org_type !== 'LOCAL') return;
+      var opt = document.createElement('option');
+      opt.value = o.id; opt.textContent = o.name + ' (' + o.org_type + ')';
+      if (o.id == selectedId) opt.selected = true;
+      sel.appendChild(opt);
+    });
+    usrFilterRoles();
+  }
+
+  window.usrFilterRoles = function() {
+    var orgId   = document.getElementById('usrOrgId').value;
+    var orgType = orgMap[orgId] ? orgMap[orgId].type : '';
+    var sel     = document.getElementById('usrRoleId');
+    var prev    = sel.value;
+    sel.innerHTML = '';
+    _roles.forEach(function(r) {
+      if (_isMgr && r.name !== 'LOCAL_USER') return;
+      if (orgType === 'LOCAL'  && !r.name.startsWith('LOCAL_'))  return;
+      if (orgType === 'CLIENT' && !r.name.startsWith('CLIENT_')) return;
+      var opt = document.createElement('option');
+      opt.value = r.id; opt.textContent = r.name;
+      if (r.id == prev) opt.selected = true;
+      sel.appendChild(opt);
+    });
+    usrToggleShift();
+  };
+
+  window.usrToggleShift = function() {
+    var roleId   = document.getElementById('usrRoleId').value;
+    var roleName = roleMap[roleId] || '';
+    document.getElementById('usrShiftWrap').style.display = ['LOCAL_USER','LOCAL_MANAGER'].includes(roleName) ? '' : 'none';
+  };
+
+  // ── Open create ───────────────────────────────────────────────────────
+  window.usrOpenCreate = function() {
+    document.getElementById('usrModalTitle').textContent = _tab === 'local' ? 'Add Team Member' : 'Add Client User';
+    document.getElementById('usrSaveLbl').textContent    = 'Create';
+    document.getElementById('usrEditId').value  = '';
+    document.getElementById('usrName').value    = '';
+    document.getElementById('usrEmail').value   = '';
+    document.getElementById('usrPassword').value = '';
+    document.getElementById('usrPwdWrap').style.display = '';
+    document.getElementById('usrShiftStart').value  = '10:00';
+    document.getElementById('usrShiftHours').value  = '8.5';
+    document.getElementById('usrWeeklyOff').value   = 'Sunday';
+    var defaultOrg = _orgs.find(function(o){ return _tab === 'local' ? o.org_type === 'LOCAL' : o.org_type === 'CLIENT'; });
+    populateOrgSelect(defaultOrg ? defaultOrg.id : (_orgs[0]||{}).id);
+    document.getElementById('usrModal').style.display = 'flex';
+  };
+
+  // ── Open edit ─────────────────────────────────────────────────────────
+  window.usrOpenEdit = function(userId) {
+    var u = _users.find(function(x){ return x.id === userId; });
+    if (!u) return;
+    document.getElementById('usrModalTitle').textContent = 'Edit User';
+    document.getElementById('usrSaveLbl').textContent    = 'Update';
+    document.getElementById('usrEditId').value  = u.id;
+    document.getElementById('usrName').value    = u.name;
+    document.getElementById('usrEmail').value   = u.email;
+    document.getElementById('usrPassword').value = '';
+    document.getElementById('usrPwdWrap').style.display = 'none';
+    populateOrgSelect(u.organization_id);
+    document.getElementById('usrRoleId').value      = u.role_id;
+    document.getElementById('usrShiftStart').value  = u.shift_start ? String(u.shift_start).slice(0,5) : '10:00';
+    document.getElementById('usrShiftHours').value  = u.shift_hours || 8.5;
+    document.getElementById('usrWeeklyOff').value   = u.weekly_off_day || 'Sunday';
+    usrToggleShift();
+    document.getElementById('usrModal').style.display = 'flex';
+  };
+
+  window.usrCloseModal = function() { document.getElementById('usrModal').style.display = 'none'; };
+
+  // ── Submit create/edit ────────────────────────────────────────────────
+  window.usrSubmit = function() {
+    var id  = document.getElementById('usrEditId').value;
+    var pwd = document.getElementById('usrPassword').value;
+    var data = {
+      name:            document.getElementById('usrName').value.trim(),
+      email:           document.getElementById('usrEmail').value.trim(),
+      organization_id: document.getElementById('usrOrgId').value,
+      role_id:         document.getElementById('usrRoleId').value,
+      weekly_off_day:  document.getElementById('usrWeeklyOff').value,
+      shift_start:     document.getElementById('usrShiftStart').value,
+      shift_hours:     document.getElementById('usrShiftHours').value
+    };
+    if (!id) data.password = pwd;
+    if (!data.name)  { alert('Name is required.'); return; }
+    if (!data.email) { alert('Email is required.'); return; }
+    if (!id && (!pwd || pwd.length < 6)) { alert('Password must be at least 6 characters.'); return; }
+    var url = id ? '/users/'+id : '/users';
+    fetch(url, { method: id ? 'PUT' : 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(data) })
+      .then(function(r){ return r.json(); })
+      .then(function(res) {
+        if (res.success) { usrCloseModal(); location.reload(); }
+        else alert(res.message || 'Error saving user');
+      })
+      .catch(function() { alert('Network error'); });
+  };
+
+  // ── Toggle active ─────────────────────────────────────────────────────
+  window.usrToggle = function(userId) {
+    var u      = _users.find(function(x){ return x.id === userId; });
+    var action = (u && u.is_active) ? 'deactivate' : 'activate';
+    if (!confirm('Are you sure you want to ' + action + ' this user?')) return;
+    fetch('/users/'+userId+'/toggle', { method: 'PATCH' })
+      .then(function(r){ return r.json(); })
+      .then(function(res){ if (res.success) location.reload(); else alert(res.message || 'Error'); });
+  };
+
+  // ── Reset password ────────────────────────────────────────────────────
+  window.usrOpenPwd = function(userId, name) {
+    document.getElementById('usrPwdId').value = userId;
+    document.getElementById('usrPwdName').textContent = name;
+    document.getElementById('usrPwdNew').value = '';
+    document.getElementById('usrPwdConfirm').value = '';
+    document.getElementById('usrPwdModal').style.display = 'flex';
+  };
+
+  window.usrSubmitPwd = function() {
+    var id   = document.getElementById('usrPwdId').value;
+    var pwd  = document.getElementById('usrPwdNew').value;
+    var conf = document.getElementById('usrPwdConfirm').value;
+    if (!pwd || pwd.length < 6) { alert('Password must be at least 6 characters.'); return; }
+    if (pwd !== conf) { alert('Passwords do not match.'); return; }
+    fetch('/users/'+id+'/reset-password', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({password:pwd}) })
+      .then(function(r){ return r.json(); })
+      .then(function(res) {
+        if (res.success) { document.getElementById('usrPwdModal').style.display = 'none'; alert('Password reset successfully.'); }
+        else alert(res.message || 'Error');
+      });
+  };
+
+  // ── Delegate support ──────────────────────────────────────────────────
+  window.usrSaveDelegate = function() {
+    var sel = document.getElementById('usrDelegateSel');
+    if (!sel) return;
+    var userId = sel.value ? parseInt(sel.value) : null;
+    fetch('/users/delegate-support', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({user_id: userId}) })
+      .then(function(r){ return r.json(); })
+      .then(function(res) {
+        if (res.success) {
+          var btn = document.querySelector('.usr-delegate-save');
+          if (btn) { btn.innerHTML = '<i class="bi bi-check2-circle"></i> Saved'; setTimeout(function(){ btn.innerHTML = '<i class="bi bi-check-lg"></i> Save'; }, 1800); }
+        } else { alert('Failed to update delegate'); }
+      });
+  };
+
+  // ── Visibility toggle ─────────────────────────────────────────────────
+  window.usrSetVisible = function(userId, visible) {
+    fetch('/users/'+userId, {
+      method: 'PUT',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ visible_to_client: visible ? 1 : 0 })
+    }).then(function(r){ return r.json(); }).then(function(res) {
+      if (res.success) {
+        // Update local data
+        var u = _users.find(function(x){ return x.id === userId; });
+        if (u) u.visible_to_client = visible ? 1 : 0;
+        // Update the wrap class + label without full re-render
+        var wrap = document.getElementById('usrVisWrap'+userId);
+        if (wrap) {
+          wrap.classList.toggle('on', visible);
+          wrap.querySelector('.usr-vis-label').textContent = visible ? 'Visible' : 'Hidden';
+          wrap.title = visible ? 'Visible to clients' : 'Hidden from clients';
+        }
+      } else {
+        alert(res.message || 'Failed to update visibility');
+        // Revert checkbox
+        var wrap = document.getElementById('usrVisWrap'+userId);
+        if (wrap) { var cb = wrap.querySelector('input'); if (cb) cb.checked = !visible; }
+      }
+    }).catch(function() {
+      alert('Network error');
+    });
+  };
+
+  // ── Initial render ────────────────────────────────────────────────────
+  usrSetTab('local');
+})();
+</script>
