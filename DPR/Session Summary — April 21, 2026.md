@@ -94,3 +94,32 @@ Restructured Edit Request modal from single-column scroll to two-column no-scrol
 - `portal/routes/portal.js`
 - `routes/index.js`
 - `views/layouts/main.ejs`
+
+## New Admin UI — Clean Hub Layout for LOCAL_ADMIN & LOCAL_MANAGER
+**Context:** Local admin found the existing UI too cluttered. Client approved the new design after preview.
+
+**Approach:** Parallel UI at `/admin/*` — existing routes untouched. Hub pages link to existing feature URLs for now. Once all pages are migrated, the new UI becomes default and the old one is retired.
+
+**What was built:**
+- `controllers/adminHubController.js` — 6 render methods (dashboard, work, team, reports, comms, tools)
+- `views/admin/layout.ejs` — self-contained layout: clean 240px sidebar with brand mark, 6 section nav items (each with per-section active colour), user footer with "Classic UI" + "Sign out" buttons; minimal sticky topbar with clock + theme toggle; no Group Channel panel, no widgets
+- `views/admin/dashboard.ejs` — personalised welcome strip (greeting + date) + 5 large section navigation cards
+- `views/admin/work.ejs` — Task Board, All Tasks, Client Queue, My Tasks, Create Task
+- `views/admin/team.ejs` — Live Status, Users, Attendance, Leave Management
+- `views/admin/reports.ejs` — Overview, Task Report, Overdue, Workload, Punctuality, Rewards
+- `views/admin/comms.ejs` — Group Channel, Info Board, Notes
+- `views/admin/tools.ejs` — Drive, Help, Backup (Backup visible to LOCAL_ADMIN only)
+
+**Routes:** `GET /admin[/work|/team|/reports|/comms|/tools]` — all gated via `requireRoles('LOCAL_ADMIN','LOCAL_MANAGER')`
+
+**Entry point:** "✨ Try New Admin UI" button added above the sidebar footer in the existing `main.ejs` layout, visible only to LOCAL_ADMIN and LOCAL_MANAGER
+
+**Summary of new files:**
+- `controllers/adminHubController.js`
+- `views/admin/layout.ejs`
+- `views/admin/dashboard.ejs`
+- `views/admin/work.ejs`
+- `views/admin/team.ejs`
+- `views/admin/reports.ejs`
+- `views/admin/comms.ejs`
+- `views/admin/tools.ejs`

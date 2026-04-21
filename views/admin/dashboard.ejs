@@ -1,0 +1,73 @@
+<%
+  var now = new Date();
+  var hour = now.getHours();
+  var greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+  var dayStr = now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+  var dayNum = now.getDate();
+%>
+
+<div class="adm-welcome">
+  <div>
+    <div class="adm-welcome-greeting"><%= greeting %></div>
+    <div class="adm-welcome-name"><%= user.name %></div>
+    <div class="adm-welcome-role"><%= user.role_name.replace('LOCAL_','') %> — <%= user.org_name %></div>
+  </div>
+  <div class="adm-welcome-date">
+    <div class="adm-welcome-day"><%= dayNum %></div>
+    <div class="adm-welcome-date-label"><%= now.toLocaleDateString('en-US', { weekday: 'short', month: 'short', year: 'numeric' }) %></div>
+  </div>
+</div>
+
+<div class="adm-hub-header">
+  <div class="adm-hub-title">What would you like to do?</div>
+  <div class="adm-hub-sub">Select a section to get started</div>
+</div>
+
+<div class="adm-section-cards">
+
+  <a href="/admin/work" class="adm-section-card" style="--card-accent:#3b82f6;--card-rgb:59,130,246">
+    <div class="adm-section-card-icon"><i class="bi bi-kanban"></i></div>
+    <div>
+      <div class="adm-section-card-title">Work</div>
+      <div class="adm-section-card-desc">Task board, client queue, create and manage all team work</div>
+    </div>
+    <i class="bi bi-chevron-right adm-section-card-arrow"></i>
+  </a>
+
+  <a href="/admin/team" class="adm-section-card" style="--card-accent:#8b5cf6;--card-rgb:139,92,246">
+    <div class="adm-section-card-icon"><i class="bi bi-people-fill"></i></div>
+    <div>
+      <div class="adm-section-card-title">Team</div>
+      <div class="adm-section-card-desc">Live status, users, attendance tracking and leave management</div>
+    </div>
+    <i class="bi bi-chevron-right adm-section-card-arrow"></i>
+  </a>
+
+  <a href="/admin/reports" class="adm-section-card" style="--card-accent:#f97316;--card-rgb:249,115,22">
+    <div class="adm-section-card-icon"><i class="bi bi-bar-chart-fill"></i></div>
+    <div>
+      <div class="adm-section-card-title">Reports</div>
+      <div class="adm-section-card-desc">Task completion, overdue work, workload, punctuality and rewards</div>
+    </div>
+    <i class="bi bi-chevron-right adm-section-card-arrow"></i>
+  </a>
+
+  <a href="/admin/comms" class="adm-section-card" style="--card-accent:#10b981;--card-rgb:16,185,129">
+    <div class="adm-section-card-icon"><i class="bi bi-chat-dots-fill"></i></div>
+    <div>
+      <div class="adm-section-card-title">Communications</div>
+      <div class="adm-section-card-desc">Group channel, info board announcements and team notes</div>
+    </div>
+    <i class="bi bi-chevron-right adm-section-card-arrow"></i>
+  </a>
+
+  <a href="/admin/tools" class="adm-section-card" style="--card-accent:#64748b;--card-rgb:100,116,139">
+    <div class="adm-section-card-icon"><i class="bi bi-tools"></i></div>
+    <div>
+      <div class="adm-section-card-title">Tools</div>
+      <div class="adm-section-card-desc">Google Drive integration, help center and system backup</div>
+    </div>
+    <i class="bi bi-chevron-right adm-section-card-arrow"></i>
+  </a>
+
+</div>

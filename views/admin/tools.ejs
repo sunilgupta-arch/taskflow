@@ -1,0 +1,40 @@
+<div class="adm-hub-header">
+  <div class="adm-section-pill" style="background:rgba(100,116,139,0.1);color:#94a3b8;border:1px solid rgba(100,116,139,0.2)">
+    <i class="bi bi-tools"></i> Tools
+  </div>
+  <h1 class="adm-hub-title">Tools</h1>
+  <p class="adm-hub-sub">Utilities and integrations to support your team's day-to-day operations</p>
+</div>
+
+<div class="adm-cards">
+
+  <a href="/drive" class="adm-card" style="--card-accent:#3b82f6;--card-rgb:59,130,246">
+    <div class="adm-card-icon"><i class="bi bi-cloud-arrow-up"></i></div>
+    <div class="adm-card-body">
+      <div class="adm-card-title">Google Drive</div>
+      <div class="adm-card-desc">Upload and manage files in your connected Google Drive — share with clients directly</div>
+    </div>
+    <div class="adm-card-footer"><span>Open Drive</span><i class="bi bi-arrow-right"></i></div>
+  </a>
+
+  <a href="/help" class="adm-card" style="--card-accent:#64748b;--card-rgb:100,116,139">
+    <div class="adm-card-icon"><i class="bi bi-question-circle"></i></div>
+    <div class="adm-card-body">
+      <div class="adm-card-title">Help Center</div>
+      <div class="adm-card-desc">Guides, documentation, and FAQs to help your team use TaskFlow effectively</div>
+    </div>
+    <div class="adm-card-footer"><span>View Help</span><i class="bi bi-arrow-right"></i></div>
+  </a>
+
+  <% if (user.role_name === 'LOCAL_ADMIN') { %>
+  <a href="/backup" class="adm-card" style="--card-accent:#f97316;--card-rgb:249,115,22">
+    <div class="adm-card-icon"><i class="bi bi-arrow-counterclockwise"></i></div>
+    <div class="adm-card-body">
+      <div class="adm-card-title">Backup</div>
+      <div class="adm-card-desc">Create and manage database backups — admin only access for system data safety</div>
+    </div>
+    <div class="adm-card-footer"><span>Manage Backups</span><i class="bi bi-arrow-right"></i></div>
+  </a>
+  <% } %>
+
+</div>

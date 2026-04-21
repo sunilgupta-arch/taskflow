@@ -173,6 +173,16 @@ router.get('/channel/search', authenticate, GroupChannelController.search);
 router.get('/channel/unfurl', authenticate, GroupChannelController.unfurl);
 router.get('/channel/attachment/:messageId', authenticate, GroupChannelController.serveAttachment);
 
+// ── Admin Hub (new clean UI for LOCAL_ADMIN / LOCAL_MANAGER) ─
+const AdminHubController = require('../controllers/adminHubController');
+const requireLocalAdmin = requireRoles('LOCAL_ADMIN', 'LOCAL_MANAGER');
+router.get('/admin',          authenticate, requireLocalAdmin, AdminHubController.dashboard);
+router.get('/admin/work',     authenticate, requireLocalAdmin, AdminHubController.work);
+router.get('/admin/team',     authenticate, requireLocalAdmin, AdminHubController.team);
+router.get('/admin/reports',  authenticate, requireLocalAdmin, AdminHubController.reports);
+router.get('/admin/comms',    authenticate, requireLocalAdmin, AdminHubController.comms);
+router.get('/admin/tools',    authenticate, requireLocalAdmin, AdminHubController.tools);
+
 // ── Client Queue (local team works client-dispatched tasks) ─
 const ClientQueueController = require('../controllers/clientQueueController');
 
