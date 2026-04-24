@@ -48,18 +48,6 @@
   text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;
   position: relative; display: inline-block;
 }
-/* Reply button */
-.gc-fullpage-messages .gc-msg-reply {
-  position: absolute; top: 6px; cursor: pointer;
-  opacity: 0; visibility: hidden; color: #fff;
-  background: rgba(0,0,0,0.6); width: 30px; height: 30px;
-  display: flex; align-items: center; justify-content: center;
-  border-radius: 6px; transition: opacity 0.15s, background 0.15s;
-  font-size: 0.9rem; line-height: 1; z-index: 2;
-}
-.gc-fullpage-messages .msg-bubble:hover .gc-msg-reply,
-.gc-fullpage-messages .gc-msg-reply:hover { opacity: 1; visibility: visible; }
-.gc-fullpage-messages .gc-msg-reply:hover { background: rgba(37,99,235,0.9); }
 /* Quoted reply block */
 .gc-fullpage-messages .gc-reply-quote {
   border-left: 3px solid var(--tf-accent, #60a5fa);
@@ -114,30 +102,6 @@
 .gc-mention-item .gc-mention-role { font-size: 0.65rem; color: var(--tf-text-muted); }
 @keyframes gcMentionPulse { 0%,100% { box-shadow: none; } 50% { box-shadow: 0 0 0 3px rgba(239,68,68,0.5); } }
 .gc-msg-mention-me { animation: gcMentionPulse 1.6s ease 2; }
-.gc-fullpage-messages .gc-msg-react {
-  position: absolute; top: 6px; right: 6px; cursor: pointer;
-  opacity: 0; visibility: hidden; color: #fff;
-  background: rgba(0,0,0,0.6); width: 30px; height: 30px;
-  display: flex; align-items: center; justify-content: center;
-  border-radius: 6px; transition: opacity 0.15s, background 0.15s;
-  font-size: 0.95rem; line-height: 1; z-index: 2;
-}
-.gc-fullpage-messages .msg-bubble:hover .gc-msg-react,
-.gc-fullpage-messages .gc-msg-react:hover { opacity: 1; visibility: visible; }
-.gc-fullpage-messages .gc-msg-react:hover { background: rgba(250,204,21,0.9); color: #000; }
-.gc-fullpage-messages .msg-bubble.sent .gc-msg-delete { right: 78px; }
-.gc-fullpage-messages .gc-msg-pin {
-  position: absolute; top: 6px; right: 110px; cursor: pointer;
-  opacity: 0; visibility: hidden; color: #fff;
-  background: rgba(0,0,0,0.6); width: 30px; height: 30px;
-  display: flex; align-items: center; justify-content: center;
-  border-radius: 6px; transition: opacity 0.15s, background 0.15s;
-  font-size: 0.9rem; line-height: 1; z-index: 2;
-}
-.gc-fullpage-messages .msg-bubble:hover .gc-msg-pin,
-.gc-fullpage-messages .gc-msg-pin:hover { opacity: 1; visibility: visible; }
-.gc-fullpage-messages .gc-msg-pin:hover { background: rgba(234,179,8,0.9); }
-.gc-fullpage-messages .gc-msg-pin.pinned { opacity: 1; visibility: visible; background: rgba(234,179,8,0.85); }
 .gc-pin-indicator {
   position: absolute; top: -8px; left: 14px;
   background: #eab308; color: #000; border-radius: 50%;
@@ -212,17 +176,6 @@
 .gc-link-preview-site { color: var(--tf-accent); font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.3px; font-weight: 600; }
 .gc-link-preview-title { font-weight: 600; color: var(--tf-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
 .gc-link-preview-desc { color: var(--tf-text-muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-top: 2px; }
-.gc-fullpage-messages .gc-msg-edit {
-  position: absolute; top: 6px; right: 78px; cursor: pointer;
-  opacity: 0; visibility: hidden; color: #fff;
-  background: rgba(0,0,0,0.6); width: 30px; height: 30px;
-  display: flex; align-items: center; justify-content: center;
-  border-radius: 6px; transition: opacity 0.15s, background 0.15s;
-  font-size: 0.9rem; line-height: 1; z-index: 2;
-}
-.gc-fullpage-messages .msg-bubble:hover .gc-msg-edit,
-.gc-fullpage-messages .gc-msg-edit:hover { opacity: 1; visibility: visible; }
-.gc-fullpage-messages .gc-msg-edit:hover { background: rgba(34,197,94,0.9); }
 .gc-edited-label { font-size: 0.65rem; opacity: 0.55; margin-left: 6px; font-style: italic; }
 .gc-editor textarea {
   font-size: 0.85rem; resize: none; background: rgba(0,0,0,0.25); color: inherit;
@@ -314,16 +267,32 @@
   border: 1px solid var(--tf-border);
 }
 
-.gc-fullpage-messages .gc-msg-delete {
-  position: absolute; top: 6px; right: 6px; cursor: pointer;
-  opacity: 0; visibility: hidden; font-size: 0.9rem; color: #fff;
-  background: rgba(0,0,0,0.6); width: 30px; height: 30px;
-  display: flex; align-items: center; justify-content: center;
-  border-radius: 6px; transition: opacity 0.15s, background 0.15s; line-height: 1; z-index: 2;
+/* WhatsApp-style message menu */
+.gc-msg-menu-btn {
+  position:absolute; top:4px; right:4px; width:22px; height:22px; border-radius:50%;
+  background:rgba(0,0,0,0.55); color:#fff; border:none; cursor:pointer; padding:0;
+  display:flex; align-items:center; justify-content:center; font-size:0.68rem;
+  opacity:0; visibility:hidden; transition:opacity 0.12s, visibility 0s 0.12s; z-index:5;
 }
-.gc-fullpage-messages .msg-bubble:hover .gc-msg-delete,
-.gc-fullpage-messages .gc-msg-delete:hover { opacity: 1; visibility: visible; }
-.gc-fullpage-messages .gc-msg-delete:hover { background: rgba(220,38,38,0.9); }
+.gc-fullpage-messages .msg-bubble:hover .gc-msg-menu-btn,
+.gc-msg-menu-btn.gc-menu-open { opacity:1; visibility:visible; transition:opacity 0.1s, visibility 0s; }
+.gc-msg-menu-btn:hover { background:rgba(0,0,0,0.8); }
+.gc-fullpage-messages .msg-bubble.sent .gc-msg-menu-btn { background:rgba(0,0,0,0.35); }
+.gc-msg-menu {
+  position:fixed; background:var(--tf-surface-2,#1e293b);
+  border:1px solid var(--tf-border,#334155); border-radius:9px;
+  box-shadow:0 6px 24px rgba(0,0,0,0.5); z-index:9999; min-width:148px;
+  overflow:hidden; animation:gcMenuIn 0.12s ease;
+}
+@keyframes gcMenuIn { from { opacity:0; transform:scale(0.93) translateY(-4px); } to { opacity:1; transform:none; } }
+.gc-msg-menu-item {
+  display:flex; align-items:center; gap:9px; padding:9px 14px;
+  font-size:0.81rem; cursor:pointer; color:var(--tf-text,#e2e8f0);
+  transition:background 0.1s; border:none; background:none; width:100%; text-align:left;
+}
+.gc-msg-menu-item:hover { background:rgba(255,255,255,0.07); }
+.gc-msg-menu-item.gc-menu-danger { color:#f87171; }
+.gc-msg-menu-item.gc-menu-danger:hover { background:rgba(248,113,113,0.1); }
 
 .gc-fullpage-input {
   padding: 12px 24px;
@@ -624,12 +593,6 @@
   // ── Pinned messages ─────────────────────────────
   var _gcUserRole = '<%= user.role_name %>';
   var _gcIsAdmin = (_gcUserRole === 'LOCAL_ADMIN' || _gcUserRole === 'CLIENT_ADMIN');
-  function _gcPinBtnHtml(m) {
-    if (m.is_deleted) return '';
-    if (!_gcIsAdmin) return '';
-    var cls = m.is_pinned ? 'gc-msg-pin pinned' : 'gc-msg-pin';
-    return '<span class="' + cls + '" onclick="event.stopPropagation(); togglePinGcFullMsg(' + m.id + ')" title="' + (m.is_pinned ? 'Unpin' : 'Pin') + '"><i class="bi bi-pin-angle-fill"></i></span>';
-  }
   function _gcPinIndicatorHtml(m) {
     if (!m.is_pinned) return '';
     return '<span class="gc-pin-indicator" title="Pinned"><i class="bi bi-pin-angle-fill"></i></span>';
@@ -671,8 +634,9 @@
     bar.classList.toggle('expanded', !open);
   };
 
-  // ── Edit own message ────────────────────────────
+  // ── Message menu (WhatsApp-style) ───────────────
   var _gcMsgRaw = {};
+  var _gcMsgMeta = {};
   var GC_EDIT_WINDOW_MS = 15 * 60 * 1000;
   function _gcCanEdit(m) {
     if (!m || m.is_deleted) return false;
@@ -680,15 +644,63 @@
     if (m.type !== 'text') return false;
     return (Date.now() - new Date(m.created_at).getTime()) < GC_EDIT_WINDOW_MS;
   }
-  function _gcEditBtnHtml(m) {
-    if (!_gcCanEdit(m)) return '';
-    return '<span class="gc-msg-edit" onclick="event.stopPropagation(); editGcFullMsg(' + m.id + ')" title="Edit"><i class="bi bi-pencil"></i></span>';
-  }
-  function _gcDeleteBtnHtmlShifted(m) {
+  function _gcMenuBtnHtml(m) {
     if (m.is_deleted) return '';
-    var right = _gcCanEdit(m) ? 110 : 78;
-    return '<span class="gc-msg-delete" style="right:' + right + 'px" onclick="event.stopPropagation(); deleteGcFullMsg(' + m.id + ')" title="Delete"><i class="bi bi-trash"></i></span>';
+    return '<button class="gc-msg-menu-btn" onclick="event.stopPropagation(); _gcShowMsgMenu(event,' + m.id + ')" title="More"><i class="bi bi-chevron-down"></i></button>';
   }
+  window._gcShowMsgMenu = function(evt, msgId) {
+    var existing = document.getElementById('gcMsgMenu');
+    if (existing) { existing.remove(); var b = document.querySelector('.gc-msg-menu-btn.gc-menu-open'); if (b) b.classList.remove('gc-menu-open'); return; }
+    var bubble = document.querySelector('[data-gcf-msg-id="' + msgId + '"]');
+    if (!bubble) return;
+    var isSent = bubble.classList.contains('sent');
+    var isDeleted = bubble.classList.contains('deleted');
+    var isPinned = bubble.classList.contains('pinned');
+    var meta = _gcMsgMeta[msgId] || {};
+    var canEdit = isSent && !isDeleted && meta.type === 'text' &&
+      (Date.now() - new Date(meta.created_at).getTime()) < GC_EDIT_WINDOW_MS;
+    var items = [];
+    if (!isDeleted) {
+      items.push({ icon: 'bi-reply-fill', label: 'Reply', fn: function() { replyToGcFullMsg(msgId); } });
+      items.push({ icon: 'bi-emoji-smile', label: 'React', fn: function(r) { showGcEmojiPicker({ currentTarget: { getBoundingClientRect: function() { return r; } } }, msgId); } });
+      if (_gcIsAdmin) items.push({ icon: 'bi-pin-angle-fill', label: isPinned ? 'Unpin' : 'Pin', fn: function() { togglePinGcFullMsg(msgId); } });
+      if (canEdit) items.push({ icon: 'bi-pencil', label: 'Edit', fn: function() { editGcFullMsg(msgId); } });
+      if (isSent) items.push({ icon: 'bi-trash', label: 'Delete', danger: true, fn: function() { deleteGcFullMsg(msgId); } });
+    }
+    if (!items.length) return;
+    var triggerBtn = evt.currentTarget;
+    triggerBtn.classList.add('gc-menu-open');
+    var menu = document.createElement('div');
+    menu.id = 'gcMsgMenu';
+    menu.className = 'gc-msg-menu';
+    items.forEach(function(item) {
+      var el = document.createElement('button');
+      el.className = 'gc-msg-menu-item' + (item.danger ? ' gc-menu-danger' : '');
+      el.innerHTML = '<i class="bi ' + item.icon + '"></i>' + item.label;
+      el.addEventListener('click', function(e) {
+        e.stopPropagation();
+        var savedRect = this.getBoundingClientRect();
+        menu.remove();
+        triggerBtn.classList.remove('gc-menu-open');
+        item.fn(savedRect);
+      });
+      menu.appendChild(el);
+    });
+    document.body.appendChild(menu);
+    var br = triggerBtn.getBoundingClientRect();
+    var mh = menu.offsetHeight, mw = menu.offsetWidth;
+    var top = br.bottom + 4;
+    if (top + mh > window.innerHeight - 8) top = br.top - mh - 4;
+    var left = br.right - mw;
+    if (left < 8) left = br.left;
+    menu.style.top = top + 'px';
+    menu.style.left = left + 'px';
+    setTimeout(function() {
+      document.addEventListener('click', function close(e) {
+        if (!menu.contains(e.target)) { menu.remove(); triggerBtn.classList.remove('gc-menu-open'); document.removeEventListener('click', close); }
+      });
+    }, 10);
+  };
   window.editGcFullMsg = function(msgId) {
     var bubble = document.querySelector('[data-gcf-msg-id="' + msgId + '"]');
     if (!bubble) return;
@@ -772,10 +784,6 @@
     var p = document.getElementById('gcEmojiPicker');
     if (p) p.remove();
   };
-  function _gcReactBtnHtml(m) {
-    if (m.is_deleted) return '';
-    return '<span class="gc-msg-react" onclick="event.stopPropagation(); showGcEmojiPicker(event,' + m.id + ')" title="Add reaction"><i class="bi bi-emoji-smile"></i></span>';
-  }
 
   // ── Reply-to-message ─────────────────────────────
   var _gcReplyingTo = null;
@@ -814,11 +822,6 @@
     else preview = _esc((m.reply_to_content || '').substring(0, 140));
     return '<div class="gc-reply-quote" onclick="event.stopPropagation(); gcFullJumpToMsg(' + m.reply_to_id + ')"><div class="gc-reply-quote-sender">' + sender + '</div><div class="gc-reply-quote-content">' + preview + '</div></div>';
   }
-  function _gcReplyBtnHtml(m, isSent) {
-    if (m.is_deleted) return '';
-    return '<span class="gc-msg-reply" style="right:42px" onclick="event.stopPropagation(); replyToGcFullMsg(' + m.id + ')" title="Reply"><i class="bi bi-reply-fill"></i></span>';
-  }
-
   // ── Browser notifications ────────────────────────
   var _gcNotifAsked = false;
   function _gcRequestNotifPerm() {
@@ -943,17 +946,14 @@
       else if (m.type === 'file' && m.attachment) { content = renderFile(m.attachment, m.id); }
       else { content = gcRenderWithMentions(m.content); }
       _gcMsgRaw[m.id] = m.content;
-      var deleteBtn = isSent && !m.is_deleted ? _gcDeleteBtnHtmlShifted(m) : '';
-      var editBtn = _gcEditBtnHtml(m);
-      var replyBtn = _gcReplyBtnHtml(m, isSent);
-      var reactBtn = _gcReactBtnHtml(m);
-      var pinBtn = _gcPinBtnHtml(m);
+      _gcMsgMeta[m.id] = { type: m.type, created_at: m.created_at, sender_id: m.sender_id };
+      var menuBtn = _gcMenuBtnHtml(m);
       var pinInd = _gcPinIndicatorHtml(m);
       var replyQuote = _gcReplyQuoteHtml(m);
       var reactions = _gcRenderReactions(m);
       var senderName = !isSent ? '<div class="gc-msg-sender">' + _esc(m.sender_name) + '</div>' : '';
       var editedLabel = m.edited_at ? '<span class="gc-edited-label">(edited)</span>' : '';
-      return dateDivider + unreadDivider + '<div class="msg-bubble ' + cls + (m.is_deleted ? ' deleted' : '') + (m.is_pinned ? ' pinned' : '') + '" data-gcf-msg-id="' + m.id + '">' + pinInd + deleteBtn + editBtn + pinBtn + replyBtn + reactBtn + senderName + replyQuote + '<div class="msg-content">' + content + '</div>' + reactions + '<div class="msg-footer"><span class="msg-time">' + time + '</span>' + editedLabel + '</div></div>';
+      return dateDivider + unreadDivider + '<div class="msg-bubble ' + cls + (m.is_deleted ? ' deleted' : '') + (m.is_pinned ? ' pinned' : '') + '" data-gcf-msg-id="' + m.id + '">' + pinInd + menuBtn + senderName + replyQuote + '<div class="msg-content">' + content + '</div>' + reactions + '<div class="msg-footer"><span class="msg-time">' + time + '</span>' + editedLabel + '</div></div>';
     }).join('');
     if (prepend) { container.insertAdjacentHTML('afterbegin', html); }
     else {
@@ -1106,16 +1106,14 @@
       if (msg.type === 'file' && msg.attachment) { content = renderFile(msg.attachment, msg.id); }
       else { content = gcRenderWithMentions(msg.content); }
       _gcMsgRaw[msg.id] = msg.content;
-      var deleteBtn = isSent ? _gcDeleteBtnHtmlShifted(msg) : '';
-      var editBtn = _gcEditBtnHtml(msg);
-      var replyBtn = _gcReplyBtnHtml(msg, isSent);
-      var reactBtn = _gcReactBtnHtml(msg);
+      _gcMsgMeta[msg.id] = { type: msg.type, created_at: msg.created_at, sender_id: msg.sender_id };
+      var menuBtn = _gcMenuBtnHtml(msg);
       var replyQuote = _gcReplyQuoteHtml(msg);
       var senderName = !isSent ? '<div class="gc-msg-sender">' + _esc(msg.sender_name) + '</div>' : '';
       if (isFromOther && !wasAtBottom && !container.querySelector('[data-gc-unread-divider]')) {
         container.insertAdjacentHTML('beforeend', _gcUnreadDividerHtml());
       }
-      container.insertAdjacentHTML('beforeend', '<div class="msg-bubble ' + cls + '" data-gcf-msg-id="' + msg.id + '">' + deleteBtn + editBtn + replyBtn + reactBtn + senderName + replyQuote + '<div class="msg-content">' + content + '</div><div class="msg-footer"><span class="msg-time">' + time + '</span></div></div>');
+      container.insertAdjacentHTML('beforeend', '<div class="msg-bubble ' + cls + '" data-gcf-msg-id="' + msg.id + '">' + menuBtn + senderName + replyQuote + '<div class="msg-content">' + content + '</div><div class="msg-footer"><span class="msg-time">' + time + '</span></div></div>');
       if (msg.type === 'text' && msg.content) {
         var newBubble = container.querySelector('[data-gcf-msg-id="' + msg.id + '"]');
         if (newBubble) _gcFetchAndRenderPreview(newBubble, msg.content);
@@ -1142,11 +1140,6 @@
           bubble.insertAdjacentHTML('afterbegin', '<span class="gc-pin-indicator" title="Pinned"><i class="bi bi-pin-angle-fill"></i></span>');
         } else if (!data.pinned && existingInd) {
           existingInd.remove();
-        }
-        var pinBtn = bubble.querySelector('.gc-msg-pin');
-        if (pinBtn) {
-          pinBtn.classList.toggle('pinned', !!data.pinned);
-          pinBtn.title = data.pinned ? 'Unpin' : 'Pin';
         }
       }
       loadGcPinned();
@@ -1183,7 +1176,7 @@
         bubble.classList.add('deleted');
         var c = bubble.querySelector('.msg-content');
         if (c) c.innerHTML = '<em class="text-muted" style="font-size:0.75rem"><i class="bi bi-ban me-1"></i>deleted</em>';
-        var d = bubble.querySelector('.gc-msg-delete');
+        var d = bubble.querySelector('.gc-msg-menu-btn');
         if (d) d.remove();
       }
     });

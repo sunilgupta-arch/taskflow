@@ -165,9 +165,12 @@
     <button class="lvm-tab"        data-filter="approved" onclick="lvmSetFilter('approved')">Approved <span class="lvm-tab-cnt" id="lvmCntApproved">0</span></button>
     <button class="lvm-tab"        data-filter="rejected" onclick="lvmSetFilter('rejected')">Rejected <span class="lvm-tab-cnt" id="lvmCntRejected">0</span></button>
   </div>
-  <button class="lvm-grant-btn" onclick="lvmOpenGrant()">
-    <i class="bi bi-person-plus"></i> Grant Leave
-  </button>
+  <div style="display:flex;align-items:center;gap:8px">
+    <a href="/admin/team" class="adm-back-btn"><i class="bi bi-arrow-left"></i> Team</a>
+    <button class="lvm-grant-btn" onclick="lvmOpenGrant()">
+      <i class="bi bi-person-plus"></i> Grant Leave
+    </button>
+  </div>
 </div>
 
 <!-- ── Stats bar ─────────────────────────────────────────────────────── -->

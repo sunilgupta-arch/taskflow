@@ -283,7 +283,7 @@
 }
 </style>
 
-<!-- Top bar: date nav + stats -->
+<!-- Top bar: date nav + stats + back -->
 <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px">
   <div class="admq-date-nav">
     <button class="admq-nav-btn" id="admqPrev"><i class="bi bi-chevron-left"></i></button>
@@ -291,7 +291,10 @@
     <button class="admq-nav-btn" id="admqToday"><i class="bi bi-calendar-check"></i> Today</button>
     <button class="admq-nav-btn" id="admqNext"><i class="bi bi-chevron-right"></i></button>
   </div>
-  <div class="admq-stats" id="admqStats"></div>
+  <div style="display:flex;align-items:center;gap:10px">
+    <div class="admq-stats" id="admqStats"></div>
+    <a href="/admin/work" class="adm-back-btn"><i class="bi bi-arrow-left"></i> Work</a>
+  </div>
 </div>
 
 <!-- Table -->

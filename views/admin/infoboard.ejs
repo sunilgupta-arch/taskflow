@@ -1,0 +1,433 @@
+<style>
+@keyframes ibFadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:none; } }
+@keyframes ibToastIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
+
+/* ── Page layout ──────────────────────────────────────────── */
+.ib-wrap { animation: ibFadeIn 0.25s ease; }
+
+/* ── Top bar ─────────────────────────────────────────────── */
+.ib-topbar { display:flex; align-items:center; gap:12px; margin-bottom:20px; flex-wrap:wrap; }
+.ib-topbar-left { flex:1; min-width:0; }
+.ib-section-pill {
+  display:inline-flex; align-items:center; gap:5px;
+  background:rgba(168,85,247,0.1); border:1px solid rgba(168,85,247,0.22);
+  color:#a855f7; border-radius:20px; padding:3px 10px;
+  font-family:var(--adm-mono); font-size:0.68rem; font-weight:700;
+  letter-spacing:0.3px; margin-bottom:6px;
+}
+.ib-page-title { font-family:var(--adm-mono); font-size:1rem; font-weight:700; color:var(--adm-text); }
+.ib-page-sub { font-size:0.78rem; color:var(--adm-muted); margin-top:2px; }
+
+/* ── Toolbar ─────────────────────────────────────────────── */
+.ib-toolbar { display:flex; align-items:center; gap:10px; margin-bottom:18px; flex-wrap:wrap; }
+.ib-stat-pill {
+  display:flex; align-items:center; gap:5px; flex-shrink:0;
+  background:var(--adm-surface); border:1px solid var(--adm-border);
+  border-radius:8px; padding:0 12px; height:34px;
+  font-family:var(--adm-mono); font-size:0.75rem; white-space:nowrap;
+}
+.ib-stat-pill .val { font-weight:700; color:#a855f7; margin-right:2px; }
+.ib-stat-pill.pinned .val { color:#fbbf24; }
+.ib-stat-pill .lbl { color:var(--adm-muted); font-size:0.67rem; text-transform:uppercase; letter-spacing:0.4px; }
+.ib-spacer { flex:1; }
+.ib-new-btn {
+  display:flex; align-items:center; gap:7px; padding:8px 16px;
+  border-radius:8px; border:none;
+  background:linear-gradient(135deg,#a855f7,#7c3aed);
+  color:#fff; font-family:var(--adm-font); font-size:0.82rem; font-weight:600;
+  cursor:pointer; transition:opacity 0.15s; white-space:nowrap; flex-shrink:0;
+}
+.ib-new-btn:hover { opacity:0.86; }
+.ib-back-btn {
+  display:inline-flex; align-items:center; gap:6px;
+  background:var(--adm-surface); border:1px solid var(--adm-border);
+  color:var(--adm-text-2); border-radius:8px; padding:0 12px; height:34px;
+  font-size:0.8rem; text-decoration:none; flex-shrink:0; transition:border-color 0.15s;
+}
+.ib-back-btn:hover { border-color:var(--adm-border-2); color:var(--adm-text); }
+
+/* ── Compose panel ───────────────────────────────────────── */
+.ib-compose {
+  background:var(--adm-surface); border:1px solid var(--adm-border);
+  border-radius:12px; margin-bottom:20px; overflow:hidden;
+  display:none;
+}
+.ib-compose.open { display:block; }
+.ib-compose-hdr {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:12px 16px; border-bottom:1px solid var(--adm-border);
+  font-size:0.78rem; font-weight:700; font-family:var(--adm-mono);
+  color:var(--adm-text-2); text-transform:uppercase; letter-spacing:0.4px;
+}
+.ib-compose-close {
+  background:none; border:none; color:var(--adm-muted);
+  cursor:pointer; font-size:0.9rem; padding:2px 5px; border-radius:5px; line-height:1;
+}
+.ib-compose-close:hover { color:#ef4444; background:rgba(239,68,68,0.08); }
+.ib-compose-body { padding:16px; display:flex; flex-direction:column; gap:12px; }
+.ib-input {
+  width:100%; background:var(--adm-bg); border:1px solid var(--adm-border);
+  color:var(--adm-text); border-radius:8px; padding:9px 13px;
+  font-family:var(--adm-font); font-size:0.84rem; outline:none;
+  transition:border-color 0.15s; box-sizing:border-box;
+}
+.ib-input:focus { border-color:rgba(168,85,247,0.5); }
+.ib-input::placeholder { color:var(--adm-muted); }
+textarea.ib-input { resize:vertical; min-height:72px; line-height:1.5; }
+.ib-compose-foot {
+  display:flex; align-items:center; justify-content:space-between;
+  flex-wrap:wrap; gap:10px;
+}
+.ib-pin-label {
+  display:flex; align-items:center; gap:6px;
+  font-size:0.78rem; color:var(--adm-text-2); cursor:pointer;
+}
+.ib-pin-label input[type="checkbox"] { accent-color:#a855f7; width:15px; height:15px; }
+.ib-publish-btn {
+  display:flex; align-items:center; gap:7px; padding:7px 18px;
+  border-radius:8px; border:none;
+  background:linear-gradient(135deg,#a855f7,#7c3aed);
+  color:#fff; font-size:0.82rem; font-weight:600; font-family:var(--adm-font);
+  cursor:pointer; transition:opacity 0.15s;
+}
+.ib-publish-btn:hover { opacity:0.86; }
+.ib-error { font-size:0.74rem; color:#ef4444; }
+
+/* ── Two-column board ────────────────────────────────────── */
+.ib-board { display:flex; gap:16px; align-items:flex-start; }
+.ib-col { flex:1; min-width:0; }
+.ib-col-header {
+  font-size:0.72rem; font-weight:700; font-family:var(--adm-mono);
+  text-transform:uppercase; letter-spacing:0.5px;
+  margin-bottom:12px; padding-bottom:8px;
+  display:flex; align-items:center; gap:6px;
+}
+.ib-col-header.local { color:#a855f7; border-bottom:2px solid rgba(168,85,247,0.22); }
+.ib-col-header.client { color:#f59e0b; border-bottom:2px solid rgba(245,158,11,0.22); }
+.ib-col-header .col-count {
+  margin-left:auto; font-size:0.65rem; font-weight:700;
+  padding:1px 7px; border-radius:10px;
+}
+.ib-col-header.local .col-count { background:rgba(168,85,247,0.12); color:#a855f7; }
+.ib-col-header.client .col-count { background:rgba(245,158,11,0.12); color:#f59e0b; }
+
+.ib-posts { display:flex; flex-direction:column; gap:10px; }
+
+/* ── Post card ───────────────────────────────────────────── */
+.ib-card {
+  background:var(--adm-surface); border:1px solid var(--adm-border);
+  border-radius:12px; overflow:hidden;
+  transition:border-color 0.15s, box-shadow 0.15s;
+  position:relative;
+}
+.ib-card:hover { border-color:var(--adm-border-2); box-shadow:0 4px 18px rgba(0,0,0,0.22); }
+.ib-card.is-pinned {
+  border-color:rgba(251,191,36,0.3);
+  box-shadow:0 0 0 1px rgba(251,191,36,0.06), 0 2px 10px rgba(251,191,36,0.05);
+}
+.ib-card.is-pinned .ib-card-accent { background:#fbbf24; }
+.ib-card.local-card .ib-card-accent { background:#a855f7; }
+.ib-card.client-card .ib-card-accent { background:#f59e0b; }
+.ib-card-accent { position:absolute; left:0; top:0; bottom:0; width:3px; }
+.ib-card-inner { padding:14px 14px 12px 18px; }
+.ib-card-head { display:flex; align-items:flex-start; gap:8px; margin-bottom:6px; }
+.ib-card-title {
+  flex:1; min-width:0;
+  font-size:0.88rem; font-weight:600; color:var(--adm-text);
+  line-height:1.4; word-break:break-word;
+}
+.ib-pin-badge { color:#fbbf24; font-size:0.72rem; flex-shrink:0; margin-top:2px; }
+.ib-all-badge {
+  font-size:0.56rem; font-weight:600;
+  background:rgba(0,212,255,0.1); color:#00d4ff;
+  border:1px solid rgba(0,212,255,0.2);
+  padding:1px 6px; border-radius:4px; vertical-align:middle;
+  flex-shrink:0; align-self:center;
+}
+.ib-card-body {
+  font-size:0.79rem; color:var(--adm-text-2); line-height:1.55;
+  white-space:pre-line; margin-bottom:10px; word-break:break-word;
+}
+.ib-card-foot {
+  display:flex; align-items:center; justify-content:space-between;
+  padding-top:8px; border-top:1px solid var(--adm-border);
+  gap:8px;
+}
+.ib-card-meta {
+  font-family:var(--adm-mono); font-size:0.62rem; color:var(--adm-muted);
+  display:flex; align-items:center; gap:6px; flex-wrap:wrap; min-width:0;
+}
+.ib-card-meta .meta-author { color:var(--adm-text-2); font-weight:600; }
+.ib-card-acts { display:flex; gap:4px; flex-shrink:0; }
+.ib-act-btn {
+  width:26px; height:26px; border-radius:6px; border:1px solid var(--adm-border);
+  background:transparent; cursor:pointer; display:flex; align-items:center;
+  justify-content:center; font-size:0.72rem; transition:all 0.15s;
+}
+.ib-act-btn.pin-btn { color:var(--adm-muted); }
+.ib-act-btn.pin-btn:hover, .ib-act-btn.pin-btn.is-pinned { color:#fbbf24; background:rgba(251,191,36,0.08); border-color:rgba(251,191,36,0.3); }
+.ib-act-btn.del-btn { color:var(--adm-muted); }
+.ib-act-btn.del-btn:hover { color:#ef4444; background:rgba(239,68,68,0.08); border-color:rgba(239,68,68,0.3); }
+
+/* ── Empty state ─────────────────────────────────────────── */
+.ib-empty {
+  text-align:center; padding:28px 16px;
+  color:var(--adm-muted); font-size:0.8rem;
+}
+.ib-empty i { font-size:1.8rem; display:block; opacity:0.25; margin-bottom:8px; }
+
+/* ── Toast ───────────────────────────────────────────────── */
+.ib-toast {
+  position:fixed; bottom:24px; right:24px; z-index:9999;
+  background:var(--adm-surface-2); border:1px solid var(--adm-border);
+  border-radius:10px; padding:10px 18px;
+  font-size:0.82rem; color:var(--adm-text);
+  box-shadow:0 6px 24px rgba(0,0,0,0.4);
+  display:flex; align-items:center; gap:8px;
+  animation:ibToastIn 0.2s ease;
+  pointer-events:none;
+}
+.ib-toast.success { border-color:rgba(16,185,129,0.4); }
+.ib-toast.success i { color:#10b981; }
+.ib-toast.error { border-color:rgba(239,68,68,0.4); }
+.ib-toast.error i { color:#ef4444; }
+</style>
+
+<%
+  var localPosts  = posts.filter(function(p){ return p.audience === 'local'; });
+  var clientPosts = posts.filter(function(p){ return p.audience !== 'local'; });
+  var totalPinned = posts.filter(function(p){ return p.is_pinned; }).length;
+%>
+
+<div class="ib-wrap">
+
+  <!-- Top bar -->
+  <div class="ib-topbar">
+    <div class="ib-topbar-left">
+      <div class="ib-section-pill"><i class="bi bi-megaphone-fill"></i> Communications</div>
+      <div class="ib-page-title">Info Board</div>
+      <div class="ib-page-sub">Post updates for your local team — view client announcements read-only</div>
+    </div>
+    <a href="/admin/comms" class="ib-back-btn"><i class="bi bi-arrow-left"></i> Comms</a>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="ib-toolbar">
+    <div class="ib-stat-pill">
+      <span class="val"><%= posts.length %></span>
+      <span class="lbl">Posts</span>
+    </div>
+    <div class="ib-stat-pill pinned">
+      <i class="bi bi-pin-angle-fill" style="color:#fbbf24;font-size:0.78rem;"></i>
+      <span class="val"><%= totalPinned %></span>
+      <span class="lbl">Pinned</span>
+    </div>
+    <div class="ib-stat-pill">
+      <span class="val" style="color:#a855f7;"><%= localPosts.length %></span>
+      <span class="lbl">Local</span>
+    </div>
+    <div class="ib-stat-pill">
+      <span class="val" style="color:#f59e0b;"><%= clientPosts.length %></span>
+      <span class="lbl">Client</span>
+    </div>
+    <div class="ib-spacer"></div>
+    <button class="ib-new-btn" onclick="ibToggleCompose()">
+      <i class="bi bi-pencil-square"></i> New Post
+    </button>
+  </div>
+
+  <!-- Compose panel -->
+  <div class="ib-compose" id="ibCompose">
+    <div class="ib-compose-hdr">
+      <span><i class="bi bi-pencil me-1"></i>New Announcement</span>
+      <button class="ib-compose-close" onclick="ibToggleCompose()" title="Close"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <div class="ib-compose-body">
+      <input type="text" id="ibTitle" class="ib-input" placeholder="Title — e.g., Team meeting at 3 PM today" maxlength="180">
+      <textarea id="ibBody" class="ib-input" placeholder="Details (optional) — Add context, instructions, or links..." rows="3"></textarea>
+      <div class="ib-compose-foot">
+        <label class="ib-pin-label">
+          <input type="checkbox" id="ibPinned">
+          <i class="bi bi-pin-angle" style="color:#fbbf24;"></i> Pin to top
+        </label>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span id="ibError" class="ib-error" style="display:none;"></span>
+          <button class="ib-publish-btn" onclick="ibPublish()">
+            <i class="bi bi-send"></i> Publish
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Two-column board -->
+  <div class="ib-board">
+
+    <!-- Local Team column -->
+    <div class="ib-col">
+      <div class="ib-col-header local">
+        <i class="bi bi-people-fill"></i> Local Team
+        <span class="col-count"><%= localPosts.length %></span>
+      </div>
+      <div class="ib-posts" id="ibLocalPosts">
+        <% if (localPosts.length === 0) { %>
+        <div class="ib-empty">
+          <i class="bi bi-megaphone"></i>
+          No local announcements yet<br>
+          <span style="font-size:0.72rem;">Use New Post to create one</span>
+        </div>
+        <% } %>
+        <% localPosts.forEach(function(p) { %>
+        <div class="ib-card local-card <%= p.is_pinned ? 'is-pinned' : '' %>" id="ib-post-<%= p.id %>">
+          <div class="ib-card-accent"></div>
+          <div class="ib-card-inner">
+            <div class="ib-card-head">
+              <% if (p.is_pinned) { %><i class="bi bi-pin-angle-fill ib-pin-badge"></i><% } %>
+              <div class="ib-card-title"><%= p.title %></div>
+            </div>
+            <% if (p.body) { %>
+            <div class="ib-card-body"><%= p.body %></div>
+            <% } %>
+            <div class="ib-card-foot">
+              <div class="ib-card-meta">
+                <span class="meta-author"><i class="bi bi-person me-1"></i><%= p.author_name %></span>
+                <span>&middot;</span>
+                <span><%= new Date(p.created_at).toLocaleString('en-US', { month:'short', day:'numeric', year:'numeric', hour:'2-digit', minute:'2-digit', hour12:true }) %></span>
+              </div>
+              <% if (canManage && p.author_org_id === userOrgId) { %>
+              <div class="ib-card-acts">
+                <button class="ib-act-btn pin-btn <%= p.is_pinned ? 'is-pinned' : '' %>" onclick="ibTogglePin(<%= p.id %>)" title="<%= p.is_pinned ? 'Unpin' : 'Pin' %>">
+                  <i class="bi bi-pin-angle<%= p.is_pinned ? '-fill' : '' %>"></i>
+                </button>
+                <button class="ib-act-btn del-btn" onclick="ibDelete(<%= p.id %>)" title="Delete">
+                  <i class="bi bi-trash3"></i>
+                </button>
+              </div>
+              <% } %>
+            </div>
+          </div>
+        </div>
+        <% }) %>
+      </div>
+    </div>
+
+    <!-- Client column -->
+    <div class="ib-col">
+      <div class="ib-col-header client">
+        <i class="bi bi-building"></i> Client Updates
+        <span class="col-count"><%= clientPosts.length %></span>
+      </div>
+      <div class="ib-posts">
+        <% if (clientPosts.length === 0) { %>
+        <div class="ib-empty">
+          <i class="bi bi-building"></i>
+          No client announcements yet
+        </div>
+        <% } %>
+        <% clientPosts.forEach(function(p) { %>
+        <div class="ib-card client-card <%= p.is_pinned ? 'is-pinned' : '' %>">
+          <div class="ib-card-accent"></div>
+          <div class="ib-card-inner">
+            <div class="ib-card-head">
+              <% if (p.is_pinned) { %><i class="bi bi-pin-angle-fill ib-pin-badge"></i><% } %>
+              <div class="ib-card-title"><%= p.title %></div>
+              <% if (p.audience === 'all') { %>
+              <span class="ib-all-badge">ALL TEAMS</span>
+              <% } %>
+            </div>
+            <% if (p.body) { %>
+            <div class="ib-card-body"><%= p.body %></div>
+            <% } %>
+            <div class="ib-card-foot">
+              <div class="ib-card-meta">
+                <span class="meta-author"><i class="bi bi-person me-1"></i><%= p.author_name %></span>
+                <span>&middot;</span>
+                <span><%= p.author_org_name %></span>
+                <span>&middot;</span>
+                <span><%= new Date(p.created_at).toLocaleString('en-US', { month:'short', day:'numeric', year:'numeric', hour:'2-digit', minute:'2-digit', hour12:true }) %></span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <% }) %>
+      </div>
+    </div>
+
+  </div><!-- .ib-board -->
+</div><!-- .ib-wrap -->
+
+<script>
+function ibToggleCompose() {
+  var panel = document.getElementById('ibCompose');
+  var isOpen = panel.classList.toggle('open');
+  if (isOpen) document.getElementById('ibTitle').focus();
+}
+
+function ibPublish() {
+  var title  = document.getElementById('ibTitle').value.trim();
+  var body   = document.getElementById('ibBody').value.trim();
+  var pinned = document.getElementById('ibPinned').checked;
+  var errEl  = document.getElementById('ibError');
+
+  if (!title) {
+    errEl.textContent = 'Title is required';
+    errEl.style.display = 'inline';
+    return;
+  }
+  errEl.style.display = 'none';
+
+  fetch('/announcements', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title: title, body: body || null, is_pinned: pinned, audience: 'local' })
+  }).then(function(r) { return r.json(); }).then(function(data) {
+    if (data.success) {
+      ibToast('success', 'bi-check-circle', 'Post published');
+      setTimeout(function() { window.location.reload(); }, 800);
+    } else {
+      errEl.textContent = data.message || 'Failed to publish';
+      errEl.style.display = 'inline';
+    }
+  }).catch(function() {
+    errEl.textContent = 'Network error';
+    errEl.style.display = 'inline';
+  });
+}
+
+function ibTogglePin(id) {
+  fetch('/announcements/' + id + '/pin', { method: 'PUT' })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.success) {
+        ibToast('success', 'bi-pin-angle', 'Pin updated');
+        setTimeout(function() { window.location.reload(); }, 600);
+      } else {
+        ibToast('error', 'bi-exclamation-circle', data.message || 'Failed');
+      }
+    });
+}
+
+function ibDelete(id) {
+  if (!confirm('Delete this post? This cannot be undone.')) return;
+  fetch('/announcements/' + id, { method: 'DELETE' })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.success) {
+        var card = document.getElementById('ib-post-' + id);
+        if (card) { card.style.opacity = '0'; card.style.transition = 'opacity 0.2s'; }
+        ibToast('success', 'bi-trash3', 'Post deleted');
+        setTimeout(function() { window.location.reload(); }, 700);
+      } else {
+        ibToast('error', 'bi-exclamation-circle', data.message || 'Failed');
+      }
+    });
+}
+
+function ibToast(type, icon, msg) {
+  var el = document.createElement('div');
+  el.className = 'ib-toast ' + type;
+  el.innerHTML = '<i class="bi ' + icon + '"></i> ' + msg;
+  document.body.appendChild(el);
+  setTimeout(function() { el.style.opacity = '0'; el.style.transition = 'opacity 0.3s'; setTimeout(function() { el.remove(); }, 350); }, 2400);
+}
+</script>

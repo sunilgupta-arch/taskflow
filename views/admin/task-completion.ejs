@@ -1,0 +1,378 @@
+<style>
+@keyframes tcFadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:none; } }
+.tc-wrap { animation: tcFadeIn 0.25s ease; }
+
+/* ── Top bar ──────────────────────────────────────────────── */
+.tc-topbar {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 12px; flex-wrap: wrap; margin-bottom: 20px;
+}
+.tc-topbar-left { flex: 1; min-width: 0; }
+.tc-section-pill {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: rgba(249,115,22,0.1); border: 1px solid rgba(249,115,22,0.2);
+  color: #f97316; border-radius: 20px; padding: 3px 10px;
+  font-family: var(--adm-mono); font-size: 0.68rem; font-weight: 700;
+  letter-spacing: 0.3px; margin-bottom: 6px;
+}
+.tc-page-title { font-family: var(--adm-mono); font-size: 1rem; font-weight: 700; color: var(--adm-text); }
+.tc-page-sub { font-size: 0.78rem; color: var(--adm-muted); margin-top: 2px; }
+
+/* ── Month nav ────────────────────────────────────────────── */
+.tc-month-nav {
+  display: flex; align-items: center; gap: 8px; flex-shrink: 0; margin-top: 4px;
+}
+.tc-nav-btn {
+  height: 32px; width: 32px; border-radius: 8px;
+  border: 1px solid var(--adm-border); background: var(--adm-surface);
+  color: var(--adm-text-2); cursor: pointer; font-size: 0.8rem;
+  display: inline-flex; align-items: center; justify-content: center;
+  transition: all 0.15s; text-decoration: none;
+}
+.tc-nav-btn:hover { border-color: var(--adm-accent); color: var(--adm-accent); }
+.tc-month-label {
+  font-family: var(--adm-mono); font-size: 0.82rem; font-weight: 700;
+  color: var(--adm-text); min-width: 130px; text-align: center;
+}
+
+/* ── Grid card ────────────────────────────────────────────── */
+.tc-card {
+  background: var(--adm-surface); border: 1px solid var(--adm-border);
+  border-radius: 14px; overflow: hidden;
+}
+.tc-scroll { overflow-x: auto; }
+
+/* ── Table ────────────────────────────────────────────────── */
+.tc-table { width: 100%; border-collapse: collapse; font-size: 0.68rem; }
+.tc-table thead th {
+  padding: 8px 3px; text-align: center; border-bottom: 1px solid var(--adm-border);
+  font-family: var(--adm-mono); font-weight: 700; white-space: nowrap;
+  background: var(--adm-surface);
+}
+.tc-table thead th.tc-name-col {
+  text-align: left; padding: 8px 14px; min-width: 140px;
+  position: sticky; left: 0; z-index: 3; background: var(--adm-surface);
+}
+.tc-table thead th.tc-score-col { min-width: 48px; }
+.tc-day-head { min-width: 34px; }
+.tc-day-abbr { font-size: 0.52rem; color: var(--adm-muted); display: block; }
+.tc-day-num  { color: var(--adm-text); font-size: 0.7rem; }
+.tc-day-num.today { color: var(--adm-accent); }
+
+.tc-table tbody tr:hover td { background: rgba(255,255,255,0.02); }
+.tc-table tbody tr:hover td.tc-sticky { background: var(--adm-surface-2); }
+
+.tc-table tbody td {
+  padding: 4px 2px; text-align: center;
+  border-bottom: 1px solid var(--adm-border);
+}
+.tc-table tbody td.tc-sticky {
+  text-align: left; padding: 8px 14px;
+  position: sticky; left: 0; z-index: 1;
+  background: var(--adm-surface);
+  border-bottom: 1px solid var(--adm-border);
+}
+.tc-user-link {
+  color: var(--adm-text); text-decoration: none; font-size: 0.78rem;
+  font-weight: 600; white-space: nowrap;
+}
+.tc-user-link:hover { color: var(--adm-accent); }
+
+.tc-today-col { background: rgba(0,212,255,0.04); }
+
+/* ── Cell chips ───────────────────────────────────────────── */
+.tc-chip {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 30px; height: 22px; padding: 0 3px;
+  border-radius: 5px; font-family: var(--adm-mono); font-size: 0.58rem;
+  font-weight: 700; cursor: pointer; transition: opacity 0.12s;
+}
+.tc-chip:hover { opacity: 0.8; }
+.tc-chip.off    { background: rgba(100,116,139,0.1); color: #64748b; cursor: default; }
+.tc-chip.holiday { background: rgba(168,85,247,0.15); color: #a855f7; cursor: default; }
+.tc-chip.c100   { background: rgba(16,185,129,0.18); color: #10b981; }
+.tc-chip.c50    { background: rgba(245,158,11,0.15); color: #f59e0b; }
+.tc-chip.c1     { background: rgba(249,115,22,0.15); color: #f97316; }
+.tc-chip.c0     { background: rgba(239,68,68,0.12);  color: #ef4444; }
+.tc-chip.empty  { color: var(--adm-border); cursor: default; }
+
+/* ── Score cell ───────────────────────────────────────────── */
+.tc-score { font-family: var(--adm-mono); font-size: 0.78rem; font-weight: 700; }
+.tc-score.s-good  { color: #10b981; }
+.tc-score.s-mid   { color: #f59e0b; }
+.tc-score.s-low   { color: #ef4444; }
+.tc-score.s-none  { color: var(--adm-muted); }
+
+/* ── Legend ───────────────────────────────────────────────── */
+.tc-legend {
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  padding: 10px 16px; border-top: 1px solid var(--adm-border);
+  justify-content: center;
+}
+.tc-legend-item {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 0.65rem; color: var(--adm-muted); font-family: var(--adm-mono);
+}
+.tc-legend-dot {
+  width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0;
+}
+
+/* ── Day detail modal ─────────────────────────────────────── */
+.tc-modal-bg {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.75); z-index: 500;
+  align-items: center; justify-content: center; padding: 1rem;
+}
+.tc-modal-bg.open { display: flex; }
+.tc-modal {
+  background: var(--adm-surface); border: 1px solid var(--adm-border);
+  border-radius: 14px; width: 100%; max-width: 500px; overflow: hidden;
+}
+.tc-modal-head {
+  padding: 1rem 1.25rem; border-bottom: 1px solid var(--adm-border);
+  display: flex; justify-content: space-between; align-items: center;
+}
+.tc-modal-title { font-family: var(--adm-mono); font-size: 0.9rem; font-weight: 700; color: var(--adm-text); }
+.tc-modal-sub   { font-size: 0.72rem; color: var(--adm-muted); margin-top: 2px; }
+.tc-modal-close {
+  background: none; border: none; color: var(--adm-muted); font-size: 1.1rem;
+  cursor: pointer; padding: 4px; transition: color 0.12s;
+}
+.tc-modal-close:hover { color: var(--adm-text); }
+.tc-modal-list { max-height: 380px; overflow-y: auto; }
+.tc-modal-foot {
+  padding: 8px 1.25rem; border-top: 1px solid var(--adm-border);
+  font-size: 0.72rem; color: var(--adm-muted); text-align: center;
+}
+.tc-task-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 1.25rem; border-bottom: 1px solid var(--adm-border);
+  text-decoration: none; color: var(--adm-text); transition: background 0.12s;
+}
+.tc-task-row:hover { background: rgba(255,255,255,0.04); }
+.tc-task-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.tc-task-body { flex: 1; min-width: 0; }
+.tc-task-name { font-size: 0.8rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tc-task-type {
+  display: inline-block; font-size: 0.55rem; padding: 1px 5px;
+  border-radius: 4px; margin-top: 2px; font-family: var(--adm-mono);
+}
+.tc-task-badge { font-size: 0.62rem; padding: 2px 8px; border-radius: 5px; white-space: nowrap; font-weight: 600; }
+.tc-empty-msg { text-align: center; padding: 2.5rem; color: var(--adm-muted); font-size: 0.8rem; }
+</style>
+
+<div class="tc-wrap">
+
+  <!-- Top bar -->
+  <div class="tc-topbar">
+    <div class="tc-topbar-left">
+      <div class="tc-section-pill"><i class="bi bi-bar-chart-fill"></i> Reports</div>
+      <div class="tc-page-title">Task Completion</div>
+      <div class="tc-page-sub">Monthly task completion grid — click any cell to see the day's tasks</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;flex-wrap:wrap">
+      <div class="tc-month-nav">
+        <a href="/admin/task-completion?month=<%= prevMonth %>" class="tc-nav-btn"><i class="bi bi-chevron-left"></i></a>
+        <span class="tc-month-label"><%= new Date(year, mon - 1).toLocaleString('default', { month: 'long', year: 'numeric' }) %></span>
+        <a href="/admin/task-completion?month=<%= nextMonth %>" class="tc-nav-btn"><i class="bi bi-chevron-right"></i></a>
+      </div>
+      <a href="/admin/reports" class="adm-back-btn"><i class="bi bi-arrow-left"></i> Reports</a>
+    </div>
+  </div>
+
+  <!-- Grid card -->
+  <div class="tc-card">
+    <div class="tc-scroll">
+      <table class="tc-table">
+        <thead>
+          <tr>
+            <th class="tc-name-col">Employee</th>
+            <% for (var d = 1; d <= lastDay; d++) { %>
+              <%
+                var dayDate  = new Date(year, mon - 1, d);
+                var dayAbbr  = dayDate.toLocaleDateString('en-US', { weekday: 'narrow' });
+                var todayParts = today.split('-');
+                var isToday  = d === parseInt(todayParts[2]) && mon === parseInt(todayParts[1]) && year === parseInt(todayParts[0]);
+              %>
+              <th class="tc-day-head <%= isToday ? 'tc-today-col' : '' %>">
+                <span class="tc-day-abbr"><%= dayAbbr %></span>
+                <span class="tc-day-num <%= isToday ? 'today' : '' %>"><%= d %></span>
+              </th>
+            <% } %>
+            <th class="tc-score-col">Score</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (!users || users.length === 0) { %>
+          <tr>
+            <td colspan="<%= lastDay + 2 %>" style="text-align:center;padding:2.5rem;color:var(--adm-muted);">No active team members found</td>
+          </tr>
+          <% } %>
+          <% (users || []).forEach(function(u) { %>
+          <%
+            var totalScore = 0, totalPossible = 0;
+          %>
+          <tr>
+            <td class="tc-sticky">
+              <a href="/users/<%= u.id %>/progress" class="tc-user-link"><%= u.name %></a>
+            </td>
+            <% for (var d = 1; d <= lastDay; d++) {
+              var cell = gridData[u.id][d];
+              var todayParts2 = today.split('-');
+              var isTodayCell = d === parseInt(todayParts2[2]) && mon === parseInt(todayParts2[1]) && year === parseInt(todayParts2[0]);
+              var dateStr = year + '-' + String(mon).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+
+              if (!cell.isOff && !cell.isFuture && cell.total > 0) {
+                totalScore += cell.done;
+                totalPossible += cell.total;
+              }
+
+              var chipClass = 'empty', chipText = '—', clickable = false, titleText = '';
+              if (cell.isFuture) {
+                chipClass = 'empty'; chipText = '';
+              } else if (cell.isHoliday) {
+                chipClass = 'holiday'; chipText = 'H'; titleText = 'Holiday';
+              } else if (cell.isOff) {
+                chipClass = 'off'; chipText = 'W'; titleText = 'Week Off';
+              } else if (cell.total === 0) {
+                chipClass = 'empty'; chipText = '—';
+              } else {
+                clickable = true;
+                var pct = Math.round((cell.done / cell.total) * 100);
+                chipText = cell.done + '/' + cell.total;
+                titleText = cell.done + ' of ' + cell.total + ' done (' + pct + '%)';
+                if (pct === 100)     chipClass = 'c100';
+                else if (pct >= 50)  chipClass = 'c50';
+                else if (pct > 0)    chipClass = 'c1';
+                else                 chipClass = 'c0';
+              }
+            %>
+            <td class="<%= isTodayCell ? 'tc-today-col' : '' %>">
+              <% if (clickable) { %>
+              <span class="tc-chip <%= chipClass %>" title="<%= titleText %>"
+                onclick="tcShowDetail(<%= u.id %>, '<%= dateStr %>', '<%= u.name %>')"><%= chipText %></span>
+              <% } else if (chipText) { %>
+              <span class="tc-chip <%= chipClass %>" title="<%= titleText %>"><%= chipText %></span>
+              <% } %>
+            </td>
+            <% } %>
+            <td>
+              <% if (totalPossible > 0) {
+                var scorePct = Math.round((totalScore / totalPossible) * 100);
+                var scoreClass = scorePct >= 80 ? 's-good' : scorePct >= 50 ? 's-mid' : 's-low';
+              %>
+              <span class="tc-score <%= scoreClass %>"><%= scorePct %>%</span>
+              <% } else { %>
+              <span class="tc-score s-none">—</span>
+              <% } %>
+            </td>
+          </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Legend -->
+    <div class="tc-legend">
+      <div class="tc-legend-item"><div class="tc-legend-dot" style="background:rgba(16,185,129,0.2)"></div>100%</div>
+      <div class="tc-legend-item"><div class="tc-legend-dot" style="background:rgba(245,158,11,0.15)"></div>50–99%</div>
+      <div class="tc-legend-item"><div class="tc-legend-dot" style="background:rgba(249,115,22,0.15)"></div>1–49%</div>
+      <div class="tc-legend-item"><div class="tc-legend-dot" style="background:rgba(239,68,68,0.12)"></div>0%</div>
+      <div class="tc-legend-item"><div class="tc-legend-dot" style="background:rgba(100,116,139,0.1)"></div>Week Off</div>
+      <div class="tc-legend-item"><div class="tc-legend-dot" style="background:rgba(168,85,247,0.15)"></div>Holiday</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Day detail modal -->
+<div class="tc-modal-bg" id="tcModal">
+  <div class="tc-modal">
+    <div class="tc-modal-head">
+      <div>
+        <div class="tc-modal-title" id="tcModalTitle">—</div>
+        <div class="tc-modal-sub" id="tcModalSub"></div>
+      </div>
+      <button class="tc-modal-close" onclick="tcCloseModal()"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <div class="tc-modal-list" id="tcModalList">
+      <div class="tc-empty-msg">Loading...</div>
+    </div>
+    <div class="tc-modal-foot" id="tcModalFoot"></div>
+  </div>
+</div>
+
+<script>
+var tcPriorityColors = { urgent:'#ef4444', high:'#f59e0b', medium:'#3b82f6', low:'#6b7280' };
+
+function tcShowDetail(userId, date, userName) {
+  var modal = document.getElementById('tcModal');
+  var list  = document.getElementById('tcModalList');
+  document.getElementById('tcModalTitle').textContent = userName;
+  document.getElementById('tcModalSub').textContent   = '';
+  document.getElementById('tcModalFoot').innerHTML    = '';
+  list.innerHTML = '<div class="tc-empty-msg">Loading...</div>';
+  modal.classList.add('open');
+
+  var dateDisplay = new Date(date + 'T12:00:00').toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric', year:'numeric' });
+  document.getElementById('tcModalSub').textContent = dateDisplay;
+
+  axios.get('/reports/task-day-detail?userId=' + userId + '&date=' + date)
+    .then(function(res) {
+      var data   = res.data.data;
+      var tasks  = data.tasks || [];
+      var today  = new Date().toISOString().split('T')[0];
+      var isPast = date < today;
+
+      if (!tasks.length) {
+        list.innerHTML = '<div class="tc-empty-msg">No tasks for this day</div>';
+        return;
+      }
+
+      var done = 0, html = '';
+      tasks.forEach(function(t) {
+        if (t.is_completed) done++;
+        var clr = tcPriorityColors[t.priority] || '#6b7280';
+        var badgeBg, badgeClr, badgeText;
+        if (t.is_completed) {
+          badgeBg = 'rgba(16,185,129,0.15)'; badgeClr = '#10b981'; badgeText = 'Done';
+        } else if (isPast) {
+          badgeBg = 'rgba(239,68,68,0.1)'; badgeClr = '#ef4444'; badgeText = 'Not Done';
+        } else {
+          badgeBg = 'rgba(245,158,11,0.15)'; badgeClr = '#f59e0b'; badgeText = 'Pending';
+        }
+        var typeStyle = t.type === 'recurring'
+          ? 'background:rgba(124,58,237,0.15);color:#a78bfa;'
+          : 'background:rgba(249,115,22,0.15);color:#f97316;';
+        var typeLabel = t.type === 'recurring' ? 'recurring' : 'one-time';
+
+        html += '<a href="/tasks/' + t.id + '" class="tc-task-row">' +
+          '<span class="tc-task-dot" style="background:' + clr + '"></span>' +
+          '<div class="tc-task-body">' +
+            '<div class="tc-task-name">' + t.title + '</div>' +
+            '<span class="tc-task-type" style="' + typeStyle + '">' + typeLabel + '</span>' +
+          '</div>' +
+          '<span class="tc-task-badge" style="background:' + badgeBg + ';color:' + badgeClr + '">' + badgeText + '</span>' +
+        '</a>';
+      });
+      list.innerHTML = html;
+
+      var pct = Math.round((done / tasks.length) * 100);
+      var scoreClr = pct >= 80 ? '#10b981' : pct >= 50 ? '#f59e0b' : '#ef4444';
+      document.getElementById('tcModalFoot').innerHTML =
+        '<strong>' + done + '</strong> of <strong>' + tasks.length + '</strong> completed' +
+        ' &nbsp;<span style="font-weight:700;color:' + scoreClr + '">(' + pct + '%)</span>';
+    })
+    .catch(function() {
+      list.innerHTML = '<div class="tc-empty-msg" style="color:#ef4444">Failed to load tasks</div>';
+    });
+}
+
+function tcCloseModal() {
+  document.getElementById('tcModal').classList.remove('open');
+}
+
+document.getElementById('tcModal').addEventListener('click', function(e) {
+  if (e.target === this) tcCloseModal();
+});
+</script>

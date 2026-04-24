@@ -1,0 +1,460 @@
+<style>
+@keyframes bkpFadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:none; } }
+
+/* ── Page ───────────────────────────────────────────────── */
+.bkp-wrap { animation:bkpFadeIn 0.25s ease; }
+
+/* ── Top bar ─────────────────────────────────────────────── */
+.bkp-topbar { display:flex; align-items:center; gap:12px; margin-bottom:20px; flex-wrap:wrap; }
+.bkp-topbar-left { flex:1; min-width:0; }
+.bkp-section-pill {
+  display:inline-flex; align-items:center; gap:5px;
+  background:rgba(249,115,22,0.1); border:1px solid rgba(249,115,22,0.2);
+  color:#f97316; border-radius:20px; padding:3px 10px;
+  font-family:var(--adm-mono); font-size:0.68rem; font-weight:700; letter-spacing:0.3px; margin-bottom:6px;
+}
+.bkp-page-title { font-family:var(--adm-mono); font-size:1rem; font-weight:700; color:var(--adm-text); }
+.bkp-page-sub { font-size:0.78rem; color:var(--adm-muted); margin-top:2px; }
+.bkp-back-btn {
+  display:inline-flex; align-items:center; gap:6px;
+  background:var(--adm-surface); border:1px solid var(--adm-border);
+  color:var(--adm-text-2); border-radius:8px; padding:0 12px; height:34px;
+  font-size:0.8rem; text-decoration:none; flex-shrink:0; transition:border-color 0.15s;
+}
+.bkp-back-btn:hover { border-color:var(--adm-border-2); color:var(--adm-text); }
+
+/* ── Grid row ────────────────────────────────────────────── */
+.bkp-top-grid { display:grid; grid-template-columns:1fr 180px 180px; gap:14px; margin-bottom:14px; }
+@media(max-width:768px) { .bkp-top-grid { grid-template-columns:1fr; } }
+
+/* ── Cards ────────────────────────────────────────────────── */
+.bkp-card {
+  background:var(--adm-surface); border:1px solid var(--adm-border);
+  border-radius:12px; overflow:hidden;
+}
+.bkp-card-hdr {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:10px 14px; border-bottom:1px solid var(--adm-border);
+  font-size:0.72rem; font-weight:700; font-family:var(--adm-mono);
+  color:var(--adm-text-2); text-transform:uppercase; letter-spacing:0.5px;
+}
+.bkp-card-body { padding:14px; }
+.bkp-badge {
+  font-family:var(--adm-mono); font-size:0.62rem; font-weight:700;
+  padding:2px 8px; border-radius:4px; letter-spacing:0.3px;
+}
+.bkp-badge.active { background:rgba(16,185,129,0.12); color:#10b981; border:1px solid rgba(16,185,129,0.25); }
+.bkp-badge.disabled { background:rgba(68,94,120,0.2); color:var(--adm-muted); border:1px solid var(--adm-border); }
+
+/* Stat tile */
+.bkp-stat-tile {
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  height:100%; min-height:90px; gap:4px; cursor:default;
+}
+.bkp-stat-val { font-family:var(--adm-mono); font-size:1.8rem; font-weight:700; line-height:1; }
+.bkp-stat-lbl { font-size:0.68rem; color:var(--adm-muted); font-family:var(--adm-mono); text-transform:uppercase; letter-spacing:0.5px; }
+
+/* Action tile */
+.bkp-action-tile {
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  min-height:90px; gap:6px; cursor:pointer; transition:background 0.15s; padding:14px;
+}
+.bkp-action-tile:hover { background:rgba(255,255,255,0.04); }
+.bkp-action-tile i { font-size:1.5rem; }
+.bkp-action-tile .lbl { font-family:var(--adm-mono); font-size:0.68rem; font-weight:700; color:var(--adm-text-2); text-transform:uppercase; letter-spacing:0.3px; }
+
+/* Form inputs */
+.bkp-input {
+  width:100%; background:var(--adm-bg); border:1px solid var(--adm-border);
+  color:var(--adm-text); border-radius:8px; padding:8px 12px;
+  font-family:var(--adm-font); font-size:0.82rem; outline:none;
+  transition:border-color 0.15s; box-sizing:border-box;
+}
+.bkp-input:focus { border-color:rgba(249,115,22,0.45); }
+.bkp-input-lbl { font-size:0.67rem; color:var(--adm-muted); font-family:var(--adm-mono); text-transform:uppercase; letter-spacing:0.4px; display:block; margin-bottom:5px; }
+.bkp-select {
+  width:100%; background:var(--adm-bg); border:1px solid var(--adm-border);
+  color:var(--adm-text); border-radius:8px; padding:8px 12px;
+  font-family:var(--adm-mono); font-size:0.8rem; outline:none;
+  transition:border-color 0.15s; box-sizing:border-box;
+}
+.bkp-select:focus { border-color:rgba(249,115,22,0.45); }
+.bkp-hint { font-size:0.7rem; color:var(--adm-muted); margin-top:10px; }
+.bkp-form-row { display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap; margin-bottom:0; }
+.bkp-form-col { flex:1; min-width:100px; }
+
+/* Buttons */
+.bkp-btn {
+  display:inline-flex; align-items:center; gap:6px;
+  background:var(--adm-surface-2); border:1px solid var(--adm-border);
+  color:var(--adm-text-2); border-radius:8px; padding:8px 14px;
+  font-size:0.78rem; font-family:var(--adm-font); cursor:pointer; transition:all 0.15s; white-space:nowrap;
+}
+.bkp-btn:hover { border-color:var(--adm-border-2); color:var(--adm-text); }
+.bkp-btn.orange { background:linear-gradient(135deg,#f97316,#ea580c); border-color:transparent; color:#fff; }
+.bkp-btn.orange:hover { opacity:0.88; }
+.bkp-btn.danger { color:#ef4444; border-color:rgba(239,68,68,0.3); }
+.bkp-btn.danger:hover { background:rgba(239,68,68,0.08); }
+.bkp-btn.sm { padding:4px 9px; font-size:0.68rem; }
+
+/* Drive card */
+.bkp-drive-row { display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap; }
+.bkp-drive-row .bkp-select-wrap { flex:1; min-width:200px; }
+
+/* Table */
+.bkp-table-wrap { overflow-x:auto; }
+.bkp-table { width:100%; border-collapse:collapse; font-size:0.78rem; }
+.bkp-table th {
+  padding:9px 12px; text-align:left; border-bottom:1px solid var(--adm-border);
+  font-family:var(--adm-mono); font-size:0.62rem; font-weight:700; color:var(--adm-muted);
+  text-transform:uppercase; letter-spacing:0.5px; white-space:nowrap;
+}
+.bkp-table td { padding:9px 12px; border-bottom:1px solid rgba(26,48,80,0.5); vertical-align:middle; }
+.bkp-table tr:last-child td { border-bottom:none; }
+.bkp-table tr:hover td { background:rgba(255,255,255,0.02); }
+.bkp-mono { font-family:var(--adm-mono); color:var(--adm-text-2); }
+.bkp-file-name { font-family:var(--adm-mono); font-size:0.76rem; font-weight:500; color:var(--adm-text); word-break:break-all; }
+.bkp-latest-badge { font-size:0.52rem; background:#10b981; color:#fff; padding:1px 5px; border-radius:3px; margin-left:6px; vertical-align:middle; }
+
+/* Status badges */
+.bkp-status { font-family:var(--adm-mono); font-size:0.62rem; font-weight:700; padding:2px 7px; border-radius:4px; letter-spacing:0.3px; }
+.bkp-status.success   { background:rgba(16,185,129,0.12); color:#10b981; border:1px solid rgba(16,185,129,0.25); }
+.bkp-status.failed    { background:rgba(239,68,68,0.12);  color:#ef4444; border:1px solid rgba(239,68,68,0.25); }
+.bkp-status.restored  { background:rgba(0,212,255,0.12);  color:#00d4ff; border:1px solid rgba(0,212,255,0.25); }
+.bkp-status.restoring { background:rgba(245,158,11,0.12); color:#f59e0b; border:1px solid rgba(245,158,11,0.25); }
+.bkp-type-badge { font-size:0.62rem; font-family:var(--adm-mono); font-weight:600; padding:2px 7px; border-radius:4px; }
+.bkp-type-badge.scheduled { background:rgba(99,102,241,0.12); color:#818cf8; }
+.bkp-type-badge.manual    { background:rgba(100,116,139,0.12); color:var(--adm-muted); }
+
+/* Pagination */
+.bkp-page-btns { display:flex; justify-content:center; gap:6px; padding:12px; }
+.bkp-pager { padding:4px 11px; border-radius:7px; border:1px solid var(--adm-border); background:transparent; color:var(--adm-text-2); font-family:var(--adm-mono); font-size:0.72rem; text-decoration:none; cursor:pointer; transition:all 0.15s; }
+.bkp-pager.active { background:#f97316; border-color:transparent; color:#fff; }
+.bkp-pager:hover:not(.active) { border-color:var(--adm-border-2); color:var(--adm-text); }
+
+/* Empty */
+.bkp-empty { text-align:center; padding:2.5rem; color:var(--adm-muted); }
+.bkp-empty i { font-size:2rem; display:block; opacity:0.22; margin-bottom:8px; }
+</style>
+
+<div class="bkp-wrap">
+
+  <!-- Top bar -->
+  <div class="bkp-topbar">
+    <div class="bkp-topbar-left">
+      <div class="bkp-section-pill"><i class="bi bi-tools"></i> Tools</div>
+      <div class="bkp-page-title">Backup</div>
+      <div class="bkp-page-sub">Create, schedule, and restore database backups</div>
+    </div>
+    <a href="/admin/tools" class="bkp-back-btn"><i class="bi bi-arrow-left"></i> Tools</a>
+  </div>
+
+  <!-- Top grid: Schedule | Stats | Actions -->
+  <div class="bkp-top-grid">
+
+    <!-- Schedule card -->
+    <div class="bkp-card">
+      <div class="bkp-card-hdr">
+        <span><i class="bi bi-clock-history me-1"></i>Scheduled Backup</span>
+        <% if (settings.scheduled_time) { %>
+        <span class="bkp-badge active">ACTIVE</span>
+        <% } else { %>
+        <span class="bkp-badge disabled">DISABLED</span>
+        <% } %>
+      </div>
+      <div class="bkp-card-body">
+        <form id="bkpScheduleForm" onsubmit="bkpSaveSchedule(event)">
+          <div class="bkp-form-row">
+            <div class="bkp-form-col">
+              <label class="bkp-input-lbl">Daily Time</label>
+              <input type="time" id="bkpTime" class="bkp-input"
+                     value="<%= settings.scheduled_time ? settings.scheduled_time.substring(0,5) : '' %>">
+            </div>
+            <div class="bkp-form-col" style="max-width:90px;">
+              <label class="bkp-input-lbl">Max Kept</label>
+              <input type="number" id="bkpMax" class="bkp-input" min="1" max="100"
+                     value="<%= settings.max_backups || 30 %>">
+            </div>
+            <div style="display:flex;gap:6px;padding-bottom:1px;">
+              <button type="submit" class="bkp-btn orange" style="padding:8px 14px;">
+                <i class="bi bi-save"></i> Save
+              </button>
+              <% if (settings.scheduled_time) { %>
+              <button type="button" class="bkp-btn danger" onclick="bkpDisableSchedule()" title="Disable">
+                <i class="bi bi-x-lg"></i>
+              </button>
+              <% } %>
+            </div>
+          </div>
+        </form>
+        <div class="bkp-hint">
+          <i class="bi bi-info-circle me-1"></i>
+          <% if (settings.scheduled_time) { %>
+            Auto-backup daily at <strong style="color:#f97316;"><%= settings.scheduled_time.substring(0,5) %></strong>.
+            Keeps the latest <strong><%= settings.max_backups %></strong> backups.
+          <% } else { %>
+            Set a time to enable daily automatic backups.
+          <% } %>
+        </div>
+      </div>
+    </div>
+
+    <!-- Total backups stat -->
+    <div class="bkp-card">
+      <div style="padding:16px;height:100%;display:flex;flex-direction:column;">
+        <div class="bkp-stat-tile">
+          <div class="bkp-stat-val" style="color:#f97316;"><%= pagination.total %></div>
+          <div class="bkp-stat-lbl">Total Backups</div>
+          <i class="bi bi-database" style="font-size:1.2rem;color:var(--adm-muted);margin-top:2px;"></i>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick actions -->
+    <div class="bkp-card" style="display:flex;flex-direction:column;">
+      <div class="bkp-action-tile" onclick="bkpCreate()" id="bkpCreateBtn" style="flex:1;border-bottom:1px solid var(--adm-border);">
+        <i class="bi bi-download" style="color:#10b981;"></i>
+        <span class="lbl">Create Backup</span>
+      </div>
+      <div class="bkp-action-tile" onclick="document.getElementById('bkpFileInput').click()" style="flex:1;">
+        <i class="bi bi-upload" style="color:#f59e0b;"></i>
+        <span class="lbl">Restore File</span>
+        <input type="file" id="bkpFileInput" accept=".sql" style="display:none;" onchange="bkpUploadRestore(this)">
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Restore from Drive -->
+  <div class="bkp-card" style="margin-bottom:14px;">
+    <div class="bkp-card-hdr">
+      <span><i class="bi bi-cloud-download me-1"></i>Restore from Google Drive</span>
+      <button class="bkp-btn sm" onclick="bkpLoadDrive()" id="bkpDriveRefresh">
+        <i class="bi bi-arrow-clockwise"></i> Refresh
+      </button>
+    </div>
+    <div class="bkp-card-body">
+      <div class="bkp-drive-row">
+        <div class="bkp-select-wrap">
+          <label class="bkp-input-lbl">Select Backup from Drive</label>
+          <select id="bkpDriveSelect" class="bkp-select">
+            <option value="">— Click Refresh to load backups from Drive —</option>
+          </select>
+        </div>
+        <button class="bkp-btn orange" onclick="bkpRestoreFromDrive()" id="bkpDriveRestoreBtn">
+          <i class="bi bi-cloud-download"></i> Restore from Drive
+        </button>
+      </div>
+      <div class="bkp-hint"><i class="bi bi-info-circle me-1"></i>Backups stored in Google Drive <strong>db_backup</strong> folder. Restoring overwrites the current database.</div>
+    </div>
+  </div>
+
+  <!-- Backup History -->
+  <div class="bkp-card">
+    <div class="bkp-card-hdr">
+      <span><i class="bi bi-archive me-1"></i>Backup History</span>
+      <span style="font-size:0.7rem;color:var(--adm-muted);font-weight:400;"><%= pagination.total %> backups</span>
+    </div>
+    <div class="bkp-table-wrap">
+      <table class="bkp-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Filename</th>
+            <th>Size</th>
+            <th>Type</th>
+            <th>Status</th>
+            <th>Created By</th>
+            <th>Date</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (backups.length > 0) { %>
+            <% backups.forEach(function(b, i) { %>
+            <tr>
+              <td class="bkp-mono" style="font-size:0.72rem;"><%= (pagination.page - 1) * pagination.limit + i + 1 %></td>
+              <td>
+                <div class="bkp-file-name">
+                  <%= b.filename %>
+                  <% if (i === 0 && pagination.page === 1) { %><span class="bkp-latest-badge">LATEST</span><% } %>
+                </div>
+              </td>
+              <td class="bkp-mono"><%= b.file_size > 1048576 ? (b.file_size/1048576).toFixed(1)+' MB' : (b.file_size/1024).toFixed(1)+' KB' %></td>
+              <td>
+                <span class="bkp-type-badge <%= b.type %>"><%= b.type %></span>
+              </td>
+              <td>
+                <span class="bkp-status <%= b.status %>"><%= b.status %></span>
+                <% if (b.notes && b.status === 'failed') { %>
+                <div style="font-size:0.6rem;color:#ef4444;margin-top:3px;" title="<%= b.notes %>"><i class="bi bi-exclamation-triangle"></i> <%= b.notes.substring(0,40) %>...</div>
+                <% } %>
+              </td>
+              <td style="font-size:0.78rem;color:var(--adm-text-2);"><%= b.created_by_name || (b.type === 'scheduled' ? 'System' : '—') %></td>
+              <td class="bkp-mono" style="font-size:0.7rem;white-space:nowrap;"><%= new Date(b.created_at).toLocaleString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit'}) %></td>
+              <td>
+                <div style="display:flex;gap:4px;">
+                  <% if (b.status === 'success') { %>
+                  <button class="bkp-btn sm" onclick="bkpRestore(<%= b.id %>,'<%= b.filename %>')" title="Restore">
+                    <i class="bi bi-arrow-counterclockwise"></i> Restore
+                  </button>
+                  <button class="bkp-btn sm" onclick="bkpUploadDrive(<%= b.id %>,'<%= b.filename %>')" title="Upload to Drive">
+                    <i class="bi bi-google"></i> Drive
+                  </button>
+                  <% } %>
+                  <a href="/backups/download/<%= b.id %>" class="bkp-btn sm" title="Download">
+                    <i class="bi bi-download"></i>
+                  </a>
+                  <button class="bkp-btn sm danger" onclick="bkpDelete(<%= b.id %>)" title="Delete">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+            <% }) %>
+          <% } else { %>
+          <tr>
+            <td colspan="8">
+              <div class="bkp-empty">
+                <i class="bi bi-database"></i>
+                No backups yet — click Create Backup to get started
+              </div>
+            </td>
+          </tr>
+          <% } %>
+        </tbody>
+      </table>
+    </div>
+    <% if (pagination.totalPages > 1) { %>
+    <div class="bkp-page-btns">
+      <% for (var p = 1; p <= pagination.totalPages; p++) { %>
+      <a href="/admin/backup?page=<%= p %>" class="bkp-pager <%= p === pagination.page ? 'active' : '' %>"><%= p %></a>
+      <% } %>
+    </div>
+    <% } %>
+  </div>
+
+</div><!-- .bkp-wrap -->
+
+<script>
+async function bkpCreate() {
+  var btn = document.getElementById('bkpCreateBtn');
+  btn.style.opacity = '0.5'; btn.style.pointerEvents = 'none';
+  showToast('Creating backup…', 'info');
+  try {
+    var r = await axios.post('/backups/create');
+    showToast(r.data.message, 'success');
+    setTimeout(function() { location.reload(); }, 1000);
+  } catch(e) {
+    showToast(e.response?.data?.message || 'Backup failed', 'error');
+    btn.style.opacity = '1'; btn.style.pointerEvents = 'auto';
+  }
+}
+
+async function bkpRestore(id, filename) {
+  if (!confirm('⚠️ RESTORE WARNING\n\nThis will OVERWRITE the current database with:\n' + filename + '\n\nA safety backup will be created first.\n\nContinue?')) return;
+  if (!confirm('Final confirmation: Restore from ' + filename + '?')) return;
+  showToast('Creating safety backup…', 'info');
+  try {
+    await axios.post('/backups/create');
+    showToast('Safety backup created. Restoring…', 'info');
+    var r = await axios.post('/backups/restore/' + id);
+    showToast(r.data.message, 'success');
+    setTimeout(function() { location.reload(); }, 1500);
+  } catch(e) { showToast(e.response?.data?.message || 'Restore failed', 'error'); }
+}
+
+async function bkpDelete(id) {
+  if (!confirm('Delete this backup permanently?')) return;
+  try {
+    await axios.delete('/backups/' + id);
+    showToast('Backup deleted', 'success');
+    setTimeout(function() { location.reload(); }, 700);
+  } catch(e) { showToast(e.response?.data?.message || 'Delete failed', 'error'); }
+}
+
+function bkpSaveSchedule(e) {
+  e.preventDefault();
+  var time = document.getElementById('bkpTime').value;
+  var max  = document.getElementById('bkpMax').value;
+  if (!time) { showToast('Please set a backup time', 'error'); return; }
+  axios.post('/backups/settings', { scheduled_time: time + ':00', max_backups: parseInt(max) || 30 })
+    .then(function(r) { showToast(r.data.message, 'success'); setTimeout(function() { location.reload(); }, 700); })
+    .catch(function(e) { showToast(e.response?.data?.message || 'Failed', 'error'); });
+}
+
+function bkpDisableSchedule() {
+  if (!confirm('Disable scheduled daily backup?')) return;
+  axios.post('/backups/settings', { scheduled_time: null, max_backups: parseInt(document.getElementById('bkpMax').value) || 30 })
+    .then(function() { showToast('Scheduled backup disabled', 'success'); setTimeout(function() { location.reload(); }, 700); })
+    .catch(function(e) { showToast(e.response?.data?.message || 'Failed', 'error'); });
+}
+
+async function bkpUploadDrive(id, filename) {
+  if (!confirm('Upload "' + filename + '" to Google Drive db_backup folder?')) return;
+  showToast('Uploading to Drive…', 'info');
+  try {
+    var r = await axios.post('/backups/upload-drive/' + id);
+    showToast(r.data.message, 'success');
+  } catch(e) { showToast(e.response?.data?.message || 'Drive upload failed', 'error'); }
+}
+
+async function bkpLoadDrive() {
+  var btn = document.getElementById('bkpDriveRefresh');
+  var sel = document.getElementById('bkpDriveSelect');
+  btn.disabled = true; sel.innerHTML = '<option value="">Loading…</option>';
+  try {
+    var r = await axios.get('/backups/drive-list');
+    var files = r.data.data || [];
+    if (!files.length) { sel.innerHTML = '<option value="">No backups found in Drive</option>'; }
+    else {
+      sel.innerHTML = '<option value="">— Select a backup —</option>';
+      files.forEach(function(f) {
+        var sz = f.size > 1048576 ? (f.size/1048576).toFixed(1)+' MB' : (f.size/1024).toFixed(1)+' KB';
+        var dt = new Date(f.createdTime).toLocaleString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit'});
+        var o = document.createElement('option'); o.value = f.id; o.dataset.name = f.name;
+        o.textContent = f.name + '  (' + sz + '  •  ' + dt + ')'; sel.appendChild(o);
+      });
+    }
+  } catch(e) { sel.innerHTML = '<option value="">Failed to load — check Drive connection</option>'; showToast(e.response?.data?.message || 'Failed', 'error'); }
+  btn.disabled = false;
+}
+
+async function bkpRestoreFromDrive() {
+  var sel = document.getElementById('bkpDriveSelect');
+  var fileId = sel.value;
+  if (!fileId) { showToast('Please select a backup from the list', 'error'); return; }
+  var fileName = sel.options[sel.selectedIndex].dataset.name;
+  if (!confirm('⚠️ RESTORE FROM DRIVE\n\nThis will OVERWRITE the current database with:\n' + fileName + '\n\nA safety backup will be created first.\n\nContinue?')) return;
+  if (!confirm('Final confirmation: Restore from Drive backup "' + fileName + '"?')) return;
+  var btn = document.getElementById('bkpDriveRestoreBtn');
+  btn.disabled = true; btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Restoring…';
+  showToast('Creating safety backup…', 'info');
+  try {
+    await axios.post('/backups/create');
+    showToast('Safety backup created. Downloading from Drive…', 'info');
+    var r = await axios.post('/backups/restore-drive', { fileId: fileId, fileName: fileName });
+    showToast(r.data.message, 'success');
+    setTimeout(function() { location.reload(); }, 1500);
+  } catch(e) {
+    showToast(e.response?.data?.message || 'Drive restore failed', 'error');
+    btn.disabled = false; btn.innerHTML = '<i class="bi bi-cloud-download"></i> Restore from Drive';
+  }
+}
+
+async function bkpUploadRestore(input) {
+  var file = input.files[0]; if (!file) return; input.value = '';
+  if (!file.name.endsWith('.sql')) { showToast('Only .sql backup files are allowed', 'error'); return; }
+  if (!confirm('⚠️ UPLOAD & RESTORE\n\nThis will OVERWRITE the current database with:\n' + file.name + '\n\nA safety backup will be created first.\n\nContinue?')) return;
+  if (!confirm('Final confirmation: Restore from uploaded file "' + file.name + '"?')) return;
+  showToast('Creating safety backup…', 'info');
+  try {
+    await axios.post('/backups/create');
+    showToast('Safety backup created. Uploading and restoring…', 'info');
+    var fd = new FormData(); fd.append('backup', file);
+    var r = await axios.post('/backups/upload-restore', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+    showToast(r.data.message, 'success');
+    setTimeout(function() { location.reload(); }, 1500);
+  } catch(e) { showToast(e.response?.data?.message || 'Restore failed', 'error'); }
+}
+</script>

@@ -1,0 +1,602 @@
+<style>
+  /* ── Layout ── */
+  .admls-topbar { display:flex; align-items:flex-start; justify-content:space-between; gap:1rem; flex-wrap:wrap; margin-bottom:1.25rem; }
+  .admls-title { font-size:1.4rem; font-weight:700; color:var(--adm-text,#f1f5f9); margin:0 0 2px; line-height:1.2; }
+  .admls-subtitle { font-size:0.72rem; color:var(--adm-muted,#64748b); font-family:var(--adm-mono,'Space Mono',monospace); display:flex; align-items:center; gap:6px; }
+  .admls-live-dot { display:inline-block; width:7px; height:7px; border-radius:50%; background:#10b981; animation:admls-pulse 1.5s ease-in-out infinite; }
+  @keyframes admls-pulse { 0%,100%{opacity:1} 50%{opacity:0.2} }
+  .admls-actions { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .admls-search { background:var(--adm-surface2,#1e293b); border:1px solid var(--adm-border,#334155); color:var(--adm-text,#f1f5f9); border-radius:8px; padding:6px 12px; font-size:0.78rem; width:190px; outline:none; transition:border-color 0.15s; }
+  .admls-search:focus { border-color:rgba(0,212,255,0.5); }
+  .admls-search::placeholder { color:var(--adm-muted,#64748b); }
+  .admls-countdown-wrap { display:flex; align-items:center; gap:5px; font-size:0.7rem; color:var(--adm-muted,#64748b); font-family:var(--adm-mono,'Space Mono',monospace); }
+  .admls-countdown-val { color:#00d4ff; font-weight:600; min-width:28px; }
+  .admls-refresh-btn { background:var(--adm-surface2,#1e293b); border:1px solid var(--adm-border,#334155); color:var(--adm-muted,#64748b); border-radius:8px; padding:6px 12px; font-size:0.75rem; cursor:pointer; transition:all 0.15s; white-space:nowrap; }
+  .admls-refresh-btn:hover { border-color:rgba(0,212,255,0.4); color:#00d4ff; }
+
+  /* ── Filter Tabs ── */
+  .admls-tabs { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:1.25rem; }
+  .admls-tab { background:var(--adm-surface2,#1e293b); border:1px solid var(--adm-border,#334155); color:var(--adm-muted,#64748b); border-radius:8px; padding:5px 12px; font-size:0.72rem; font-weight:600; cursor:pointer; transition:all 0.15s; display:flex; align-items:center; gap:6px; }
+  .admls-tab:hover { border-color:rgba(0,212,255,0.3); color:var(--adm-text,#f1f5f9); }
+  .admls-tab.active { background:rgba(0,212,255,0.08); border-color:rgba(0,212,255,0.4); color:#00d4ff; }
+  .admls-tab-count { background:rgba(0,0,0,0.25); border-radius:4px; padding:1px 5px; font-family:var(--adm-mono,'Space Mono',monospace); font-size:0.65rem; min-width:18px; text-align:center; }
+  .admls-tab.active .admls-tab-count { background:rgba(0,212,255,0.15); color:#00d4ff; }
+  .admls-tab[data-filter="working"].active  { background:rgba(16,185,129,0.08); border-color:rgba(16,185,129,0.4); color:#10b981; }
+  .admls-tab[data-filter="working"].active .admls-tab-count { background:rgba(16,185,129,0.15); color:#10b981; }
+  .admls-tab[data-filter="idle"].active    { background:rgba(245,158,11,0.08); border-color:rgba(245,158,11,0.4); color:#f59e0b; }
+  .admls-tab[data-filter="idle"].active .admls-tab-count { background:rgba(245,158,11,0.15); color:#f59e0b; }
+  .admls-tab[data-filter="absent"].active  { background:rgba(239,68,68,0.08); border-color:rgba(239,68,68,0.4); color:#ef4444; }
+  .admls-tab[data-filter="absent"].active .admls-tab-count { background:rgba(239,68,68,0.15); color:#ef4444; }
+  .admls-tab[data-filter="extending"].active { background:rgba(139,92,246,0.08); border-color:rgba(139,92,246,0.4); color:#a78bfa; }
+  .admls-tab[data-filter="extending"].active .admls-tab-count { background:rgba(139,92,246,0.15); color:#a78bfa; }
+  .admls-tab[data-filter="stale"].active   { background:rgba(249,115,22,0.08); border-color:rgba(249,115,22,0.4); color:#f97316; }
+  .admls-tab[data-filter="stale"].active .admls-tab-count { background:rgba(249,115,22,0.15); color:#f97316; }
+
+  /* ── Grid ── */
+  .admls-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(290px, 1fr)); gap:0.85rem; }
+
+  /* ── Card ── */
+  .admls-card { background:var(--adm-surface,#0f172a); border:1px solid var(--adm-border,#334155); border-radius:12px; padding:1rem; transition:border-color 0.2s, transform 0.15s; border-left:3px solid transparent; position:relative; }
+  .admls-card:hover { transform:translateY(-1px); }
+  .admls-card--working   { border-left-color:#10b981; }
+  .admls-card--extending { border-left-color:#8b5cf6; }
+  .admls-card--idle      { border-left-color:#f59e0b; }
+  .admls-card--absent    { border-left-color:#ef4444; }
+  .admls-card--stale     { border-left-color:#f97316; }
+  .admls-card--off, .admls-card--leave { border-left-color:#334155; opacity:0.6; }
+
+  /* Chat button on card */
+  .admls-chat-btn { position:absolute; top:10px; right:10px; background:rgba(0,212,255,0.08); border:1px solid rgba(0,212,255,0.2); color:#00d4ff; border-radius:7px; padding:4px 8px; font-size:0.65rem; cursor:pointer; display:flex; align-items:center; gap:4px; transition:all 0.15s; opacity:0; }
+  .admls-card:hover .admls-chat-btn { opacity:1; }
+  .admls-chat-btn:hover { background:rgba(0,212,255,0.15); border-color:rgba(0,212,255,0.5); }
+
+  /* Card head */
+  .admls-card-head { display:flex; align-items:flex-start; gap:10px; margin-bottom:0.65rem; }
+  .admls-avatar { width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:0.78rem; flex-shrink:0; }
+  .admls-card-info { flex:1; min-width:0; padding-right:30px; }
+  .admls-emp-name { font-weight:600; font-size:0.88rem; color:var(--adm-text,#f1f5f9); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .admls-shift-label { font-size:0.62rem; color:var(--adm-muted,#64748b); font-family:var(--adm-mono,'Space Mono',monospace); margin-top:1px; }
+
+  /* Badge */
+  .admls-badge { display:inline-flex; align-items:center; gap:4px; font-size:0.6rem; font-weight:700; padding:3px 7px; border-radius:6px; white-space:nowrap; font-family:var(--adm-mono,'Space Mono',monospace); text-transform:uppercase; letter-spacing:0.3px; flex-shrink:0; }
+  .admls-badge--working   { background:rgba(16,185,129,0.15); color:#10b981; }
+  .admls-badge--extending { background:rgba(139,92,246,0.15); color:#a78bfa; }
+  .admls-badge--idle      { background:rgba(245,158,11,0.15); color:#f59e0b; }
+  .admls-badge--absent    { background:rgba(239,68,68,0.12); color:#ef4444; }
+  .admls-badge--stale     { background:rgba(249,115,22,0.12); color:#f97316; }
+  .admls-badge--off       { background:rgba(100,116,139,0.1); color:#64748b; }
+  .admls-badge--leave     { background:rgba(99,102,241,0.12); color:#818cf8; }
+  .admls-dot { width:6px; height:6px; border-radius:50%; background:currentColor; animation:admls-pulse 1.5s ease-in-out infinite; }
+
+  /* Shift progress bar */
+  .admls-progress-wrap { margin-bottom:0.65rem; }
+  .admls-progress-row { display:flex; align-items:center; gap:8px; margin-bottom:3px; }
+  .admls-progress-label { font-size:0.6rem; color:var(--adm-muted,#64748b); font-family:var(--adm-mono,'Space Mono',monospace); flex-shrink:0; }
+  .admls-progress-pct { font-size:0.6rem; font-weight:700; font-family:var(--adm-mono,'Space Mono',monospace); flex-shrink:0; min-width:28px; text-align:right; }
+  .admls-progress-track { flex:1; height:5px; background:var(--adm-border,#334155); border-radius:3px; overflow:hidden; }
+  .admls-progress-fill { height:100%; border-radius:3px; transition:width 0.5s ease; }
+
+  /* Task box */
+  .admls-task-box { border-radius:8px; padding:0.55rem 0.75rem; margin-bottom:0.6rem; }
+  .admls-task-box--working   { background:rgba(16,185,129,0.07);  border:1px solid rgba(16,185,129,0.18); }
+  .admls-task-box--extending { background:rgba(139,92,246,0.07);  border:1px solid rgba(139,92,246,0.18); }
+  .admls-task-name { font-size:0.78rem; font-weight:500; color:var(--adm-text,#f1f5f9); display:flex; align-items:center; gap:5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .admls-task-name i { font-size:0.7rem; flex-shrink:0; }
+  .admls-task-meta { display:flex; align-items:center; gap:10px; margin-top:4px; font-size:0.65rem; font-family:var(--adm-mono,'Space Mono',monospace); color:var(--adm-muted,#64748b); }
+  .admls-elapsed { color:#00d4ff; font-weight:600; }
+
+  /* Status hints */
+  .admls-hint { font-size:0.7rem; padding:5px 0 2px; }
+  .admls-hint--idle   { color:#f59e0b; }
+  .admls-hint--absent { color:#ef4444; }
+  .admls-hint--stale  { color:#f97316; }
+
+  /* Card footer */
+  .admls-card-foot { display:flex; align-items:center; justify-content:space-between; padding-top:0.55rem; border-top:1px solid var(--adm-border,#334155); margin-top:0.1rem; }
+  .admls-login-time { font-size:0.65rem; color:var(--adm-muted,#64748b); font-family:var(--adm-mono,'Space Mono',monospace); display:flex; align-items:center; gap:4px; }
+  .admls-force-btn { background:none; border:1px solid rgba(239,68,68,0.3); color:#ef4444; border-radius:6px; padding:3px 9px; font-size:0.62rem; cursor:pointer; display:flex; align-items:center; gap:4px; font-family:var(--adm-mono,'Space Mono',monospace); transition:all 0.15s; }
+  .admls-force-btn:hover { background:rgba(239,68,68,0.08); border-color:#ef4444; }
+
+  /* Empty state */
+  .admls-empty { text-align:center; padding:3rem 1rem; color:var(--adm-muted,#64748b); font-size:0.85rem; }
+  .admls-empty i { font-size:2rem; display:block; margin-bottom:0.5rem; }
+
+  /* Loading skeleton */
+  .admls-skeleton { background:var(--adm-surface,#0f172a); border:1px solid var(--adm-border,#334155); border-radius:12px; padding:1rem; height:150px; animation:admls-shimmer 1.5s infinite; }
+  @keyframes admls-shimmer { 0%,100%{opacity:0.4} 50%{opacity:0.8} }
+
+  /* ── DM Chat Drawer ── */
+  .admls-dm-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:1100; opacity:0; pointer-events:none; transition:opacity 0.25s; }
+  .admls-dm-overlay.open { opacity:1; pointer-events:all; }
+  .admls-dm-drawer { position:fixed; top:0; right:0; height:100%; width:360px; max-width:100vw; background:var(--adm-surface,#0f172a); border-left:1px solid var(--adm-border,#334155); z-index:1101; display:flex; flex-direction:column; transform:translateX(100%); transition:transform 0.28s cubic-bezier(0.4,0,0.2,1); }
+  .admls-dm-drawer.open { transform:translateX(0); }
+  .admls-dm-head { display:flex; align-items:center; gap:10px; padding:0.85rem 1rem; border-bottom:1px solid var(--adm-border,#334155); flex-shrink:0; }
+  .admls-dm-peer-avatar { width:34px; height:34px; border-radius:50%; background:rgba(0,212,255,0.12); color:#00d4ff; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:0.75rem; flex-shrink:0; }
+  .admls-dm-peer-info { flex:1; min-width:0; }
+  .admls-dm-peer-name { font-weight:600; font-size:0.88rem; color:var(--adm-text,#f1f5f9); }
+  .admls-dm-peer-sub { font-size:0.62rem; color:var(--adm-muted,#64748b); font-family:var(--adm-mono,'Space Mono',monospace); }
+  .admls-dm-close { background:none; border:none; color:var(--adm-muted,#64748b); cursor:pointer; padding:4px; border-radius:6px; font-size:1rem; line-height:1; transition:color 0.15s; flex-shrink:0; }
+  .admls-dm-close:hover { color:var(--adm-text,#f1f5f9); }
+  .admls-dm-messages { flex:1; overflow-y:auto; padding:0.75rem 1rem; display:flex; flex-direction:column; gap:6px; }
+  .admls-dm-msg { max-width:82%; }
+  .admls-dm-msg.mine { align-self:flex-end; }
+  .admls-dm-msg.theirs { align-self:flex-start; }
+  .admls-dm-bubble { padding:7px 11px; border-radius:12px; font-size:0.8rem; line-height:1.45; word-break:break-word; }
+  .admls-dm-msg.mine .admls-dm-bubble { background:rgba(0,212,255,0.12); border:1px solid rgba(0,212,255,0.2); color:var(--adm-text,#f1f5f9); border-bottom-right-radius:3px; }
+  .admls-dm-msg.theirs .admls-dm-bubble { background:var(--adm-surface2,#1e293b); border:1px solid var(--adm-border,#334155); color:var(--adm-text,#f1f5f9); border-bottom-left-radius:3px; }
+  .admls-dm-meta { font-size:0.58rem; color:var(--adm-muted,#64748b); margin-top:2px; font-family:var(--adm-mono,'Space Mono',monospace); }
+  .admls-dm-msg.mine .admls-dm-meta { text-align:right; }
+  .admls-dm-empty-chat { text-align:center; color:var(--adm-muted,#64748b); font-size:0.78rem; margin:auto; padding:2rem 1rem; }
+  .admls-dm-empty-chat i { font-size:1.8rem; display:block; margin-bottom:0.5rem; }
+  .admls-dm-loading { text-align:center; color:var(--adm-muted,#64748b); font-size:0.75rem; padding:1rem; }
+  .admls-dm-footer { padding:0.75rem 1rem; border-top:1px solid var(--adm-border,#334155); display:flex; gap:8px; align-items:flex-end; flex-shrink:0; }
+  .admls-dm-input { flex:1; background:var(--adm-surface2,#1e293b); border:1px solid var(--adm-border,#334155); color:var(--adm-text,#f1f5f9); border-radius:8px; padding:8px 12px; font-size:0.8rem; resize:none; outline:none; transition:border-color 0.15s; line-height:1.4; max-height:100px; font-family:inherit; }
+  .admls-dm-input:focus { border-color:rgba(0,212,255,0.4); }
+  .admls-dm-input::placeholder { color:var(--adm-muted,#64748b); }
+  .admls-dm-send { background:rgba(0,212,255,0.1); border:1px solid rgba(0,212,255,0.3); color:#00d4ff; border-radius:8px; width:36px; height:36px; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:0.9rem; transition:all 0.15s; flex-shrink:0; }
+  .admls-dm-send:hover { background:rgba(0,212,255,0.2); }
+  .admls-dm-send:disabled { opacity:0.4; cursor:not-allowed; }
+</style>
+
+<!-- Top bar -->
+<div class="admls-topbar">
+  <div>
+    <h1 class="admls-title">Live Status</h1>
+    <div class="admls-subtitle">
+      <span class="admls-live-dot"></span>
+      <span id="admls-time-label">Loading...</span>
+    </div>
+  </div>
+  <div class="admls-actions">
+    <input type="text" class="admls-search" id="admls-search" placeholder="Search employee...">
+    <div class="admls-countdown-wrap">
+      <i class="bi bi-arrow-repeat" style="font-size:0.7rem;"></i>
+      <span class="admls-countdown-val" id="admls-countdown">--</span>
+    </div>
+    <button class="admls-refresh-btn" onclick="ADMLS.refresh()">
+      <i class="bi bi-arrow-clockwise"></i> Refresh
+    </button>
+    <a href="/admin/team" class="adm-back-btn"><i class="bi bi-arrow-left"></i> Team</a>
+  </div>
+</div>
+
+<!-- Filter tabs -->
+<div class="admls-tabs" id="admls-tabs">
+  <button class="admls-tab active" data-filter="all">All <span class="admls-tab-count" id="cnt-all">--</span></button>
+  <button class="admls-tab" data-filter="working">Working <span class="admls-tab-count" id="cnt-working">--</span></button>
+  <button class="admls-tab" data-filter="idle">Idle <span class="admls-tab-count" id="cnt-idle">--</span></button>
+  <button class="admls-tab" data-filter="absent">Absent <span class="admls-tab-count" id="cnt-absent">--</span></button>
+  <button class="admls-tab" data-filter="extending">Extending <span class="admls-tab-count" id="cnt-extending">--</span></button>
+  <button class="admls-tab" data-filter="off">Off / Leave <span class="admls-tab-count" id="cnt-off">--</span></button>
+  <button class="admls-tab" data-filter="stale" id="stale-tab" style="display:none;">Stale <span class="admls-tab-count" id="cnt-stale">--</span></button>
+</div>
+
+<!-- Cards grid -->
+<div class="admls-grid" id="admls-grid">
+  <div class="admls-skeleton"></div>
+  <div class="admls-skeleton"></div>
+  <div class="admls-skeleton"></div>
+</div>
+
+<!-- Empty state -->
+<div class="admls-empty" id="admls-empty" style="display:none;">
+  <i class="bi bi-people"></i>
+  No employees match the current filter.
+</div>
+
+<!-- DM Chat Drawer -->
+<div class="admls-dm-overlay" id="admls-dm-overlay" onclick="ADMLS.closeChat()"></div>
+<div class="admls-dm-drawer" id="admls-dm-drawer">
+  <div class="admls-dm-head">
+    <div class="admls-dm-peer-avatar" id="admls-dm-peer-avatar">?</div>
+    <div class="admls-dm-peer-info">
+      <div class="admls-dm-peer-name" id="admls-dm-peer-name">--</div>
+      <div class="admls-dm-peer-sub">Private message</div>
+    </div>
+    <button class="admls-dm-close" onclick="ADMLS.closeChat()"><i class="bi bi-x-lg"></i></button>
+  </div>
+  <div class="admls-dm-messages" id="admls-dm-messages">
+    <div class="admls-dm-loading">Loading...</div>
+  </div>
+  <div class="admls-dm-footer">
+    <textarea class="admls-dm-input" id="admls-dm-input" placeholder="Type a message..." rows="1"></textarea>
+    <button class="admls-dm-send" id="admls-dm-send" onclick="ADMLS.sendMsg()">
+      <i class="bi bi-send-fill"></i>
+    </button>
+  </div>
+</div>
+
+<script>
+(function() {
+  'use strict';
+
+  var _tz          = '<%- timezone %>';
+  var _currentUserId = <%= currentUserId %>;
+  var _employees   = [];
+  var _counts      = {};
+  var _currentDec  = 0;
+  var _filter      = 'all';
+  var _search      = '';
+  var _countdownTimer = null;
+  var _elapsedTimer   = null;
+  var _countdownSec   = 30;
+
+  /* ── DM state ── */
+  var _dmConvId    = null;
+  var _dmPeerId    = null;
+  var _dmPeerName  = '';
+  var _dmMessages  = [];
+  var _dmSending   = false;
+
+  function esc(s) {
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+  function hexToRgb(hex) {
+    var r = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return r ? parseInt(r[1],16)+','+parseInt(r[2],16)+','+parseInt(r[3],16) : '100,116,139';
+  }
+
+  var STATUS_CFG = {
+    working:   { color:'#10b981', dot:true  },
+    extending: { color:'#8b5cf6', dot:false },
+    idle:      { color:'#f59e0b', dot:false },
+    absent:    { color:'#ef4444', dot:false },
+    stale:     { color:'#f97316', dot:false },
+    off:       { color:'#475569', dot:false },
+    leave:     { color:'#6366f1', dot:false },
+  };
+
+  function fmtTime(val) {
+    if (!val) return '--';
+    try { return new Date(val).toLocaleString('en-US', { timeZone:_tz, hour:'2-digit', minute:'2-digit', hour12:true }); }
+    catch(e) { return '--'; }
+  }
+  function fmtTimestamp(val) {
+    if (!val) return '';
+    try { return new Date(val).toLocaleString('en-US', { timeZone:_tz, month:'short', day:'numeric', hour:'2-digit', minute:'2-digit', hour12:true }); }
+    catch(e) { return ''; }
+  }
+  function shiftEndLabel(shiftStart, shiftHours) {
+    if (!shiftStart || !shiftHours) return '--';
+    var p = shiftStart.split(':');
+    var endDec = (parseInt(p[0]) + (parseInt(p[1])||0)/60 + parseFloat(shiftHours)) % 24;
+    var h = Math.floor(endDec), m = Math.round((endDec-h)*60);
+    return (h%12||12)+':'+String(m).padStart(2,'0')+' '+(h>=12?'PM':'AM');
+  }
+  function fmtShiftStart(s) {
+    if (!s) return '--';
+    var p = s.split(':'); var h = parseInt(p[0]), m = parseInt(p[1])||0;
+    return (h%12||12)+':'+String(m).padStart(2,'0')+' '+(h>=12?'PM':'AM');
+  }
+  function shiftPct(shiftStart, shiftHours) {
+    if (!shiftStart || !shiftHours) return -1;
+    var p = shiftStart.split(':');
+    var startDec = parseInt(p[0]) + (parseInt(p[1])||0)/60;
+    return Math.max(0, Math.min(115, (_currentDec - startDec) / parseFloat(shiftHours) * 100));
+  }
+  function nameInitials(name) {
+    return (name || '').split(' ').map(function(w){ return w[0]||''; }).join('').substring(0,2).toUpperCase();
+  }
+
+  /* ───────────────── Card render ───────────────── */
+  function renderCard(emp) {
+    var cfg = STATUS_CFG[emp.statusType] || { color:'#64748b', dot:false };
+    var pct = shiftPct(emp.shiftStart, emp.shiftHours);
+    var isOff = emp.statusType === 'off' || emp.statusType === 'leave';
+    var barColor = emp.statusType === 'working' ? '#10b981' :
+                   emp.statusType === 'extending' ? '#8b5cf6' :
+                   emp.statusType === 'idle' ? '#f59e0b' :
+                   emp.statusType === 'absent' ? '#ef4444' : '#475569';
+    if (pct > 100) barColor = '#f97316';
+    var rgb = hexToRgb(cfg.color);
+
+    var h = '<div class="admls-card admls-card--'+esc(emp.statusType)+'">';
+
+    /* Chat button — only for other users, not self */
+    if (emp.id !== _currentUserId) {
+      var safeN = esc(emp.name).replace(/'/g,"\\'");
+      h += '<button class="admls-chat-btn" onclick="ADMLS.openChat('+emp.id+',\''+safeN+'\')">';
+      h += '<i class="bi bi-chat-dots-fill"></i> Chat</button>';
+    }
+
+    /* Head */
+    h += '<div class="admls-card-head">';
+    h += '<div class="admls-avatar" style="background:rgba('+rgb+',0.15);color:'+cfg.color+';">'+esc(nameInitials(emp.name))+'</div>';
+    h += '<div class="admls-card-info">';
+    h += '<div class="admls-emp-name">'+esc(emp.name)+'</div>';
+    h += '<div class="admls-shift-label">';
+    if (emp.shiftStart) h += fmtShiftStart(emp.shiftStart)+' &bull; '+parseFloat(emp.shiftHours)+'h &bull; ends '+shiftEndLabel(emp.shiftStart, emp.shiftHours);
+    else h += 'No shift info';
+    h += '</div></div>';
+    h += '<span class="admls-badge admls-badge--'+esc(emp.statusType)+'">';
+    if (cfg.dot) h += '<span class="admls-dot"></span>';
+    h += esc(emp.status)+'</span>';
+    h += '</div>';
+
+    /* Shift progress bar */
+    if (pct >= 0 && !isOff) {
+      var fillW = Math.min(100, pct);
+      h += '<div class="admls-progress-wrap"><div class="admls-progress-row">';
+      h += '<span class="admls-progress-label">Shift</span>';
+      h += '<div class="admls-progress-track"><div class="admls-progress-fill" style="width:'+fillW+'%;background:'+barColor+';"></div></div>';
+      h += '<span class="admls-progress-pct" style="color:'+barColor+';">'+Math.round(pct)+'%</span>';
+      h += '</div></div>';
+    }
+
+    /* Task box */
+    if ((emp.statusType === 'working' || emp.statusType === 'extending') && emp.taskName) {
+      h += '<div class="admls-task-box admls-task-box--'+esc(emp.statusType)+'">';
+      h += '<div class="admls-task-name"><i class="bi bi-play-circle-fill" style="color:'+cfg.color+';"></i>'+esc(emp.taskName)+'</div>';
+      if (emp.startedAt) {
+        h += '<div class="admls-task-meta"><span>Started '+fmtTime(emp.startedAt)+'</span>';
+        h += '<span class="admls-elapsed" data-started="'+esc(emp.startedAt)+'">--</span></div>';
+      }
+      h += '</div>';
+    } else if (emp.statusType === 'idle') {
+      h += '<div class="admls-hint admls-hint--idle"><i class="bi bi-hourglass-split"></i> Logged in &mdash; no active task session</div>';
+    } else if (emp.statusType === 'absent') {
+      h += '<div class="admls-hint admls-hint--absent"><i class="bi bi-x-circle"></i> Shift started but not logged in</div>';
+    } else if (emp.statusType === 'stale') {
+      h += '<div class="admls-hint admls-hint--stale"><i class="bi bi-exclamation-triangle"></i> Still logged in &mdash; likely forgot to logout</div>';
+    }
+
+    /* Footer */
+    var showForce = emp.attendanceId && (emp.statusType === 'stale' || emp.statusType === 'extending' || emp.statusType === 'idle');
+    if (emp.loginTime || showForce) {
+      h += '<div class="admls-card-foot">';
+      if (emp.loginTime) h += '<span class="admls-login-time"><i class="bi bi-door-open"></i> In: '+fmtTime(emp.loginTime)+'</span>';
+      else h += '<span></span>';
+      if (showForce) {
+        var sn = esc(emp.name).replace(/'/g,"\\'");
+        h += '<button class="admls-force-btn" onclick="ADMLS.forceLogout('+emp.attendanceId+',\''+sn+'\')">';
+        h += '<i class="bi bi-box-arrow-right"></i> Force Logout</button>';
+      }
+      h += '</div>';
+    }
+    h += '</div>';
+    return h;
+  }
+
+  /* ───────────────── Grid ───────────────── */
+  function getFiltered() {
+    return _employees.filter(function(emp) {
+      if (_filter !== 'all') {
+        if (_filter === 'off') { if (emp.statusType !== 'off' && emp.statusType !== 'leave') return false; }
+        else { if (emp.statusType !== _filter) return false; }
+      }
+      if (_search && emp.name.toLowerCase().indexOf(_search) < 0) return false;
+      return true;
+    });
+  }
+  function updateElapsed() {
+    document.querySelectorAll('.admls-elapsed[data-started]').forEach(function(el) {
+      var ms = Date.now() - new Date(el.dataset.started).getTime();
+      if (ms < 0) ms = 0;
+      var min = Math.floor(ms/60000), h = Math.floor(min/60), m = min%60;
+      el.textContent = h > 0 ? h+'h '+m+'m' : m+'m';
+    });
+  }
+  function render() {
+    var filtered = getFiltered();
+    var grid = document.getElementById('admls-grid');
+    var empty = document.getElementById('admls-empty');
+    if (!filtered.length) { grid.innerHTML = ''; empty.style.display = ''; }
+    else { empty.style.display = 'none'; grid.innerHTML = filtered.map(renderCard).join(''); updateElapsed(); }
+  }
+  function updateTabs() {
+    document.getElementById('cnt-all').textContent       = _counts.total      || 0;
+    document.getElementById('cnt-working').textContent   = _counts.working     || 0;
+    document.getElementById('cnt-idle').textContent      = _counts.idle        || 0;
+    document.getElementById('cnt-absent').textContent    = _counts.absent      || 0;
+    document.getElementById('cnt-extending').textContent = _counts.extending   || 0;
+    document.getElementById('cnt-off').textContent       = _counts.offOrLeave  || 0;
+    document.getElementById('cnt-stale').textContent     = _counts.stale       || 0;
+    var st = document.getElementById('stale-tab');
+    if (st) st.style.display = (_counts.stale||0) > 0 ? '' : 'none';
+  }
+
+  /* ───────────────── Polling ───────────────── */
+  function startCountdown() {
+    clearInterval(_countdownTimer);
+    _countdownSec = 30;
+    document.getElementById('admls-countdown').textContent = _countdownSec+'s';
+    _countdownTimer = setInterval(function() {
+      _countdownSec--;
+      if (_countdownSec <= 0) {
+        clearInterval(_countdownTimer);
+        document.getElementById('admls-countdown').textContent = '...';
+        fetchData();
+      } else {
+        document.getElementById('admls-countdown').textContent = _countdownSec+'s';
+      }
+    }, 1000);
+  }
+  function fetchData() {
+    fetch('/admin/live-status/data')
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        if (!d.success) return;
+        _employees  = d.employees  || [];
+        _counts     = d.counts     || {};
+        _currentDec = d.currentDec || 0;
+        try {
+          document.getElementById('admls-time-label').textContent = new Date(d.serverTime).toLocaleString('en-US', {
+            timeZone:d.timezone, weekday:'long', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit', hour12:true
+          });
+        } catch(e) {}
+        updateTabs();
+        render();
+        startCountdown();
+      })
+      .catch(function() { startCountdown(); });
+  }
+
+  /* ───────────────── DM Chat ───────────────── */
+  function dmScrollBottom() {
+    var el = document.getElementById('admls-dm-messages');
+    if (el) el.scrollTop = el.scrollHeight;
+  }
+  function renderDmMessages() {
+    var el = document.getElementById('admls-dm-messages');
+    if (!el) return;
+    if (!_dmMessages.length) {
+      el.innerHTML = '<div class="admls-dm-empty-chat"><i class="bi bi-chat-dots"></i>No messages yet.<br>Say hello!</div>';
+      return;
+    }
+    var html = '';
+    _dmMessages.forEach(function(msg) {
+      var mine = msg.sender_id === _currentUserId;
+      var cls = mine ? 'mine' : 'theirs';
+      var content = msg.is_deleted ? '<em style="opacity:0.5">Message deleted</em>' : esc(msg.content);
+      html += '<div class="admls-dm-msg '+cls+'">';
+      html += '<div class="admls-dm-bubble">'+content+'</div>';
+      html += '<div class="admls-dm-meta">'+fmtTimestamp(msg.created_at)+'</div>';
+      html += '</div>';
+    });
+    el.innerHTML = html;
+    dmScrollBottom();
+  }
+  function loadDmMessages() {
+    if (!_dmConvId) return;
+    var el = document.getElementById('admls-dm-messages');
+    if (el) el.innerHTML = '<div class="admls-dm-loading">Loading...</div>';
+    fetch('/chat/conversations/'+_dmConvId+'/messages')
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        if (d.success) { _dmMessages = d.data.messages || []; renderDmMessages(); }
+      })
+      .catch(function() {
+        var el2 = document.getElementById('admls-dm-messages');
+        if (el2) el2.innerHTML = '<div class="admls-dm-loading">Failed to load messages.</div>';
+      });
+  }
+
+  /* ───────────────── Socket listener ───────────────── */
+  function setupSocket() {
+    if (typeof io === 'undefined') return;
+    var sock = io({ transports:['websocket','polling'] });
+    sock.on('chat:message', function(payload) {
+      if (payload.conversation_id !== _dmConvId) return;
+      var msg = payload.message;
+      /* avoid duplicate if we already appended it optimistically */
+      var exists = _dmMessages.some(function(m) { return m.id === msg.id; });
+      if (!exists) { _dmMessages.push(msg); renderDmMessages(); }
+      /* mark read since drawer is open */
+      fetch('/chat/conversations/'+_dmConvId+'/read', { method:'POST' }).catch(function(){});
+    });
+  }
+
+  /* ───────────────── Init ───────────────── */
+  function init() {
+    document.getElementById('admls-search').addEventListener('input', function() {
+      _search = this.value.toLowerCase().trim(); render();
+    });
+    document.querySelectorAll('#admls-tabs .admls-tab').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        _filter = this.dataset.filter;
+        document.querySelectorAll('#admls-tabs .admls-tab').forEach(function(b) { b.classList.remove('active'); });
+        this.classList.add('active');
+        render();
+      });
+    });
+
+    /* DM input — Enter to send, Shift+Enter for newline */
+    var inp = document.getElementById('admls-dm-input');
+    if (inp) {
+      inp.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); ADMLS.sendMsg(); }
+      });
+      inp.addEventListener('input', function() {
+        this.style.height = 'auto';
+        this.style.height = Math.min(this.scrollHeight, 100)+'px';
+      });
+    }
+
+    _elapsedTimer = setInterval(updateElapsed, 10000);
+    fetchData();
+    setupSocket();
+  }
+
+  /* ───────────────── Public API ───────────────── */
+  window.ADMLS = {
+    refresh: function() {
+      clearInterval(_countdownTimer);
+      document.getElementById('admls-countdown').textContent = '...';
+      fetchData();
+    },
+    forceLogout: function(attendanceId, userName) {
+      if (!confirm('Force logout '+userName+'? This will end their session now.')) return;
+      fetch('/attendance/force-logout', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ attendance_id: attendanceId })
+      }).then(function(r) { return r.json(); }).then(function(d) {
+        if (typeof showToast === 'function') showToast(d.message || 'User logged out');
+        ADMLS.refresh();
+      }).catch(function() {
+        if (typeof showToast === 'function') showToast('Failed to force logout', 'error');
+      });
+    },
+    openChat: function(peerId, peerName) {
+      _dmPeerId   = peerId;
+      _dmPeerName = peerName;
+      _dmConvId   = null;
+      _dmMessages = [];
+
+      /* Update drawer header */
+      var initials = peerName.split(' ').map(function(w){return w[0]||'';}).join('').substring(0,2).toUpperCase();
+      document.getElementById('admls-dm-peer-avatar').textContent = initials;
+      document.getElementById('admls-dm-peer-name').textContent   = peerName;
+      document.getElementById('admls-dm-messages').innerHTML = '<div class="admls-dm-loading">Opening chat...</div>';
+      document.getElementById('admls-dm-input').value = '';
+
+      /* Open drawer */
+      document.getElementById('admls-dm-overlay').classList.add('open');
+      document.getElementById('admls-dm-drawer').classList.add('open');
+      document.getElementById('admls-dm-input').focus();
+
+      /* Find/create conversation using the existing chat system */
+      fetch('/chat/conversations', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ participant_ids: [peerId] })
+      }).then(function(r){ return r.json(); }).then(function(d){
+        if (!d.success) throw new Error(d.message);
+        _dmConvId = d.data.conversation_id;
+        loadDmMessages();
+      }).catch(function(){
+        document.getElementById('admls-dm-messages').innerHTML = '<div class="admls-dm-loading">Failed to open chat.</div>';
+      });
+    },
+    closeChat: function() {
+      document.getElementById('admls-dm-overlay').classList.remove('open');
+      document.getElementById('admls-dm-drawer').classList.remove('open');
+      _dmConvId = null; _dmPeerId = null; _dmMessages = [];
+    },
+    sendMsg: function() {
+      if (_dmSending || !_dmConvId) return;
+      var inp = document.getElementById('admls-dm-input');
+      var content = (inp.value || '').trim();
+      if (!content) return;
+      _dmSending = true;
+      var btn = document.getElementById('admls-dm-send');
+      if (btn) btn.disabled = true;
+      fetch('/chat/conversations/'+_dmConvId+'/messages', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ content: content })
+      }).then(function(r){ return r.json(); }).then(function(d){
+        _dmSending = false;
+        if (btn) btn.disabled = false;
+        if (!d.success) { if (typeof showToast==='function') showToast(d.message||'Failed to send','error'); return; }
+        inp.value = ''; inp.style.height = 'auto';
+        _dmMessages.push(d.data.message);
+        renderDmMessages();
+      }).catch(function(){
+        _dmSending = false;
+        if (btn) btn.disabled = false;
+        if (typeof showToast==='function') showToast('Failed to send message','error');
+      });
+    }
+  };
+
+  document.addEventListener('DOMContentLoaded', init);
+})();
+</script>

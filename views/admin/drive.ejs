@@ -1,0 +1,398 @@
+<style>
+@keyframes drvFadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:none; } }
+
+/* ── Page ──────────────────────────────────────────────────── */
+.drv-wrap { animation:drvFadeIn 0.25s ease; }
+
+/* ── Top bar ──────────────────────────────────────────────── */
+.drv-topbar { display:flex; align-items:center; gap:12px; margin-bottom:20px; flex-wrap:wrap; }
+.drv-topbar-left { flex:1; min-width:0; }
+.drv-section-pill {
+  display:inline-flex; align-items:center; gap:5px;
+  background:rgba(59,130,246,0.1); border:1px solid rgba(59,130,246,0.2);
+  color:#3b82f6; border-radius:20px; padding:3px 10px;
+  font-family:var(--adm-mono); font-size:0.68rem; font-weight:700; letter-spacing:0.3px; margin-bottom:6px;
+}
+.drv-page-title { font-family:var(--adm-mono); font-size:1rem; font-weight:700; color:var(--adm-text); }
+.drv-page-sub { font-size:0.78rem; color:var(--adm-muted); margin-top:2px; }
+
+/* ── Toolbar ──────────────────────────────────────────────── */
+.drv-toolbar {
+  display:flex; align-items:center; gap:10px;
+  background:var(--adm-surface); border:1px solid var(--adm-border);
+  border-radius:12px; padding:10px 14px; margin-bottom:14px; flex-wrap:wrap;
+}
+.drv-breadcrumb { display:flex; align-items:center; gap:4px; font-size:0.8rem; flex:1; min-width:0; flex-wrap:wrap; }
+.drv-breadcrumb a { color:var(--adm-accent); text-decoration:none; font-weight:500; }
+.drv-breadcrumb a:hover { text-decoration:underline; }
+.drv-breadcrumb .sep { color:var(--adm-muted); font-size:0.7rem; }
+.drv-breadcrumb .current { color:var(--adm-text); font-weight:600; }
+.drv-tb-actions { display:flex; gap:8px; align-items:center; flex-shrink:0; }
+.drv-size-info { font-family:var(--adm-mono); font-size:0.65rem; color:var(--adm-muted); white-space:nowrap; }
+.drv-btn {
+  display:inline-flex; align-items:center; gap:6px;
+  background:var(--adm-surface-2); border:1px solid var(--adm-border);
+  color:var(--adm-text-2); border-radius:8px; padding:6px 12px;
+  font-size:0.78rem; font-family:var(--adm-font); cursor:pointer; transition:all 0.15s;
+}
+.drv-btn:hover { border-color:var(--adm-border-2); color:var(--adm-text); }
+.drv-btn.primary { background:linear-gradient(135deg,#3b82f6,#2563eb); border-color:transparent; color:#fff; }
+.drv-btn.primary:hover { opacity:0.88; }
+.drv-back-btn {
+  display:inline-flex; align-items:center; gap:6px;
+  background:var(--adm-surface); border:1px solid var(--adm-border);
+  color:var(--adm-text-2); border-radius:8px; padding:0 12px; height:34px;
+  font-size:0.8rem; text-decoration:none; flex-shrink:0; transition:border-color 0.15s;
+}
+.drv-back-btn:hover { border-color:var(--adm-border-2); color:var(--adm-text); }
+
+/* ── Drop zone ──────────────────────────────────────────── */
+.drv-dropzone {
+  border:2px dashed var(--adm-border); border-radius:12px;
+  padding:2.5rem; text-align:center; margin-bottom:14px;
+  transition:all 0.2s; display:none;
+}
+.drv-dropzone.active { display:block; border-color:var(--adm-accent); background:rgba(0,212,255,0.04); }
+.drv-dropzone.dragover { border-color:var(--adm-accent); background:rgba(0,212,255,0.09); transform:scale(1.01); }
+.drv-dropzone p { font-size:0.82rem; color:var(--adm-muted); margin:0.4rem 0 0; }
+.drv-dropzone label { color:var(--adm-accent); cursor:pointer; text-decoration:underline; }
+
+/* ── Upload progress ────────────────────────────────────── */
+.drv-upload-progress {
+  background:var(--adm-surface); border:1px solid var(--adm-border);
+  border-radius:8px; padding:10px 14px; margin-bottom:12px; display:none;
+}
+.drv-upload-progress.show { display:block; }
+.drv-upload-file { display:flex; align-items:center; gap:10px; margin-bottom:6px; font-size:0.78rem; }
+.drv-upload-file:last-child { margin-bottom:0; }
+.drv-upload-file .name { flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--adm-text); }
+.drv-upload-file .status { font-family:var(--adm-mono); font-size:0.65rem; color:var(--adm-muted); flex-shrink:0; }
+.drv-upload-file .status.done { color:#10b981; }
+
+/* ── Grid ────────────────────────────────────────────────── */
+.drv-grid {
+  display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:10px;
+}
+.drv-item {
+  background:var(--adm-surface); border:1px solid var(--adm-border);
+  border-radius:12px; padding:1.1rem 0.9rem; text-align:center;
+  cursor:pointer; transition:all 0.18s; position:relative;
+  display:flex; flex-direction:column; align-items:center; gap:0.55rem;
+}
+.drv-item:hover { border-color:var(--adm-accent); background:var(--adm-surface-2); transform:translateY(-2px); box-shadow:0 4px 14px rgba(0,0,0,0.28); }
+.drv-item-icon { width:44px; height:44px; display:flex; align-items:center; justify-content:center; border-radius:10px; font-size:1.4rem; }
+.drv-item-icon.folder  { background:rgba(245,158,11,0.14); color:#f59e0b; }
+.drv-item-icon.image   { background:rgba(236,72,153,0.14); color:#ec4899; }
+.drv-item-icon.pdf     { background:rgba(239,68,68,0.14);  color:#ef4444; }
+.drv-item-icon.doc     { background:rgba(59,130,246,0.14); color:#3b82f6; }
+.drv-item-icon.sheet   { background:rgba(16,185,129,0.14); color:#10b981; }
+.drv-item-icon.video   { background:rgba(124,58,237,0.14); color:#a78bfa; }
+.drv-item-icon.audio   { background:rgba(6,182,212,0.14);  color:#06b6d4; }
+.drv-item-icon.archive { background:rgba(107,114,128,0.14);color:#9ca3af; }
+.drv-item-icon.file    { background:rgba(100,116,139,0.14);color:var(--adm-muted); }
+.drv-item-name { font-size:0.76rem; font-weight:500; color:var(--adm-text); word-break:break-word; line-height:1.3; max-height:2.6em; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
+.drv-item-size { font-size:0.6rem; color:var(--adm-muted); font-family:var(--adm-mono); }
+.drv-item-menu {
+  position:absolute; top:6px; right:6px; background:none; border:none;
+  color:var(--adm-muted); cursor:pointer; padding:2px 5px; border-radius:4px;
+  font-size:0.85rem; opacity:0; transition:opacity 0.15s;
+}
+.drv-item:hover .drv-item-menu { opacity:1; }
+.drv-item-menu:hover { background:var(--adm-surface-2); color:var(--adm-text); }
+
+/* ── Context menu ─────────────────────────────────────────── */
+.drv-ctx-menu {
+  position:fixed; background:var(--adm-surface-2); border:1px solid var(--adm-border);
+  border-radius:10px; padding:4px 0; min-width:155px;
+  box-shadow:0 8px 28px rgba(0,0,0,0.45); z-index:500; display:none;
+}
+.drv-ctx-menu.show { display:block; }
+.drv-ctx-menu button {
+  display:flex; align-items:center; gap:8px; width:100%;
+  padding:7px 14px; background:none; border:none; color:var(--adm-text);
+  font-size:0.8rem; font-family:var(--adm-font); cursor:pointer; text-align:left; transition:background 0.12s;
+}
+.drv-ctx-menu button:hover { background:rgba(255,255,255,0.06); }
+.drv-ctx-menu button.danger { color:#ef4444; }
+.drv-ctx-menu button i { width:16px; text-align:center; font-size:0.82rem; }
+.drv-ctx-div { height:1px; background:var(--adm-border); margin:3px 0; }
+
+/* ── Empty state ──────────────────────────────────────────── */
+.drv-empty { text-align:center; padding:4rem 2rem; color:var(--adm-muted); grid-column:1 / -1; }
+.drv-empty i { font-size:2.8rem; display:block; opacity:0.22; margin-bottom:0.75rem; }
+.drv-empty p { font-size:0.82rem; }
+
+/* ── Modal ────────────────────────────────────────────────── */
+.drv-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:600; align-items:center; justify-content:center; padding:1rem; }
+.drv-modal.show { display:flex; }
+.drv-modal-box { background:var(--adm-surface); border:1px solid var(--adm-border); border-radius:14px; padding:1.5rem; width:100%; max-width:380px; }
+.drv-modal-title { font-family:var(--adm-mono); font-size:0.78rem; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:var(--adm-text-2); margin-bottom:1.1rem; }
+.drv-modal-input {
+  width:100%; background:var(--adm-bg); border:1px solid var(--adm-border);
+  color:var(--adm-text); border-radius:8px; padding:9px 12px;
+  font-family:var(--adm-font); font-size:0.84rem; outline:none;
+  transition:border-color 0.15s; box-sizing:border-box; margin-bottom:1rem;
+}
+.drv-modal-input:focus { border-color:rgba(59,130,246,0.5); }
+.drv-modal-foot { display:flex; gap:8px; justify-content:flex-end; }
+</style>
+
+<%
+function drvFileIcon(f) {
+  if (f.isFolder) return 'folder-fill';
+  var m = f.mimeType || '', n = (f.name||'').toLowerCase();
+  if (m.startsWith('image/')) return 'file-image';
+  if (m === 'application/pdf' || n.endsWith('.pdf')) return 'file-pdf';
+  if (m.includes('word') || m.includes('document') || n.endsWith('.doc') || n.endsWith('.docx')) return 'file-word';
+  if (m.includes('sheet') || m.includes('excel') || n.endsWith('.xls') || n.endsWith('.xlsx') || n.endsWith('.csv')) return 'file-spreadsheet';
+  if (m.includes('presentation') || m.includes('powerpoint') || n.endsWith('.ppt') || n.endsWith('.pptx')) return 'file-slides';
+  if (m.startsWith('video/')) return 'file-play';
+  if (m.startsWith('audio/')) return 'file-music';
+  if (m.includes('zip') || m.includes('rar') || m.includes('tar') || m.includes('7z')) return 'file-zip';
+  if (m.includes('text') || n.endsWith('.txt') || n.endsWith('.json') || n.endsWith('.xml')) return 'file-text';
+  return 'file-earmark';
+}
+function drvIconClass(f) {
+  if (f.isFolder) return 'folder';
+  var m = f.mimeType || '', n = (f.name||'').toLowerCase();
+  if (m.startsWith('image/')) return 'image';
+  if (m === 'application/pdf' || n.endsWith('.pdf')) return 'pdf';
+  if (m.includes('word') || m.includes('document') || n.endsWith('.doc') || n.endsWith('.docx')) return 'doc';
+  if (m.includes('sheet') || m.includes('excel') || n.endsWith('.xls') || n.endsWith('.xlsx') || n.endsWith('.csv')) return 'sheet';
+  if (m.includes('presentation') || m.includes('powerpoint')) return 'doc';
+  if (m.startsWith('video/')) return 'video';
+  if (m.startsWith('audio/')) return 'audio';
+  if (m.includes('zip') || m.includes('rar') || m.includes('tar')) return 'archive';
+  return 'file';
+}
+function drvFmtSize(bytes) {
+  if (!bytes) return '';
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1048576) return (bytes/1024).toFixed(1) + ' KB';
+  return (bytes/1048576).toFixed(1) + ' MB';
+}
+%>
+
+<div class="drv-wrap">
+
+  <!-- Top bar -->
+  <div class="drv-topbar">
+    <div class="drv-topbar-left">
+      <div class="drv-section-pill"><i class="bi bi-cloud-arrow-up"></i> Tools</div>
+      <div class="drv-page-title">Google Drive</div>
+      <div class="drv-page-sub">Upload and manage files in your connected Google Drive</div>
+    </div>
+    <a href="/admin/tools" class="drv-back-btn"><i class="bi bi-arrow-left"></i> Tools</a>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="drv-toolbar">
+    <div class="drv-breadcrumb">
+      <a href="/admin/drive"><i class="bi bi-folder2-open me-1"></i>My Drive</a>
+      <% breadcrumb.forEach(function(b, i) { %>
+        <span class="sep"><i class="bi bi-chevron-right"></i></span>
+        <% if (i === breadcrumb.length - 1) { %>
+          <span class="current"><%= b.name %></span>
+        <% } else { %>
+          <a href="/admin/drive?folder=<%= b.id %>"><%= b.name %></a>
+        <% } %>
+      <% }); %>
+    </div>
+    <div class="drv-tb-actions">
+      <span class="drv-size-info">Max <%= maxSizeMB %>MB/file</span>
+      <button class="drv-btn" onclick="drvToggleDropzone()"><i class="bi bi-cloud-upload"></i> Upload</button>
+      <button class="drv-btn" onclick="drvOpenFolderModal()"><i class="bi bi-folder-plus"></i> Folder</button>
+    </div>
+  </div>
+
+  <!-- Drop zone -->
+  <div class="drv-dropzone" id="drvDropzone">
+    <i class="bi bi-cloud-arrow-up" style="font-size:2rem;color:var(--adm-accent);"></i>
+    <p>Drag & drop files here or <label for="drvFileInput">browse</label></p>
+    <p style="font-size:0.65rem;">Max <%= maxSizeMB %>MB per file</p>
+    <input type="file" id="drvFileInput" multiple style="display:none;" onchange="drvHandleFiles(this.files)">
+  </div>
+
+  <!-- Upload progress -->
+  <div class="drv-upload-progress" id="drvUploadProgress"></div>
+
+  <!-- Grid -->
+  <div class="drv-grid" id="drvGrid">
+    <% if (files.length === 0) { %>
+    <div class="drv-empty">
+      <i class="bi bi-folder2-open"></i>
+      <p>This folder is empty</p>
+      <p style="font-size:0.74rem;margin-top:4px;">Upload files or create a folder to get started</p>
+    </div>
+    <% } %>
+    <% files.forEach(function(f) { %>
+    <div class="drv-item"
+         data-id="<%= f.id %>" data-name="<%= f.name %>"
+         data-is-folder="<%= f.isFolder %>" data-web-link="<%= f.webViewLink || '' %>"
+         <% if (f.isFolder) { %>ondblclick="drvNavFolder('<%= f.id %>')"<% } else { %>ondblclick="drvOpenFile('<%= f.id %>','<%= f.webViewLink||'' %>')"<% } %>>
+      <button class="drv-item-menu" onclick="event.stopPropagation();drvShowCtx(event,'<%= f.id %>','<%= f.name.replace(/'/g,"\\'") %>',<%= f.isFolder %>,'<%= f.webViewLink||'' %>')">
+        <i class="bi bi-three-dots-vertical"></i>
+      </button>
+      <div class="drv-item-icon <%= drvIconClass(f) %>">
+        <i class="bi bi-<%= drvFileIcon(f) %>"></i>
+      </div>
+      <div class="drv-item-name" title="<%= f.name %>"><%= f.name %></div>
+      <% if (!f.isFolder && f.size) { %>
+      <div class="drv-item-size"><%= drvFmtSize(f.size) %></div>
+      <% } %>
+    </div>
+    <% }); %>
+  </div>
+
+</div><!-- .drv-wrap -->
+
+<!-- Context menu -->
+<div class="drv-ctx-menu" id="drvCtx">
+  <button onclick="drvCtxOpen()"><i class="bi bi-box-arrow-up-right"></i> Open</button>
+  <button onclick="drvCtxDownload()"><i class="bi bi-download"></i> Download</button>
+  <div class="drv-ctx-div"></div>
+  <button onclick="drvCtxRename()"><i class="bi bi-pencil"></i> Rename</button>
+  <div class="drv-ctx-div"></div>
+  <button class="danger" onclick="drvCtxDelete()"><i class="bi bi-trash3"></i> Delete</button>
+</div>
+
+<!-- New Folder Modal -->
+<div class="drv-modal" id="drvFolderModal">
+  <div class="drv-modal-box">
+    <div class="drv-modal-title"><i class="bi bi-folder-plus me-2"></i>New Folder</div>
+    <input type="text" id="drvFolderName" class="drv-modal-input" placeholder="Folder name..." onkeydown="if(event.key==='Enter')drvCreateFolder()">
+    <div class="drv-modal-foot">
+      <button class="drv-btn" onclick="document.getElementById('drvFolderModal').classList.remove('show')">Cancel</button>
+      <button class="drv-btn primary" onclick="drvCreateFolder()">Create</button>
+    </div>
+  </div>
+</div>
+
+<!-- Rename Modal -->
+<div class="drv-modal" id="drvRenameModal">
+  <div class="drv-modal-box">
+    <div class="drv-modal-title"><i class="bi bi-pencil me-2"></i>Rename</div>
+    <input type="text" id="drvRenameInput" class="drv-modal-input" onkeydown="if(event.key==='Enter')drvSubmitRename()">
+    <div class="drv-modal-foot">
+      <button class="drv-btn" onclick="document.getElementById('drvRenameModal').classList.remove('show')">Cancel</button>
+      <button class="drv-btn primary" onclick="drvSubmitRename()">Rename</button>
+    </div>
+  </div>
+</div>
+
+<script>
+var _drvCurFolder = '<%= currentFolderId %>';
+var _drvRoot = '<%= rootFolderId %>';
+var _drvMaxMB = <%= maxSizeMB %>;
+var _drvCtxId = null, _drvCtxName = null, _drvCtxIsFolder = false, _drvCtxLink = null;
+
+function drvNavFolder(id) { window.location.href = '/admin/drive?folder=' + id; }
+function drvOpenFile(id, link) { link ? window.open(link, '_blank') : (window.location.href = '/drive/download/' + id); }
+
+function drvShowCtx(e, id, name, isFolder, link) {
+  e.preventDefault();
+  _drvCtxId = id; _drvCtxName = name; _drvCtxIsFolder = isFolder; _drvCtxLink = link;
+  var m = document.getElementById('drvCtx');
+  m.style.left = e.clientX + 'px'; m.style.top = e.clientY + 'px';
+  if (e.clientX + 170 > window.innerWidth) m.style.left = (e.clientX - 170) + 'px';
+  if (e.clientY + 180 > window.innerHeight) m.style.top = (e.clientY - 160) + 'px';
+  m.classList.add('show');
+}
+document.addEventListener('click', function() { document.getElementById('drvCtx').classList.remove('show'); });
+
+function drvCtxOpen() { _drvCtxIsFolder ? drvNavFolder(_drvCtxId) : drvOpenFile(_drvCtxId, _drvCtxLink); }
+function drvCtxDownload() {
+  if (_drvCtxIsFolder) { showToast('Folders cannot be downloaded directly', 'error'); return; }
+  window.location.href = '/drive/download/' + _drvCtxId;
+}
+function drvCtxRename() {
+  document.getElementById('drvRenameInput').value = _drvCtxName;
+  document.getElementById('drvRenameModal').classList.add('show');
+  setTimeout(function() { document.getElementById('drvRenameInput').focus(); }, 80);
+}
+function drvCtxDelete() {
+  if (!confirm('Delete "' + _drvCtxName + '"? This will move it to trash.')) return;
+  axios.delete('/drive/' + _drvCtxId).then(function(r) {
+    showToast(r.data.message, 'success');
+    var el = document.querySelector('.drv-item[data-id="' + _drvCtxId + '"]');
+    if (el) el.remove();
+    if (!document.querySelector('.drv-item')) {
+      document.getElementById('drvGrid').innerHTML = '<div class="drv-empty"><i class="bi bi-folder2-open"></i><p>This folder is empty</p></div>';
+    }
+  }).catch(function(e) { showToast(e.response?.data?.message || 'Failed to delete', 'error'); });
+}
+
+function drvSubmitRename() {
+  var name = document.getElementById('drvRenameInput').value.trim();
+  if (!name) { showToast('Name is required', 'error'); return; }
+  axios.put('/drive/rename/' + _drvCtxId, { name: name }).then(function() {
+    showToast('Renamed successfully', 'success');
+    document.getElementById('drvRenameModal').classList.remove('show');
+    var el = document.querySelector('.drv-item[data-id="' + _drvCtxId + '"]');
+    if (el) { el.querySelector('.drv-item-name').textContent = name; el.dataset.name = name; }
+  }).catch(function(e) { showToast(e.response?.data?.message || 'Failed to rename', 'error'); });
+}
+
+function drvOpenFolderModal() {
+  document.getElementById('drvFolderName').value = '';
+  document.getElementById('drvFolderModal').classList.add('show');
+  setTimeout(function() { document.getElementById('drvFolderName').focus(); }, 80);
+}
+function drvCreateFolder() {
+  var name = document.getElementById('drvFolderName').value.trim();
+  if (!name) { showToast('Folder name is required', 'error'); return; }
+  axios.post('/drive/folder', { name: name, parent_id: _drvCurFolder }).then(function() {
+    showToast('Folder created', 'success');
+    document.getElementById('drvFolderModal').classList.remove('show');
+    location.reload();
+  }).catch(function(e) { showToast(e.response?.data?.message || 'Failed', 'error'); });
+}
+
+function drvToggleDropzone() { document.getElementById('drvDropzone').classList.toggle('active'); }
+
+function drvHandleFiles(files) {
+  if (!files || !files.length) return;
+  var max = _drvMaxMB * 1024 * 1024;
+  for (var i = 0; i < files.length; i++) {
+    if (files[i].size > max) { showToast('File "' + files[i].name + '" exceeds ' + _drvMaxMB + 'MB limit', 'error'); return; }
+  }
+  drvUpload(files);
+}
+
+async function drvUpload(files) {
+  var prog = document.getElementById('drvUploadProgress');
+  prog.classList.add('show'); prog.innerHTML = '';
+  for (var i = 0; i < files.length; i++) {
+    prog.innerHTML += '<div class="drv-upload-file" id="dru-' + i + '"><i class="bi bi-file-earmark" style="color:var(--adm-muted)"></i><span class="name">' + files[i].name + '</span><span class="status" id="drus-' + i + '">Uploading...</span></div>';
+  }
+  var fd = new FormData();
+  fd.append('folder_id', _drvCurFolder);
+  for (var j = 0; j < files.length; j++) fd.append('files', files[j]);
+  try {
+    var r = await axios.post('/drive/upload', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+    for (var k = 0; k < files.length; k++) {
+      var s = document.getElementById('drus-' + k);
+      if (s) { s.textContent = 'Done'; s.classList.add('done'); }
+    }
+    showToast(r.data.message, 'success');
+    document.getElementById('drvDropzone').classList.remove('active');
+    document.getElementById('drvFileInput').value = '';
+    setTimeout(function() { location.reload(); }, 800);
+  } catch (e) {
+    showToast(e.response?.data?.message || 'Upload failed', 'error');
+    for (var m = 0; m < files.length; m++) {
+      var st = document.getElementById('drus-' + m);
+      if (st && st.textContent === 'Uploading...') { st.textContent = 'Failed'; st.style.color = '#ef4444'; }
+    }
+  }
+}
+
+// Drag & drop
+(function() {
+  var body = document.body, dz = document.getElementById('drvDropzone'), cnt = 0;
+  body.addEventListener('dragenter', function(e) { e.preventDefault(); cnt++; dz.classList.add('active'); });
+  body.addEventListener('dragleave', function(e) { e.preventDefault(); if (--cnt <= 0) { cnt = 0; dz.classList.remove('dragover'); } });
+  body.addEventListener('dragover', function(e) { e.preventDefault(); dz.classList.add('dragover'); });
+  body.addEventListener('drop', function(e) { e.preventDefault(); cnt = 0; dz.classList.remove('dragover'); if (e.dataTransfer.files.length) drvHandleFiles(e.dataTransfer.files); });
+})();
+</script>

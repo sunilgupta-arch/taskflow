@@ -1,0 +1,519 @@
+<style>
+/* ── Toolbar ───────────────────────────────────────────────────────── */
+.admtb-toolbar {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+.admtb-date-nav { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.admtb-nav-btn {
+  height: 36px; padding: 0 14px; border-radius: 9px;
+  border: 1px solid var(--adm-border); background: var(--adm-surface);
+  color: var(--adm-text-2); cursor: pointer; font-size: 0.85rem;
+  display: inline-flex; align-items: center; gap: 5px;
+  transition: all 0.15s; font-family: var(--adm-font);
+}
+.admtb-nav-btn:hover { border-color: var(--adm-accent); color: var(--adm-accent); }
+.admtb-date-input {
+  height: 36px; padding: 0 12px; border-radius: 9px;
+  border: 1px solid var(--adm-border); background: var(--adm-surface-2);
+  color: var(--adm-text); font-size: 0.78rem; font-family: var(--adm-mono);
+  cursor: pointer;
+}
+.admtb-date-input:focus { outline: none; border-color: var(--adm-accent); }
+
+.admtb-select {
+  height: 36px; padding: 0 32px 0 12px; border-radius: 9px;
+  border: 1px solid var(--adm-border); background: var(--adm-surface-2);
+  color: var(--adm-text); font-size: 0.82rem; font-family: var(--adm-font);
+  cursor: pointer; appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 16 16'%3E%3Cpath fill='%2394a3b8' d='M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 10px center;
+  min-width: 150px;
+}
+.admtb-select:focus { outline: none; border-color: var(--adm-accent); }
+
+.admtb-today-btn {
+  height: 36px; padding: 0 14px; border-radius: 9px;
+  border: 1px solid rgba(0,212,255,0.3); background: rgba(0,212,255,0.07);
+  color: var(--adm-accent); cursor: pointer; font-size: 0.78rem;
+  font-family: var(--adm-mono); font-weight: 600; letter-spacing: 0.3px;
+  transition: all 0.15s;
+}
+.admtb-today-btn:hover { background: rgba(0,212,255,0.14); }
+
+/* ── Stats bar ─────────────────────────────────────────────────────── */
+.admtb-stats {
+  display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
+  margin-left: auto;
+}
+.admtb-stat {
+  display: flex; align-items: center; gap: 6px;
+  padding: 5px 12px; border-radius: 8px;
+  border: 1px solid var(--adm-border); background: var(--adm-surface);
+  font-size: 0.73rem; font-weight: 500; color: var(--adm-text-2);
+  white-space: nowrap;
+}
+.admtb-stat-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.admtb-stat-count { font-family: var(--adm-mono); font-weight: 700; font-size: 0.9rem; }
+.admtb-stat.s-total    { border-color: rgba(100,116,139,0.3); }
+.admtb-stat.s-done     { border-color: rgba(16,185,129,0.3);  background: rgba(16,185,129,0.06);  color: #10b981; }
+.admtb-stat.s-progress { border-color: rgba(59,130,246,0.3);  background: rgba(59,130,246,0.06);  color: #3b82f6; }
+.admtb-stat.s-pending  { border-color: rgba(249,115,22,0.3);  background: rgba(249,115,22,0.06);  color: #f97316; }
+
+/* ── Table ─────────────────────────────────────────────────────────── */
+.admtb-table-wrap {
+  background: var(--adm-surface); border: 1px solid var(--adm-border);
+  border-radius: 14px; overflow: hidden;
+}
+.admtb-table { width: 100%; border-collapse: collapse; }
+.admtb-table thead th {
+  font-family: var(--adm-mono); font-size: 0.67rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.6px;
+  color: var(--adm-muted); padding: 10px 14px;
+  border-bottom: 1px solid var(--adm-border);
+  text-align: left; white-space: nowrap;
+  background: var(--adm-surface-2);
+}
+.admtb-table tbody tr {
+  border-bottom: 1px solid var(--adm-border);
+  transition: background 0.12s;
+}
+.admtb-table tbody tr:last-child { border-bottom: none; }
+.admtb-table tbody tr:hover { background: var(--adm-surface-2); }
+.admtb-table tbody td {
+  padding: 10px 14px; font-size: 0.86rem;
+  color: var(--adm-text); vertical-align: middle;
+}
+
+/* Left border accent by status */
+.admtb-table tbody tr td:first-child { border-left: 3px solid transparent; }
+.admtb-table tbody tr.row-done      td:first-child { border-left-color: #10b981; }
+.admtb-table tbody tr.row-progress  td:first-child { border-left-color: #3b82f6; }
+.admtb-table tbody tr.row-pending   td:first-child { border-left-color: #f97316; }
+.admtb-table tbody tr.row-unattended td:first-child { border-left-color: #94a3b8; }
+
+/* Task title cell */
+.admtb-task-name { font-weight: 500; color: var(--adm-text); }
+.admtb-task-sub  { font-size: 0.7rem; color: var(--adm-muted); margin-top: 2px; }
+
+/* Employee cell */
+.admtb-emp { display: flex; align-items: center; gap: 8px; }
+.admtb-avatar {
+  width: 26px; height: 26px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.65rem; font-weight: 700; flex-shrink: 0; color: #fff;
+}
+.admtb-emp-name { font-size: 0.84rem; color: var(--adm-text); }
+.admtb-fallback-tag {
+  font-size: 0.62rem; font-family: var(--adm-mono); font-weight: 700;
+  padding: 1px 5px; border-radius: 5px; margin-left: 4px;
+  background: rgba(139,92,246,0.12); color: #8b5cf6;
+  border: 1px solid rgba(139,92,246,0.25); text-transform: uppercase;
+}
+
+/* Type badge */
+.admtb-type {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 0.67rem; font-family: var(--adm-mono); font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.3px;
+  padding: 2px 8px; border-radius: 20px;
+}
+.admtb-type.t-recurring { background: rgba(139,92,246,0.1); color: #8b5cf6; border: 1px solid rgba(139,92,246,0.25); }
+.admtb-type.t-once      { background: rgba(59,130,246,0.1);  color: #3b82f6; border: 1px solid rgba(59,130,246,0.25); }
+
+/* Priority dot */
+.admtb-priority { display: inline-flex; align-items: center; gap: 5px; font-size: 0.78rem; color: var(--adm-text-2); }
+.admtb-pri-dot  { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.pri-high   .admtb-pri-dot { background: #ef4444; }
+.pri-medium .admtb-pri-dot { background: #f97316; }
+.pri-low    .admtb-pri-dot { background: #10b981; }
+
+/* Status badge */
+.admtb-status {
+  display: inline-flex; align-items: center;
+  padding: 3px 9px; border-radius: 20px;
+  font-size: 0.66rem; font-weight: 600; font-family: var(--adm-mono);
+  text-transform: uppercase; letter-spacing: 0.3px; white-space: nowrap;
+}
+.admtb-status.s-done       { background: rgba(16,185,129,0.12); color: #10b981; }
+.admtb-status.s-in_progress{ background: rgba(59,130,246,0.12);  color: #3b82f6; }
+.admtb-status.s-pending    { background: rgba(249,115,22,0.12);  color: #f97316; }
+.admtb-status.s-unattended { background: rgba(100,116,139,0.12); color: #94a3b8; }
+
+/* Duration chip */
+.admtb-duration {
+  font-size: 0.72rem; font-family: var(--adm-mono); color: var(--adm-muted);
+  display: inline-flex; align-items: center; gap: 3px;
+}
+
+/* Empty / loading states */
+.admtb-empty {
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; padding: 60px 20px;
+  color: var(--adm-muted); text-align: center;
+}
+.admtb-empty i { font-size: 2.4rem; margin-bottom: 10px; opacity: 0.25; }
+.admtb-empty-title { font-size: 0.9rem; font-weight: 600; color: var(--adm-text-2); margin-bottom: 4px; }
+.admtb-empty-sub   { font-size: 0.78rem; }
+.admtb-loading {
+  display: flex; align-items: center; justify-content: center;
+  gap: 10px; padding: 60px; color: var(--adm-muted); font-size: 0.85rem;
+}
+.admtb-spinner {
+  width: 18px; height: 18px; border-radius: 50%;
+  border: 2px solid var(--adm-border); border-top-color: var(--adm-accent);
+  animation: admtb-spin 0.7s linear infinite;
+}
+@keyframes admtb-spin { to { transform: rotate(360deg); } }
+
+/* Page header */
+.admtb-header {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  margin-bottom: 22px; gap: 12px; flex-wrap: wrap;
+}
+.admtb-breadcrumb {
+  font-size: 0.72rem; font-family: var(--adm-mono); color: var(--adm-muted);
+  margin-bottom: 6px; display: flex; align-items: center; gap: 5px;
+}
+.admtb-breadcrumb a { color: var(--adm-muted); text-decoration: none; }
+.admtb-breadcrumb a:hover { color: var(--adm-accent); }
+.admtb-page-title {
+  font-size: 1.3rem; font-weight: 700; color: var(--adm-text);
+  display: flex; align-items: center; gap: 8px; margin: 0;
+}
+.admtb-page-title i { color: #3b82f6; }
+</style>
+
+<!-- Page header -->
+<div class="admtb-header">
+  <div>
+    <div class="admtb-breadcrumb">
+      <a href="/admin/work"><i class="bi bi-kanban"></i> Work</a>
+      <i class="bi bi-chevron-right" style="font-size:0.6rem"></i>
+      <span>Task Board</span>
+    </div>
+    <h1 class="admtb-page-title"><i class="bi bi-layout-text-window-reverse"></i> Task Board</h1>
+  </div>
+  <a href="/admin/work" class="adm-back-btn"><i class="bi bi-arrow-left"></i> Work</a>
+</div>
+
+<!-- Toolbar -->
+<div class="admtb-toolbar">
+  <div class="admtb-date-nav">
+    <button class="admtb-nav-btn" id="admtbPrev"><i class="bi bi-chevron-left"></i></button>
+    <input type="date" class="admtb-date-input" id="admtbDate" value="<%= today %>">
+    <button class="admtb-nav-btn" id="admtbNext"><i class="bi bi-chevron-right"></i></button>
+    <button class="admtb-today-btn" id="admtbTodayBtn">TODAY</button>
+  </div>
+
+  <select class="admtb-select" id="admtbEmpFilter">
+    <option value="">All Employees</option>
+    <% localUsers.forEach(function(u) { %>
+      <option value="<%= u.id %>"><%= u.name %></option>
+    <% }); %>
+  </select>
+
+  <select class="admtb-select" id="admtbTypeFilter">
+    <option value="">All Types</option>
+    <option value="recurring">Recurring</option>
+    <option value="once">One-time</option>
+  </select>
+
+  <div class="admtb-stats">
+    <div class="admtb-stat s-total">
+      <span class="admtb-stat-dot" style="background:var(--adm-muted)"></span>
+      <span class="admtb-stat-count" id="admtbStTotal">—</span> Tasks
+    </div>
+    <div class="admtb-stat s-done">
+      <span class="admtb-stat-dot" style="background:#10b981"></span>
+      <span class="admtb-stat-count" id="admtbStDone">—</span> Done
+    </div>
+    <div class="admtb-stat s-progress">
+      <span class="admtb-stat-dot" style="background:#3b82f6"></span>
+      <span class="admtb-stat-count" id="admtbStProgress">—</span> In Progress
+    </div>
+    <div class="admtb-stat s-pending">
+      <span class="admtb-stat-dot" style="background:#f97316"></span>
+      <span class="admtb-stat-count" id="admtbStPending">—</span> Pending
+    </div>
+  </div>
+</div>
+
+<!-- Table -->
+<div class="admtb-table-wrap">
+  <table class="admtb-table">
+    <thead>
+      <tr>
+        <th style="width:30%">Task</th>
+        <th style="width:20%">Employee</th>
+        <th style="width:10%">Type</th>
+        <th style="width:10%">Deadline</th>
+        <th style="width:10%">Priority</th>
+        <th style="width:10%">Status</th>
+        <th style="width:10%">Duration</th>
+      </tr>
+    </thead>
+    <tbody id="admtbBody">
+      <tr>
+        <td colspan="7">
+          <div class="admtb-loading">
+            <div class="admtb-spinner"></div> Loading tasks…
+          </div>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<script>
+(function () {
+  var _today     = '<%- today %>';
+  var _localUsers = <%- JSON.stringify(localUsers).replace(/<\//g, '<\\/') %>;
+
+  var allRows      = [];   // flat array of {task+employee} rows
+  var currentDate  = _today;
+  var empFilter    = '';
+  var typeFilter   = '';
+
+  /* ── helpers ─────────────────────────────────────────────────── */
+  function esc(s) {
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function avatarColor(name) {
+    var colors = ['#3b82f6','#8b5cf6','#10b981','#f97316','#ec4899','#06b6d4','#f59e0b','#6366f1'];
+    var h = 0;
+    for (var i = 0; i < (name||'').length; i++) h = (h * 31 + name.charCodeAt(i)) & 0xffffffff;
+    return colors[Math.abs(h) % colors.length];
+  }
+
+  function initials(name) {
+    var parts = (name || '?').trim().split(' ');
+    return (parts[0][0] + (parts[1] ? parts[1][0] : '')).toUpperCase();
+  }
+
+  function fmtDuration(mins) {
+    if (!mins) return '';
+    var h = Math.floor(mins / 60), m = mins % 60;
+    return h ? (h + 'h ' + (m ? m + 'm' : '')) : (m + 'm');
+  }
+
+  function fmtDeadline(t) {
+    if (!t) return '<span style="color:var(--adm-muted)">—</span>';
+    var parts = t.split(':');
+    var h = parseInt(parts[0]), m = parts[1];
+    var ampm = h >= 12 ? 'PM' : 'AM';
+    h = h % 12 || 12;
+    return esc(h + ':' + m + ' ' + ampm);
+  }
+
+  function patternLabel(g) {
+    if (g.type === 'once') return '';
+    if (g.pattern === 'daily')   return 'Daily';
+    if (g.pattern === 'weekly')  return 'Weekly';
+    if (g.pattern === 'monthly') return 'Monthly';
+    return '';
+  }
+
+  /* ── flatten taskGroups → rows ──────────────────────────────── */
+  function flattenGroups(groups) {
+    var rows = [];
+    groups.forEach(function (g) {
+      g.employees.forEach(function (e) {
+        rows.push({
+          task_id:          e.task_id,
+          title:            g.title,
+          type:             g.type,
+          pattern:          g.pattern,
+          deadline_time:    g.deadline_time,
+          priority:         g.priority,
+          reward_amount:    g.reward_amount,
+          user_id:          e.user_id,
+          user_name:        e.user_name,
+          status:           e.status,
+          duration_minutes: e.duration_minutes,
+          fallback_role:    e.fallback_role,
+          original_assignee:e.original_assignee
+        });
+      });
+    });
+    return rows;
+  }
+
+  /* ── filter ─────────────────────────────────────────────────── */
+  function getFiltered() {
+    return allRows.filter(function (r) {
+      if (empFilter  && String(r.user_id) !== String(empFilter))  return false;
+      if (typeFilter && r.type !== typeFilter) return false;
+      return true;
+    });
+  }
+
+  /* ── stats ──────────────────────────────────────────────────── */
+  function updateStats(rows) {
+    var done = 0, progress = 0, pending = 0;
+    rows.forEach(function (r) {
+      if (r.status === 'done')        done++;
+      else if (r.status === 'in_progress') progress++;
+      else pending++;
+    });
+    document.getElementById('admtbStTotal').textContent    = rows.length;
+    document.getElementById('admtbStDone').textContent     = done;
+    document.getElementById('admtbStProgress').textContent = progress;
+    document.getElementById('admtbStPending').textContent  = pending;
+  }
+
+  /* ── render ─────────────────────────────────────────────────── */
+  function renderRows(rows) {
+    var tbody = document.getElementById('admtbBody');
+    if (!rows.length) {
+      tbody.innerHTML =
+        '<tr><td colspan="7"><div class="admtb-empty">' +
+        '<i class="bi bi-calendar-x"></i>' +
+        '<div class="admtb-empty-title">No tasks found</div>' +
+        '<div class="admtb-empty-sub">Try changing the date or clearing filters</div>' +
+        '</div></td></tr>';
+      return;
+    }
+
+    var html = '';
+    rows.forEach(function (r) {
+      var rowClass = r.status === 'done' ? 'row-done'
+                   : r.status === 'in_progress' ? 'row-progress'
+                   : r.status === 'unattended'  ? 'row-unattended'
+                   : 'row-pending';
+
+      var statusLabel = r.status === 'in_progress' ? 'In Progress'
+                      : r.status === 'done'        ? 'Done'
+                      : r.status === 'unattended'  ? 'Unattended'
+                      : 'Pending';
+
+      var typeClass = r.type === 'recurring' ? 't-recurring' : 't-once';
+      var typeLabel = r.type === 'recurring'
+        ? ('<i class="bi bi-arrow-repeat"></i> ' + (patternLabel(r) || 'Recurring'))
+        : 'One-time';
+
+      var priClass = 'pri-' + (r.priority || 'medium');
+      var priLabel = r.priority ? (r.priority.charAt(0).toUpperCase() + r.priority.slice(1)) : 'Medium';
+
+      var fallbackTag = '';
+      if (r.fallback_role && r.fallback_role !== 'primary') {
+        var label = r.fallback_role === 'secondary' ? '2nd'
+                  : r.fallback_role === 'tertiary'  ? '3rd'
+                  : r.fallback_role === 'all_unavailable' ? 'Unavailable'
+                  : r.fallback_role;
+        fallbackTag = '<span class="admtb-fallback-tag">' + esc(label) + '</span>';
+        if (r.original_assignee) {
+          fallbackTag += '<span style="font-size:0.68rem;color:var(--adm-muted);margin-left:4px">for ' + esc(r.original_assignee) + '</span>';
+        }
+      }
+
+      var color = avatarColor(r.user_name);
+      var sub = (r.type === 'recurring' && r.pattern) ? patternLabel(r) : '';
+
+      html +=
+        '<tr class="' + rowClass + '">' +
+          '<td>' +
+            '<div class="admtb-task-name">' + esc(r.title) + '</div>' +
+            (sub ? '<div class="admtb-task-sub"><i class="bi bi-arrow-repeat"></i> ' + esc(sub) + '</div>' : '') +
+          '</td>' +
+          '<td>' +
+            '<div class="admtb-emp">' +
+              '<div class="admtb-avatar" style="background:' + color + '">' + esc(initials(r.user_name)) + '</div>' +
+              '<div>' +
+                '<div class="admtb-emp-name">' + esc(r.user_name) + fallbackTag + '</div>' +
+              '</div>' +
+            '</div>' +
+          '</td>' +
+          '<td><span class="admtb-type ' + typeClass + '">' + typeLabel + '</span></td>' +
+          '<td>' + fmtDeadline(r.deadline_time) + '</td>' +
+          '<td>' +
+            '<div class="admtb-priority ' + priClass + '">' +
+              '<span class="admtb-pri-dot"></span>' + esc(priLabel) +
+            '</div>' +
+          '</td>' +
+          '<td><span class="admtb-status s-' + esc(r.status) + '">' + esc(statusLabel) + '</span></td>' +
+          '<td>' +
+            (r.duration_minutes
+              ? '<span class="admtb-duration"><i class="bi bi-clock"></i> ' + esc(fmtDuration(r.duration_minutes)) + '</span>'
+              : '<span style="color:var(--adm-muted)">—</span>') +
+          '</td>' +
+        '</tr>';
+    });
+
+    tbody.innerHTML = html;
+    updateStats(rows);
+  }
+
+  function applyFilters() {
+    renderRows(getFiltered());
+  }
+
+  /* ── fetch data ─────────────────────────────────────────────── */
+  function loadDate(dateStr) {
+    var tbody = document.getElementById('admtbBody');
+    tbody.innerHTML =
+      '<tr><td colspan="7"><div class="admtb-loading">' +
+      '<div class="admtb-spinner"></div> Loading tasks…</div></td></tr>';
+    ['admtbStTotal','admtbStDone','admtbStProgress','admtbStPending'].forEach(function(id) {
+      document.getElementById(id).textContent = '—';
+    });
+
+    fetch('/admin/taskboard/data?date=' + encodeURIComponent(dateStr), {
+      credentials: 'same-origin'
+    })
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+      if (!data.success) throw new Error(data.message || 'Server error');
+      allRows = flattenGroups(data.taskGroups || []);
+      applyFilters();
+    })
+    .catch(function (err) {
+      tbody.innerHTML =
+        '<tr><td colspan="7"><div class="admtb-empty">' +
+        '<i class="bi bi-exclamation-triangle"></i>' +
+        '<div class="admtb-empty-title">Failed to load tasks</div>' +
+        '<div class="admtb-empty-sub">' + esc(err.message) + '</div>' +
+        '</div></td></tr>';
+    });
+  }
+
+  /* ── date helpers ───────────────────────────────────────────── */
+  function shiftDate(d, days) {
+    var dt = new Date(d + 'T12:00:00');
+    dt.setDate(dt.getDate() + days);
+    return dt.toISOString().split('T')[0];
+  }
+
+  function setDate(d) {
+    currentDate = d;
+    document.getElementById('admtbDate').value = d;
+    loadDate(d);
+  }
+
+  /* ── wire up controls ───────────────────────────────────────── */
+  document.getElementById('admtbPrev').addEventListener('click', function () {
+    setDate(shiftDate(currentDate, -1));
+  });
+  document.getElementById('admtbNext').addEventListener('click', function () {
+    setDate(shiftDate(currentDate, 1));
+  });
+  document.getElementById('admtbTodayBtn').addEventListener('click', function () {
+    setDate(_today);
+  });
+  document.getElementById('admtbDate').addEventListener('change', function () {
+    if (this.value) setDate(this.value);
+  });
+  document.getElementById('admtbEmpFilter').addEventListener('change', function () {
+    empFilter = this.value;
+    applyFilters();
+  });
+  document.getElementById('admtbTypeFilter').addEventListener('change', function () {
+    typeFilter = this.value;
+    applyFilters();
+  });
+
+  /* ── initial load ───────────────────────────────────────────── */
+  loadDate(currentDate);
+})();
+</script>

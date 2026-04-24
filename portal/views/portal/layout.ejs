@@ -1669,12 +1669,6 @@
 
   // ── Pinned messages ─────────────────────────────
   var _gcIsAdmin = (PORTAL_USER.role === 'CLIENT_ADMIN' || PORTAL_USER.role === 'LOCAL_ADMIN');
-  function _gcPinBtnHtml(m) {
-    if (m.is_deleted) return '';
-    if (!_gcIsAdmin) return '';
-    var cls = m.is_pinned ? 'gc-msg-pin pinned' : 'gc-msg-pin';
-    return '<span class="' + cls + '" onclick="event.stopPropagation(); togglePinGcMsg(' + m.id + ')" title="' + (m.is_pinned ? 'Unpin' : 'Pin') + '"><i class="bi bi-pin-angle-fill"></i></span>';
-  }
   function _gcPinIndicatorHtml(m) {
     if (!m.is_pinned) return '';
     return '<span class="gc-pin-indicator" title="Pinned"><i class="bi bi-pin-angle-fill"></i></span>';
@@ -1714,8 +1708,9 @@
     bar.classList.toggle('expanded', !open);
   };
 
-  // ── Edit own message ────────────────────────────
+  // ── Message menu (WhatsApp-style) ───────────────
   var _gcMsgRaw = {};
+  var _gcMsgMeta = {};
   var GC_EDIT_WINDOW_MS = 15 * 60 * 1000;
   function _gcCanEdit(m) {
     if (!m || m.is_deleted) return false;
@@ -1723,15 +1718,63 @@
     if (m.type !== 'text') return false;
     return (Date.now() - new Date(m.created_at).getTime()) < GC_EDIT_WINDOW_MS;
   }
-  function _gcEditBtnHtml(m) {
-    if (!_gcCanEdit(m)) return '';
-    return '<span class="gc-msg-edit" onclick="event.stopPropagation(); editGcMsg(' + m.id + ')" title="Edit"><i class="bi bi-pencil"></i></span>';
-  }
-  function _gcDeleteBtnHtmlShifted(m) {
+  function _gcMenuBtnHtml(m) {
     if (m.is_deleted) return '';
-    var right = _gcCanEdit(m) ? 100 : 68;
-    return '<span class="gc-msg-delete" style="right:' + right + 'px" onclick="event.stopPropagation(); deleteGcMsg(' + m.id + ')" title="Delete"><i class="bi bi-trash"></i></span>';
+    return '<button class="gc-msg-menu-btn" onclick="event.stopPropagation(); _gcShowMsgMenu(event,' + m.id + ')" title="More"><i class="bi bi-chevron-down"></i></button>';
   }
+  window._gcShowMsgMenu = function(evt, msgId) {
+    var existing = document.getElementById('gcMsgMenu');
+    if (existing) { existing.remove(); var ob = document.querySelector('.gc-msg-menu-btn.gc-menu-open'); if (ob) ob.classList.remove('gc-menu-open'); return; }
+    var bubble = document.querySelector('[data-gc-msg-id="' + msgId + '"]');
+    if (!bubble) return;
+    var isSent = bubble.classList.contains('sent');
+    var isDeleted = bubble.classList.contains('deleted');
+    var isPinned = bubble.classList.contains('pinned');
+    var meta = _gcMsgMeta[msgId] || {};
+    var canEdit = isSent && !isDeleted && meta.type === 'text' &&
+      (Date.now() - new Date(meta.created_at).getTime()) < GC_EDIT_WINDOW_MS;
+    var items = [];
+    if (!isDeleted) {
+      items.push({ icon: 'bi-reply-fill', label: 'Reply', fn: function() { replyToGcMsg(msgId); } });
+      items.push({ icon: 'bi-emoji-smile', label: 'React', fn: function(r) { showGcEmojiPicker({ currentTarget: { getBoundingClientRect: function() { return r; } } }, msgId); } });
+      if (_gcIsAdmin) items.push({ icon: 'bi-pin-angle-fill', label: isPinned ? 'Unpin' : 'Pin', fn: function() { togglePinGcMsg(msgId); } });
+      if (canEdit) items.push({ icon: 'bi-pencil', label: 'Edit', fn: function() { editGcMsg(msgId); } });
+      if (isSent) items.push({ icon: 'bi-trash', label: 'Delete', danger: true, fn: function() { deleteGcMsg(msgId); } });
+    }
+    if (!items.length) return;
+    var triggerBtn = evt.currentTarget;
+    triggerBtn.classList.add('gc-menu-open');
+    var menu = document.createElement('div');
+    menu.id = 'gcMsgMenu';
+    menu.className = 'gc-msg-menu';
+    items.forEach(function(item) {
+      var el = document.createElement('button');
+      el.className = 'gc-msg-menu-item' + (item.danger ? ' gc-menu-danger' : '');
+      el.innerHTML = '<i class="bi ' + item.icon + '"></i>' + item.label;
+      el.addEventListener('click', function(e) {
+        e.stopPropagation();
+        var savedRect = this.getBoundingClientRect();
+        menu.remove();
+        triggerBtn.classList.remove('gc-menu-open');
+        item.fn(savedRect);
+      });
+      menu.appendChild(el);
+    });
+    document.body.appendChild(menu);
+    var br = triggerBtn.getBoundingClientRect();
+    var mh = menu.offsetHeight, mw = menu.offsetWidth;
+    var top = br.bottom + 4;
+    if (top + mh > window.innerHeight - 8) top = br.top - mh - 4;
+    var left = br.right - mw;
+    if (left < 8) left = br.left;
+    menu.style.top = top + 'px';
+    menu.style.left = left + 'px';
+    setTimeout(function() {
+      document.addEventListener('click', function close(e) {
+        if (!menu.contains(e.target)) { menu.remove(); triggerBtn.classList.remove('gc-menu-open'); document.removeEventListener('click', close); }
+      });
+    }, 10);
+  };
   window.editGcMsg = function(msgId) {
     var bubble = document.querySelector('[data-gc-msg-id="' + msgId + '"]');
     if (!bubble) return;
@@ -1815,10 +1858,6 @@
     var p = document.getElementById('gcEmojiPicker');
     if (p) p.remove();
   };
-  function _gcReactBtnHtml(m) {
-    if (m.is_deleted) return '';
-    return '<span class="gc-msg-react" onclick="event.stopPropagation(); showGcEmojiPicker(event,' + m.id + ')" title="Add reaction"><i class="bi bi-emoji-smile"></i></span>';
-  }
 
   // ── Reply-to-message state + helpers ────────────
   var _gcReplyingTo = null;
@@ -1857,11 +1896,6 @@
     else preview = escapeHtml((m.reply_to_content || '').substring(0, 120));
     return '<div class="gc-reply-quote" onclick="event.stopPropagation(); gcJumpToMsg(' + m.reply_to_id + ')"><div class="gc-reply-quote-sender">' + sender + '</div><div class="gc-reply-quote-content">' + preview + '</div></div>';
   }
-  function _gcReplyBtnHtml(m, isSent) {
-    if (m.is_deleted) return '';
-    return '<span class="gc-msg-reply" style="right:36px" onclick="event.stopPropagation(); replyToGcMsg(' + m.id + ')" title="Reply"><i class="bi bi-reply-fill"></i></span>';
-  }
-
   // ── Browser notifications ────────────────────────
   var _gcNotifAsked = false;
   function _gcRequestNotifPerm() {
@@ -2043,17 +2077,14 @@
         content = gcRenderWithMentions(m.content);
       }
       _gcMsgRaw[m.id] = m.content;
-      var deleteBtn = isSent && !m.is_deleted ? _gcDeleteBtnHtmlShifted(m) : '';
-      var editBtn = _gcEditBtnHtml(m);
-      var replyBtn = _gcReplyBtnHtml(m, isSent);
-      var reactBtn = _gcReactBtnHtml(m);
-      var pinBtn = _gcPinBtnHtml(m);
+      _gcMsgMeta[m.id] = { type: m.type, created_at: m.created_at, sender_id: m.sender_id };
+      var menuBtn = _gcMenuBtnHtml(m);
       var pinInd = _gcPinIndicatorHtml(m);
       var replyQuote = _gcReplyQuoteHtml(m);
       var reactions = _gcRenderReactions(m);
       var senderName = !isSent ? '<div class="gc-msg-sender">' + escapeHtml(m.sender_name) + '</div>' : '';
       var editedLabel = m.edited_at ? '<span class="gc-edited-label">(edited)</span>' : '';
-      return dateDivider + unreadDivider + '<div class="msg-bubble ' + cls + (m.is_deleted ? ' deleted' : '') + (m.is_pinned ? ' pinned' : '') + '" data-gc-msg-id="' + m.id + '">' + pinInd + deleteBtn + editBtn + pinBtn + replyBtn + reactBtn + senderName + replyQuote + '<div class="msg-content">' + content + '</div>' + reactions + '<div class="msg-footer"><span class="msg-time">' + time + '</span>' + editedLabel + '</div></div>';
+      return dateDivider + unreadDivider + '<div class="msg-bubble ' + cls + (m.is_deleted ? ' deleted' : '') + (m.is_pinned ? ' pinned' : '') + '" data-gc-msg-id="' + m.id + '">' + pinInd + menuBtn + senderName + replyQuote + '<div class="msg-content">' + content + '</div>' + reactions + '<div class="msg-footer"><span class="msg-time">' + time + '</span>' + editedLabel + '</div></div>';
     }).join('');
     if (prepend) {
       container.insertAdjacentHTML('afterbegin', html);
@@ -2228,16 +2259,14 @@
         content = gcRenderWithMentions(msg.content);
       }
       _gcMsgRaw[msg.id] = msg.content;
-      var deleteBtn = isSent ? _gcDeleteBtnHtmlShifted(msg) : '';
-      var editBtn = _gcEditBtnHtml(msg);
-      var replyBtn = _gcReplyBtnHtml(msg, isSent);
-      var reactBtn = _gcReactBtnHtml(msg);
+      _gcMsgMeta[msg.id] = { type: msg.type, created_at: msg.created_at, sender_id: msg.sender_id };
+      var menuBtn = _gcMenuBtnHtml(msg);
       var replyQuote = _gcReplyQuoteHtml(msg);
       var senderName = !isSent ? '<div class="gc-msg-sender">' + escapeHtml(msg.sender_name) + '</div>' : '';
       if (isFromOther && !wasAtBottom && !container.querySelector('[data-gc-unread-divider]')) {
         container.insertAdjacentHTML('beforeend', _gcUnreadDividerHtml());
       }
-      container.insertAdjacentHTML('beforeend', '<div class="msg-bubble ' + cls + '" data-gc-msg-id="' + msg.id + '">' + deleteBtn + editBtn + replyBtn + reactBtn + senderName + replyQuote + '<div class="msg-content">' + content + '</div><div class="msg-footer"><span class="msg-time">' + time + '</span></div></div>');
+      container.insertAdjacentHTML('beforeend', '<div class="msg-bubble ' + cls + '" data-gc-msg-id="' + msg.id + '">' + menuBtn + senderName + replyQuote + '<div class="msg-content">' + content + '</div><div class="msg-footer"><span class="msg-time">' + time + '</span></div></div>');
       if (msg.type === 'text' && msg.content) {
         var newBubble = container.querySelector('[data-gc-msg-id="' + msg.id + '"]');
         if (newBubble) _gcFetchAndRenderPreview(newBubble, msg.content);
@@ -2265,11 +2294,6 @@
         bubble.insertAdjacentHTML('afterbegin', '<span class="gc-pin-indicator" title="Pinned"><i class="bi bi-pin-angle-fill"></i></span>');
       } else if (!data.pinned && existingInd) {
         existingInd.remove();
-      }
-      var pinBtn = bubble.querySelector('.gc-msg-pin');
-      if (pinBtn) {
-        pinBtn.classList.toggle('pinned', !!data.pinned);
-        pinBtn.title = data.pinned ? 'Unpin' : 'Pin';
       }
     }
     loadGcPinned();
@@ -2306,7 +2330,7 @@
       bubble.classList.add('deleted');
       var c = bubble.querySelector('.msg-content');
       if (c) c.innerHTML = '<em class="text-muted" style="font-size:0.75rem"><i class="bi bi-ban me-1"></i>deleted</em>';
-      var d = bubble.querySelector('.gc-msg-delete');
+      var d = bubble.querySelector('.gc-msg-menu-btn');
       if (d) d.remove();
     }
   });

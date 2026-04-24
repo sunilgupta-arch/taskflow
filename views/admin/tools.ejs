@@ -8,7 +8,7 @@
 
 <div class="adm-cards">
 
-  <a href="/drive" class="adm-card" style="--card-accent:#3b82f6;--card-rgb:59,130,246">
+  <a href="/admin/drive" class="adm-card" style="--card-accent:#3b82f6;--card-rgb:59,130,246">
     <div class="adm-card-icon"><i class="bi bi-cloud-arrow-up"></i></div>
     <div class="adm-card-body">
       <div class="adm-card-title">Google Drive</div>
@@ -17,7 +17,7 @@
     <div class="adm-card-footer"><span>Open Drive</span><i class="bi bi-arrow-right"></i></div>
   </a>
 
-  <a href="/help" class="adm-card" style="--card-accent:#64748b;--card-rgb:100,116,139">
+  <a href="/admin/helpcenter" class="adm-card" style="--card-accent:#64748b;--card-rgb:100,116,139">
     <div class="adm-card-icon"><i class="bi bi-question-circle"></i></div>
     <div class="adm-card-body">
       <div class="adm-card-title">Help Center</div>
@@ -27,7 +27,7 @@
   </a>
 
   <% if (user.role_name === 'LOCAL_ADMIN') { %>
-  <a href="/backup" class="adm-card" style="--card-accent:#f97316;--card-rgb:249,115,22">
+  <a href="/admin/backup" class="adm-card" style="--card-accent:#f97316;--card-rgb:249,115,22">
     <div class="adm-card-icon"><i class="bi bi-arrow-counterclockwise"></i></div>
     <div class="adm-card-body">
       <div class="adm-card-title">Backup</div>

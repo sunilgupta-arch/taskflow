@@ -1,0 +1,1009 @@
+<style>
+  /* ── Layout ── */
+  .admc-wrap { display:flex; height:calc(100vh - 176px); background:var(--adm-surface,#0f172a); border:1px solid var(--adm-border,#334155); border-radius:14px; overflow:hidden; }
+
+  /* ── Sidebar ── */
+  .admc-sidebar { width:300px; min-width:300px; border-right:1px solid var(--adm-border,#334155); display:flex; flex-direction:column; }
+  .admc-sidebar-head { padding:0.9rem 1rem; border-bottom:1px solid var(--adm-border,#334155); display:flex; align-items:center; justify-content:space-between; gap:0.5rem; flex-shrink:0; }
+  .admc-sidebar-title { font-size:0.7rem; font-weight:700; color:var(--adm-muted,#64748b); font-family:var(--adm-mono,'Space Mono',monospace); text-transform:uppercase; letter-spacing:1px; }
+  .admc-new-btn { background:rgba(0,212,255,0.1); border:1px solid rgba(0,212,255,0.25); color:#00d4ff; border-radius:7px; padding:4px 10px; font-size:0.7rem; cursor:pointer; display:flex; align-items:center; gap:4px; transition:all 0.15s; }
+  .admc-new-btn:hover { background:rgba(0,212,255,0.18); }
+  .admc-search-wrap { padding:0.65rem 1rem; border-bottom:1px solid var(--adm-border,#334155); flex-shrink:0; }
+  .admc-search { width:100%; background:var(--adm-surface2,#1e293b); border:1px solid var(--adm-border,#334155); color:var(--adm-text,#f1f5f9); border-radius:8px; padding:6px 10px 6px 30px; font-size:0.78rem; outline:none; }
+  .admc-search:focus { border-color:rgba(0,212,255,0.4); }
+  .admc-search::placeholder { color:var(--adm-muted,#64748b); }
+  .admc-search-icon { position:absolute; left:9px; top:50%; transform:translateY(-50%); color:var(--adm-muted,#64748b); font-size:0.75rem; pointer-events:none; }
+  .admc-conv-list { flex:1; overflow-y:auto; }
+  .admc-conv-item { display:flex; align-items:center; gap:0.7rem; padding:0.8rem 1rem; cursor:pointer; border-bottom:1px solid var(--adm-border,#334155); transition:background 0.15s; }
+  .admc-conv-item:hover { background:var(--adm-surface2,#1e293b); }
+  .admc-conv-item.active { background:var(--adm-surface2,#1e293b); border-left:3px solid #00d4ff; }
+  .admc-avatar { width:38px; height:38px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:0.75rem; flex-shrink:0; }
+  .admc-avatar.direct { background:linear-gradient(135deg,rgba(0,212,255,0.3),rgba(99,102,241,0.3)); color:#e2e8f0; }
+  .admc-avatar.group  { background:linear-gradient(135deg,rgba(139,92,246,0.3),rgba(236,72,153,0.3)); color:#e2e8f0; }
+  .admc-avatar.system { background:rgba(99,102,241,0.15); color:#818cf8; }
+  .admc-conv-info { flex:1; min-width:0; }
+  .admc-conv-name { font-size:0.82rem; font-weight:600; color:var(--adm-text,#f1f5f9); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:flex; align-items:center; gap:5px; }
+  .admc-conv-preview { font-size:0.72rem; color:var(--adm-muted,#64748b); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:2px; }
+  .admc-conv-meta { display:flex; flex-direction:column; align-items:flex-end; gap:4px; flex-shrink:0; }
+  .admc-conv-time { font-size:0.6rem; color:var(--adm-muted,#64748b); font-family:var(--adm-mono,'Space Mono',monospace); }
+  .admc-unread { background:#00d4ff; color:#000; font-size:0.58rem; font-weight:700; min-width:18px; height:18px; border-radius:9px; display:flex; align-items:center; justify-content:center; padding:0 4px; font-family:var(--adm-mono,'Space Mono',monospace); }
+  .admc-org-tag { font-size:0.52rem; padding:1px 5px; border-radius:4px; font-weight:600; letter-spacing:0.5px; }
+  .admc-org-tag.LOCAL  { background:rgba(139,92,246,0.15); color:#a78bfa; }
+  .admc-org-tag.CLIENT { background:rgba(0,212,255,0.12); color:#00d4ff; }
+
+  /* ── Main Panel ── */
+  .admc-main { flex:1; display:flex; flex-direction:column; min-width:0; }
+  .admc-main-head { padding:0.8rem 1.1rem; border-bottom:1px solid var(--adm-border,#334155); display:flex; align-items:center; gap:0.7rem; flex-shrink:0; }
+  .admc-head-name { font-size:0.88rem; font-weight:600; color:var(--adm-text,#f1f5f9); }
+  .admc-head-sub  { font-size:0.65rem; color:var(--adm-muted,#64748b); font-family:var(--adm-mono,'Space Mono',monospace); margin-top:1px; }
+  .admc-head-actions { margin-left:auto; display:flex; align-items:center; gap:4px; }
+  .admc-head-btn { background:none; border:none; color:var(--adm-muted,#64748b); cursor:pointer; padding:5px 8px; border-radius:7px; font-size:0.85rem; transition:all 0.15s; }
+  .admc-head-btn:hover { background:var(--adm-surface2,#1e293b); color:var(--adm-text,#f1f5f9); }
+  .admc-head-btn.danger:hover { background:rgba(239,68,68,0.1); color:#ef4444; }
+
+  /* ── Messages ── */
+  .admc-messages { flex:1; overflow-y:auto; padding:1rem 1.1rem; display:flex; flex-direction:column; gap:4px; }
+  .admc-empty { flex:1; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:0.5rem; color:var(--adm-muted,#64748b); font-size:0.82rem; }
+  .admc-empty i { font-size:2.2rem; opacity:0.3; }
+  .admc-date-div { text-align:center; margin:0.6rem 0; font-size:0.62rem; color:var(--adm-muted,#64748b); font-family:var(--adm-mono,'Space Mono',monospace); }
+  .admc-date-div span { background:var(--adm-surface,#0f172a); border:1px solid var(--adm-border,#334155); padding:2px 10px; border-radius:20px; }
+  .admc-msg-row { display:flex; align-items:flex-end; gap:0.5rem; }
+  .admc-msg-row.sent { justify-content:flex-end; }
+  .admc-msg-row.received { justify-content:flex-start; }
+  .admc-bubble { max-width:72%; padding:0.55rem 0.85rem; border-radius:12px; font-size:0.82rem; line-height:1.45; word-break:break-word; position:relative; }
+  .admc-msg-row.sent     .admc-bubble { background:rgba(0,212,255,0.1); border:1px solid rgba(0,212,255,0.18); color:var(--adm-text,#f1f5f9); border-bottom-right-radius:3px; }
+  .admc-msg-row.received .admc-bubble { background:var(--adm-surface2,#1e293b); border:1px solid var(--adm-border,#334155); color:var(--adm-text,#f1f5f9); border-bottom-left-radius:3px; }
+  .admc-msg-sender { font-size:0.62rem; font-weight:700; color:#a78bfa; margin-bottom:2px; }
+  .admc-msg-time { font-size:0.55rem; color:var(--adm-muted,#64748b); margin-top:3px; text-align:right; font-family:var(--adm-mono,'Space Mono',monospace); display:flex; align-items:center; justify-content:flex-end; gap:2px; }
+  .admc-tick { font-size:0.75rem; display:inline-flex; align-items:center; }
+  .admc-tick.sent { color:rgba(180,195,210,0.6); }
+  .admc-tick.read { color:#00d4ff; }
+  .admc-load-more { align-self:center; font-size:0.68rem; color:#00d4ff; cursor:pointer; padding:3px 14px; border:1px solid var(--adm-border,#334155); border-radius:20px; background:var(--adm-surface2,#1e293b); margin-bottom:0.4rem; }
+  .admc-load-more:hover { border-color:#00d4ff; }
+
+  /* System / call messages */
+  .admc-sys-msg { display:flex; justify-content:center; margin:4px 0; }
+  .admc-sys-bubble { background:rgba(99,102,241,0.07); border:1px solid rgba(99,102,241,0.18); border-radius:10px; padding:0.6rem 1rem; max-width:85%; }
+  .admc-sys-label { font-size:0.6rem; color:#818cf8; font-weight:600; margin-bottom:3px; }
+  .admc-sys-content { font-size:0.78rem; color:var(--adm-text,#f1f5f9); white-space:pre-wrap; }
+  .admc-sys-time { font-size:0.55rem; color:var(--adm-muted,#64748b); text-align:right; margin-top:2px; font-family:var(--adm-mono,'Space Mono',monospace); }
+  .admc-call-row { display:flex; justify-content:center; margin:4px 0; }
+  .admc-call-pill { display:inline-flex; align-items:center; gap:7px; border-radius:20px; padding:5px 14px; font-size:0.78rem; font-weight:500; }
+
+  /* Attachment in bubble */
+  .admc-attach-box { display:flex; align-items:center; gap:0.6rem; padding:0.45rem 0.6rem; border-radius:8px; background:var(--adm-surface,#0f172a); border:1px solid var(--adm-border,#334155); margin-bottom:4px; cursor:default; }
+  .admc-attach-icon { width:30px; height:30px; border-radius:6px; background:rgba(0,212,255,0.1); color:#00d4ff; display:flex; align-items:center; justify-content:center; font-size:0.8rem; flex-shrink:0; }
+  .admc-attach-name { font-size:0.73rem; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:160px; }
+  .admc-attach-size { font-size:0.55rem; color:var(--adm-muted,#64748b); font-family:var(--adm-mono,'Space Mono',monospace); }
+  .admc-attach-action { font-size:0.78rem; color:var(--adm-muted,#64748b); flex-shrink:0; cursor:pointer; background:none; border:none; padding:2px 4px; border-radius:4px; transition:color 0.15s; }
+  .admc-attach-action:hover { color:#00d4ff; }
+  .admc-attach-action.saved { color:#10b981; cursor:default; }
+
+  /* ── Typing ── */
+  .admc-typing { font-size:0.68rem; color:var(--adm-muted,#64748b); font-style:italic; padding:2px 4px; min-height:18px; }
+
+  /* ── Attach preview bar ── */
+  .admc-attach-preview { display:none; padding:0.5rem 1.1rem; border-top:1px solid var(--adm-border,#334155); background:var(--adm-surface2,#1e293b); align-items:center; gap:0.7rem; }
+  .admc-attach-preview.show { display:flex; }
+  .admc-attach-preview-icon { width:34px; height:34px; border-radius:7px; background:rgba(0,212,255,0.1); color:#00d4ff; display:flex; align-items:center; justify-content:center; font-size:0.9rem; flex-shrink:0; }
+  .admc-attach-preview-info { flex:1; min-width:0; }
+  .admc-attach-preview-name { font-size:0.76rem; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .admc-attach-preview-size { font-size:0.6rem; color:var(--adm-muted,#64748b); font-family:var(--adm-mono,'Space Mono',monospace); }
+  .admc-preview-remove { background:none; border:none; color:var(--adm-muted,#64748b); cursor:pointer; font-size:0.85rem; padding:4px; border-radius:4px; transition:color 0.15s; }
+  .admc-preview-remove:hover { color:#ef4444; }
+
+  /* ── Upload bar ── */
+  .admc-upload-bar { display:none; padding:0.5rem 1.1rem; border-top:1px solid var(--adm-border,#334155); background:var(--adm-surface2,#1e293b); align-items:center; gap:0.7rem; }
+  .admc-upload-bar.show { display:flex; }
+  .admc-upload-spinner { width:20px; height:20px; border:2px solid var(--adm-border,#334155); border-top-color:#00d4ff; border-radius:50%; animation:admc-spin 0.8s linear infinite; flex-shrink:0; }
+  @keyframes admc-spin { to { transform:rotate(360deg); } }
+  .admc-upload-info { flex:1; min-width:0; }
+  .admc-upload-name { font-size:0.74rem; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .admc-upload-status { font-size:0.6rem; color:var(--adm-muted,#64748b); font-family:var(--adm-mono,'Space Mono',monospace); }
+  .admc-upload-track { height:3px; background:var(--adm-border,#334155); border-radius:2px; margin-top:4px; overflow:hidden; }
+  .admc-upload-fill  { height:100%; background:#00d4ff; border-radius:2px; width:0; transition:width 0.2s ease; }
+
+  /* ── Input area ── */
+  .admc-input-area { padding:0.75rem 1.1rem; border-top:1px solid var(--adm-border,#334155); display:flex; align-items:flex-end; gap:8px; flex-shrink:0; }
+  .admc-attach-btn { width:36px; height:36px; border-radius:50%; background:var(--adm-surface2,#1e293b); border:1px solid var(--adm-border,#334155); color:var(--adm-muted,#64748b); display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:0.95rem; transition:all 0.15s; position:relative; flex-shrink:0; }
+  .admc-attach-btn:hover { color:#00d4ff; border-color:rgba(0,212,255,0.4); }
+  .admc-attach-menu { position:absolute; bottom:calc(100% + 8px); left:0; background:var(--adm-surface,#0f172a); border:1px solid var(--adm-border,#334155); border-radius:10px; padding:0.3rem 0; min-width:175px; box-shadow:0 8px 24px rgba(0,0,0,0.35); z-index:50; display:none; }
+  .admc-attach-menu.show { display:block; }
+  .admc-attach-menu-item { display:flex; align-items:center; gap:0.55rem; width:100%; padding:0.5rem 1rem; background:none; border:none; color:var(--adm-text,#f1f5f9); font-size:0.78rem; cursor:pointer; text-align:left; transition:background 0.15s; }
+  .admc-attach-menu-item:hover { background:var(--adm-surface2,#1e293b); }
+  .admc-attach-menu-item i { width:16px; text-align:center; }
+  .admc-textarea { flex:1; background:var(--adm-surface2,#1e293b); border:1px solid var(--adm-border,#334155); color:var(--adm-text,#f1f5f9); border-radius:10px; padding:8px 12px; font-size:0.82rem; font-family:inherit; resize:none; outline:none; min-height:36px; max-height:120px; line-height:1.4; transition:border-color 0.15s; }
+  .admc-textarea:focus { border-color:rgba(0,212,255,0.4); }
+  .admc-textarea::placeholder { color:var(--adm-muted,#64748b); }
+  .admc-send-btn { width:36px; height:36px; border-radius:50%; background:rgba(0,212,255,0.12); border:1px solid rgba(0,212,255,0.3); color:#00d4ff; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:0.9rem; transition:all 0.15s; flex-shrink:0; }
+  .admc-send-btn:hover { background:rgba(0,212,255,0.22); }
+  .admc-send-btn:disabled { opacity:0.35; cursor:not-allowed; }
+
+  /* ── New chat modal ── */
+  .admc-modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:500; align-items:center; justify-content:center; padding:1rem; }
+  .admc-modal-overlay.show { display:flex; }
+  .admc-modal { background:var(--adm-surface,#0f172a); border:1px solid var(--adm-border,#334155); border-radius:14px; width:100%; max-width:460px; max-height:85vh; display:flex; flex-direction:column; }
+  .admc-modal-head { padding:1.1rem 1.25rem; border-bottom:1px solid var(--adm-border,#334155); display:flex; align-items:center; justify-content:space-between; flex-shrink:0; }
+  .admc-modal-title { font-size:0.78rem; font-weight:700; font-family:var(--adm-mono,'Space Mono',monospace); color:var(--adm-text,#f1f5f9); letter-spacing:0.5px; }
+  .admc-modal-close { background:none; border:none; color:var(--adm-muted,#64748b); cursor:pointer; font-size:1.1rem; padding:3px; border-radius:6px; transition:color 0.15s; }
+  .admc-modal-close:hover { color:var(--adm-text,#f1f5f9); }
+  .admc-modal-body { padding:1.1rem 1.25rem; overflow-y:auto; flex:1; }
+  .admc-modal-footer { padding:0.85rem 1.25rem; border-top:1px solid var(--adm-border,#334155); display:flex; justify-content:flex-end; gap:0.5rem; flex-shrink:0; }
+  .admc-label { font-size:0.65rem; color:var(--adm-muted,#64748b); text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:0.4rem; font-family:var(--adm-mono,'Space Mono',monospace); }
+  .admc-input { width:100%; background:var(--adm-surface2,#1e293b); border:1px solid var(--adm-border,#334155); color:var(--adm-text,#f1f5f9); border-radius:8px; padding:7px 11px; font-size:0.8rem; outline:none; transition:border-color 0.15s; margin-bottom:1rem; }
+  .admc-input:focus { border-color:rgba(0,212,255,0.4); }
+  .admc-input::placeholder { color:var(--adm-muted,#64748b); }
+  .admc-type-btns { display:flex; gap:6px; margin-bottom:1rem; }
+  .admc-type-btn { flex:1; border-radius:8px; padding:6px 10px; font-size:0.75rem; font-weight:600; cursor:pointer; transition:all 0.15s; border:1px solid var(--adm-border,#334155); }
+  .admc-type-btn.active { background:rgba(0,212,255,0.1); border-color:rgba(0,212,255,0.4); color:#00d4ff; }
+  .admc-type-btn:not(.active) { background:var(--adm-surface2,#1e293b); color:var(--adm-muted,#64748b); }
+  .admc-user-item { display:flex; align-items:center; gap:0.65rem; padding:0.45rem 0.6rem; border-radius:8px; cursor:pointer; transition:background 0.15s; margin-bottom:2px; }
+  .admc-user-item:hover { background:var(--adm-surface2,#1e293b); }
+  .admc-user-item.selected { background:rgba(0,212,255,0.08); border:1px solid rgba(0,212,255,0.25); }
+  .admc-user-item input[type="checkbox"] { accent-color:#00d4ff; flex-shrink:0; }
+  .admc-btn { border-radius:8px; padding:6px 16px; font-size:0.78rem; font-weight:600; cursor:pointer; transition:all 0.15s; border:none; }
+  .admc-btn-primary { background:rgba(0,212,255,0.12); border:1px solid rgba(0,212,255,0.3); color:#00d4ff; }
+  .admc-btn-primary:hover { background:rgba(0,212,255,0.2); }
+  .admc-btn-primary:disabled { opacity:0.4; cursor:not-allowed; }
+  .admc-btn-ghost { background:var(--adm-surface2,#1e293b); border:1px solid var(--adm-border,#334155); color:var(--adm-muted,#64748b); }
+  .admc-btn-ghost:hover { color:var(--adm-text,#f1f5f9); }
+
+  /* ── Drive picker modal ── */
+  .admc-dp-item { display:flex; align-items:center; gap:0.65rem; padding:0.5rem 0.6rem; border-radius:8px; cursor:pointer; transition:background 0.15s; }
+  .admc-dp-item:hover { background:var(--adm-surface2,#1e293b); }
+  .admc-dp-item.selected { background:rgba(0,212,255,0.08); border:1px solid rgba(0,212,255,0.25); }
+  .admc-dp-icon { width:30px; height:30px; border-radius:6px; display:flex; align-items:center; justify-content:center; font-size:0.8rem; flex-shrink:0; }
+  .admc-dp-icon.folder { background:rgba(245,158,11,0.15); color:#f59e0b; }
+  .admc-dp-icon.file   { background:rgba(100,116,139,0.12); color:#94a3b8; }
+
+  /* ── Attach context menu ── */
+  #admc-ctx-menu { display:none; position:fixed; z-index:9999; background:var(--adm-surface,#0f172a); border:1px solid var(--adm-border,#334155); border-radius:9px; box-shadow:0 4px 18px rgba(0,0,0,0.25); min-width:150px; padding:0.3rem 0; font-size:0.8rem; }
+  #admc-ctx-menu.show { display:block; }
+  .admc-ctx-item { display:flex; align-items:center; gap:0.5rem; padding:0.45rem 0.9rem; cursor:pointer; color:var(--adm-text,#f1f5f9); transition:background 0.15s; }
+  .admc-ctx-item:hover { background:var(--adm-surface2,#1e293b); }
+
+  /* ── Clear chat confirm ── */
+  #admc-clear-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:600; align-items:center; justify-content:center; padding:1rem; }
+  #admc-clear-modal.show { display:flex; }
+
+  /* Mobile */
+  .admc-back-btn { display:none; background:none; border:none; color:var(--adm-muted,#64748b); font-size:1.1rem; cursor:pointer; padding:0; }
+  @media (max-width:768px) {
+    .admc-sidebar { width:100%; min-width:100%; }
+    .admc-main { display:none; }
+    .admc-wrap.conv-open .admc-sidebar { display:none; }
+    .admc-wrap.conv-open .admc-main { display:flex; }
+    .admc-back-btn { display:inline-flex; }
+  }
+</style>
+
+<a href="/admin/comms" class="adm-back-btn"><i class="bi bi-arrow-left"></i> Comms</a>
+
+<div class="admc-wrap" id="admc-wrap">
+
+  <!-- ── Sidebar ── -->
+  <div class="admc-sidebar">
+    <div class="admc-sidebar-head">
+      <span class="admc-sidebar-title">Conversations</span>
+      <button class="admc-new-btn" onclick="ADMC.openNewModal()">
+        <i class="bi bi-plus-lg"></i> New
+      </button>
+    </div>
+    <div class="admc-search-wrap">
+      <div style="position:relative;">
+        <i class="bi bi-search admc-search-icon"></i>
+        <input class="admc-search" id="admc-search" placeholder="Search..." oninput="ADMC.filterConvs()">
+      </div>
+    </div>
+    <div class="admc-conv-list" id="admc-conv-list">
+      <% if (!conversations.length) { %>
+        <div class="admc-empty" style="padding:2rem;">
+          <i class="bi bi-chat-dots"></i>
+          <span>No conversations yet</span>
+        </div>
+      <% } else { %>
+        <% conversations.forEach(function(c) { %>
+          <%
+            var displayName = c.type === 'system' ? 'System'
+              : c.type === 'direct' ? (c.other_user ? c.other_user.name : 'Unknown')
+              : (c.group_name || 'Group');
+            var searchKey = displayName.toLowerCase();
+            function fmtSidebarTime(d) {
+              if (!d) return '';
+              var dt = new Date(d), now = new Date(), diff = now - dt;
+              if (diff < 86400000 && dt.getDate() === now.getDate())
+                return dt.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:true});
+              if (diff < 604800000)
+                return dt.toLocaleDateString('en-US',{weekday:'short'});
+              return dt.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+            }
+          %>
+          <div class="admc-conv-item <%= activeConversationId === c.id ? 'active' : '' %>"
+               data-id="<%= c.id %>"
+               data-search="<%= searchKey %>"
+               onclick="ADMC.openConv(<%= c.id %>)">
+            <div class="admc-avatar <%= c.type %>">
+              <% if (c.type === 'system') { %><i class="bi bi-robot"></i>
+              <% } else if (c.type === 'direct' && c.other_user) { %><%= c.other_user.name.charAt(0).toUpperCase() %>
+              <% } else { %><i class="bi bi-people-fill"></i>
+              <% } %>
+            </div>
+            <div class="admc-conv-info">
+              <div class="admc-conv-name">
+                <%= displayName %>
+                <% if (c.type === 'system') { %>
+                  <span class="admc-org-tag LOCAL" style="background:rgba(99,102,241,0.15);color:#818cf8;">BOT</span>
+                <% } else if (c.type === 'direct' && c.other_user) { %>
+                  <span class="admc-org-tag <%= c.other_user.org_type %>"><%= c.other_user.org_type %></span>
+                <% } %>
+              </div>
+              <div class="admc-conv-preview">
+                <% if (c.last_message) { %>
+                  <% if (c.type === 'group' && c.last_message_sender) { %><strong><%= c.last_message_sender.split(' ')[0] %>:</strong> <% } %>
+                  <%= c.last_message.length > 42 ? c.last_message.substring(0,42)+'…' : c.last_message %>
+                <% } else { %><em>No messages yet</em><% } %>
+              </div>
+            </div>
+            <div class="admc-conv-meta">
+              <% if (c.last_message_at) { %>
+                <span class="admc-conv-time"><%= fmtSidebarTime(c.last_message_at) %></span>
+              <% } %>
+              <% if (c.unread_count > 0) { %>
+                <span class="admc-unread"><%= c.unread_count > 9 ? '9+' : c.unread_count %></span>
+              <% } %>
+            </div>
+          </div>
+        <% }); %>
+      <% } %>
+    </div>
+  </div>
+
+  <!-- ── Main panel ── -->
+  <div class="admc-main" id="admc-main">
+    <div id="admc-head-area">
+      <!-- filled dynamically -->
+    </div>
+    <div class="admc-messages" id="admc-messages">
+      <div class="admc-empty">
+        <i class="bi bi-chat-square-text"></i>
+        <span>Select a conversation to start chatting</span>
+      </div>
+    </div>
+    <div id="admc-input-wrap" style="display:none;">
+      <div class="admc-typing" id="admc-typing"></div>
+      <div class="admc-attach-preview" id="admc-attach-preview">
+        <div class="admc-attach-preview-icon" id="admc-prev-icon"><i class="bi bi-file-earmark"></i></div>
+        <img id="admc-prev-thumb" style="display:none;width:46px;height:46px;object-fit:cover;border-radius:6px;" alt="">
+        <div class="admc-attach-preview-info">
+          <div class="admc-attach-preview-name" id="admc-prev-name"></div>
+          <div class="admc-attach-preview-size" id="admc-prev-size"></div>
+        </div>
+        <button class="admc-preview-remove" onclick="ADMC.clearAttach()"><i class="bi bi-x-lg"></i></button>
+      </div>
+      <div class="admc-upload-bar" id="admc-upload-bar">
+        <div class="admc-upload-spinner"></div>
+        <div class="admc-upload-info">
+          <div class="admc-upload-name" id="admc-upload-name">Uploading...</div>
+          <div class="admc-upload-status" id="admc-upload-status">0%</div>
+          <div class="admc-upload-track"><div class="admc-upload-fill" id="admc-upload-fill"></div></div>
+        </div>
+      </div>
+      <div class="admc-input-area">
+        <div style="position:relative;">
+          <button class="admc-attach-btn" id="admc-attach-btn" onclick="ADMC.toggleAttachMenu(event)">
+            <i class="bi bi-paperclip"></i>
+          </button>
+          <div class="admc-attach-menu" id="admc-attach-menu">
+            <button class="admc-attach-menu-item" onclick="ADMC.triggerUpload()"><i class="bi bi-upload"></i> Upload File</button>
+            <button class="admc-attach-menu-item" onclick="ADMC.openDrivePicker()"><i class="bi bi-cloud"></i> From Drive</button>
+          </div>
+          <input type="file" id="admc-file-input" style="display:none;" onchange="ADMC.handleFile(this)">
+        </div>
+        <textarea class="admc-textarea" id="admc-input" placeholder="Type a message…" rows="1"></textarea>
+        <button class="admc-send-btn" id="admc-send-btn" onclick="ADMC.send()">
+          <i class="bi bi-send-fill"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Attachment context menu -->
+<div id="admc-ctx-menu">
+  <div class="admc-ctx-item" id="admc-ctx-open"><i class="bi bi-box-arrow-up-right"></i> Open</div>
+  <div class="admc-ctx-item" id="admc-ctx-save"><i class="bi bi-download"></i> Save As</div>
+</div>
+
+<!-- Clear chat confirm -->
+<div id="admc-clear-modal">
+  <div style="background:var(--adm-surface,#0f172a);border:1px solid var(--adm-border,#334155);border-radius:14px;width:100%;max-width:360px;padding:1.5rem;">
+    <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.75rem;">
+      <span style="width:36px;height:36px;border-radius:50%;background:rgba(239,68,68,0.12);display:flex;align-items:center;justify-content:center;color:#ef4444;font-size:1rem;flex-shrink:0;"><i class="bi bi-trash3"></i></span>
+      <div>
+        <div style="font-weight:700;font-size:0.88rem;color:var(--adm-text,#f1f5f9);">Clear Chat</div>
+        <div style="font-size:0.72rem;color:var(--adm-muted,#64748b);">Only cleared for you, not the other person.</div>
+      </div>
+    </div>
+    <p style="font-size:0.78rem;color:var(--adm-muted,#64748b);margin-bottom:1.25rem;">All messages will be hidden from your view. This cannot be undone.</p>
+    <div style="display:flex;gap:0.5rem;justify-content:flex-end;">
+      <button class="admc-btn admc-btn-ghost" onclick="document.getElementById('admc-clear-modal').classList.remove('show')">Cancel</button>
+      <button onclick="ADMC.execClearChat()" style="background:#ef4444;color:#fff;border:none;border-radius:8px;padding:6px 16px;font-size:0.78rem;font-weight:600;cursor:pointer;">Clear Chat</button>
+    </div>
+  </div>
+</div>
+
+<!-- New conversation modal -->
+<div class="admc-modal-overlay" id="admc-new-modal">
+  <div class="admc-modal">
+    <div class="admc-modal-head">
+      <span class="admc-modal-title"><i class="bi bi-plus-circle" style="margin-right:6px;"></i>NEW CONVERSATION</span>
+      <button class="admc-modal-close" onclick="ADMC.closeNewModal()"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <div class="admc-modal-body">
+      <label class="admc-label">Chat Type</label>
+      <div class="admc-type-btns">
+        <button class="admc-type-btn active" id="admc-btn-direct" onclick="ADMC.setChatType('direct')"><i class="bi bi-person me-1"></i>Direct</button>
+        <button class="admc-type-btn" id="admc-btn-group" onclick="ADMC.setChatType('group')"><i class="bi bi-people me-1"></i>Group</button>
+      </div>
+      <div id="admc-group-name-field" style="display:none;">
+        <label class="admc-label">Group Name</label>
+        <input class="admc-input" id="admc-group-name" placeholder="Enter group name…">
+      </div>
+      <label class="admc-label">Select Users</label>
+      <input class="admc-input" id="admc-user-search" placeholder="Search users…" oninput="ADMC.filterUsers()" style="margin-bottom:0.5rem;">
+      <div id="admc-user-list" style="max-height:280px;overflow-y:auto;">
+        <% users.forEach(function(u) { %>
+        <div class="admc-user-item" data-uid="<%= u.id %>" data-name="<%= u.name.toLowerCase() %>" onclick="ADMC.toggleUser(this)">
+          <input type="checkbox" data-uid="<%= u.id %>">
+          <div class="admc-avatar direct" style="width:30px;height:30px;font-size:0.65rem;"><%= u.name.charAt(0).toUpperCase() %></div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:0.8rem;font-weight:600;color:var(--adm-text,#f1f5f9);"><%= u.name %></div>
+            <div style="font-size:0.62rem;color:var(--adm-muted,#64748b);"><%= u.role_name %></div>
+          </div>
+          <span class="admc-org-tag <%= u.org_type %>"><%= u.org_type %></span>
+        </div>
+        <% }); %>
+      </div>
+    </div>
+    <div class="admc-modal-footer">
+      <button class="admc-btn admc-btn-ghost" onclick="ADMC.closeNewModal()">Cancel</button>
+      <button class="admc-btn admc-btn-primary" id="admc-create-btn" onclick="ADMC.createConv()">Start Chat</button>
+    </div>
+  </div>
+</div>
+
+<!-- Drive picker modal -->
+<div class="admc-modal-overlay" id="admc-drive-modal">
+  <div class="admc-modal">
+    <div class="admc-modal-head">
+      <span class="admc-modal-title"><i class="bi bi-cloud" style="margin-right:6px;"></i>PICK FROM DRIVE</span>
+      <button class="admc-modal-close" onclick="ADMC.closeDrivePicker()"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <div class="admc-modal-body" style="padding-top:0.5rem;">
+      <div id="admc-dp-breadcrumb" style="font-size:0.72rem;color:var(--adm-muted,#64748b);margin-bottom:0.5rem;">
+        <a href="#" style="color:#00d4ff;" onclick="ADMC.loadDrive();return false;">My Drive</a>
+      </div>
+      <div id="admc-dp-list" style="max-height:320px;overflow-y:auto;">
+        <div style="text-align:center;padding:2rem;color:var(--adm-muted,#64748b);font-size:0.78rem;">Loading…</div>
+      </div>
+    </div>
+    <div class="admc-modal-footer">
+      <button class="admc-btn admc-btn-ghost" onclick="ADMC.closeDrivePicker()">Cancel</button>
+      <button class="admc-btn admc-btn-primary" id="admc-dp-select" onclick="ADMC.selectDriveFile()" disabled>Select</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  'use strict';
+
+  var _convId      = <%= activeConversationId || 'null' %>;
+  var _userId      = <%= user.id %>;
+  var _maxMB       = <%= maxAttachMB %>;
+  var _chatType    = 'direct';
+  var _pending     = null; // attachment
+  var _typingTimer = null;
+  var _dpRoot      = null;
+  var _dpSelected  = null;
+  var _ctxMsgId    = null;
+  var _socket      = null;
+
+  function esc(s) {
+    if (!s) return '';
+    var d = document.createElement('div');
+    d.appendChild(document.createTextNode(s));
+    return d.innerHTML;
+  }
+
+  function apiFetch(url, opts) {
+    opts = opts || {};
+    opts.headers = opts.headers || {};
+    if (opts.json) {
+      opts.headers['Content-Type'] = 'application/json';
+      opts.body = JSON.stringify(opts.json);
+      delete opts.json;
+    }
+    return fetch(url, opts).then(function(r) { return r.json(); });
+  }
+
+  function fmtTime(d) {
+    if (!d) return '';
+    return new Date(d).toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit', hour12:true });
+  }
+  function fmtSidebarTime(d) {
+    if (!d) return '';
+    var dt = new Date(d), now = new Date(), diff = now - dt;
+    if (diff < 86400000 && dt.getDate() === now.getDate()) return fmtTime(d);
+    if (diff < 604800000) return dt.toLocaleDateString('en-US',{weekday:'short'});
+    return dt.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+  }
+  function fmtDateDiv(d) {
+    return new Date(d).toLocaleDateString('en-US',{weekday:'long',month:'short',day:'numeric'});
+  }
+  function fmtBytes(b) {
+    if (!b) return '';
+    if (b < 1024) return b+' B';
+    if (b < 1048576) return (b/1024).toFixed(1)+' KB';
+    return (b/1048576).toFixed(1)+' MB';
+  }
+  function attachIcon(mime) {
+    if (!mime) return 'file-earmark';
+    if (mime.startsWith('image/')) return 'file-image';
+    if (mime === 'application/pdf') return 'file-pdf';
+    if (mime.includes('word')||mime.includes('document')) return 'file-word';
+    if (mime.includes('sheet')||mime.includes('excel')) return 'file-spreadsheet';
+    if (mime.startsWith('video/')) return 'file-play';
+    if (mime.startsWith('audio/')) return 'file-music';
+    if (mime.includes('zip')||mime.includes('rar')) return 'file-zip';
+    return 'file-earmark';
+  }
+  function isViewable(mime, name) {
+    if (!mime) return false;
+    if (mime.startsWith('image/')||mime==='application/pdf'||mime.startsWith('text/')) return true;
+    if (mime.includes('word')||mime.includes('document')||mime.includes('sheet')||mime.includes('excel')||mime.includes('presentation')||mime.includes('powerpoint')||mime.includes('google-apps')) return true;
+    var n = (name||'').toLowerCase();
+    return /\.(pdf|doc|docx|xls|xlsx|csv|ppt|pptx|txt|jpg|jpeg|png|gif|svg|webp)$/.test(n);
+  }
+
+  /* ── Build attachment HTML ── */
+  function buildAttach(m) {
+    if (!m.attachment_drive_id) return '';
+    var icon = attachIcon(m.attachment_mime);
+    var size = fmtBytes(m.attachment_size);
+    var viewable = isViewable(m.attachment_mime, m.attachment_name);
+    var isSender = m.sender_id === _userId;
+    var alreadySaved = m.saved_to_drive || isSender;
+
+    var h = '<div class="admc-attach-box" data-msg-id="'+m.id+'" data-mime="'+(m.attachment_mime||'')+'" oncontextmenu="ADMC.openCtxMenu(event,this)">';
+    h += '<div class="admc-attach-icon"><i class="bi bi-'+icon+'"></i></div>';
+    h += '<div style="flex:1;min-width:0;"><div class="admc-attach-name">'+esc(m.attachment_name)+'</div>';
+    if (size) h += '<div class="admc-attach-size">'+size+'</div>';
+    h += '</div>';
+    if (viewable) {
+      h += '<a href="/chat/attachment/'+m.id+'?action=view" target="_blank" class="admc-attach-action" title="Open"><i class="bi bi-box-arrow-up-right"></i></a>';
+    } else if (alreadySaved) {
+      h += '<span class="admc-attach-action saved" title="Saved"><i class="bi bi-check-lg"></i></span>';
+    } else {
+      var sn = esc(m.attachment_name).replace(/'/g,"\\'");
+      h += '<button class="admc-attach-action" title="Save to Drive" onclick="event.stopPropagation();ADMC.saveToDrive(\''+m.attachment_drive_id+'\',\''+sn+'\','+m.id+',this)"><i class="bi bi-cloud-download"></i></button>';
+    }
+    h += '</div>';
+    return h;
+  }
+
+  /* ── Build messages HTML ── */
+  function buildMsgsHTML(msgs) {
+    var html = '', lastDate = '';
+    msgs.forEach(function(m) {
+      var mDate = fmtDateDiv(m.created_at);
+      if (mDate !== lastDate) {
+        html += '<div class="admc-date-div"><span>'+mDate+'</span></div>';
+        lastDate = mDate;
+      }
+      var time = fmtTime(m.created_at);
+      if (m.message_type && m.message_type.startsWith('call_')) {
+        var missed = m.message_type === 'call_missed';
+        var ico = missed ? 'bi-telephone-x-fill' : (m.message_type==='call_outgoing'?'bi-telephone-outbound-fill':'bi-telephone-inbound-fill');
+        var clr = missed ? '#ef4444' : '#10b981';
+        html += '<div class="admc-call-row" data-mid="'+m.id+'">';
+        html += '<div class="admc-call-pill" style="background:rgba('+(missed?'239,68,68':'16,185,129')+',0.08);border:1px solid rgba('+(missed?'239,68,68':'16,185,129')+',0.2);color:'+clr+';">';
+        html += '<i class="bi '+ico+'"></i>'+esc(m.content)+'<span style="font-size:0.6rem;color:var(--adm-muted,#64748b);margin-left:4px;">'+time+'</span></div></div>';
+        return;
+      }
+      if (m.sender_name === 'System') {
+        html += '<div class="admc-sys-msg" data-mid="'+m.id+'">';
+        html += '<div class="admc-sys-bubble">';
+        html += '<div class="admc-sys-label"><i class="bi bi-robot me-1"></i>System</div>';
+        if (m.content) html += '<div class="admc-sys-content">'+esc(m.content)+'</div>';
+        html += '<div class="admc-sys-time">'+time+'</div>';
+        html += '</div></div>';
+        return;
+      }
+      var sent = m.sender_id === _userId;
+      html += '<div class="admc-msg-row '+(sent?'sent':'received')+'" data-mid="'+m.id+'">';
+      html += '<div class="admc-bubble">';
+      if (!sent && m.sender_name) html += '<div class="admc-msg-sender">'+esc(m.sender_name)+'</div>';
+      html += buildAttach(m);
+      if (m.content) html += '<div>'+esc(m.content)+'</div>';
+      var tick = sent ? '<span class="admc-tick '+(m.is_read?'read':'sent')+'" data-tick="'+m.id+'"><i class="bi bi-check2-all"></i></span>' : '';
+      html += '<div class="admc-msg-time"><span>'+time+'</span>'+tick+'</div>';
+      html += '</div></div>';
+    });
+    return html;
+  }
+
+  /* ── Conversation list ── */
+  function filterConvs() {
+    var term = document.getElementById('admc-search').value.toLowerCase();
+    document.querySelectorAll('.admc-conv-item').forEach(function(el) {
+      el.style.display = (el.dataset.search||'').includes(term) ? '' : 'none';
+    });
+  }
+
+  /* ── Open conversation ── */
+  function openConv(id) {
+    _convId = id;
+    document.querySelectorAll('.admc-conv-item').forEach(function(el) {
+      el.classList.toggle('active', parseInt(el.dataset.id) === id);
+    });
+    document.getElementById('admc-wrap').classList.add('conv-open');
+    var item = document.querySelector('.admc-conv-item[data-id="'+id+'"]');
+    if (item) { var b = item.querySelector('.admc-unread'); if (b) b.remove(); }
+    loadMessages(id);
+  }
+
+  /* ── Load messages ── */
+  function loadMessages(id, beforeId) {
+    var url = '/chat/conversations/'+id+'/messages';
+    if (beforeId) url += '?before='+beforeId;
+    apiFetch(url).then(function(d) {
+      if (!d.success) return;
+      var msgs = d.data.messages, conv = d.data.conversation;
+      renderHeader(conv);
+      var el = document.getElementById('admc-messages');
+      if (beforeId) {
+        var prev = el.scrollHeight;
+        el.insertAdjacentHTML('afterbegin', buildMsgsHTML(msgs));
+        el.scrollTop = el.scrollHeight - prev;
+      } else {
+        var html = '';
+        if (msgs.length >= 50) html += '<div class="admc-load-more" onclick="ADMC.loadOlder()">Load older messages</div>';
+        html += buildMsgsHTML(msgs);
+        if (!msgs.length) html = '<div class="admc-empty"><i class="bi bi-chat-dots"></i><span>No messages yet — say hello!</span></div>';
+        el.innerHTML = html;
+        el.scrollTop = el.scrollHeight;
+      }
+      apiFetch('/chat/conversations/'+id+'/read', { method:'POST' });
+      if (_socket) _socket.emit('chat:join', id);
+    }).catch(function() {});
+  }
+
+  /* ── Render header ── */
+  function renderHeader(conv) {
+    var name, sub, avatarClass, avatarContent;
+    if (conv.type === 'system') {
+      name = 'System Notifications'; sub = 'Automated reminders';
+      avatarClass = 'system'; avatarContent = '<i class="bi bi-robot"></i>';
+    } else if (conv.type === 'direct') {
+      var other = conv.participants.find(function(p){return p.id!==_userId;}) || conv.participants[0];
+      name = other.name; sub = other.role_name+' &middot; '+other.org_type;
+      avatarClass = 'direct'; avatarContent = other.name.charAt(0).toUpperCase();
+    } else {
+      name = conv.name||'Group';
+      sub = conv.participants.map(function(p){return p.name.split(' ')[0];}).join(', ');
+      avatarClass = 'group'; avatarContent = '<i class="bi bi-people-fill"></i>';
+    }
+    var actions = '';
+    if (conv.type !== 'system') {
+      actions += '<button class="admc-head-btn danger" title="Clear chat" onclick="ADMC.confirmClear()"><i class="bi bi-trash3"></i></button>';
+    }
+    document.getElementById('admc-head-area').innerHTML =
+      '<div class="admc-main-head">'+
+        '<button class="admc-back-btn" onclick="ADMC.goBack()"><i class="bi bi-arrow-left"></i></button>'+
+        '<div class="admc-avatar '+avatarClass+'">'+avatarContent+'</div>'+
+        '<div style="flex:1;min-width:0;"><div class="admc-head-name">'+esc(name)+'</div>'+
+        '<div class="admc-head-sub">'+sub+'</div></div>'+
+        '<div class="admc-head-actions">'+actions+'</div>'+
+      '</div>';
+
+    var inputWrap = document.getElementById('admc-input-wrap');
+    inputWrap.style.display = conv.type === 'system' ? 'none' : 'block';
+
+    var notice = document.getElementById('admc-sys-notice');
+    if (conv.type === 'system') {
+      if (!notice) {
+        var el = document.createElement('div');
+        el.id = 'admc-sys-notice';
+        el.style.cssText = 'padding:0.65rem 1rem;text-align:center;font-size:0.72rem;color:#818cf8;background:rgba(99,102,241,0.07);border-top:1px solid var(--adm-border,#334155);';
+        el.innerHTML = '<i class="bi bi-robot me-1"></i>System notifications — read only';
+        inputWrap.parentNode.appendChild(el);
+      } else { notice.style.display='block'; }
+    } else if (notice) { notice.style.display='none'; }
+  }
+
+  /* ── Send ── */
+  function send() {
+    if (!_convId) return;
+    var inp = document.getElementById('admc-input');
+    var content = inp.value.trim();
+    if (!content && !_pending) return;
+    inp.value = '';
+    inp.style.height = 'auto';
+    document.getElementById('admc-send-btn').disabled = true;
+    document.getElementById('admc-attach-btn').disabled = true;
+
+    var p;
+    if (_pending && _pending.type === 'local') {
+      var fd = new FormData();
+      fd.append('file', _pending.file);
+      if (content) fd.append('content', content);
+      document.getElementById('admc-upload-name').textContent = 'Uploading '+_pending.name;
+      document.getElementById('admc-upload-status').textContent = '0%';
+      document.getElementById('admc-upload-fill').style.width = '0%';
+      document.getElementById('admc-upload-bar').classList.add('show');
+      document.getElementById('admc-attach-preview').classList.remove('show');
+      var xhr = new XMLHttpRequest();
+      p = new Promise(function(resolve, reject) {
+        xhr.upload.onprogress = function(e) {
+          if (e.total) {
+            var pct = Math.round(e.loaded/e.total*100);
+            document.getElementById('admc-upload-status').textContent = pct+'%';
+            document.getElementById('admc-upload-fill').style.width = pct+'%';
+          }
+        };
+        xhr.onload = function() {
+          try { resolve(JSON.parse(xhr.responseText)); } catch(e) { reject(e); }
+        };
+        xhr.onerror = function() { reject(new Error('Upload failed')); };
+        xhr.open('POST','/chat/conversations/'+_convId+'/attach-local');
+        xhr.send(fd);
+      });
+    } else if (_pending && _pending.type === 'drive') {
+      document.getElementById('admc-attach-preview').classList.remove('show');
+      p = apiFetch('/chat/conversations/'+_convId+'/attach-drive', {
+        method:'POST', json:{ drive_file_id:_pending.driveFileId, content:content||null }
+      });
+    } else {
+      p = apiFetch('/chat/conversations/'+_convId+'/messages', {
+        method:'POST', json:{ content:content }
+      });
+    }
+
+    p.then(function(d) {
+      document.getElementById('admc-upload-bar').classList.remove('show');
+      if (!d.success) { if(typeof showToast==='function') showToast(d.message||'Failed to send','error'); inp.value=content; return; }
+      ADMC.clearAttach();
+      appendMsg(d.data.message);
+      updateConvPreview(_convId, d.data.message);
+    }).catch(function() {
+      document.getElementById('admc-upload-bar').classList.remove('show');
+      if(typeof showToast==='function') showToast('Failed to send','error');
+      inp.value = content;
+    }).finally(function() {
+      document.getElementById('admc-send-btn').disabled = false;
+      document.getElementById('admc-attach-btn').disabled = false;
+      document.getElementById('admc-input').focus();
+    });
+  }
+
+  /* ── Append one message ── */
+  function appendMsg(m) {
+    var el = document.getElementById('admc-messages');
+    var empty = el.querySelector('.admc-empty');
+    if (empty) empty.remove();
+    var sent = m.sender_id === _userId;
+    var time = fmtTime(m.created_at);
+    var mDate = fmtDateDiv(m.created_at);
+    var dividers = el.querySelectorAll('.admc-date-div');
+    var needDate = !dividers.length || dividers[dividers.length-1].textContent.trim() !== mDate;
+    var html = '';
+    if (needDate) html += '<div class="admc-date-div"><span>'+mDate+'</span></div>';
+    html += '<div class="admc-msg-row '+(sent?'sent':'received')+'" data-mid="'+m.id+'">';
+    html += '<div class="admc-bubble">';
+    if (!sent && m.sender_name) html += '<div class="admc-msg-sender">'+esc(m.sender_name)+'</div>';
+    html += buildAttach(m);
+    if (m.content) html += '<div>'+esc(m.content)+'</div>';
+    var tick = sent ? '<span class="admc-tick '+(m.is_read?'read':'sent')+'" data-tick="'+m.id+'"><i class="bi bi-check2-all"></i></span>' : '';
+    html += '<div class="admc-msg-time"><span>'+time+'</span>'+tick+'</div>';
+    html += '</div></div>';
+    el.insertAdjacentHTML('beforeend', html);
+    el.scrollTop = el.scrollHeight;
+  }
+
+  /* ── Update sidebar preview ── */
+  function updateConvPreview(id, msg) {
+    var item = document.querySelector('.admc-conv-item[data-id="'+id+'"]');
+    if (!item) return;
+    var prev = item.querySelector('.admc-conv-preview');
+    if (prev) {
+      var txt = msg.content ? (msg.content.length>42?msg.content.substring(0,42)+'…':msg.content) : (msg.attachment_name||'');
+      prev.innerHTML = msg.sender_id===_userId ? '<strong>You:</strong> '+esc(txt) : esc(txt);
+    }
+    var timeEl = item.querySelector('.admc-conv-time');
+    if (timeEl) timeEl.textContent = fmtTime(msg.created_at);
+    var list = document.getElementById('admc-conv-list');
+    if (list.firstElementChild !== item) list.insertBefore(item, list.firstElementChild);
+  }
+
+  /* ── Attachment ── */
+  function attachFile(file) {
+    if (file.size > _maxMB*1024*1024) {
+      if (typeof showToast==='function') showToast('File exceeds '+_maxMB+'MB limit','error');
+      return;
+    }
+    _pending = { type:'local', file:file, name:file.name||'file', size:file.size, mime:file.type };
+    showPreview(_pending.name, _pending.size, file);
+  }
+  function showPreview(name, size, fileObj) {
+    document.getElementById('admc-prev-name').textContent = name;
+    document.getElementById('admc-prev-size').textContent = fmtBytes(size);
+    var thumb = document.getElementById('admc-prev-thumb');
+    var icon  = document.getElementById('admc-prev-icon');
+    if (fileObj && fileObj.type && fileObj.type.startsWith('image/')) {
+      try {
+        if (thumb.dataset.url) URL.revokeObjectURL(thumb.dataset.url);
+        thumb.src = URL.createObjectURL(fileObj);
+        thumb.dataset.url = thumb.src;
+        thumb.style.display = ''; icon.style.display = 'none';
+      } catch(e) {}
+    } else { thumb.style.display='none'; icon.style.display=''; }
+    document.getElementById('admc-attach-preview').classList.add('show');
+  }
+
+  /* ── New conversation modal ── */
+  function setChatType(type) {
+    _chatType = type;
+    document.getElementById('admc-btn-direct').className = 'admc-type-btn'+(type==='direct'?' active':'');
+    document.getElementById('admc-btn-group').className  = 'admc-type-btn'+(type==='group' ?' active':'');
+    document.getElementById('admc-group-name-field').style.display = type==='group'?'block':'none';
+  }
+  function filterUsers() {
+    var term = document.getElementById('admc-user-search').value.toLowerCase();
+    document.querySelectorAll('.admc-user-item').forEach(function(el) {
+      el.style.display = (el.dataset.name||'').includes(term)?'':'none';
+    });
+  }
+  function toggleUser(el) {
+    var cb = el.querySelector('input[type="checkbox"]');
+    if (_chatType==='direct') {
+      document.querySelectorAll('.admc-user-item').forEach(function(e){
+        e.classList.remove('selected'); e.querySelector('input').checked=false;
+      });
+    }
+    el.classList.toggle('selected');
+    cb.checked = el.classList.contains('selected');
+  }
+  function createConv() {
+    var ids = [];
+    document.querySelectorAll('.admc-user-item.selected').forEach(function(el){ ids.push(parseInt(el.dataset.uid)); });
+    if (!ids.length) { if(typeof showToast==='function') showToast('Select at least one user','error'); return; }
+    var payload = { type:_chatType, participant_ids:ids };
+    if (_chatType==='group') {
+      var gn = (document.getElementById('admc-group-name').value||'').trim();
+      if (!gn) { if(typeof showToast==='function') showToast('Enter a group name','error'); return; }
+      payload.name = gn;
+    }
+    document.getElementById('admc-create-btn').disabled = true;
+    apiFetch('/chat/conversations',{method:'POST',json:payload}).then(function(d){
+      if (!d.success) { if(typeof showToast==='function') showToast(d.message||'Failed','error'); return; }
+      ADMC.closeNewModal();
+      window.location.href = '/admin/chat?c='+d.data.conversation_id;
+    }).finally(function(){ document.getElementById('admc-create-btn').disabled=false; });
+  }
+
+  /* ── Drive picker ── */
+  function loadDrive(folderId) {
+    var list = document.getElementById('admc-dp-list');
+    list.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--adm-muted,#64748b);font-size:0.78rem;">Loading…</div>';
+    var url = '/chat/drive-files'+(folderId?'?folder='+folderId:'');
+    apiFetch(url).then(function(d){
+      if (!d.success) { list.innerHTML='<div style="text-align:center;padding:2rem;color:#ef4444;font-size:0.78rem;">Failed to load</div>'; return; }
+      var files = d.data.files;
+      _dpRoot = d.data.rootFolderId;
+      var bc = document.getElementById('admc-dp-breadcrumb');
+      bc.innerHTML = '<a href="#" style="color:#00d4ff;" onclick="ADMC.loadDrive();return false;">My Drive</a>';
+      if (folderId && folderId!==_dpRoot) bc.innerHTML += ' <i class="bi bi-chevron-right" style="font-size:0.6rem;"></i> <span>…</span>';
+      if (!files.length) { list.innerHTML='<div style="text-align:center;padding:2rem;color:var(--adm-muted,#64748b);font-size:0.78rem;">Empty folder</div>'; return; }
+      var html='';
+      files.forEach(function(f){
+        var iconCls=f.isFolder?'folder':'file', icon=f.isFolder?'folder-fill':attachIcon(f.mimeType);
+        html += '<div class="admc-dp-item" data-id="'+f.id+'" data-folder="'+f.isFolder+'" data-name="'+esc(f.name)+'" data-size="'+(f.size||0)+'" data-mime="'+(f.mimeType||'')+'"';
+        if (f.isFolder) html += ' ondblclick="ADMC.loadDrive(\''+f.id+'\')"';
+        html += ' onclick="ADMC.pickDriveItem(this)">';
+        html += '<div class="admc-dp-icon '+iconCls+'"><i class="bi bi-'+icon+'"></i></div>';
+        html += '<div style="flex:1;min-width:0;font-size:0.78rem;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+esc(f.name)+'</div>';
+        if (!f.isFolder&&f.size) html += '<span style="font-size:0.6rem;color:var(--adm-muted,#64748b);font-family:var(--adm-mono);flex-shrink:0;">'+fmtBytes(f.size)+'</span>';
+        html += '</div>';
+      });
+      list.innerHTML = html;
+    });
+  }
+  function pickDriveItem(el) {
+    document.querySelectorAll('.admc-dp-item').forEach(function(e){ e.classList.remove('selected'); });
+    el.classList.add('selected');
+    if (el.dataset.folder==='true') { _dpSelected=null; document.getElementById('admc-dp-select').disabled=true; }
+    else { _dpSelected=el; document.getElementById('admc-dp-select').disabled=false; }
+  }
+  function selectDriveFile() {
+    if (!_dpSelected) return;
+    _pending = { type:'drive', driveFileId:_dpSelected.dataset.id, name:_dpSelected.dataset.name, size:parseInt(_dpSelected.dataset.size)||0, mime:_dpSelected.dataset.mime };
+    showPreview(_pending.name, _pending.size);
+    ADMC.closeDrivePicker();
+  }
+
+  /* ── Save to Drive ── */
+  function saveToDrive(driveId, name, msgId, btn) {
+    btn.innerHTML = '<i class="bi bi-hourglass-split"></i>';
+    btn.disabled = true;
+    apiFetch('/chat/save-to-drive',{method:'POST',json:{drive_file_id:driveId,file_name:name,message_id:msgId}}).then(function(d){
+      if (d.success||d.status===409) {
+        btn.innerHTML='<i class="bi bi-check-lg"></i>'; btn.className='admc-attach-action saved'; btn.onclick=null;
+        if(typeof showToast==='function') showToast('Saved to Drive','success');
+      } else { btn.innerHTML='<i class="bi bi-cloud-download"></i>'; btn.disabled=false; }
+    }).catch(function(){ btn.innerHTML='<i class="bi bi-cloud-download"></i>'; btn.disabled=false; });
+  }
+
+  /* ── Context menu ── */
+  function openCtxMenu(e, el) {
+    e.preventDefault(); e.stopPropagation();
+    _ctxMsgId = el.dataset.msgId;
+    var mime = el.dataset.mime||'', nameEl=el.querySelector('.admc-attach-name'), name=nameEl?nameEl.textContent:'';
+    document.getElementById('admc-ctx-open').style.display = isViewable(mime,name)?'flex':'none';
+    var menu = document.getElementById('admc-ctx-menu');
+    menu.classList.add('show');
+    var x=e.clientX, y=e.clientY;
+    if (x+160>window.innerWidth) x=window.innerWidth-165;
+    if (y+80>window.innerHeight) y=window.innerHeight-85;
+    menu.style.left=x+'px'; menu.style.top=y+'px';
+  }
+
+  /* ── Socket ── */
+  function setupSocket() {
+    if (typeof io==='undefined') return;
+    _socket = io({ withCredentials:true });
+    _socket.on('chat:message', function(data) {
+      var msg=data.message, cid=data.conversation_id;
+      if (cid===_convId) {
+        appendMsg(msg);
+        apiFetch('/chat/conversations/'+cid+'/read',{method:'POST'});
+      } else {
+        var item = document.querySelector('.admc-conv-item[data-id="'+cid+'"]');
+        if (item) {
+          var b=item.querySelector('.admc-unread');
+          if (b) { var n=parseInt(b.textContent)||0; b.textContent=n+1>9?'9+':n+1; }
+          else { var m=item.querySelector('.admc-conv-meta'); if(m) m.insertAdjacentHTML('beforeend','<span class="admc-unread">1</span>'); }
+        } else { location.reload(); }
+      }
+      updateConvPreview(cid, msg);
+    });
+    _socket.on('chat:typing', function(data) {
+      if (data.conversation_id===_convId && data.user_id!==_userId) {
+        var el=document.getElementById('admc-typing');
+        el.textContent=data.user_name+' is typing…';
+        clearTimeout(_typingTimer);
+        _typingTimer=setTimeout(function(){el.textContent='';},3000);
+      }
+    });
+    _socket.on('chat:read', function(data) {
+      if (data.conversation_id!==_convId) return;
+      document.querySelectorAll('.admc-tick.sent').forEach(function(t){
+        if (parseInt(t.dataset.tick)<=data.last_read_message_id) { t.classList.remove('sent'); t.classList.add('read'); }
+      });
+    });
+  }
+
+  /* ── Init ── */
+  function init() {
+    var inp = document.getElementById('admc-input');
+    inp.addEventListener('keydown', function(e) {
+      if (e.key==='Enter'&&!e.shiftKey) { e.preventDefault(); send(); }
+    });
+    inp.addEventListener('input', function() {
+      this.style.height='auto'; this.style.height=Math.min(this.scrollHeight,120)+'px';
+      if (!_convId) return;
+      var now=Date.now();
+      if (_socket && now-(ADMC._lastTyping||0)>2000) { _socket.emit('chat:typing',{conversation_id:_convId}); ADMC._lastTyping=now; }
+    });
+    /* paste image */
+    inp.addEventListener('paste', function(e) {
+      var items=(e.clipboardData||window.clipboardData||{}).items||[];
+      for (var i=0;i<items.length;i++) {
+        if (items[i].kind==='file') { var f=items[i].getAsFile(); if(f){e.preventDefault();attachFile(f);return;} }
+      }
+    });
+    /* close attach menu on outside click */
+    document.addEventListener('click', function(e) {
+      var menu=document.getElementById('admc-attach-menu');
+      if (menu&&!e.target.closest('.admc-attach-btn')) menu.classList.remove('show');
+      if (!document.getElementById('admc-ctx-menu').contains(e.target)) {
+        document.getElementById('admc-ctx-menu').classList.remove('show'); _ctxMsgId=null;
+      }
+    });
+    document.addEventListener('keydown',function(e){
+      if(e.key==='Escape'){
+        document.getElementById('admc-ctx-menu').classList.remove('show');
+        document.getElementById('admc-clear-modal').classList.remove('show');
+      }
+    });
+    /* ctx menu actions */
+    document.getElementById('admc-ctx-open').addEventListener('click',function(){
+      if(_ctxMsgId) window.open('/chat/attachment/'+_ctxMsgId+'?action=view','_blank');
+      document.getElementById('admc-ctx-menu').classList.remove('show');
+    });
+    document.getElementById('admc-ctx-save').addEventListener('click',function(){
+      if(_ctxMsgId){var a=document.createElement('a');a.href='/chat/attachment/'+_ctxMsgId+'?action=download';a.download='';document.body.appendChild(a);a.click();document.body.removeChild(a);}
+      document.getElementById('admc-ctx-menu').classList.remove('show');
+    });
+
+    setupSocket();
+    if (_convId) openConv(_convId);
+  }
+
+  /* ── Public API ── */
+  window.ADMC = {
+    _lastTyping: 0,
+    filterConvs: filterConvs,
+    openConv: openConv,
+    loadOlder: function() {
+      var first=document.querySelector('.admc-msg-row[data-mid]');
+      if (first) loadMessages(_convId, first.dataset.mid);
+    },
+    goBack: function() {
+      document.getElementById('admc-wrap').classList.remove('conv-open');
+      _convId=null;
+    },
+    send: send,
+    clearAttach: function() {
+      _pending=null;
+      var thumb=document.getElementById('admc-prev-thumb');
+      if(thumb.dataset.url){URL.revokeObjectURL(thumb.dataset.url);delete thumb.dataset.url;}
+      thumb.style.display='none'; thumb.src='';
+      document.getElementById('admc-prev-icon').style.display='';
+      document.getElementById('admc-attach-preview').classList.remove('show');
+      document.getElementById('admc-prev-name').textContent='';
+      document.getElementById('admc-prev-size').textContent='';
+    },
+    toggleAttachMenu: function(e) { e.stopPropagation(); document.getElementById('admc-attach-menu').classList.toggle('show'); },
+    triggerUpload: function() { document.getElementById('admc-attach-menu').classList.remove('show'); document.getElementById('admc-file-input').click(); },
+    handleFile: function(inp) { if(inp.files&&inp.files[0]){attachFile(inp.files[0]);inp.value='';} },
+    openNewModal: function() {
+      document.getElementById('admc-new-modal').classList.add('show');
+      setChatType('direct');
+      document.querySelectorAll('.admc-user-item').forEach(function(el){el.classList.remove('selected');el.querySelector('input').checked=false;});
+      document.getElementById('admc-user-search').value='';
+      filterUsers();
+    },
+    closeNewModal: function() { document.getElementById('admc-new-modal').classList.remove('show'); },
+    setChatType: setChatType,
+    filterUsers: filterUsers,
+    toggleUser: toggleUser,
+    createConv: createConv,
+    openDrivePicker: function() {
+      document.getElementById('admc-attach-menu').classList.remove('show');
+      _dpSelected=null;
+      document.getElementById('admc-dp-select').disabled=true;
+      document.getElementById('admc-drive-modal').classList.add('show');
+      loadDrive();
+    },
+    closeDrivePicker: function() { document.getElementById('admc-drive-modal').classList.remove('show'); },
+    loadDrive: loadDrive,
+    pickDriveItem: pickDriveItem,
+    selectDriveFile: selectDriveFile,
+    saveToDrive: saveToDrive,
+    openCtxMenu: openCtxMenu,
+    confirmClear: function() { if(_convId) document.getElementById('admc-clear-modal').classList.add('show'); },
+    execClearChat: function() {
+      document.getElementById('admc-clear-modal').classList.remove('show');
+      apiFetch('/chat/conversations/'+_convId+'/clear',{method:'POST'}).then(function(d){
+        if(d.success){
+          document.getElementById('admc-messages').innerHTML='<div class="admc-empty"><i class="bi bi-chat-dots"></i><span>Chat cleared</span></div>';
+          if(typeof showToast==='function') showToast('Chat cleared','success');
+        }
+      });
+    },
+  };
+
+  document.addEventListener('DOMContentLoaded', init);
+})();
+</script>

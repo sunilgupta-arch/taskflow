@@ -1,0 +1,525 @@
+<style>
+/* ── Stats ───────────────────────────────────────────────────────── */
+.admt-stats {
+  display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px;
+}
+.admt-stat {
+  flex: 1; min-width: 110px;
+  background: var(--adm-surface); border: 1px solid var(--adm-border);
+  border-radius: 12px; padding: 14px 16px;
+  display: flex; flex-direction: column; gap: 4px;
+}
+.admt-stat-label {
+  font-size: 0.68rem; font-family: var(--adm-mono); font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.5px; color: var(--adm-muted);
+}
+.admt-stat-num {
+  font-size: 1.8rem; font-family: var(--adm-mono); font-weight: 700; line-height: 1;
+}
+.admt-stat.s-total    .admt-stat-num { color: var(--adm-text); }
+.admt-stat.s-done     .admt-stat-num { color: #10b981; }
+.admt-stat.s-progress .admt-stat-num { color: #3b82f6; }
+.admt-stat.s-pending  .admt-stat-num { color: #f97316; }
+
+/* ── Toolbar ─────────────────────────────────────────────────────── */
+.admt-toolbar {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+/* Schedule toggle */
+.admt-tabs {
+  display: flex; background: var(--adm-surface-2);
+  border: 1px solid var(--adm-border); border-radius: 9px;
+  padding: 3px; gap: 2px; flex-shrink: 0;
+}
+.admt-tab {
+  height: 30px; padding: 0 14px; border-radius: 7px;
+  border: none; background: transparent;
+  font-size: 0.78rem; font-weight: 600; font-family: var(--adm-font);
+  color: var(--adm-muted); cursor: pointer; transition: all 0.15s;
+  white-space: nowrap;
+}
+.admt-tab.active {
+  background: var(--adm-surface); color: var(--adm-text);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+}
+/* Date nav (today mode only) */
+.admt-date-nav { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.admt-nav-btn {
+  height: 36px; padding: 0 12px; border-radius: 9px;
+  border: 1px solid var(--adm-border); background: var(--adm-surface);
+  color: var(--adm-text-2); cursor: pointer; font-size: 0.85rem;
+  display: inline-flex; align-items: center; gap: 5px;
+  transition: all 0.15s; font-family: var(--adm-font);
+}
+.admt-nav-btn:hover { border-color: var(--adm-accent); color: var(--adm-accent); }
+.admt-date-input {
+  height: 36px; padding: 0 12px; border-radius: 9px;
+  border: 1px solid var(--adm-border); background: var(--adm-surface-2);
+  color: var(--adm-text); font-size: 0.78rem; font-family: var(--adm-mono); cursor: pointer;
+}
+.admt-date-input:focus { outline: none; border-color: var(--adm-accent); }
+.admt-today-btn {
+  height: 36px; padding: 0 12px; border-radius: 9px;
+  border: 1px solid rgba(0,212,255,0.3); background: rgba(0,212,255,0.07);
+  color: var(--adm-accent); cursor: pointer; font-size: 0.75rem;
+  font-family: var(--adm-mono); font-weight: 600; transition: all 0.15s;
+}
+.admt-today-btn:hover { background: rgba(0,212,255,0.14); }
+
+/* Type filter */
+.admt-select {
+  height: 36px; padding: 0 30px 0 11px; border-radius: 9px;
+  border: 1px solid var(--adm-border); background: var(--adm-surface-2);
+  color: var(--adm-text); font-size: 0.82rem; font-family: var(--adm-font);
+  cursor: pointer; appearance: none; min-width: 130px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 16 16'%3E%3Cpath fill='%2394a3b8' d='M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 10px center;
+}
+.admt-select:focus { outline: none; border-color: var(--adm-accent); }
+.admt-count { font-size: 0.75rem; font-family: var(--adm-mono); color: var(--adm-muted); margin-left: 4px; }
+
+/* ── Table ───────────────────────────────────────────────────────── */
+.admt-table-wrap {
+  background: var(--adm-surface); border: 1px solid var(--adm-border);
+  border-radius: 14px; overflow: hidden;
+}
+.admt-table { width: 100%; border-collapse: collapse; }
+.admt-table thead th {
+  font-family: var(--adm-mono); font-size: 0.67rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.6px;
+  color: var(--adm-muted); padding: 10px 14px;
+  border-bottom: 1px solid var(--adm-border);
+  text-align: left; white-space: nowrap; background: var(--adm-surface-2);
+}
+.admt-table tbody tr { border-bottom: 1px solid var(--adm-border); transition: background 0.1s; }
+.admt-table tbody tr:last-child { border-bottom: none; }
+.admt-table tbody tr:hover { background: var(--adm-surface-2); }
+.admt-table tbody td { padding: 11px 14px; font-size: 0.86rem; color: var(--adm-text); vertical-align: middle; }
+
+/* Left-border accent */
+.admt-table tbody tr td:first-child { border-left: 3px solid transparent; }
+.admt-table tbody tr.rs-done      td:first-child { border-left-color: #10b981; }
+.admt-table tbody tr.rs-in_progress td:first-child { border-left-color: #3b82f6; }
+.admt-table tbody tr.rs-pending   td:first-child { border-left-color: #f97316; }
+.admt-table tbody tr.rs-active    td:first-child { border-left-color: #8b5cf6; }
+.admt-table tbody tr.rs-completed td:first-child { border-left-color: #64748b; }
+
+/* Task title */
+.admt-task-title { font-weight: 500; }
+.admt-task-sub   { font-size: 0.7rem; color: var(--adm-muted); margin-top: 2px; }
+
+/* Type badge */
+.admt-badge {
+  display: inline-flex; align-items: center; gap: 3px;
+  font-size: 0.65rem; font-family: var(--adm-mono); font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.3px;
+  padding: 2px 8px; border-radius: 20px;
+}
+.admt-badge.b-recurring { background: rgba(139,92,246,0.1); color: #8b5cf6; border: 1px solid rgba(139,92,246,0.25); }
+.admt-badge.b-once      { background: rgba(59,130,246,0.1);  color: #3b82f6; border: 1px solid rgba(59,130,246,0.25); }
+
+/* Priority */
+.admt-pri { display: inline-flex; align-items: center; gap: 5px; font-size: 0.78rem; color: var(--adm-text-2); }
+.admt-pri-dot { width: 7px; height: 7px; border-radius: 50%; }
+.admt-pri.p-urgent .admt-pri-dot { background: #ef4444; }
+.admt-pri.p-high   .admt-pri-dot { background: #f97316; }
+.admt-pri.p-medium .admt-pri-dot { background: #3b82f6; }
+.admt-pri.p-low    .admt-pri-dot { background: #10b981; }
+
+/* Status badge */
+.admt-status {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 9px; border-radius: 20px;
+  font-size: 0.66rem; font-weight: 600; font-family: var(--adm-mono);
+  text-transform: uppercase; letter-spacing: 0.3px; white-space: nowrap;
+}
+.admt-status.s-done        { background: rgba(16,185,129,0.12); color: #10b981; }
+.admt-status.s-in_progress { background: rgba(59,130,246,0.12);  color: #3b82f6; }
+.admt-status.s-pending     { background: rgba(249,115,22,0.12);  color: #f97316; }
+.admt-status.s-active      { background: rgba(139,92,246,0.12);  color: #8b5cf6; }
+.admt-status.s-completed   { background: rgba(100,116,139,0.12); color: #94a3b8; }
+
+/* Duration */
+.admt-duration { font-size: 0.72rem; font-family: var(--adm-mono); color: var(--adm-muted); }
+
+/* Action buttons */
+.admt-actions { display: flex; gap: 5px; flex-wrap: nowrap; }
+.admt-btn {
+  height: 28px; padding: 0 10px; border-radius: 7px;
+  font-size: 0.72rem; font-weight: 600; font-family: var(--adm-font);
+  border: 1px solid var(--adm-border); background: transparent;
+  color: var(--adm-text-2); cursor: pointer; white-space: nowrap;
+  display: inline-flex; align-items: center; gap: 4px; transition: all 0.13s;
+}
+.admt-btn.btn-start   { border-color: rgba(0,212,255,0.3);  color: var(--adm-accent); background: rgba(0,212,255,0.07); }
+.admt-btn.btn-start:hover { background: rgba(0,212,255,0.15); }
+.admt-btn.btn-complete { border-color: rgba(16,185,129,0.3); color: #10b981; background: rgba(16,185,129,0.07); }
+.admt-btn.btn-complete:hover { background: rgba(16,185,129,0.15); }
+.admt-btn.btn-view    { }
+.admt-btn.btn-view:hover { border-color: var(--adm-accent); color: var(--adm-accent); }
+.admt-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* In-progress timer */
+.admt-timer { font-size: 0.72rem; font-family: var(--adm-mono); color: #3b82f6; white-space: nowrap; }
+
+/* Empty / Loading */
+.admt-empty {
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; padding: 60px 20px; color: var(--adm-muted); text-align: center;
+}
+.admt-empty i { font-size: 2.4rem; margin-bottom: 10px; opacity: 0.22; }
+.admt-empty-title { font-size: 0.9rem; font-weight: 600; color: var(--adm-text-2); margin-bottom: 4px; }
+.admt-loading {
+  display: flex; align-items: center; justify-content: center;
+  gap: 10px; padding: 60px; color: var(--adm-muted); font-size: 0.85rem;
+}
+.admt-spinner {
+  width: 18px; height: 18px; border-radius: 50%;
+  border: 2px solid var(--adm-border); border-top-color: var(--adm-accent);
+  animation: admt-spin 0.7s linear infinite;
+}
+@keyframes admt-spin { to { transform: rotate(360deg); } }
+
+/* Page header */
+.admt-header { margin-bottom: 22px; display:flex; align-items:flex-start; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+.admt-breadcrumb {
+  font-size: 0.72rem; font-family: var(--adm-mono); color: var(--adm-muted);
+  margin-bottom: 6px; display: flex; align-items: center; gap: 5px;
+}
+.admt-breadcrumb a { color: var(--adm-muted); text-decoration: none; }
+.admt-breadcrumb a:hover { color: var(--adm-accent); }
+.admt-page-title {
+  font-size: 1.3rem; font-weight: 700; color: var(--adm-text);
+  display: flex; align-items: center; gap: 8px; margin: 0;
+}
+.admt-page-title i { color: #22d3ee; }
+</style>
+
+<!-- Header -->
+<div class="admt-header">
+  <div>
+    <div class="admt-breadcrumb">
+      <a href="/admin/work"><i class="bi bi-kanban"></i> Work</a>
+      <i class="bi bi-chevron-right" style="font-size:0.6rem"></i>
+      <span>My Tasks</span>
+    </div>
+    <h1 class="admt-page-title"><i class="bi bi-person-check-fill"></i> My Tasks</h1>
+  </div>
+  <a href="/admin/work" class="adm-back-btn"><i class="bi bi-arrow-left"></i> Work</a>
+</div>
+
+<!-- Stats -->
+<div class="admt-stats">
+  <div class="admt-stat s-total">
+    <div class="admt-stat-label">Total</div>
+    <div class="admt-stat-num" id="admtStTotal">—</div>
+  </div>
+  <div class="admt-stat s-done">
+    <div class="admt-stat-label">Done</div>
+    <div class="admt-stat-num" id="admtStDone">—</div>
+  </div>
+  <div class="admt-stat s-progress">
+    <div class="admt-stat-label">In Progress</div>
+    <div class="admt-stat-num" id="admtStProgress">—</div>
+  </div>
+  <div class="admt-stat s-pending">
+    <div class="admt-stat-label">Pending</div>
+    <div class="admt-stat-num" id="admtStPending">—</div>
+  </div>
+</div>
+
+<!-- Toolbar -->
+<div class="admt-toolbar">
+  <!-- Schedule toggle -->
+  <div class="admt-tabs">
+    <button class="admt-tab active" id="admtTabToday" onclick="switchSchedule('today')">
+      <i class="bi bi-calendar-day"></i> Today
+    </button>
+    <button class="admt-tab" id="admtTabAll" onclick="switchSchedule('all')">
+      <i class="bi bi-list-ul"></i> All My Tasks
+    </button>
+  </div>
+
+  <!-- Date nav (today mode) -->
+  <div class="admt-date-nav" id="admtDateNav">
+    <button class="admt-nav-btn" id="admtPrev"><i class="bi bi-chevron-left"></i></button>
+    <input type="date" class="admt-date-input" id="admtDate" value="<%= today %>">
+    <button class="admt-nav-btn" id="admtNext"><i class="bi bi-chevron-right"></i></button>
+    <button class="admt-today-btn" id="admtTodayBtn">TODAY</button>
+  </div>
+
+  <!-- Type filter -->
+  <select class="admt-select" id="admtTypeFilter">
+    <option value="">All Types</option>
+    <option value="recurring">Recurring</option>
+    <option value="once">One-time</option>
+  </select>
+
+  <span class="admt-count" id="admtCount"></span>
+</div>
+
+<!-- Table -->
+<div class="admt-table-wrap">
+  <table class="admt-table">
+    <thead>
+      <tr>
+        <th style="width:35%">Task</th>
+        <th style="width:10%">Type</th>
+        <th style="width:12%">Deadline / Due</th>
+        <th style="width:9%">Priority</th>
+        <th style="width:12%">Status</th>
+        <th style="width:22%">Action</th>
+      </tr>
+    </thead>
+    <tbody id="admtBody">
+      <tr><td colspan="6">
+        <div class="admt-loading"><div class="admt-spinner"></div> Loading…</div>
+      </td></tr>
+    </tbody>
+  </table>
+</div>
+
+<script>
+(function () {
+  var _today       = '<%- today %>';
+  var _userId      = <%- currentUser.id %>;
+  var currentSchedule = 'today';
+  var currentDate     = _today;
+  var typeFilter      = '';
+  var allTasks        = [];
+
+  /* ── helpers ─────────────────────────────────────────────────── */
+  function esc(s) {
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function fmtTime(t) {
+    if (!t) return '—';
+    var p = t.split(':'); var h = parseInt(p[0]); var m = p[1];
+    return (h % 12 || 12) + ':' + m + ' ' + (h >= 12 ? 'PM' : 'AM');
+  }
+
+  function fmtDate(d) {
+    if (!d) return '—';
+    var s = String(d).split('T')[0];
+    return new Date(s + 'T12:00:00').toLocaleDateString('en-GB', { day:'2-digit', month:'short' });
+  }
+
+  function fmtDuration(mins) {
+    if (!mins) return '';
+    var h = Math.floor(mins / 60), m = mins % 60;
+    return h ? h + 'h ' + (m ? m + 'm' : '') : m + 'm';
+  }
+
+  function patternLabel(t) {
+    if (t.pattern === 'daily')   return 'Daily';
+    if (t.pattern === 'monthly') return 'Monthly';
+    if (t.pattern === 'weekly' && t.recurrence_days) {
+      var names = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+      return t.recurrence_days.split(',').map(function(d){ return names[parseInt(d.trim())]; }).join(', ');
+    }
+    return 'Weekly';
+  }
+
+  /* ── stats ───────────────────────────────────────────────────── */
+  function updateStats(tasks) {
+    var done = 0, prog = 0, pend = 0;
+    tasks.forEach(function(t) {
+      if (t.status === 'done' || t.status === 'completed') done++;
+      else if (t.status === 'in_progress') prog++;
+      else pend++;
+    });
+    document.getElementById('admtStTotal').textContent    = tasks.length;
+    document.getElementById('admtStDone').textContent     = done;
+    document.getElementById('admtStProgress').textContent = prog;
+    document.getElementById('admtStPending').textContent  = pend;
+  }
+
+  /* ── filter ──────────────────────────────────────────────────── */
+  function getFiltered() {
+    if (!typeFilter) return allTasks;
+    return allTasks.filter(function(t){ return t.type === typeFilter; });
+  }
+
+  /* ── render ──────────────────────────────────────────────────── */
+  function render() {
+    var rows  = getFiltered();
+    var tbody = document.getElementById('admtBody');
+    document.getElementById('admtCount').textContent = rows.length + ' task' + (rows.length !== 1 ? 's' : '');
+    updateStats(rows);
+
+    if (!rows.length) {
+      tbody.innerHTML =
+        '<tr><td colspan="6"><div class="admt-empty">' +
+        '<i class="bi bi-' + (currentSchedule === 'today' ? 'calendar-check' : 'inbox') + '"></i>' +
+        '<div class="admt-empty-title">' + (currentSchedule === 'today' ? 'Nothing assigned for this day' : 'No tasks assigned to you') + '</div>' +
+        '<div style="font-size:0.78rem;color:var(--adm-muted)">Ask an admin to assign tasks to you</div>' +
+        '</div></td></tr>';
+      return;
+    }
+
+    var html = '';
+    rows.forEach(function(t) {
+      var rowClass = 'rs-' + esc(t.status);
+
+      /* type badge */
+      var typeHtml = t.type === 'recurring'
+        ? '<span class="admt-badge b-recurring"><i class="bi bi-arrow-repeat"></i> ' + esc(patternLabel(t)) + '</span>'
+        : '<span class="admt-badge b-once">One-time</span>';
+
+      /* deadline/due */
+      var dueHtml;
+      if (t.type === 'recurring') {
+        dueHtml = t.deadline_time
+          ? '<span style="font-family:var(--adm-mono);font-size:0.8rem;">' + esc(fmtTime(t.deadline_time)) + '</span>'
+          : '<span style="color:var(--adm-muted)">—</span>';
+      } else {
+        var isOverdue = t.due_date && String(t.due_date).split('T')[0] < new Date().toISOString().split('T')[0] && t.status !== 'completed';
+        dueHtml = t.due_date
+          ? '<span style="' + (isOverdue ? 'color:#ef4444' : 'color:var(--adm-text-2)') + ';font-size:0.82rem;">' +
+            esc(fmtDate(t.due_date)) + (isOverdue ? '<div style="font-size:0.6rem;color:#ef4444">Overdue</div>' : '') + '</span>'
+          : '<span style="color:var(--adm-muted)">—</span>';
+      }
+
+      /* priority */
+      var pri      = t.priority || 'medium';
+      var priLabel = pri.charAt(0).toUpperCase() + pri.slice(1);
+      var priHtml  = '<div class="admt-pri p-' + esc(pri) + '"><span class="admt-pri-dot"></span>' + esc(priLabel) + '</div>';
+
+      /* status */
+      var statusLabel = { done:'Done', in_progress:'In Progress', pending:'Pending', active:'Active', completed:'Completed' }[t.status] || t.status;
+      var statusHtml  = '<span class="admt-status s-' + esc(t.status) + '">' + esc(statusLabel) + '</span>';
+      if (t.status === 'in_progress' && t.started_at) {
+        statusHtml += '<div class="admt-timer"><i class="bi bi-play-fill"></i> ' + esc(new Date(t.started_at).toLocaleTimeString('en-US', {hour:'2-digit',minute:'2-digit',hour12:true})) + '</div>';
+      }
+      if ((t.status === 'done' || t.status === 'completed') && t.duration_minutes) {
+        statusHtml += '<div class="admt-duration"><i class="bi bi-clock"></i> ' + esc(fmtDuration(t.duration_minutes)) + '</div>';
+      }
+
+      /* action buttons */
+      var actionHtml = '';
+      if (currentSchedule === 'today') {
+        if (t.type === 'recurring') {
+          if (t.status === 'pending') {
+            actionHtml = '<button class="admt-btn btn-start" onclick="startSession(' + t.id + ')"><i class="bi bi-play-fill"></i> Start</button>';
+          } else if (t.status === 'in_progress') {
+            actionHtml = '<button class="admt-btn btn-complete" onclick="completeSession(' + t.id + ')"><i class="bi bi-check-lg"></i> Complete</button>';
+          } else {
+            actionHtml = '<button class="admt-btn" disabled><i class="bi bi-check-circle-fill" style="color:#10b981"></i> Done</button>';
+          }
+        } else {
+          if (t.status === 'pending') {
+            actionHtml =
+              '<button class="admt-btn btn-start" onclick="startTask(' + t.id + ')"><i class="bi bi-play-fill"></i> Start</button>' +
+              '<button class="admt-btn btn-complete" onclick="completeTask(' + t.id + ')"><i class="bi bi-check-lg"></i> Done</button>';
+          } else if (t.status === 'in_progress') {
+            actionHtml = '<button class="admt-btn btn-complete" onclick="completeTask(' + t.id + ')"><i class="bi bi-check-lg"></i> Complete</button>';
+          } else {
+            actionHtml = '<button class="admt-btn" disabled><i class="bi bi-check-circle-fill" style="color:#10b981"></i> Done</button>';
+          }
+        }
+      } else {
+        /* all mode — just link to task detail */
+        actionHtml = '<a href="/tasks/' + t.id + '" class="admt-btn btn-view"><i class="bi bi-box-arrow-up-right"></i> View</a>';
+      }
+
+      /* task sub-line */
+      var sub = t.type === 'recurring' ? patternLabel(t) : '';
+
+      html +=
+        '<tr class="' + rowClass + '">' +
+          '<td>' +
+            '<div class="admt-task-title">' + esc(t.title) + '</div>' +
+            (sub ? '<div class="admt-task-sub"><i class="bi bi-arrow-repeat"></i> ' + esc(sub) + '</div>' : '') +
+          '</td>' +
+          '<td>' + typeHtml + '</td>' +
+          '<td>' + dueHtml + '</td>' +
+          '<td>' + priHtml + '</td>' +
+          '<td>' + statusHtml + '</td>' +
+          '<td><div class="admt-actions">' + actionHtml + '</div></td>' +
+        '</tr>';
+    });
+    tbody.innerHTML = html;
+  }
+
+  /* ── fetch data ──────────────────────────────────────────────── */
+  function loadData() {
+    var tbody = document.getElementById('admtBody');
+    tbody.innerHTML = '<tr><td colspan="6"><div class="admt-loading"><div class="admt-spinner"></div> Loading…</div></td></tr>';
+    ['admtStTotal','admtStDone','admtStProgress','admtStPending'].forEach(function(id){ document.getElementById(id).textContent = '—'; });
+
+    var url = '/admin/my-tasks/data?schedule=' + currentSchedule;
+    if (currentSchedule === 'today') url += '&date=' + encodeURIComponent(currentDate);
+
+    fetch(url, { credentials: 'same-origin' })
+      .then(function(r){ return r.json(); })
+      .then(function(data) {
+        if (!data.success) throw new Error(data.message || 'Server error');
+        allTasks = data.tasks || [];
+        render();
+      })
+      .catch(function(err) {
+        tbody.innerHTML =
+          '<tr><td colspan="6"><div class="admt-empty">' +
+          '<i class="bi bi-exclamation-triangle"></i>' +
+          '<div class="admt-empty-title">Failed to load tasks</div>' +
+          '<div style="font-size:0.78rem">' + esc(err.message) + '</div>' +
+          '</div></td></tr>';
+      });
+  }
+
+  /* ── schedule switch ─────────────────────────────────────────── */
+  window.switchSchedule = function(s) {
+    currentSchedule = s;
+    document.getElementById('admtTabToday').classList.toggle('active', s === 'today');
+    document.getElementById('admtTabAll').classList.toggle('active', s === 'all');
+    document.getElementById('admtDateNav').style.display = s === 'today' ? 'flex' : 'none';
+    loadData();
+  };
+
+  /* ── date nav ────────────────────────────────────────────────── */
+  function shiftDate(d, days) {
+    var dt = new Date(d + 'T12:00:00'); dt.setDate(dt.getDate() + days);
+    return dt.toISOString().split('T')[0];
+  }
+  function setDate(d) {
+    currentDate = d;
+    document.getElementById('admtDate').value = d;
+    loadData();
+  }
+  document.getElementById('admtPrev').addEventListener('click', function(){ setDate(shiftDate(currentDate, -1)); });
+  document.getElementById('admtNext').addEventListener('click', function(){ setDate(shiftDate(currentDate, 1)); });
+  document.getElementById('admtTodayBtn').addEventListener('click', function(){ setDate(_today); });
+  document.getElementById('admtDate').addEventListener('change', function(){ if (this.value) setDate(this.value); });
+  document.getElementById('admtTypeFilter').addEventListener('change', function(){ typeFilter = this.value; render(); });
+
+  /* ── task actions ────────────────────────────────────────────── */
+  function doAction(url, method, taskId, optimisticStatus) {
+    fetch(url, { method: method, credentials: 'same-origin' })
+      .then(function(r){ return r.json(); })
+      .then(function(data) {
+        if (data.success) {
+          /* optimistically update local task status, then reload for accurate server data */
+          allTasks.forEach(function(t) {
+            if (t.id === taskId) t.status = optimisticStatus;
+          });
+          render();
+          /* reload after short delay to get accurate started_at / completed_at / duration */
+          setTimeout(loadData, 600);
+        } else {
+          alert(data.message || 'Action failed');
+        }
+      })
+      .catch(function(){ alert('Network error'); });
+  }
+
+  window.startSession   = function(id){ doAction('/tasks/' + id + '/start-session',   'POST', id, 'in_progress'); };
+  window.completeSession= function(id){ doAction('/tasks/' + id + '/complete-session','POST', id, 'done'); };
+  window.startTask      = function(id){ doAction('/tasks/start/'   + id,              'POST', id, 'in_progress'); };
+  window.completeTask   = function(id){ doAction('/tasks/complete/' + id,             'POST', id, 'completed'); };
+
+  /* ── initial load ────────────────────────────────────────────── */
+  loadData();
+})();
+</script>

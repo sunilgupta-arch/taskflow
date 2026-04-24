@@ -1,0 +1,295 @@
+<style>
+@keyframes hcFadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:none; } }
+
+/* ── Page ───────────────────────────────────────────────── */
+.hc-wrap { animation:hcFadeIn 0.25s ease; }
+
+/* ── Top bar ─────────────────────────────────────────────── */
+.hc-topbar { display:flex; align-items:center; gap:12px; margin-bottom:20px; flex-wrap:wrap; }
+.hc-topbar-left { flex:1; min-width:0; }
+.hc-section-pill {
+  display:inline-flex; align-items:center; gap:5px;
+  background:rgba(100,116,139,0.12); border:1px solid rgba(100,116,139,0.25);
+  color:#94a3b8; border-radius:20px; padding:3px 10px;
+  font-family:var(--adm-mono); font-size:0.68rem; font-weight:700; letter-spacing:0.3px; margin-bottom:6px;
+}
+.hc-page-title { font-family:var(--adm-mono); font-size:1rem; font-weight:700; color:var(--adm-text); }
+.hc-page-sub { font-size:0.78rem; color:var(--adm-muted); margin-top:2px; }
+.hc-back-btn {
+  display:inline-flex; align-items:center; gap:6px;
+  background:var(--adm-surface); border:1px solid var(--adm-border);
+  color:var(--adm-text-2); border-radius:8px; padding:0 12px; height:34px;
+  font-size:0.8rem; text-decoration:none; flex-shrink:0; transition:border-color 0.15s;
+}
+.hc-back-btn:hover { border-color:var(--adm-border-2); color:var(--adm-text); }
+
+/* ── Search ──────────────────────────────────────────────── */
+.hc-search-wrap { position:relative; max-width:420px; margin-bottom:24px; }
+.hc-search {
+  width:100%; background:var(--adm-surface); border:1px solid var(--adm-border);
+  color:var(--adm-text); border-radius:10px; padding:10px 14px 10px 38px;
+  font-family:var(--adm-font); font-size:0.84rem; outline:none;
+  transition:border-color 0.15s; box-sizing:border-box;
+}
+.hc-search:focus { border-color:rgba(100,116,139,0.5); }
+.hc-search::placeholder { color:var(--adm-muted); }
+.hc-search-icon { position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--adm-muted); font-size:0.82rem; pointer-events:none; }
+
+/* ── Section label ───────────────────────────────────────── */
+.hc-section-lbl {
+  font-family:var(--adm-mono); font-size:0.65rem; font-weight:700; letter-spacing:1px;
+  text-transform:uppercase; color:var(--adm-muted); margin-bottom:10px;
+}
+
+/* ── Topic grid ──────────────────────────────────────────── */
+.hc-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:12px; margin-bottom:28px; }
+
+/* ── Topic card ──────────────────────────────────────────── */
+.hc-card {
+  background:var(--adm-surface); border:1px solid var(--adm-border);
+  border-radius:12px; padding:16px; display:flex; gap:12px; align-items:flex-start;
+  text-decoration:none; transition:all 0.18s; cursor:pointer;
+  position:relative; overflow:hidden;
+}
+.hc-card::before { content:''; position:absolute; left:0; top:0; bottom:0; width:3px; background:var(--hc-accent,#94a3b8); opacity:0; transition:opacity 0.18s; }
+.hc-card:hover { border-color:var(--hc-accent,var(--adm-border-2)); box-shadow:0 4px 18px rgba(0,0,0,0.22); transform:translateY(-1px); }
+.hc-card:hover::before { opacity:1; }
+.hc-card-icon {
+  width:38px; height:38px; border-radius:9px; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center; font-size:1.1rem;
+  background:rgba(var(--hc-rgb,100,116,139),0.12); color:var(--hc-accent,#94a3b8);
+}
+.hc-card-body { flex:1; min-width:0; }
+.hc-card-title { font-size:0.86rem; font-weight:600; color:var(--adm-text); margin-bottom:3px; line-height:1.3; }
+.hc-card-desc { font-size:0.74rem; color:var(--adm-muted); line-height:1.45; }
+.hc-card-arrow { font-size:0.7rem; color:var(--adm-muted); flex-shrink:0; margin-top:2px; }
+.hc-card:hover .hc-card-arrow { color:var(--hc-accent,#94a3b8); }
+.hc-card[data-hidden="true"] { display:none; }
+
+/* ── Full docs banner ────────────────────────────────────── */
+.hc-banner {
+  background:linear-gradient(135deg,rgba(100,116,139,0.12),rgba(71,85,105,0.08));
+  border:1px solid rgba(100,116,139,0.25); border-radius:12px;
+  padding:18px 20px; display:flex; align-items:center; gap:16px; flex-wrap:wrap;
+}
+.hc-banner-icon { font-size:1.8rem; color:#94a3b8; flex-shrink:0; }
+.hc-banner-body { flex:1; min-width:0; }
+.hc-banner-title { font-size:0.9rem; font-weight:700; font-family:var(--adm-mono); color:var(--adm-text); margin-bottom:3px; }
+.hc-banner-desc { font-size:0.78rem; color:var(--adm-muted); }
+.hc-banner-btn {
+  display:inline-flex; align-items:center; gap:6px; flex-shrink:0;
+  background:var(--adm-surface-2); border:1px solid var(--adm-border);
+  color:var(--adm-text-2); border-radius:8px; padding:8px 16px;
+  font-size:0.8rem; font-family:var(--adm-font); text-decoration:none; transition:all 0.15s;
+}
+.hc-banner-btn:hover { border-color:var(--adm-border-2); color:var(--adm-text); }
+</style>
+
+<div class="hc-wrap">
+
+  <!-- Top bar -->
+  <div class="hc-topbar">
+    <div class="hc-topbar-left">
+      <div class="hc-section-pill"><i class="bi bi-tools"></i> Tools</div>
+      <div class="hc-page-title">Help Center</div>
+      <div class="hc-page-sub">Guides and documentation to help you use TaskFlow effectively</div>
+    </div>
+    <a href="/admin/tools" class="hc-back-btn"><i class="bi bi-arrow-left"></i> Tools</a>
+  </div>
+
+  <!-- Search -->
+  <div class="hc-search-wrap">
+    <i class="bi bi-search hc-search-icon"></i>
+    <input type="text" class="hc-search" id="hcSearch" placeholder="Search topics…" oninput="hcFilter(this.value)">
+  </div>
+
+  <!-- Getting Started -->
+  <div class="hc-section-lbl">Getting Started</div>
+  <div class="hc-grid">
+    <a href="/help?topic=welcome" target="_blank" class="hc-card" style="--hc-accent:#00d4ff;--hc-rgb:0,212,255" data-title="Welcome & Overview">
+      <div class="hc-card-icon"><i class="bi bi-house-door-fill"></i></div>
+      <div class="hc-card-body">
+        <div class="hc-card-title">Welcome & Overview</div>
+        <div class="hc-card-desc">Introduction to TaskFlow — what it does and how it's organised</div>
+      </div>
+      <i class="bi bi-arrow-up-right hc-card-arrow"></i>
+    </a>
+    <a href="/help?topic=roles" target="_blank" class="hc-card" style="--hc-accent:#a78bfa;--hc-rgb:167,139,250" data-title="Roles & Permissions">
+      <div class="hc-card-icon"><i class="bi bi-shield-check"></i></div>
+      <div class="hc-card-body">
+        <div class="hc-card-title">Roles & Permissions</div>
+        <div class="hc-card-desc">What each role can do — LOCAL_ADMIN, LOCAL_MANAGER, LOCAL_USER, and client roles</div>
+      </div>
+      <i class="bi bi-arrow-up-right hc-card-arrow"></i>
+    </a>
+    <a href="/help?topic=dashboard" target="_blank" class="hc-card" style="--hc-accent:#06b6d4;--hc-rgb:6,182,212" data-title="Dashboard">
+      <div class="hc-card-icon"><i class="bi bi-speedometer2"></i></div>
+      <div class="hc-card-body">
+        <div class="hc-card-title">Dashboard</div>
+        <div class="hc-card-desc">Understanding your dashboard — stats, tasks summary, and quick actions</div>
+      </div>
+      <i class="bi bi-arrow-up-right hc-card-arrow"></i>
+    </a>
+  </div>
+
+  <!-- Tasks & Work -->
+  <div class="hc-section-lbl">Tasks & Work</div>
+  <div class="hc-grid">
+    <a href="/help?topic=tasks" target="_blank" class="hc-card" style="--hc-accent:#3b82f6;--hc-rgb:59,130,246" data-title="Task Management">
+      <div class="hc-card-icon"><i class="bi bi-check2-square"></i></div>
+      <div class="hc-card-body">
+        <div class="hc-card-title">Task Management</div>
+        <div class="hc-card-desc">Creating, assigning, updating, and completing tasks</div>
+      </div>
+      <i class="bi bi-arrow-up-right hc-card-arrow"></i>
+    </a>
+    <a href="/help?topic=taskboard" target="_blank" class="hc-card" style="--hc-accent:#8b5cf6;--hc-rgb:139,92,246" data-title="Taskboard View">
+      <div class="hc-card-icon"><i class="bi bi-kanban"></i></div>
+      <div class="hc-card-body">
+        <div class="hc-card-title">Taskboard</div>
+        <div class="hc-card-desc">Kanban-style task board — columns, drag-to-complete, and filters</div>
+      </div>
+      <i class="bi bi-arrow-up-right hc-card-arrow"></i>
+    </a>
+    <a href="/help?topic=attendance" target="_blank" class="hc-card" style="--hc-accent:#10b981;--hc-rgb:16,185,129" data-title="Attendance & Shifts">
+      <div class="hc-card-icon"><i class="bi bi-clock-history"></i></div>
+      <div class="hc-card-body">
+        <div class="hc-card-title">Attendance & Shifts</div>
+        <div class="hc-card-desc">Clock in/out, shift schedules, overrides, and auto-logout</div>
+      </div>
+      <i class="bi bi-arrow-up-right hc-card-arrow"></i>
+    </a>
+    <a href="/help?topic=leaves" target="_blank" class="hc-card" style="--hc-accent:#f59e0b;--hc-rgb:245,158,11" data-title="Leave Management">
+      <div class="hc-card-icon"><i class="bi bi-calendar-x"></i></div>
+      <div class="hc-card-body">
+        <div class="hc-card-title">Leave Management</div>
+        <div class="hc-card-desc">Applying for leave, approving requests, and tracking leave balances</div>
+      </div>
+      <i class="bi bi-arrow-up-right hc-card-arrow"></i>
+    </a>
+    <a href="/help?topic=progress" target="_blank" class="hc-card" style="--hc-accent:#34d399;--hc-rgb:52,211,153" data-title="Progress Tracking">
+      <div class="hc-card-icon"><i class="bi bi-graph-up-arrow"></i></div>
+      <div class="hc-card-body">
+        <div class="hc-card-title">Progress Tracking</div>
+        <div class="hc-card-desc">Daily progress logs, completion rates, and performance reports</div>
+      </div>
+      <i class="bi bi-arrow-up-right hc-card-arrow"></i>
+    </a>
+  </div>
+
+  <!-- Communication -->
+  <div class="hc-section-lbl">Communication</div>
+  <div class="hc-grid">
+    <a href="/help?topic=chat" target="_blank" class="hc-card" style="--hc-accent:#00d4ff;--hc-rgb:0,212,255" data-title="Chat">
+      <div class="hc-card-icon"><i class="bi bi-chat-left-dots-fill"></i></div>
+      <div class="hc-card-body">
+        <div class="hc-card-title">Chat</div>
+        <div class="hc-card-desc">Direct messages, group conversations, and file attachments</div>
+      </div>
+      <i class="bi bi-arrow-up-right hc-card-arrow"></i>
+    </a>
+    <a href="/help?topic=channel" target="_blank" class="hc-card" style="--hc-accent:#3b82f6;--hc-rgb:59,130,246" data-title="Group Channel">
+      <div class="hc-card-icon"><i class="bi bi-broadcast"></i></div>
+      <div class="hc-card-body">
+        <div class="hc-card-title">Group Channel</div>
+        <div class="hc-card-desc">Team-wide chat with mentions, replies, reactions, pins, and files</div>
+      </div>
+      <i class="bi bi-arrow-up-right hc-card-arrow"></i>
+    </a>
+    <a href="/help?topic=announcements" target="_blank" class="hc-card" style="--hc-accent:#a855f7;--hc-rgb:168,85,247" data-title="Info Board">
+      <div class="hc-card-icon"><i class="bi bi-megaphone-fill"></i></div>
+      <div class="hc-card-body">
+        <div class="hc-card-title">Info Board</div>
+        <div class="hc-card-desc">Posting announcements and pinning important updates for the team</div>
+      </div>
+      <i class="bi bi-arrow-up-right hc-card-arrow"></i>
+    </a>
+    <a href="/help?topic=notes" target="_blank" class="hc-card" style="--hc-accent:#10b981;--hc-rgb:16,185,129" data-title="Notes">
+      <div class="hc-card-icon"><i class="bi bi-journal-text"></i></div>
+      <div class="hc-card-body">
+        <div class="hc-card-title">Notes</div>
+        <div class="hc-card-desc">Shared team notes for SOPs, references, and internal documentation</div>
+      </div>
+      <i class="bi bi-arrow-up-right hc-card-arrow"></i>
+    </a>
+  </div>
+
+  <!-- Team & System (admin only) -->
+  <% if (isAdmin) { %>
+  <div class="hc-section-lbl">Team & System</div>
+  <div class="hc-grid">
+    <a href="/help?topic=users" target="_blank" class="hc-card" style="--hc-accent:#8b5cf6;--hc-rgb:139,92,246" data-title="User Management">
+      <div class="hc-card-icon"><i class="bi bi-people-fill"></i></div>
+      <div class="hc-card-body">
+        <div class="hc-card-title">User Management</div>
+        <div class="hc-card-desc">Adding users, assigning roles, deactivating accounts</div>
+      </div>
+      <i class="bi bi-arrow-up-right hc-card-arrow"></i>
+    </a>
+    <a href="/help?topic=reports" target="_blank" class="hc-card" style="--hc-accent:#f97316;--hc-rgb:249,115,22" data-title="Reports">
+      <div class="hc-card-icon"><i class="bi bi-file-earmark-bar-graph"></i></div>
+      <div class="hc-card-body">
+        <div class="hc-card-title">Reports</div>
+        <div class="hc-card-desc">Generating and exporting reports for tasks, attendance, and more</div>
+      </div>
+      <i class="bi bi-arrow-up-right hc-card-arrow"></i>
+    </a>
+    <a href="/help?topic=drive" target="_blank" class="hc-card" style="--hc-accent:#3b82f6;--hc-rgb:59,130,246" data-title="Google Drive">
+      <div class="hc-card-icon"><i class="bi bi-cloud-arrow-up-fill"></i></div>
+      <div class="hc-card-body">
+        <div class="hc-card-title">Google Drive</div>
+        <div class="hc-card-desc">Uploading, organising, and sharing files via Google Drive integration</div>
+      </div>
+      <i class="bi bi-arrow-up-right hc-card-arrow"></i>
+    </a>
+    <a href="/help?topic=backups" target="_blank" class="hc-card" style="--hc-accent:#f97316;--hc-rgb:249,115,22" data-title="Backups">
+      <div class="hc-card-icon"><i class="bi bi-arrow-counterclockwise"></i></div>
+      <div class="hc-card-body">
+        <div class="hc-card-title">Backups</div>
+        <div class="hc-card-desc">Creating manual backups, scheduling automatic backups, and restoring</div>
+      </div>
+      <i class="bi bi-arrow-up-right hc-card-arrow"></i>
+    </a>
+    <a href="/help?topic=rewards" target="_blank" class="hc-card" style="--hc-accent:#fbbf24;--hc-rgb:251,191,36" data-title="Rewards">
+      <div class="hc-card-icon"><i class="bi bi-trophy-fill"></i></div>
+      <div class="hc-card-body">
+        <div class="hc-card-title">Rewards</div>
+        <div class="hc-card-desc">Recognising team performance with points and badges</div>
+      </div>
+      <i class="bi bi-arrow-up-right hc-card-arrow"></i>
+    </a>
+    <a href="/help?topic=settings" target="_blank" class="hc-card" style="--hc-accent:#64748b;--hc-rgb:100,116,139" data-title="Account & Settings">
+      <div class="hc-card-icon"><i class="bi bi-gear-fill"></i></div>
+      <div class="hc-card-body">
+        <div class="hc-card-title">Account & Settings</div>
+        <div class="hc-card-desc">Profile settings, password, timezone, notification preferences</div>
+      </div>
+      <i class="bi bi-arrow-up-right hc-card-arrow"></i>
+    </a>
+  </div>
+  <% } %>
+
+  <!-- Full docs banner -->
+  <div class="hc-banner">
+    <i class="bi bi-book hc-banner-icon"></i>
+    <div class="hc-banner-body">
+      <div class="hc-banner-title">Full Documentation</div>
+      <div class="hc-banner-desc">Open the complete Help Center with step-by-step guides, tips, and role-specific walkthroughs</div>
+    </div>
+    <a href="/help" target="_blank" class="hc-banner-btn">
+      <i class="bi bi-box-arrow-up-right"></i> Open Full Docs
+    </a>
+  </div>
+
+</div><!-- .hc-wrap -->
+
+<script>
+function hcFilter(q) {
+  var s = q.trim().toLowerCase();
+  document.querySelectorAll('.hc-card').forEach(function(c) {
+    var title = (c.dataset.title || '').toLowerCase();
+    var desc  = (c.querySelector('.hc-card-desc')?.textContent || '').toLowerCase();
+    c.dataset.hidden = (!s || title.includes(s) || desc.includes(s)) ? 'false' : 'true';
+  });
+}
+</script>

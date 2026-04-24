@@ -1,0 +1,1107 @@
+<style>
+/* ── Catalog stat cards ──────────────────────────────────────────── */
+.admat-stat-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px; margin-bottom: 22px;
+}
+.admat-stat-card {
+  background: var(--adm-surface); border: 1px solid var(--adm-border);
+  border-radius: 12px; padding: 14px 16px;
+  cursor: pointer; transition: all 0.15s; user-select: none;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.admat-stat-card:hover { border-color: var(--card-accent, var(--adm-accent)); background: var(--adm-surface-2); }
+.admat-stat-card.active {
+  border-color: var(--card-accent, var(--adm-accent));
+  background: rgba(var(--card-rgb, 0,212,255), 0.07);
+}
+.admat-stat-label {
+  font-size: 0.68rem; font-family: var(--adm-mono); font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.5px; color: var(--adm-muted);
+}
+.admat-stat-num {
+  font-size: 1.7rem; font-family: var(--adm-mono); font-weight: 700;
+  line-height: 1; color: var(--card-accent, var(--adm-text));
+}
+.admat-stat-sub { font-size: 0.7rem; color: var(--adm-muted); }
+
+/* ── Toolbar ─────────────────────────────────────────────────────── */
+.admat-toolbar {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.admat-search-wrap { position: relative; flex: 1; min-width: 180px; max-width: 280px; }
+.admat-search-wrap i {
+  position: absolute; left: 10px; top: 50%; transform: translateY(-50%);
+  color: var(--adm-muted); font-size: 0.85rem; pointer-events: none;
+}
+.admat-search {
+  width: 100%; height: 36px; padding: 0 12px 0 32px;
+  border-radius: 9px; border: 1px solid var(--adm-border);
+  background: var(--adm-surface-2); color: var(--adm-text);
+  font-size: 0.83rem; font-family: var(--adm-font);
+}
+.admat-search:focus { outline: none; border-color: var(--adm-accent); }
+.admat-select {
+  height: 36px; padding: 0 30px 0 11px; border-radius: 9px;
+  border: 1px solid var(--adm-border); background: var(--adm-surface-2);
+  color: var(--adm-text); font-size: 0.82rem; font-family: var(--adm-font);
+  cursor: pointer; appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 16 16'%3E%3Cpath fill='%2394a3b8' d='M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 10px center;
+  min-width: 140px;
+}
+.admat-select:focus { outline: none; border-color: var(--adm-accent); }
+.admat-create-btn {
+  height: 36px; padding: 0 16px; border-radius: 9px;
+  background: var(--adm-accent); color: #000; border: none;
+  font-size: 0.82rem; font-weight: 700; font-family: var(--adm-font);
+  cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+  margin-left: auto; white-space: nowrap; transition: opacity 0.15s;
+  text-decoration: none;
+}
+.admat-create-btn:hover { opacity: 0.88; }
+.admat-count-label {
+  font-size: 0.75rem; font-family: var(--adm-mono); color: var(--adm-muted);
+  white-space: nowrap; margin-left: 4px;
+}
+
+/* ── Table ───────────────────────────────────────────────────────── */
+.admat-table-wrap {
+  background: var(--adm-surface); border: 1px solid var(--adm-border);
+  border-radius: 14px; overflow: hidden;
+}
+.admat-table { width: 100%; border-collapse: collapse; }
+.admat-table thead th {
+  font-family: var(--adm-mono); font-size: 0.67rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.6px;
+  color: var(--adm-muted); padding: 10px 14px;
+  border-bottom: 1px solid var(--adm-border);
+  text-align: left; white-space: nowrap; background: var(--adm-surface-2);
+}
+.admat-table tbody tr { border-bottom: 1px solid var(--adm-border); transition: background 0.1s; }
+.admat-table tbody tr:last-child { border-bottom: none; }
+.admat-table tbody tr:hover { background: var(--adm-surface-2); }
+.admat-table tbody td { padding: 10px 14px; font-size: 0.85rem; color: var(--adm-text); vertical-align: middle; }
+
+/* Left-border accent by status */
+.admat-table tbody tr td:first-child { border-left: 3px solid transparent; }
+.admat-table tbody tr.rs-active      td:first-child { border-left-color: #10b981; }
+.admat-table tbody tr.rs-pending     td:first-child { border-left-color: #f97316; }
+.admat-table tbody tr.rs-in_progress td:first-child { border-left-color: #3b82f6; }
+.admat-table tbody tr.rs-completed   td:first-child { border-left-color: #64748b; }
+.admat-table tbody tr.rs-deactivated td:first-child { border-left-color: #ef4444; }
+.admat-table tbody tr.rs-unassigned  td:first-child { border-left-color: #f59e0b; }
+
+/* Task title cell */
+.admat-task-title { font-weight: 500; color: var(--adm-text); font-size: 0.88rem; }
+.admat-task-desc  { font-size: 0.7rem; color: var(--adm-muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 300px; }
+
+/* Badges */
+.admat-badge {
+  display: inline-flex; align-items: center; gap: 3px;
+  font-size: 0.65rem; font-family: var(--adm-mono); font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.3px;
+  padding: 2px 8px; border-radius: 20px;
+}
+.admat-badge.b-recurring { background: rgba(139,92,246,0.1); color: #8b5cf6; border: 1px solid rgba(139,92,246,0.25); }
+.admat-badge.b-once      { background: rgba(59,130,246,0.1);  color: #3b82f6; border: 1px solid rgba(59,130,246,0.25); }
+.admat-badge.b-active    { background: rgba(16,185,129,0.1);  color: #10b981; border: 1px solid rgba(16,185,129,0.25); }
+.admat-badge.b-pending   { background: rgba(249,115,22,0.1);  color: #f97316; border: 1px solid rgba(249,115,22,0.25); }
+.admat-badge.b-in_progress{ background: rgba(59,130,246,0.1); color: #3b82f6; border: 1px solid rgba(59,130,246,0.25); }
+.admat-badge.b-completed { background: rgba(100,116,139,0.1); color: #94a3b8; border: 1px solid rgba(100,116,139,0.25); }
+.admat-badge.b-deactivated{ background: rgba(239,68,68,0.1);  color: #ef4444; border: 1px solid rgba(239,68,68,0.25); }
+.admat-badge.b-unassigned { background: rgba(245,158,11,0.1); color: #f59e0b; border: 1px solid rgba(245,158,11,0.25); }
+
+/* Priority dot */
+.admat-pri { display: inline-flex; align-items: center; gap: 5px; font-size: 0.78rem; color: var(--adm-text-2); }
+.admat-pri-dot { width: 7px; height: 7px; border-radius: 50%; }
+.admat-pri.p-urgent  .admat-pri-dot { background: #ef4444; }
+.admat-pri.p-high    .admat-pri-dot { background: #f97316; }
+.admat-pri.p-medium  .admat-pri-dot { background: #3b82f6; }
+.admat-pri.p-low     .admat-pri-dot { background: #10b981; }
+
+/* Assignee chip */
+.admat-assignee { display: flex; align-items: center; gap: 6px; }
+.admat-av {
+  width: 24px; height: 24px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.6rem; font-weight: 700; color: #fff; flex-shrink: 0;
+}
+.admat-assignee-name { font-size: 0.82rem; color: var(--adm-text); }
+.admat-extra-tag {
+  font-size: 0.62rem; font-family: var(--adm-mono);
+  padding: 1px 5px; border-radius: 5px;
+  background: rgba(100,116,139,0.12); color: var(--adm-muted);
+  border: 1px solid var(--adm-border);
+}
+
+/* Action buttons */
+.admat-actions { display: flex; gap: 5px; }
+.admat-btn {
+  height: 26px; padding: 0 9px; border-radius: 7px;
+  font-size: 0.7rem; font-family: var(--adm-font); font-weight: 500;
+  border: 1px solid var(--adm-border); background: transparent;
+  color: var(--adm-text-2); cursor: pointer; white-space: nowrap;
+  display: inline-flex; align-items: center; gap: 4px;
+  transition: all 0.13s;
+}
+.admat-btn:hover              { background: var(--adm-surface-2); color: var(--adm-text); }
+.admat-btn.btn-edit:hover     { border-color: #8b5cf6; color: #8b5cf6; }
+.admat-btn.btn-assign:hover   { border-color: var(--adm-accent); color: var(--adm-accent); }
+.admat-btn.btn-deact:hover    { border-color: #ef4444; color: #ef4444; }
+.admat-btn.btn-delete:hover   { border-color: #ef4444; color: #ef4444; background: rgba(239,68,68,0.07); }
+
+/* Empty state */
+.admat-empty {
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; padding: 60px 20px; color: var(--adm-muted); text-align: center;
+}
+.admat-empty i { font-size: 2.4rem; margin-bottom: 10px; opacity: 0.2; }
+.admat-empty-title { font-size: 0.9rem; font-weight: 600; color: var(--adm-text-2); margin-bottom: 4px; }
+
+/* Assign modal */
+.admat-modal-bg {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.55); backdrop-filter: blur(2px);
+  z-index: 1000; align-items: center; justify-content: center;
+}
+.admat-modal-bg.open { display: flex; }
+.admat-modal {
+  background: var(--adm-surface); border: 1px solid var(--adm-border);
+  border-radius: 16px; padding: 24px; width: 100%; max-width: 420px;
+  margin: 16px; max-height: 80vh; display: flex; flex-direction: column;
+}
+.admat-modal-title {
+  font-size: 0.9rem; font-weight: 700; color: var(--adm-text);
+  margin-bottom: 16px; display: flex; align-items: center; gap: 8px;
+}
+.admat-modal-title i { color: var(--adm-accent); }
+.admat-user-list {
+  flex: 1; overflow-y: auto; border: 1px solid var(--adm-border);
+  border-radius: 10px; padding: 6px; margin-bottom: 16px;
+  display: flex; flex-direction: column; gap: 2px;
+}
+.admat-user-opt {
+  display: flex; align-items: center; gap: 10px;
+  padding: 7px 10px; border-radius: 8px; cursor: pointer;
+  transition: background 0.1s;
+}
+.admat-user-opt:hover { background: var(--adm-surface-2); }
+.admat-user-opt input[type=radio] { accent-color: var(--adm-accent); width: 14px; height: 14px; }
+.admat-user-opt-name { font-size: 0.84rem; color: var(--adm-text); }
+.admat-modal-footer { display: flex; gap: 8px; justify-content: flex-end; }
+.admat-modal-btn {
+  height: 34px; padding: 0 16px; border-radius: 9px;
+  font-size: 0.82rem; font-weight: 600; font-family: var(--adm-font);
+  cursor: pointer; border: 1px solid var(--adm-border);
+  background: transparent; color: var(--adm-text-2); transition: all 0.13s;
+}
+.admat-modal-btn:hover { background: var(--adm-surface-2); }
+.admat-modal-btn.primary {
+  background: var(--adm-accent); color: #000; border-color: var(--adm-accent);
+}
+.admat-modal-btn.primary:hover { opacity: 0.88; }
+
+/* ── Create drawer ───────────────────────────────────────────────── */
+.admat-cr-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.55); backdrop-filter: blur(2px);
+  z-index: 1010;
+}
+.admat-cr-overlay.open { display: block; }
+.admat-cr-drawer {
+  position: fixed; top: 0; right: -560px; width: 540px; height: 100%;
+  background: var(--adm-surface); border-left: 1px solid var(--adm-border);
+  z-index: 1011; display: flex; flex-direction: column;
+  transition: right 0.25s cubic-bezier(0.4,0,0.2,1);
+}
+.admat-cr-drawer.open { right: 0; }
+.admat-cr-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 18px 22px; border-bottom: 1px solid var(--adm-border); flex-shrink: 0;
+}
+.admat-cr-head-title {
+  font-size: 0.95rem; font-weight: 700; color: var(--adm-text);
+  display: flex; align-items: center; gap: 8px;
+}
+.admat-cr-head-title i { color: #6366f1; }
+.admat-cr-close {
+  width: 30px; height: 30px; border-radius: 8px;
+  border: 1px solid var(--adm-border); background: transparent;
+  color: var(--adm-muted); cursor: pointer; font-size: 1rem;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.13s;
+}
+.admat-cr-close:hover { background: var(--adm-surface-2); color: var(--adm-text); }
+.admat-cr-body {
+  flex: 1; overflow-y: auto; padding: 20px 22px;
+  display: flex; flex-direction: column; gap: 16px;
+}
+.admat-cr-foot {
+  display: flex; gap: 8px; justify-content: flex-end;
+  padding: 14px 22px; border-top: 1px solid var(--adm-border); flex-shrink: 0;
+}
+.admat-cr-foot-btn {
+  height: 36px; padding: 0 20px; border-radius: 9px;
+  font-size: 0.83rem; font-weight: 600; font-family: var(--adm-font);
+  cursor: pointer; border: 1px solid var(--adm-border);
+  background: transparent; color: var(--adm-text-2); transition: all 0.13s;
+}
+.admat-cr-foot-btn:hover { background: var(--adm-surface-2); }
+.admat-cr-foot-btn.primary {
+  background: #6366f1; color: #fff; border-color: #6366f1;
+}
+.admat-cr-foot-btn.primary:hover { background: #4f46e5; }
+.admat-cr-foot-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Form elements inside drawer */
+.admat-cr-label {
+  font-size: 0.68rem; font-family: var(--adm-mono); font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.5px; color: var(--adm-muted);
+  display: block; margin-bottom: 6px;
+}
+.admat-cr-input, .admat-cr-select, .admat-cr-textarea {
+  width: 100%; padding: 8px 12px; border-radius: 9px;
+  border: 1px solid var(--adm-border); background: var(--adm-surface-2);
+  color: var(--adm-text); font-size: 0.85rem; font-family: var(--adm-font);
+  box-sizing: border-box;
+}
+.admat-cr-textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
+.admat-cr-input:focus, .admat-cr-select:focus, .admat-cr-textarea:focus {
+  outline: none; border-color: #6366f1;
+}
+.admat-cr-select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 16 16'%3E%3Cpath fill='%2394a3b8' d='M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 10px center;
+  padding-right: 30px;
+}
+.admat-cr-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.admat-cr-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+.admat-cr-section {
+  padding: 14px; border-radius: 10px;
+  border: 1px solid var(--adm-border); background: var(--adm-surface-2);
+  display: flex; flex-direction: column; gap: 12px;
+}
+.admat-cr-section-title {
+  font-size: 0.72rem; font-family: var(--adm-mono); font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.5px; color: var(--adm-accent);
+  margin-bottom: 2px;
+}
+.admat-cr-day-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.admat-cr-day {
+  min-width: 40px; height: 34px; padding: 0 10px; border-radius: 8px;
+  border: 1px solid var(--adm-border); background: transparent;
+  color: var(--adm-text-2); font-size: 0.75rem; font-family: var(--adm-mono);
+  font-weight: 600; cursor: pointer; transition: all 0.13s;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.admat-cr-day.sel { background: rgba(99,102,241,0.15); border-color: #6366f1; color: #6366f1; }
+.admat-cr-date-row { display: flex; flex-wrap: wrap; gap: 5px; }
+.admat-cr-date {
+  width: 34px; height: 34px; border-radius: 7px;
+  border: 1px solid var(--adm-border); background: transparent;
+  color: var(--adm-text-2); font-size: 0.72rem; font-family: var(--adm-mono);
+  cursor: pointer; transition: all 0.13s;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.admat-cr-date.sel { background: rgba(99,102,241,0.15); border-color: #6366f1; color: #6366f1; }
+.admat-cr-multi-select {
+  width: 100%; border-radius: 9px; border: 1px solid var(--adm-border);
+  background: var(--adm-surface-2); color: var(--adm-text);
+  font-size: 0.84rem; font-family: var(--adm-font);
+  padding: 4px;
+}
+.admat-cr-multi-select option { padding: 5px 8px; border-radius: 5px; }
+.admat-cr-hint {
+  font-size: 0.7rem; color: var(--adm-muted); margin-top: 4px;
+}
+.admat-cr-toggle-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px; border-radius: 9px;
+  border: 1px solid var(--adm-border); background: var(--adm-surface-2);
+  cursor: pointer;
+}
+.admat-cr-toggle-row input[type=checkbox] { accent-color: #6366f1; width: 15px; height: 15px; }
+.admat-cr-toggle-label { font-size: 0.83rem; color: var(--adm-text); }
+.admat-cr-toggle-sub  { font-size: 0.7rem; color: var(--adm-muted); }
+.admat-cr-error {
+  padding: 10px 14px; border-radius: 9px;
+  border: 1px solid rgba(239,68,68,0.3); background: rgba(239,68,68,0.08);
+  color: #fca5a5; font-size: 0.82rem; display: none;
+}
+
+/* Page header */
+.admat-header { margin-bottom: 22px; display:flex; align-items:flex-start; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+.admat-breadcrumb {
+  font-size: 0.72rem; font-family: var(--adm-mono); color: var(--adm-muted);
+  margin-bottom: 6px; display: flex; align-items: center; gap: 5px;
+}
+.admat-breadcrumb a { color: var(--adm-muted); text-decoration: none; }
+.admat-breadcrumb a:hover { color: var(--adm-accent); }
+.admat-page-title {
+  font-size: 1.3rem; font-weight: 700; color: var(--adm-text);
+  display: flex; align-items: center; gap: 8px; margin: 0;
+}
+.admat-page-title i { color: #6366f1; }
+</style>
+
+<!-- Header -->
+<div class="admat-header">
+  <div>
+    <div class="admat-breadcrumb">
+      <a href="/admin/work"><i class="bi bi-kanban"></i> Work</a>
+      <i class="bi bi-chevron-right" style="font-size:0.6rem"></i>
+      <span>All Tasks</span>
+    </div>
+    <h1 class="admat-page-title"><i class="bi bi-check2-all"></i> All Tasks</h1>
+  </div>
+  <a href="/admin/work" class="adm-back-btn"><i class="bi bi-arrow-left"></i> Work</a>
+</div>
+
+<!-- Catalog stat cards — each is a filter shortcut -->
+<div class="admat-stat-row">
+  <div class="admat-stat-card active" id="sc-all" onclick="setStatFilter('all')"
+       style="--card-accent:var(--adm-accent);--card-rgb:0,212,255">
+    <div class="admat-stat-label">Total Tasks</div>
+    <div class="admat-stat-num"><%= stats.total || 0 %></div>
+    <div class="admat-stat-sub">All non-deleted</div>
+  </div>
+  <div class="admat-stat-card" id="sc-recurring" onclick="setStatFilter('recurring')"
+       style="--card-accent:#8b5cf6;--card-rgb:139,92,246">
+    <div class="admat-stat-label">Active Recurring</div>
+    <div class="admat-stat-num"><%= stats.active_recurring || 0 %></div>
+    <div class="admat-stat-sub">Daily / Weekly / Monthly</div>
+  </div>
+  <div class="admat-stat-card" id="sc-once" onclick="setStatFilter('once')"
+       style="--card-accent:#3b82f6;--card-rgb:59,130,246">
+    <div class="admat-stat-label">Active One-time</div>
+    <div class="admat-stat-num"><%= stats.active_once || 0 %></div>
+    <div class="admat-stat-sub">Pending or in progress</div>
+  </div>
+  <div class="admat-stat-card" id="sc-unassigned" onclick="setStatFilter('unassigned')"
+       style="--card-accent:#f59e0b;--card-rgb:245,158,11">
+    <div class="admat-stat-label">Unassigned</div>
+    <div class="admat-stat-num"><%= stats.unassigned || 0 %></div>
+    <div class="admat-stat-sub">Need an owner</div>
+  </div>
+  <div class="admat-stat-card" id="sc-completed" onclick="setStatFilter('completed')"
+       style="--card-accent:#64748b;--card-rgb:100,116,139">
+    <div class="admat-stat-label">Completed</div>
+    <div class="admat-stat-num"><%= stats.completed || 0 %></div>
+    <div class="admat-stat-sub">One-time tasks done</div>
+  </div>
+  <div class="admat-stat-card" id="sc-deactivated" onclick="setStatFilter('deactivated')"
+       style="--card-accent:#ef4444;--card-rgb:239,68,68">
+    <div class="admat-stat-label">Deactivated</div>
+    <div class="admat-stat-num"><%= stats.deactivated || 0 %></div>
+    <div class="admat-stat-sub">Stopped or archived</div>
+  </div>
+</div>
+
+<!-- Toolbar -->
+<div class="admat-toolbar">
+  <div class="admat-search-wrap">
+    <i class="bi bi-search"></i>
+    <input type="text" class="admat-search" id="admatSearch" placeholder="Search tasks…">
+  </div>
+  <select class="admat-select" id="admatTypeFilter">
+    <option value="">All Types</option>
+    <option value="recurring">Recurring</option>
+    <option value="once">One-time</option>
+  </select>
+  <select class="admat-select" id="admatPriFilter">
+    <option value="">All Priorities</option>
+    <option value="urgent">Urgent</option>
+    <option value="high">High</option>
+    <option value="medium">Medium</option>
+    <option value="low">Low</option>
+  </select>
+  <select class="admat-select" id="admatEmpFilter">
+    <option value="">All Employees</option>
+    <% localUsers.forEach(function(u) { %>
+      <option value="<%= u.id %>"><%= u.name %></option>
+    <% }); %>
+  </select>
+  <span class="admat-count-label" id="admatCountLabel"></span>
+  <button class="admat-create-btn" onclick="openCreateDrawer()">
+    <i class="bi bi-plus-lg"></i> New Task
+  </button>
+</div>
+
+<!-- Table -->
+<div class="admat-table-wrap">
+  <table class="admat-table">
+    <thead>
+      <tr>
+        <th style="width:32%">Task</th>
+        <th style="width:10%">Type</th>
+        <th style="width:18%">Assigned To</th>
+        <th style="width:8%">Priority</th>
+        <th style="width:10%">Status</th>
+        <th style="width:12%">Due / Ends</th>
+        <th style="width:10%">Actions</th>
+      </tr>
+    </thead>
+    <tbody id="admatBody"></tbody>
+  </table>
+</div>
+
+<!-- Create task drawer -->
+<div class="admat-cr-overlay" id="admatCrOverlay" onclick="closeCreateDrawer()"></div>
+<div class="admat-cr-drawer" id="admatCrDrawer">
+  <div class="admat-cr-head">
+    <div class="admat-cr-head-title"><i class="bi bi-plus-circle-fill"></i> New Task</div>
+    <button class="admat-cr-close" onclick="closeCreateDrawer()"><i class="bi bi-x-lg"></i></button>
+  </div>
+
+  <div class="admat-cr-body" id="admatCrBody">
+    <div class="admat-cr-error" id="admatCrError"></div>
+
+    <!-- Title -->
+    <div>
+      <label class="admat-cr-label">Title *</label>
+      <input type="text" class="admat-cr-input" id="crTitle" placeholder="Task title" maxlength="255">
+    </div>
+
+    <!-- Description -->
+    <div>
+      <label class="admat-cr-label">Description</label>
+      <textarea class="admat-cr-textarea" id="crDesc" placeholder="Optional description…"></textarea>
+    </div>
+
+    <!-- Type + Priority -->
+    <div class="admat-cr-grid">
+      <div>
+        <label class="admat-cr-label">Type *</label>
+        <select class="admat-cr-select" id="crType" onchange="crHandleTypeChange()">
+          <option value="once">One-time</option>
+          <option value="recurring">Recurring</option>
+        </select>
+      </div>
+      <div>
+        <label class="admat-cr-label">Priority *</label>
+        <select class="admat-cr-select" id="crPriority">
+          <option value="low">Low</option>
+          <option value="medium" selected>Medium</option>
+          <option value="high">High</option>
+          <option value="urgent">Urgent</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Due Date + Reward (one-time) -->
+    <div class="admat-cr-grid" id="crOnceMeta">
+      <div>
+        <label class="admat-cr-label">Due Date</label>
+        <input type="date" class="admat-cr-input" id="crDueDate">
+      </div>
+      <div>
+        <label class="admat-cr-label">Reward (pts)</label>
+        <input type="number" class="admat-cr-input" id="crReward" placeholder="0" min="0" step="1">
+      </div>
+    </div>
+
+    <!-- Recurrence section (recurring only) -->
+    <div class="admat-cr-section" id="crRecurSection" style="display:none">
+      <div class="admat-cr-section-title"><i class="bi bi-arrow-repeat"></i> Recurrence</div>
+
+      <div class="admat-cr-grid-3">
+        <div>
+          <label class="admat-cr-label">Pattern *</label>
+          <select class="admat-cr-select" id="crPattern" onchange="crHandlePatternChange()">
+            <option value="daily">Every Day</option>
+            <option value="weekly" selected>Weekly</option>
+            <option value="monthly">Monthly</option>
+          </select>
+        </div>
+        <div>
+          <label class="admat-cr-label">Deadline Time</label>
+          <input type="time" class="admat-cr-input" id="crDeadlineTime">
+        </div>
+        <div>
+          <label class="admat-cr-label">End Date</label>
+          <input type="date" class="admat-cr-input" id="crEndDate">
+        </div>
+      </div>
+
+      <!-- Reward (recurring) -->
+      <div>
+        <label class="admat-cr-label">Reward (pts)</label>
+        <input type="number" class="admat-cr-input" id="crRewardRec" placeholder="0" min="0" step="1">
+      </div>
+
+      <!-- Weekly days -->
+      <div id="crWeeklyDays">
+        <label class="admat-cr-label">Days of Week *</label>
+        <div class="admat-cr-day-row">
+          <button type="button" class="admat-cr-day" data-day="0">Sun</button>
+          <button type="button" class="admat-cr-day" data-day="1">Mon</button>
+          <button type="button" class="admat-cr-day" data-day="2">Tue</button>
+          <button type="button" class="admat-cr-day" data-day="3">Wed</button>
+          <button type="button" class="admat-cr-day" data-day="4">Thu</button>
+          <button type="button" class="admat-cr-day" data-day="5">Fri</button>
+          <button type="button" class="admat-cr-day" data-day="6">Sat</button>
+        </div>
+      </div>
+
+      <!-- Monthly dates -->
+      <div id="crMonthlyDates" style="display:none">
+        <label class="admat-cr-label">Dates of Month *</label>
+        <div class="admat-cr-date-row" id="crDatePills"></div>
+      </div>
+    </div>
+
+    <!-- Assignment section -->
+    <div class="admat-cr-section">
+      <div class="admat-cr-section-title"><i class="bi bi-people"></i> Assignment</div>
+
+      <div>
+        <label class="admat-cr-label">Assign To</label>
+        <select class="admat-cr-multi-select" id="crAssignTo" multiple size="4" onchange="crHandleAssignChange()">
+          <% localUsers.forEach(function(u) { %>
+            <option value="<%= u.id %>"><%= u.name %></option>
+          <% }); %>
+        </select>
+        <div class="admat-cr-hint">Hold Ctrl / Cmd to select multiple. Leave empty for team pick.</div>
+      </div>
+
+      <!-- Fallback assignees -->
+      <div id="crFallbackSection">
+        <div style="font-size:0.72rem;color:var(--adm-muted);padding:8px 10px;border-radius:8px;border:1px solid var(--adm-border);margin-bottom:10px;">
+          <i class="bi bi-info-circle" style="color:var(--adm-accent)"></i>
+          Fallback takes over if the primary is on leave. Not available with multi-assign.
+        </div>
+        <div class="admat-cr-grid">
+          <div>
+            <label class="admat-cr-label">Secondary (Backup 1)</label>
+            <select class="admat-cr-select" id="crSecondary" onchange="crHandleFallbackChange()">
+              <option value="">— None —</option>
+              <% localUsers.forEach(function(u) { %>
+                <option value="<%= u.id %>"><%= u.name %></option>
+              <% }); %>
+            </select>
+          </div>
+          <div>
+            <label class="admat-cr-label">Tertiary (Backup 2)</label>
+            <select class="admat-cr-select" id="crTertiary" onchange="crHandleFallbackChange()">
+              <option value="">— None —</option>
+              <% localUsers.forEach(function(u) { %>
+                <option value="<%= u.id %>"><%= u.name %></option>
+              <% }); %>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Client visibility -->
+    <label class="admat-cr-toggle-row">
+      <input type="checkbox" id="crClientVisible">
+      <div>
+        <div class="admat-cr-toggle-label"><i class="bi bi-eye" style="color:var(--adm-accent)"></i> Visible to Client Team</div>
+        <div class="admat-cr-toggle-sub">Client admins and managers will see this task</div>
+      </div>
+    </label>
+  </div>
+
+  <div class="admat-cr-foot">
+    <button class="admat-cr-foot-btn" onclick="closeCreateDrawer()">Cancel</button>
+    <button class="admat-cr-foot-btn primary" id="admatCrSubmit" onclick="submitCreateTask()">
+      <i class="bi bi-plus-lg"></i> Create Task
+    </button>
+  </div>
+</div>
+
+<!-- Assign modal -->
+<div class="admat-modal-bg" id="admatAssignModal">
+  <div class="admat-modal">
+    <div class="admat-modal-title"><i class="bi bi-person-check"></i> Reassign Task</div>
+    <input type="hidden" id="admatAssignTaskId">
+    <div class="admat-user-list" id="admatUserList"></div>
+    <div class="admat-modal-footer">
+      <button class="admat-modal-btn" onclick="closeAssignModal()">Cancel</button>
+      <button class="admat-modal-btn primary" onclick="submitAssign()">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var _tasks     = <%- JSON.stringify(tasks).replace(/<\//g, '<\\/') %>;
+  var _users     = <%- JSON.stringify(localUsers).replace(/<\//g, '<\\/') %>;
+
+  /* active filter state */
+  var statFilter = 'all';   /* all | recurring | once | unassigned | completed | deactivated */
+  var search     = '';
+  var typeFilter = '';
+  var priFilter  = '';
+  var empFilter  = '';
+
+  /* ── helpers ─────────────────────────────────────────────────── */
+  function esc(s) {
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+  function avatarColor(name) {
+    var c = ['#3b82f6','#8b5cf6','#10b981','#f97316','#ec4899','#06b6d4','#f59e0b','#6366f1'];
+    var h = 0;
+    for (var i = 0; i < (name||'').length; i++) h = (h * 31 + name.charCodeAt(i)) & 0xffffffff;
+    return c[Math.abs(h) % c.length];
+  }
+  function initials(name) {
+    var p = (name||'?').trim().split(' ');
+    return (p[0][0] + (p[1] ? p[1][0] : '')).toUpperCase();
+  }
+  function fmtDate(d) {
+    if (!d) return '—';
+    var s = String(d).split('T')[0];
+    var dt = new Date(s + 'T12:00:00');
+    return dt.toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' });
+  }
+  function patternLabel(t) {
+    if (t.type !== 'recurring') return '';
+    if (t.recurrence_pattern === 'daily') return 'Daily';
+    if (t.recurrence_pattern === 'monthly') return 'Monthly';
+    if (t.recurrence_pattern === 'weekly' && t.recurrence_days) {
+      var names = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+      return t.recurrence_days.split(',').map(function(d) { return names[parseInt(d.trim())]; }).join(', ');
+    }
+    return 'Weekly';
+  }
+
+  /* ── filtering ───────────────────────────────────────────────── */
+  function getFiltered() {
+    return _tasks.filter(function (t) {
+      /* stat card filter */
+      if (statFilter === 'recurring')   { if (!(t.type === 'recurring' && t.status === 'active'))          return false; }
+      if (statFilter === 'once')        { if (!(t.type === 'once' && ['pending','in_progress'].includes(t.status))) return false; }
+      if (statFilter === 'unassigned')  { if (t.assigned_to || ['deactivated','completed'].includes(t.status)) return false; }
+      if (statFilter === 'completed')   { if (t.status !== 'completed')   return false; }
+      if (statFilter === 'deactivated') { if (t.status !== 'deactivated') return false; }
+
+      /* toolbar filters */
+      if (typeFilter && t.type !== typeFilter) return false;
+      if (priFilter  && (t.priority || 'medium') !== priFilter) return false;
+      if (empFilter  && String(t.assigned_to) !== String(empFilter)) return false;
+      if (search) {
+        var q = search.toLowerCase();
+        if ((t.title || '').toLowerCase().indexOf(q) === -1 &&
+            (t.description || '').toLowerCase().indexOf(q) === -1) return false;
+      }
+      return true;
+    });
+  }
+
+  /* ── stat card active state ──────────────────────────────────── */
+  function setStatFilter(key) {
+    statFilter = key;
+    document.querySelectorAll('.admat-stat-card').forEach(function (el) {
+      el.classList.toggle('active', el.id === 'sc-' + key);
+    });
+    /* always reset all toolbar filters so the full category is shown, not a stacked subset */
+    search    = ''; document.getElementById('admatSearch').value    = '';
+    priFilter = ''; document.getElementById('admatPriFilter').value = '';
+    empFilter = ''; document.getElementById('admatEmpFilter').value = '';
+    /* set type only for type-specific cards; clear it for everything else */
+    if (key === 'recurring') { typeFilter = 'recurring'; document.getElementById('admatTypeFilter').value = 'recurring'; }
+    else if (key === 'once') { typeFilter = 'once';      document.getElementById('admatTypeFilter').value = 'once'; }
+    else                     { typeFilter = '';           document.getElementById('admatTypeFilter').value = ''; }
+    render();
+  }
+  window.setStatFilter = setStatFilter;
+
+  /* ── render ─────────────────────────────────────────────────── */
+  function render() {
+    var rows  = getFiltered();
+    var tbody = document.getElementById('admatBody');
+    document.getElementById('admatCountLabel').textContent = rows.length + ' task' + (rows.length !== 1 ? 's' : '');
+
+    if (!rows.length) {
+      tbody.innerHTML =
+        '<tr><td colspan="7"><div class="admat-empty">' +
+        '<i class="bi bi-inbox"></i>' +
+        '<div class="admat-empty-title">No tasks match</div>' +
+        '<div style="font-size:0.78rem">Try clearing a filter</div>' +
+        '</div></td></tr>';
+      return;
+    }
+
+    var html = '';
+    rows.forEach(function (t) {
+      /* row class */
+      var rc = t.assigned_to ? 'rs-' + esc(t.status) : 'rs-unassigned';
+
+      /* type badge */
+      var typeHtml = t.type === 'recurring'
+        ? '<span class="admat-badge b-recurring"><i class="bi bi-arrow-repeat"></i>' + esc(patternLabel(t) || 'Recurring') + '</span>'
+        : '<span class="admat-badge b-once">One-time</span>';
+
+      /* status badge */
+      var statusLabel = { active:'Active', pending:'Pending', in_progress:'In Progress',
+                          completed:'Completed', deactivated:'Deactivated' }[t.status] || t.status;
+      var statusHtml = '<span class="admat-badge b-' + esc(t.status) + '">' + esc(statusLabel) + '</span>';
+      if (!t.assigned_to && !['deactivated','completed'].includes(t.status)) {
+        statusHtml += ' <span class="admat-badge b-unassigned" style="margin-left:3px;">Unassigned</span>';
+      }
+
+      /* assignee */
+      var assigneeHtml;
+      if (t.assigned_to_name) {
+        var extras = [];
+        if (t.secondary_name) extras.push(t.secondary_name);
+        if (t.tertiary_name)  extras.push(t.tertiary_name);
+        var color = avatarColor(t.assigned_to_name);
+        assigneeHtml =
+          '<div class="admat-assignee">' +
+          '<div class="admat-av" style="background:' + color + '">' + esc(initials(t.assigned_to_name)) + '</div>' +
+          '<div>' +
+            '<div class="admat-assignee-name">' + esc(t.assigned_to_name) + '</div>' +
+            (extras.length ? '<div style="font-size:0.68rem;color:var(--adm-muted);margin-top:1px;">+' + extras.length + ' fallback</div>' : '') +
+          '</div></div>';
+      } else {
+        assigneeHtml = '<span style="font-size:0.78rem;color:var(--adm-muted);">— unassigned</span>';
+      }
+
+      /* priority */
+      var pri = t.priority || 'medium';
+      var priLabel = pri.charAt(0).toUpperCase() + pri.slice(1);
+      var priHtml  = '<div class="admat-pri p-' + esc(pri) + '"><span class="admat-pri-dot"></span>' + esc(priLabel) + '</div>';
+
+      /* due / ends */
+      var dueHtml;
+      if (t.type === 'recurring') {
+        dueHtml = t.recurrence_end_date
+          ? '<div style="font-size:0.72rem;color:var(--adm-muted);">Ends<br>' + esc(fmtDate(t.recurrence_end_date)) + '</div>'
+          : '<span style="color:var(--adm-muted)">No end</span>';
+      } else {
+        var isOverdue = t.due_date && String(t.due_date).split('T')[0] < new Date().toISOString().split('T')[0] && t.status !== 'completed';
+        dueHtml = t.due_date
+          ? '<span style="' + (isOverdue ? 'color:#ef4444' : 'color:var(--adm-text-2)') + ';font-size:0.82rem;">' +
+            esc(fmtDate(t.due_date)) + (isOverdue ? '<div style="font-size:0.62rem;color:#ef4444">Overdue</div>' : '') + '</span>'
+          : '<span style="color:var(--adm-muted)">—</span>';
+      }
+
+      /* actions */
+      var editBtn   = '<a href="/tasks/' + t.id + '/edit" class="admat-btn btn-edit"><i class="bi bi-pencil"></i> Edit</a>';
+      var assignBtn = '<button class="admat-btn btn-assign" onclick="openAssignModal(' + t.id + ',\'' + esc(t.assigned_to || '') + '\')"><i class="bi bi-person-check"></i> Assign</button>';
+      var deactBtn  = '';
+      if (t.status !== 'deactivated' && t.status !== 'completed') {
+        deactBtn = '<button class="admat-btn btn-deact" onclick="deactivate(' + t.id + ')"><i class="bi bi-pause-circle"></i> Deactivate</button>';
+      }
+      if (t.status === 'deactivated') {
+        deactBtn = '<button class="admat-btn btn-delete" onclick="deleteTask(' + t.id + ')"><i class="bi bi-trash"></i> Delete</button>';
+      }
+
+      html +=
+        '<tr class="' + rc + '">' +
+          '<td>' +
+            '<div class="admat-task-title">' + esc(t.title) + '</div>' +
+            (t.description ? '<div class="admat-task-desc">' + esc(t.description) + '</div>' : '') +
+            (t.created_by_name ? '<div style="font-size:0.68rem;color:var(--adm-muted);margin-top:2px;">by ' + esc(t.created_by_name) + '</div>' : '') +
+          '</td>' +
+          '<td>' + typeHtml + '</td>' +
+          '<td>' + assigneeHtml + '</td>' +
+          '<td>' + priHtml + '</td>' +
+          '<td>' + statusHtml + '</td>' +
+          '<td>' + dueHtml + '</td>' +
+          '<td><div class="admat-actions">' + editBtn + assignBtn + deactBtn + '</div></td>' +
+        '</tr>';
+    });
+    tbody.innerHTML = html;
+  }
+
+  /* ── assign modal ────────────────────────────────────────────── */
+  window.openAssignModal = function (taskId, currentUserId) {
+    document.getElementById('admatAssignTaskId').value = taskId;
+    var html = '';
+    _users.forEach(function (u) {
+      var checked = String(u.id) === String(currentUserId) ? 'checked' : '';
+      var color = avatarColor(u.name);
+      html +=
+        '<label class="admat-user-opt">' +
+        '<input type="radio" name="assignUser" value="' + u.id + '" ' + checked + '>' +
+        '<div class="admat-av" style="background:' + color + ';width:28px;height:28px;font-size:0.65rem;">' + esc(initials(u.name)) + '</div>' +
+        '<span class="admat-user-opt-name">' + esc(u.name) + '</span>' +
+        '</label>';
+    });
+    document.getElementById('admatUserList').innerHTML = html;
+    document.getElementById('admatAssignModal').classList.add('open');
+  };
+
+  window.closeAssignModal = function () {
+    document.getElementById('admatAssignModal').classList.remove('open');
+  };
+
+  window.submitAssign = function () {
+    var taskId = document.getElementById('admatAssignTaskId').value;
+    var sel = document.querySelector('input[name="assignUser"]:checked');
+    if (!sel) return;
+    fetch('/tasks/assign', {
+      method: 'POST', credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ task_id: taskId, assigned_to: [sel.value] })
+    })
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+      if (data.success) {
+        /* update local task record so table refreshes without a reload */
+        var uid = parseInt(sel.value);
+        var uname = (_users.find(function(u){ return u.id === uid; }) || {}).name || '';
+        _tasks.forEach(function (t) {
+          if (t.id === parseInt(taskId)) { t.assigned_to = uid; t.assigned_to_name = uname; }
+        });
+        closeAssignModal();
+        render();
+      }
+    })
+    .catch(function () { alert('Failed to assign task'); });
+  };
+
+  window.deactivate = function (taskId) {
+    if (!confirm('Deactivate this task?')) return;
+    fetch('/tasks/deactivate/' + taskId, { method: 'POST', credentials: 'same-origin' })
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+      if (data.success) {
+        _tasks.forEach(function (t) { if (t.id === taskId) t.status = 'deactivated'; });
+        render();
+      }
+    });
+  };
+
+  window.deleteTask = function (taskId) {
+    if (!confirm('Permanently delete this task? This cannot be undone.')) return;
+    fetch('/tasks/' + taskId, { method: 'DELETE', credentials: 'same-origin' })
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+      if (data.success) {
+        _tasks = _tasks.filter(function (t) { return t.id !== taskId; });
+        render();
+      }
+    });
+  };
+
+  /* ── wire up toolbar ─────────────────────────────────────────── */
+  document.getElementById('admatSearch').addEventListener('input', function () {
+    search = this.value.trim();
+    render();
+  });
+  document.getElementById('admatTypeFilter').addEventListener('change', function () {
+    typeFilter = this.value;
+    /* sync stat cards */
+    if (typeFilter === 'recurring' && statFilter !== 'recurring') { statFilter = 'all'; document.querySelectorAll('.admat-stat-card').forEach(function(el){ el.classList.toggle('active', el.id === 'sc-all'); }); }
+    if (typeFilter === 'once'      && statFilter !== 'once')      { statFilter = 'all'; document.querySelectorAll('.admat-stat-card').forEach(function(el){ el.classList.toggle('active', el.id === 'sc-all'); }); }
+    render();
+  });
+  document.getElementById('admatPriFilter').addEventListener('change', function () {
+    priFilter = this.value; render();
+  });
+  document.getElementById('admatEmpFilter').addEventListener('change', function () {
+    empFilter = this.value; render();
+  });
+
+  /* close assign modal on backdrop click */
+  document.getElementById('admatAssignModal').addEventListener('click', function (e) {
+    if (e.target === this) closeAssignModal();
+  });
+
+  /* ── initial render ──────────────────────────────────────────── */
+  render();
+
+  /* ══ Create task drawer ════════════════════════════════════════ */
+
+  window.openCreateDrawer = function () {
+    /* reset form */
+    document.getElementById('crTitle').value       = '';
+    document.getElementById('crDesc').value        = '';
+    document.getElementById('crType').value        = 'once';
+    document.getElementById('crPriority').value    = 'medium';
+    document.getElementById('crDueDate').value     = '';
+    document.getElementById('crReward').value      = '';
+    document.getElementById('crRewardRec').value   = '';
+    document.getElementById('crPattern').value     = 'weekly';
+    document.getElementById('crDeadlineTime').value= '';
+    document.getElementById('crEndDate').value     = '';
+    document.getElementById('crSecondary').value   = '';
+    document.getElementById('crTertiary').value    = '';
+    document.getElementById('crClientVisible').checked = false;
+    document.getElementById('admatCrError').style.display = 'none';
+    var submitBtn = document.getElementById('admatCrSubmit');
+    submitBtn.disabled = false;
+    submitBtn.innerHTML = '<i class="bi bi-plus-lg"></i> Create Task';
+    /* clear multi-select */
+    Array.from(document.getElementById('crAssignTo').options).forEach(function(o){ o.selected = false; });
+    /* clear day/date pills */
+    document.querySelectorAll('.admat-cr-day').forEach(function(b){ b.classList.remove('sel'); });
+    document.querySelectorAll('.admat-cr-date').forEach(function(b){ b.classList.remove('sel'); });
+    /* show/hide sections */
+    crHandleTypeChange();
+    crHandlePatternChange();
+    crHandleAssignChange();
+    /* build monthly date pills if not already built */
+    var pillWrap = document.getElementById('crDatePills');
+    if (!pillWrap.children.length) {
+      for (var d = 1; d <= 31; d++) {
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'admat-cr-date';
+        btn.textContent = d;
+        btn.dataset.date = d;
+        btn.addEventListener('click', function(){ this.classList.toggle('sel'); });
+        pillWrap.appendChild(btn);
+      }
+    }
+    document.getElementById('admatCrOverlay').classList.add('open');
+    document.getElementById('admatCrDrawer').classList.add('open');
+    setTimeout(function(){ document.getElementById('crTitle').focus(); }, 280);
+  };
+
+  window.closeCreateDrawer = function () {
+    document.getElementById('admatCrOverlay').classList.remove('open');
+    document.getElementById('admatCrDrawer').classList.remove('open');
+  };
+
+  window.crHandleTypeChange = function () {
+    var isRecurring = document.getElementById('crType').value === 'recurring';
+    document.getElementById('crOnceMeta').style.display     = isRecurring ? 'none' : 'grid';
+    document.getElementById('crRecurSection').style.display = isRecurring ? 'flex' : 'none';
+    if (isRecurring) crHandlePatternChange();
+  };
+
+  window.crHandlePatternChange = function () {
+    var pat = document.getElementById('crPattern').value;
+    document.getElementById('crWeeklyDays').style.display   = pat === 'weekly'  ? 'block' : 'none';
+    document.getElementById('crMonthlyDates').style.display = pat === 'monthly' ? 'block' : 'none';
+  };
+
+  window.crHandleAssignChange = function () {
+    var count = Array.from(document.getElementById('crAssignTo').options).filter(function(o){ return o.selected; }).length;
+    var fb = document.getElementById('crFallbackSection');
+    if (count > 1) {
+      fb.style.opacity = '0.4'; fb.style.pointerEvents = 'none';
+      document.getElementById('crSecondary').value = '';
+      document.getElementById('crTertiary').value  = '';
+    } else {
+      fb.style.opacity = '1'; fb.style.pointerEvents = 'auto';
+    }
+  };
+
+  window.crHandleFallbackChange = function () {
+    var hasFallback = document.getElementById('crSecondary').value || document.getElementById('crTertiary').value;
+    if (hasFallback) {
+      var sel = document.getElementById('crAssignTo');
+      var kept = false;
+      Array.from(sel.options).forEach(function(o){ if (o.selected && !kept) { kept = true; } else { o.selected = false; } });
+    }
+  };
+
+  /* wire up day-of-week toggle buttons */
+  document.querySelectorAll('.admat-cr-day').forEach(function (btn) {
+    btn.addEventListener('click', function () { this.classList.toggle('sel'); });
+  });
+
+  window.submitCreateTask = function () {
+    var title = document.getElementById('crTitle').value.trim();
+    var errDiv = document.getElementById('admatCrError');
+    errDiv.style.display = 'none';
+
+    if (!title) {
+      errDiv.textContent = 'Title is required.';
+      errDiv.style.display = 'block';
+      document.getElementById('crTitle').focus();
+      return;
+    }
+
+    var type    = document.getElementById('crType').value;
+    var pattern = document.getElementById('crPattern').value;
+
+    /* validate recurrence days */
+    if (type === 'recurring' && pattern !== 'daily') {
+      var selDays = pattern === 'weekly'
+        ? Array.from(document.querySelectorAll('.admat-cr-day.sel')).map(function(b){ return b.dataset.day; })
+        : Array.from(document.querySelectorAll('.admat-cr-date.sel')).map(function(b){ return b.dataset.date; });
+      if (!selDays.length) {
+        errDiv.textContent = pattern === 'weekly' ? 'Select at least one day of the week.' : 'Select at least one date of the month.';
+        errDiv.style.display = 'block';
+        return;
+      }
+    }
+
+    var submitBtn = document.getElementById('admatCrSubmit');
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Creating…';
+
+    /* build payload */
+    var payload = {
+      title:    title,
+      description: document.getElementById('crDesc').value.trim(),
+      type:     type,
+      priority: document.getElementById('crPriority').value
+    };
+
+    if (type === 'once') {
+      var dd = document.getElementById('crDueDate').value;
+      var rw = document.getElementById('crReward').value;
+      if (dd) payload.due_date = dd;
+      if (rw) payload.reward_amount = rw;
+    } else {
+      payload.recurrence_pattern = pattern;
+      var dt = document.getElementById('crDeadlineTime').value;
+      var ed = document.getElementById('crEndDate').value;
+      var rwR = document.getElementById('crRewardRec').value;
+      if (dt) payload.deadline_time = dt;
+      if (ed) payload.recurrence_end_date = ed;
+      if (rwR) payload.reward_amount = rwR;
+      if (pattern !== 'daily') {
+        var days = pattern === 'weekly'
+          ? Array.from(document.querySelectorAll('.admat-cr-day.sel')).map(function(b){ return b.dataset.day; })
+          : Array.from(document.querySelectorAll('.admat-cr-date.sel')).map(function(b){ return b.dataset.date; });
+        payload.recurrence_days = days.join(',');
+      }
+    }
+
+    /* assignees */
+    var assignOpts = Array.from(document.getElementById('crAssignTo').options).filter(function(o){ return o.selected; });
+    if (assignOpts.length) payload.assigned_to = assignOpts.map(function(o){ return o.value; });
+    var sec = document.getElementById('crSecondary').value;
+    var ter = document.getElementById('crTertiary').value;
+    if (sec) payload.secondary_assignee = sec;
+    if (ter) payload.tertiary_assignee  = ter;
+
+    /* client visibility */
+    if (document.getElementById('crClientVisible').checked) payload.client_visible = '1';
+
+    fetch('/tasks/create', {
+      method: 'POST', credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(data) {
+      if (data.success) {
+        closeCreateDrawer();
+        /* reload page so the new task appears with full server-computed fields */
+        window.location.reload();
+      } else {
+        errDiv.textContent = data.message || 'Failed to create task.';
+        errDiv.style.display = 'block';
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="bi bi-plus-lg"></i> Create Task';
+      }
+    })
+    .catch(function(err) {
+      errDiv.textContent = 'Network error. Please try again.';
+      errDiv.style.display = 'block';
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = '<i class="bi bi-plus-lg"></i> Create Task';
+    });
+  };
+
+  /* close drawer on Escape key */
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeCreateDrawer();
+  });
+})();
+</script>

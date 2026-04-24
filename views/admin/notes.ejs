@@ -173,9 +173,12 @@
     <div class="nt-page-title">My Notes</div>
     <div class="nt-page-sub">Personal notes, SOPs, and reference material — visible only to you</div>
   </div>
-  <button class="nt-new-btn" onclick="ntOpenCreate()">
-    <i class="bi bi-plus-lg"></i> New Note
-  </button>
+  <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+    <a href="/admin/comms" class="adm-back-btn"><i class="bi bi-arrow-left"></i> Comms</a>
+    <button class="nt-new-btn" onclick="ntOpenCreate()">
+      <i class="bi bi-plus-lg"></i> New Note
+    </button>
+  </div>
 </div>
 
 <!-- Toolbar + stats on one row -->

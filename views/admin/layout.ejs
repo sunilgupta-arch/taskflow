@@ -343,6 +343,17 @@
       line-height: 1.5;
     }
 
+    /* ── Back button (shared across sub-pages) ────────── */
+    .adm-back-btn {
+      display: inline-flex; align-items: center; gap: 5px;
+      height: 32px; padding: 0 12px; border-radius: 8px;
+      background: var(--adm-surface); border: 1px solid var(--adm-border);
+      color: var(--adm-muted); font-size: 0.75rem; font-weight: 600;
+      font-family: var(--adm-mono); text-decoration: none; cursor: pointer;
+      transition: all 0.15s; white-space: nowrap; flex-shrink: 0;
+    }
+    .adm-back-btn:hover { border-color: var(--adm-border-2); color: var(--adm-text); }
+
     /* ── Cards ────────────────────────────────────────── */
     .adm-cards {
       display: grid;
@@ -734,6 +745,50 @@
       transition: border-color 0.15s, color 0.15s;
     }
     .adm-gc-btn:hover, .adm-gc-btn.active { border-color: #a78bfa; color: #a78bfa; }
+    /* Badge */
+    .adm-gc-badge {
+      position: absolute; top: -5px; right: -5px;
+      font-size: 0.58rem; font-weight: 800;
+      padding: 0 5px; border-radius: 8px; min-width: 17px; height: 17px;
+      display: flex; align-items: center; justify-content: center; pointer-events: none;
+    }
+    [data-bs-theme="dark"]  .adm-gc-badge { background: #eab308; color: #000; }
+    [data-bs-theme="light"] .adm-gc-badge { background: #f97316; color: #fff; }
+
+    /* Bell-shake + glow for dark */
+    @keyframes admGcRingD {
+      0%, 52%, 100% { transform: rotate(0deg); box-shadow: none; }
+      18% { box-shadow: 0 0 0 4px rgba(234,179,8,0.35), 0 0 14px rgba(234,179,8,0.25); }
+      56% { transform: rotate(-15deg); } 61% { transform: rotate(15deg); }
+      66% { transform: rotate(-11deg); } 71% { transform: rotate(11deg); }
+      76% { transform: rotate(-7deg);  } 81% { transform: rotate(7deg);  }
+      88% { transform: rotate(0deg); }
+    }
+    /* Bell-shake + glow for light */
+    @keyframes admGcRingL {
+      0%, 52%, 100% { transform: rotate(0deg); box-shadow: none; }
+      18% { box-shadow: 0 0 0 4px rgba(249,115,22,0.4), 0 0 14px rgba(249,115,22,0.3); }
+      56% { transform: rotate(-15deg); } 61% { transform: rotate(15deg); }
+      66% { transform: rotate(-11deg); } 71% { transform: rotate(11deg); }
+      76% { transform: rotate(-7deg);  } 81% { transform: rotate(7deg);  }
+      88% { transform: rotate(0deg); }
+    }
+    /* Expanding ping ring */
+    @keyframes admGcPing {
+      0%   { transform: scale(1);   opacity: 0.75; }
+      100% { transform: scale(1.9); opacity: 0; }
+    }
+
+    [data-bs-theme="dark"]  .adm-gc-btn.has-unread { border-color: #eab308; color: #eab308; animation: admGcRingD 2.8s ease-in-out infinite; }
+    [data-bs-theme="light"] .adm-gc-btn.has-unread { border-color: #f97316; color: #f97316; animation: admGcRingL 2.8s ease-in-out infinite; }
+
+    /* Ping ring pseudo-element */
+    .adm-gc-btn.has-unread::after {
+      content: ''; position: absolute; inset: -2px; border-radius: 11px;
+      animation: admGcPing 1.7s ease-out infinite; pointer-events: none;
+    }
+    [data-bs-theme="dark"]  .adm-gc-btn.has-unread::after { border: 2px solid #eab308; }
+    [data-bs-theme="light"] .adm-gc-btn.has-unread::after { border: 2px solid #f97316; }
     .adm-gc-overlay {
       position: fixed; inset: 0; background: rgba(0,0,0,0.4);
       z-index: 1044; backdrop-filter: blur(2px);
@@ -895,6 +950,7 @@
       </a>
       <button class="adm-gc-btn" id="admGcBtn" onclick="toggleAdmGc()" title="Group Channel">
         <i class="bi bi-people-fill"></i>
+        <span class="adm-gc-badge" id="admGcBadge" style="display:none"></span>
       </button>
       <button class="adm-bridge-btn" id="admBridgeBtn" onclick="toggleAdmBridge()" title="Client Messages">
         <i class="bi bi-chat-dots-fill"></i>
@@ -1145,6 +1201,22 @@
   var admGcIsOpen  = false;
   var admGcUserId  = <%= user.id %>;
   var admGcLoaded  = false;
+  var admGcUnread  = 0;
+  var _admGcLastReadKey = 'gc-last-read-' + admGcUserId;
+
+  function admGcSetBadge(n) {
+    admGcUnread = n;
+    var badge = document.getElementById('admGcBadge'), btn = document.getElementById('admGcBtn');
+    if (!badge || !btn) return;
+    if (n > 0) {
+      badge.textContent = n > 99 ? '99+' : n;
+      badge.style.display = '';
+      btn.classList.add('has-unread');
+    } else {
+      badge.style.display = 'none';
+      btn.classList.remove('has-unread');
+    }
+  }
 
   function toggleAdmGc() { admGcIsOpen ? closeAdmGc() : openAdmGc(); }
 
@@ -1153,6 +1225,7 @@
     document.getElementById('admGcOverlay').style.display = '';
     document.getElementById('admGcDrawer').classList.add('open');
     document.getElementById('admGcBtn').classList.add('active');
+    admGcSetBadge(0);
     if (!admGcLoaded) admGcLoad();
   }
 
@@ -1167,7 +1240,13 @@
     fetch('/channel/messages').then(function(r){ return r.json(); }).then(function(res) {
       if (!res.success) return;
       admGcLoaded = true;
-      admGcRenderMessages(res.data.messages.slice().reverse());
+      var msgs = res.data.messages.slice().reverse();
+      admGcRenderMessages(msgs);
+      if (msgs.length) {
+        var latestId = msgs[msgs.length - 1].id;
+        var lastRead = parseInt(localStorage.getItem(_admGcLastReadKey) || '0', 10);
+        if (latestId > lastRead) localStorage.setItem(_admGcLastReadKey, String(latestId));
+      }
     }).catch(function(){});
   }
 
@@ -1334,11 +1413,46 @@
     // Group Channel live events
     admBdrSock.on('channel:message', function(msg) {
       if (admGcLoaded) admGcAppend(msg);
+      if (msg.sender_id !== admGcUserId && !admGcIsOpen) {
+        admGcSetBadge(admGcUnread + 1);
+        // Store latest msg id so page-load badge check works across sessions
+        var lastRead = parseInt(localStorage.getItem(_admGcLastReadKey) || '0', 10);
+        if (msg.id > lastRead) localStorage.setItem('gc-last-msg-' + admGcUserId, String(msg.id));
+        // Play notification tone
+        try {
+          var _ac = new (window.AudioContext || window.webkitAudioContext)();
+          var _now = _ac.currentTime;
+          [784, 1046].forEach(function(freq, i) {
+            var o = _ac.createOscillator(), g = _ac.createGain();
+            o.type = 'sine'; o.frequency.value = freq; o.connect(g); g.connect(_ac.destination);
+            var t = _now + i * 0.08;
+            g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.11, t + 0.02); g.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
+            o.start(t); o.stop(t + 0.25);
+          });
+        } catch(e) {}
+      }
     });
     admBdrSock.on('channel:message:delete', function(data) {
       var bubble = document.querySelector('#admGcMessages [data-gc-mid="'+data.id+'"]');
       if (bubble) { bubble.classList.add('deleted'); var c=bubble.querySelector('.adm-gc-content'); if(c) c.innerHTML='<em>This message was deleted</em>'; }
     });
+
+    // Initial unread count on page load (compare localStorage last-read vs last-received)
+    (function() {
+      var lastRead = parseInt(localStorage.getItem(_admGcLastReadKey) || '0', 10);
+      var lastMsg  = parseInt(localStorage.getItem('gc-last-msg-' + admGcUserId) || '0', 10);
+      if (lastMsg > lastRead) {
+        // Do a quick fetch to count exact unreads
+        fetch('/channel/messages').then(function(r){ return r.json(); }).then(function(res) {
+          if (!res.success) return;
+          var msgs = res.data.messages || [];
+          var unread = msgs.filter(function(m){ return m.id > lastRead && m.sender_id !== admGcUserId; }).length;
+          if (unread > 0) admGcSetBadge(unread);
+          // Update last-msg to latest known
+          if (msgs.length) localStorage.setItem('gc-last-msg-' + admGcUserId, String(Math.max.apply(null, msgs.map(function(m){return m.id;}))));
+        }).catch(function(){});
+      }
+    })();
 
     // Queue live events
     admBdrSock.on('queue:new_request', function() { admQueueUpdateBadge(); if (typeof window.admqSocketCallback === 'function') window.admqSocketCallback(); });
