@@ -1,8 +1,8 @@
 CREATE TABLE IF NOT EXISTS client_request_attachments (
-  id          INT AUTO_INCREMENT PRIMARY KEY,
-  request_id  INT NULL,
-  instance_id INT NULL,
-  uploaded_by INT NOT NULL,
+  id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  request_id  INT UNSIGNED NULL,
+  instance_id INT UNSIGNED NULL,
+  uploaded_by INT UNSIGNED NOT NULL,
   file_name   VARCHAR(255) NOT NULL,
   mime_type   VARCHAR(100),
   drive_file_id VARCHAR(150) NOT NULL,
