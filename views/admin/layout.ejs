@@ -354,6 +354,17 @@
     }
     .adm-back-btn:hover { border-color: var(--adm-border-2); color: var(--adm-text); }
 
+    /* ── Toasts ───────────────────────────────────────── */
+    #_admToastContainer { position:fixed; top:24px; left:50%; transform:translateX(-50%); z-index:9999; display:flex; flex-direction:column; align-items:center; gap:10px; pointer-events:none; }
+    .adm-toast { display:flex; align-items:flex-start; gap:10px; min-width:300px; max-width:420px; background:var(--adm-surface-2); border:1px solid var(--adm-border-2); border-top:3px solid var(--adm-accent); border-radius:10px; padding:12px 14px; box-shadow:0 6px 24px rgba(0,0,0,.5); pointer-events:all; animation:admToastIn .2s ease; }
+    @keyframes admToastIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:none; } }
+    .adm-toast-icon { font-size:1rem; color:var(--adm-accent); flex-shrink:0; margin-top:1px; }
+    .adm-toast-body { flex:1; min-width:0; }
+    .adm-toast-title { font-size:0.78rem; font-weight:600; color:var(--adm-text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .adm-toast-text  { font-size:0.72rem; color:var(--adm-muted); margin-top:2px; line-height:1.4; }
+    .adm-toast-close { background:none; border:none; color:var(--adm-muted); font-size:1rem; line-height:1; cursor:pointer; padding:0; flex-shrink:0; }
+    .adm-toast-close:hover { color:var(--adm-text); }
+
     /* ── Cards ────────────────────────────────────────── */
     .adm-cards {
       display: grid;
@@ -864,6 +875,7 @@
   </style>
 </head>
 <body>
+<div id="_admToastContainer"></div>
 <div class="adm-shell">
 
   <!-- ── Sidebar ──────────────────────────────────────── -->
@@ -1328,6 +1340,99 @@
     if (e.key==='Enter' && !e.shiftKey) { e.preventDefault(); admGcSend(); }
   });
 
+  // ── Continuous queue bell + tab title blink ─────────────
+  var _admBellCtx        = null;
+  var _admBellInterval   = null;
+  var _admBellActive     = false;
+  var _admTitleInterval  = null;
+  var _admOrigTitle      = document.title;
+  var _admBellUnlocked   = false;
+  var _admBellPending    = false; // ring as soon as user interacts
+
+  // Create AudioContext and play a silent pulse to fully unlock it
+  function _admUnlockAudio() {
+    if (_admBellUnlocked) return;
+    try {
+      if (!_admBellCtx) _admBellCtx = new (window.AudioContext || window.webkitAudioContext)();
+      var p = _admBellCtx.resume();
+      if (p && p.then) {
+        p.then(function() {
+          // Play a truly silent buffer to satisfy autoplay policy
+          var buf = _admBellCtx.createBuffer(1, 1, 22050);
+          var src = _admBellCtx.createBufferSource();
+          src.buffer = buf; src.connect(_admBellCtx.destination); src.start(0);
+          _admBellUnlocked = true;
+          // If a bell was pending while audio was locked, play it now
+          if (_admBellPending) { _admBellPending = false; _admPlayBell(); }
+        }).catch(function(){});
+      }
+    } catch(e) {}
+  }
+
+  // Unlock on first user interaction
+  document.addEventListener('click',   _admUnlockAudio, { once: false });
+  document.addEventListener('keydown', _admUnlockAudio, { once: false });
+
+  function _admPlayBell() {
+    if (!_admBellCtx || _admBellCtx.state !== 'running') {
+      _admBellPending = true; // play as soon as ctx unlocks
+      return;
+    }
+    try {
+      var ctx = _admBellCtx, now = ctx.currentTime;
+      [[659, 0.20], [1318, 0.10], [1975, 0.05]].forEach(function(p) {
+        var osc = ctx.createOscillator(), g = ctx.createGain();
+        osc.type = 'sine'; osc.frequency.value = p[0];
+        osc.connect(g); g.connect(ctx.destination);
+        g.gain.setValueAtTime(p[1], now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 2.0);
+        osc.start(now); osc.stop(now + 2.1);
+      });
+    } catch(e) {}
+  }
+
+  function _admStartTitleBlink() {
+    if (_admTitleInterval) return;
+    _admOrigTitle = document.title;
+    var show = true;
+    _admTitleInterval = setInterval(function() {
+      document.title = show ? '(🔔) New Request' : _admOrigTitle;
+      show = !show;
+    }, 1000);
+  }
+
+  function _admStopTitleBlink() {
+    if (_admTitleInterval) { clearInterval(_admTitleInterval); _admTitleInterval = null; }
+    document.title = _admOrigTitle;
+  }
+
+  function _admStartBell() {
+    if (_admBellActive) return;
+    _admBellActive = true;
+    _admUnlockAudio();
+    _admStartTitleBlink();
+    _admPlayBell();
+    _admBellInterval = setInterval(function() {
+      if (!_admBellActive) { clearInterval(_admBellInterval); _admBellInterval = null; return; }
+      _admPlayBell();
+    }, 4000);
+  }
+
+  function _admStopBell() {
+    _admBellActive  = false;
+    _admBellPending = false;
+    if (_admBellInterval) { clearInterval(_admBellInterval); _admBellInterval = null; }
+    _admStopTitleBlink();
+  }
+
+  // Stop when user returns to the tab that has the queue page open
+  document.addEventListener('visibilitychange', function() {
+    if (!document.hidden && window.admqIsQueuePage) _admStopBell();
+  });
+  window.addEventListener('focus', function() {
+    if (window.admqIsQueuePage) _admStopBell();
+  });
+
   // ── Client Queue badge ───────────────────────────────────
   function admQueueUpdateBadge() {
     fetch('/queue/badge').then(function(r){ return r.json(); }).then(function(res) {
@@ -1342,6 +1447,7 @@
       } else {
         btn.style.display = 'none';
         btn.classList.remove('has-open');
+        _admStopBell();
       }
     }).catch(function(){});
   }
@@ -1455,8 +1561,58 @@
     })();
 
     // Queue live events
-    admBdrSock.on('queue:new_request', function() { admQueueUpdateBadge(); if (typeof window.admqSocketCallback === 'function') window.admqSocketCallback(); });
-    admBdrSock.on('queue:updated',     function() { admQueueUpdateBadge(); if (typeof window.admqSocketCallback === 'function') window.admqSocketCallback(); });
+    admBdrSock.on('queue:new_request', function() {
+      admQueueUpdateBadge();
+      if (!window.admqIsQueuePage) _admStartBell();
+      if (typeof window.admqSocketCallback === 'function') window.admqSocketCallback();
+    });
+    admBdrSock.on('queue:updated', function() {
+      admQueueUpdateBadge();
+      if (typeof window.admqSocketCallback === 'function') window.admqSocketCallback();
+    });
+    admBdrSock.on('request:comment', function(data) {
+      var preview = data.body.length > 60 ? data.body.substring(0, 60) + '…' : data.body;
+      _admShowToast(data.title, data.commenter_name + ': ' + preview, data.instance_id);
+      _admPlayCommentSound();
+      if (typeof window.admqOnComment === 'function') window.admqOnComment(data);
+    });
+  }
+
+  function _admPlayCommentSound() {
+    try {
+      var ctx = new (window.AudioContext || window.webkitAudioContext)();
+      [[880, 0, 0.13], [1108, 0.11, 0.16]].forEach(function(p) {
+        var osc = ctx.createOscillator(), g = ctx.createGain();
+        osc.type = 'sine'; osc.frequency.value = p[0];
+        osc.connect(g); g.connect(ctx.destination);
+        g.gain.setValueAtTime(0, ctx.currentTime + p[1]);
+        g.gain.linearRampToValueAtTime(0.25, ctx.currentTime + p[1] + 0.01);
+        g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + p[1] + p[2]);
+        osc.start(ctx.currentTime + p[1]);
+        osc.stop(ctx.currentTime + p[1] + p[2] + 0.01);
+      });
+    } catch(e) {}
+  }
+
+  function _admShowToast(title, text, instanceId) {
+    var c = document.getElementById('_admToastContainer');
+    if (!c) return;
+    var t = document.createElement('div');
+    t.className = 'adm-toast';
+    t.innerHTML = '<div class="adm-toast-icon"><i class="bi bi-chat-left-text-fill"></i></div>'
+      + '<div class="adm-toast-body"><div class="adm-toast-title">' + _admEsc(title) + '</div>'
+      + '<div class="adm-toast-text">' + _admEsc(text) + '</div></div>'
+      + '<button class="adm-toast-close" onclick="this.parentElement.remove()">&times;</button>';
+    if (instanceId) t.style.cursor = 'pointer';
+    t.addEventListener('click', function(e) {
+      if (e.target.classList.contains('adm-toast-close')) return;
+      if (instanceId) window.location.href = '/admin/queue';
+    });
+    c.appendChild(t);
+    setTimeout(function() { if (t.parentElement) t.remove(); }, 6000);
+  }
+  function _admEsc(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 </script>
 <%- script %>

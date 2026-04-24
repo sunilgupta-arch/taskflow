@@ -139,7 +139,24 @@ class ClientQueueController {
       const instanceId = parseInt(req.params.id);
       const { body } = req.body;
       if (!body || !body.trim()) return ApiResponse.error(res, 'Comment cannot be empty', 400);
-      const comment = await ClientRequest.addComment(instanceId, req.user.id, body.trim());
+      const [comment, ctx] = await Promise.all([
+        ClientRequest.addComment(instanceId, req.user.id, body.trim()),
+        ClientRequest.getInstanceContext(instanceId)
+      ]);
+      if (ctx) {
+        try {
+          const io = getIO();
+          const payload = {
+            instance_id: instanceId,
+            instance_date: ctx.instance_date,
+            title: ctx.title,
+            body: body.trim(),
+            commenter_name: req.user.name,
+            commenter_role: req.user.role_name
+          };
+          io.of('/portal').to(`portal:user:${ctx.created_by}`).emit('request:comment', payload);
+        } catch (_) {}
+      }
       return ApiResponse.success(res, { comment });
     } catch (err) {
       console.error('ClientQueue addComment error:', err);

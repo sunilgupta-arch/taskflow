@@ -226,7 +226,28 @@ class ClientRequestController {
         return ApiResponse.error(res, 'Not found or not authorized', 404);
       const { body } = req.body;
       if (!body || !body.trim()) return ApiResponse.error(res, 'Comment cannot be empty', 400);
-      const comment = await ClientRequest.addComment(instanceId, req.user.id, body.trim());
+      const [comment, ctx] = await Promise.all([
+        ClientRequest.addComment(instanceId, req.user.id, body.trim()),
+        ClientRequest.getInstanceContext(instanceId)
+      ]);
+      if (ctx) {
+        try {
+          const io = getIO();
+          const payload = {
+            instance_id: instanceId,
+            instance_date: ctx.instance_date,
+            title: ctx.title,
+            body: body.trim(),
+            commenter_name: req.user.name,
+            commenter_role: req.user.role_name
+          };
+          if (ctx.picked_by) {
+            io.to(`user:${ctx.picked_by}`).emit('request:comment', payload);
+          } else {
+            io.to('admins').emit('request:comment', payload);
+          }
+        } catch (_) {}
+      }
       return ApiResponse.success(res, { comment });
     } catch (err) {
       console.error('ClientRequest addComment error:', err);

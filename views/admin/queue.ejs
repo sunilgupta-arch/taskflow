@@ -591,8 +591,29 @@
       }).finally(function(){ if(inp) inp.value=''; });
   };
 
+  // ── Mark this as the queue page so layout stops the bell on focus ────
+  window.admqIsQueuePage = true;
+  if (typeof _admStopBell === 'function') _admStopBell();
+
   // ── Socket live reload (called by layout.ejs socket block) ───────────
   window.admqSocketCallback = function() { loadDate(_date); };
+
+  // ── Live comment from client (called by layout.ejs) ─────────────────
+  window.admqOnComment = function(data) {
+    if (_detailId !== data.instance_id) return;
+    var list = document.querySelector('.admq-comments-list');
+    if (!list) return;
+    var bg = '#2563eb';
+    var node = document.createElement('div');
+    node.className = 'admq-comment';
+    node.innerHTML = '<div class="admq-comment-avatar" style="background:'+bg+'">'
+      + esc((data.commenter_name||'?').charAt(0).toUpperCase())
+      + '</div><div style="flex:1"><div class="admq-comment-meta">'
+      + esc(data.commenter_name||'') + '&nbsp;·&nbsp;just now</div>'
+      + '<div class="admq-comment-body">' + esc(data.body||'') + '</div></div>';
+    list.appendChild(node);
+    list.scrollTop = list.scrollHeight;
+  };
 
   // ── Initial render ───────────────────────────────────────────────────
   renderStats(_raw.stats, _date);

@@ -393,6 +393,10 @@ const isSalesUser = user.role_name === 'CLIENT_SALES';
 .portal-table-sm th, .portal-table-sm td { padding:5px 10px; font-size:0.8rem; }
 .req-row:hover td { background:var(--tf-surface-2); cursor:pointer; }
 .req-row-overdue td { background:rgba(220,53,69,0.08); }
+.req-row-cancelled td { opacity:0.5; text-decoration:line-through; }
+.req-cancelled-toggle { padding:8px 12px; font-size:0.8rem; }
+.req-cancelled-toggle a { color:var(--tf-muted); text-decoration:none; }
+.req-cancelled-toggle a:hover { color:var(--tf-text); text-decoration:underline; }
 .portal-req-detail-link { color:var(--tf-text); }
 .portal-req-detail-link:hover { text-decoration:underline !important; }
 .btn-xs { padding:2px 8px; font-size:0.72rem; }
@@ -405,6 +409,8 @@ const isSalesUser = user.role_name === 'CLIENT_SALES';
   const IS_PAST    = '<%= isPast %>' === 'true';
   const CAN_CREATE = '<%= canCreate %>' === 'true';
   const IS_SALES   = <%- isSalesUser %>;
+  const _hashOpen  = (function() { var m = window.location.hash.match(/^#open=(\d+)$/); return m ? parseInt(m[1]) : null; })();
+  let _openDetailId = null;
 
   function escHtml(s) {
     if (!s) return '';
@@ -429,7 +435,9 @@ const isSalesUser = user.role_name === 'CLIENT_SALES';
   // ── Render instances table ──────────────────────────────
   function renderInstances(instances) {
     const area = document.getElementById('reqInstancesArea');
-    if (!instances || instances.length === 0) {
+    const active    = (instances || []).filter(i => i.status !== 'cancelled');
+    const cancelled = (instances || []).filter(i => i.status === 'cancelled');
+    if (active.length === 0 && cancelled.length === 0) {
       area.innerHTML = `<div class="portal-empty-state">
         <i class="bi bi-inbox" style="font-size:2rem;color:var(--tf-muted)"></i>
         <p class="mt-2 text-muted">No requests for this date</p>
@@ -438,7 +446,8 @@ const isSalesUser = user.role_name === 'CLIENT_SALES';
       return;
     }
     let rows = '';
-    instances.forEach((inst, idx) => {
+    const allVisible = [...active, ...cancelled];
+    allVisible.forEach((inst, idx) => {
       const isOverdue = IS_PAST && ['open','picked'].includes(inst.status);
       const recLabel = inst.recurrence !== 'none' ? 'recurring' : 'one-time';
       const canEdit = CAN_CREATE && ['open', 'picked'].includes(inst.status);
@@ -465,7 +474,8 @@ const isSalesUser = user.role_name === 'CLIENT_SALES';
       const cancelBtn = CAN_CREATE && !IS_PAST && inst.status === 'open'
         ? `<button class="btn btn-xs btn-outline-danger req-cancel-btn ms-1" data-id="${inst.id}" title="Cancel this request">✕</button>`
         : '';
-      rows += `<tr class="${isOverdue ? 'req-row-overdue' : ''} req-row" data-id="${inst.id}">
+      const isCancelled = inst.status === 'cancelled';
+      rows += `<tr class="${isOverdue ? 'req-row-overdue' : ''} req-row${isCancelled ? ' req-row-cancelled' : ''}" data-id="${inst.id}" ${isCancelled ? 'style="display:none"' : ''}>
         <td class="text-muted small">${idx + 1}</td>
         <td>
           <a href="#" class="portal-req-detail-link" data-id="${inst.id}">${escHtml(inst.title)}</a>
@@ -481,13 +491,36 @@ const isSalesUser = user.role_name === 'CLIENT_SALES';
         <td class="small">${escHtml(inst.picked_by_name || inst.completed_by_name || '—')}</td>
       </tr>`;
     });
+    const cancelledFooter = cancelled.length > 0
+      ? `<div class="req-cancelled-toggle" id="reqCancelledToggle">
+           <a href="#" onclick="toggleCancelledRows(event)">
+             Show ${cancelled.length} cancelled request${cancelled.length > 1 ? 's' : ''}
+           </a>
+         </div>`
+      : '';
     area.innerHTML = `<div class="portal-requests-table-wrap">
       <table class="portal-table" id="requestsTable">
         <thead><tr><th>#</th><th>Title</th><th>Type</th><th>Frequency</th><th>Priority</th><th>Due Time</th><th>Status</th><th>Handled By</th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
-    </div>`;
+    </div>${cancelledFooter}`;
   }
+
+  var _cancelledVisible = false;
+  window.toggleCancelledRows = function(e) {
+    e.preventDefault();
+    _cancelledVisible = !_cancelledVisible;
+    document.querySelectorAll('.req-row-cancelled').forEach(function(tr) {
+      tr.style.display = _cancelledVisible ? '' : 'none';
+    });
+    const link = document.querySelector('#reqCancelledToggle a');
+    if (link) {
+      const n = document.querySelectorAll('.req-row-cancelled').length;
+      link.textContent = _cancelledVisible
+        ? 'Hide cancelled requests'
+        : 'Show ' + n + ' cancelled request' + (n > 1 ? 's' : '');
+    }
+  };
 
   // ── Update stats bar ────────────────────────────────────
   function renderStats(stats) {
@@ -503,7 +536,7 @@ const isSalesUser = user.role_name === 'CLIENT_SALES';
   }
 
   // ── Load instances from API (live update) ───────────────
-  async function loadInstances(date) {
+  async function loadInstances(date, autoOpenId) {
     try {
       const r = await fetch('/portal/requests/instances?date=' + date, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
       const data = await r.json();
@@ -511,6 +544,7 @@ const isSalesUser = user.role_name === 'CLIENT_SALES';
         renderInstances(data.data.instances);
         renderStats(data.data.stats);
         updateBadge();
+        if (autoOpenId) openReqDetail(autoOpenId);
       }
     } catch (err) { console.error('loadInstances error', err); }
   }
@@ -534,6 +568,7 @@ const isSalesUser = user.role_name === 'CLIENT_SALES';
   const _initInstances = <%- JSON.stringify(instances) %>;
   const _initStats     = <%- JSON.stringify(stats) %>;
   renderInstances(_initInstances);
+  if (_hashOpen) openReqDetail(_hashOpen);
 
   // ── Create request ──────────────────────────────────────
   window.showCreateRequestModal = function() {
@@ -755,20 +790,27 @@ const isSalesUser = user.role_name === 'CLIENT_SALES';
   });
 
   // ── Detail modal ────────────────────────────────────────
-  document.addEventListener('click', async function(e) {
-    const link = e.target.closest('.portal-req-detail-link');
-    if (!link) return;
-    e.preventDefault();
-    const id = link.dataset.id;
+  const _detailModalEl = document.getElementById('reqDetailModal');
+  _detailModalEl.addEventListener('hidden.bs.modal', function() { _openDetailId = null; });
+
+  async function openReqDetail(id) {
+    _openDetailId = parseInt(id);
     document.getElementById('reqDetailTitle').textContent = 'Loading...';
     document.getElementById('reqDetailBody').innerHTML = '<div class="text-center py-4"><div class="spinner-border spinner-border-sm"></div></div>';
-    new bootstrap.Modal(document.getElementById('reqDetailModal')).show();
+    bootstrap.Modal.getOrCreateInstance(_detailModalEl).show();
     try {
       const r = await fetch('/portal/requests/instances/' + id, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
       const data = await r.json();
       if (!data.success) { document.getElementById('reqDetailBody').innerHTML = '<p class="text-danger">Failed to load</p>'; return; }
       renderReqDetail(data.data);
     } catch { document.getElementById('reqDetailBody').innerHTML = '<p class="text-danger">Error</p>'; }
+  }
+
+  document.addEventListener('click', function(e) {
+    const link = e.target.closest('.portal-req-detail-link');
+    if (!link) return;
+    e.preventDefault();
+    openReqDetail(link.dataset.id);
   });
 
   // Row click → detail (but not if clicking a button or the detail link itself)
@@ -815,8 +857,8 @@ const isSalesUser = user.role_name === 'CLIENT_SALES';
       history.forEach(h => { html += `<li class="list-group-item px-0 py-1 small"><span class="text-muted">${new Date(h.released_at).toLocaleString()}</span> — returned by <strong>${escHtml(h.released_by_name)}</strong>${h.reason ? ': ' + escHtml(h.reason) : ''}</li>`; });
       html += `</ul></div>`;
     }
-    html += `<hr><div class="mb-2 small fw-semibold">Comments</div>`;
-    if (comments.length === 0) html += `<p class="text-muted small">No comments yet.</p>`;
+    html += `<hr><div class="mb-2 small fw-semibold">Comments</div><div id="reqCommentsList">`;
+    if (comments.length === 0) html += `<p class="text-muted small" id="reqNoComments">No comments yet.</p>`;
     comments.forEach(c => {
       const isClient = c.role_name && c.role_name.startsWith('CLIENT');
       html += `<div class="d-flex gap-2 mb-2">
@@ -825,7 +867,7 @@ const isSalesUser = user.role_name === 'CLIENT_SALES';
         <div class="small" style="white-space:pre-wrap">${escHtml(c.body)}</div></div>
       </div>`;
     });
-    html += `<div class="mt-2 d-flex gap-2">
+    html += `</div><div class="mt-2 d-flex gap-2">
       <textarea class="form-control form-control-sm flex-grow-1" id="reqCommentInput" rows="2" placeholder="Add a comment..."></textarea>
       <button class="btn btn-sm btn-primary align-self-end" onclick="submitReqComment(${inst.id})">Send</button>
     </div>`;
@@ -871,6 +913,24 @@ const isSalesUser = user.role_name === 'CLIENT_SALES';
       else alert(data.message || 'Failed');
     } catch {}
   });
+
+  // ── Live comment callback (called by layout socket handler) ────────
+  window.portalReqOnComment = function(data) {
+    if (_openDetailId !== data.instance_id) return false;
+    const list = document.getElementById('reqCommentsList');
+    if (!list) return false;
+    const noMsg = document.getElementById('reqNoComments');
+    if (noMsg) noMsg.remove();
+    const isClient = data.commenter_role && data.commenter_role.startsWith('CLIENT');
+    const node = document.createElement('div');
+    node.className = 'd-flex gap-2 mb-2';
+    node.innerHTML = `<div class="flex-shrink-0 rounded-circle d-flex align-items-center justify-content-center text-white small fw-bold" style="width:32px;height:32px;background:${isClient?'#0d6efd':'#198754'}">${escHtml(data.commenter_name[0])}</div>
+      <div><div class="small fw-semibold">${escHtml(data.commenter_name)} <span class="text-muted fw-normal">just now</span></div>
+      <div class="small" style="white-space:pre-wrap">${escHtml(data.body)}</div></div>`;
+    list.appendChild(node);
+    list.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    return true;
+  };
 
   // ── Socket.IO: live update without full reload ──────────
   if (typeof io !== 'undefined') {

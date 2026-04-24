@@ -1319,6 +1319,43 @@
       }
     });
 
+    function _playReqCommentSound() {
+      try {
+        var ctx = new (window.AudioContext || window.webkitAudioContext)();
+        [[880, 0, 0.13], [1108, 0.11, 0.16]].forEach(function(p) {
+          var osc = ctx.createOscillator(), g = ctx.createGain();
+          osc.type = 'sine'; osc.frequency.value = p[0];
+          osc.connect(g); g.connect(ctx.destination);
+          g.gain.setValueAtTime(0, ctx.currentTime + p[1]);
+          g.gain.linearRampToValueAtTime(0.25, ctx.currentTime + p[1] + 0.01);
+          g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + p[1] + p[2]);
+          osc.start(ctx.currentTime + p[1]);
+          osc.stop(ctx.currentTime + p[1] + p[2] + 0.01);
+        });
+      } catch(e) {}
+    }
+
+    portalSocket.on('request:comment', function(data) {
+      // If the requests page has the modal open for this instance, append live
+      var handled = typeof window.portalReqOnComment === 'function' && window.portalReqOnComment(data);
+      _playReqCommentSound();
+      var preview = data.body.length > 60 ? data.body.substring(0, 60) + '…' : data.body;
+      var date = data.instance_date ? String(data.instance_date).split('T')[0] : '';
+      var href = '/portal/requests' + (date ? '?date=' + date : '') + '#open=' + data.instance_id;
+      showPortalToast({
+        title: data.title,
+        customText: data.commenter_name + ': ' + preview,
+        customIcon: 'bi-chat-left-text-fill',
+        priority: 'normal',
+        // If modal already handled it (live append), toast click just scrolls comments into view
+        href: handled ? null : href,
+        onClickOverride: handled ? function() {
+          var list = document.getElementById('reqCommentsList');
+          if (list) list.scrollIntoView({ behavior: 'smooth', block: 'end' });
+        } : null
+      });
+    });
+
     // On page load — check if there's an active urgent chat
     // ── Urgent History ─────────────────────────────────────
     var _urgentHistoryModalInst = null;

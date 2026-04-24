@@ -5102,34 +5102,111 @@ callSocket.on('call:busy', function() {
 
   function fetchQueueBadge() {
     $.get('/queue/badge', function(res) {
-      if (res && res.success) setQueueBadge(res.data.count || 0);
+      if (res && res.success) {
+        var n = res.data.count || 0;
+        setQueueBadge(n);
+        if (n === 0) stopBell();
+      }
     });
   }
 
-  function playQueueAlert() {
-    if (_onQueuePage) return;
+  // ── persistent AudioContext bell ──────────────────────────────────────────
+  var _ctx          = null;
+  var _unlocked     = false;
+  var _pending      = false;
+  var _bellActive   = false;
+  var _bellInterval = null;
+  var _titleInterval = null;
+  var _origTitle    = document.title;
+
+  function unlockAudio() {
+    if (_unlocked) return;
     try {
-      var ctx = new (window.AudioContext || window.webkitAudioContext)();
-      var now = ctx.currentTime;
-      [523, 659, 784].forEach(function(freq, i) {
-        var o = ctx.createOscillator(), g = ctx.createGain();
-        o.type = 'triangle'; o.frequency.value = freq;
-        o.connect(g); g.connect(ctx.destination);
-        var t = now + i * 0.1;
-        g.gain.setValueAtTime(0, t);
-        g.gain.linearRampToValueAtTime(0.15, t + 0.03);
-        g.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
-        o.start(t); o.stop(t + 0.3);
+      if (!_ctx) _ctx = new (window.AudioContext || window.webkitAudioContext)();
+      var p = _ctx.resume();
+      if (p && p.then) {
+        p.then(function() {
+          var buf = _ctx.createBuffer(1, 1, 22050);
+          var src = _ctx.createBufferSource();
+          src.buffer = buf; src.connect(_ctx.destination); src.start(0);
+          _unlocked = true;
+          if (_pending) { _pending = false; playBell(); }
+        }).catch(function(){});
+      }
+    } catch(e) {}
+  }
+
+  document.addEventListener('click',   unlockAudio, { once: false });
+  document.addEventListener('keydown', unlockAudio, { once: false });
+
+  function playBell() {
+    if (!_ctx || _ctx.state !== 'running') { _pending = true; return; }
+    try {
+      var now = _ctx.currentTime;
+      [[659, 0.20], [1318, 0.10], [1975, 0.05]].forEach(function(p) {
+        var osc = _ctx.createOscillator(), g = _ctx.createGain();
+        osc.type = 'sine'; osc.frequency.value = p[0];
+        osc.connect(g); g.connect(_ctx.destination);
+        g.gain.setValueAtTime(p[1], now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 2.0);
+        osc.start(now); osc.stop(now + 2.1);
       });
     } catch(e) {}
   }
+
+  function startTitleBlink() {
+    if (_titleInterval) return;
+    _origTitle = document.title;
+    var show = true;
+    _titleInterval = setInterval(function() {
+      document.title = show ? '(!) New Request' : _origTitle;
+      show = !show;
+    }, 1000);
+  }
+
+  function stopTitleBlink() {
+    if (_titleInterval) { clearInterval(_titleInterval); _titleInterval = null; }
+    document.title = _origTitle;
+  }
+
+  function startBell() {
+    if (_bellActive) return;
+    _bellActive = true;
+    unlockAudio();
+    startTitleBlink();
+    playBell();
+    _bellInterval = setInterval(function() {
+      if (!_bellActive) { clearInterval(_bellInterval); _bellInterval = null; return; }
+      playBell();
+    }, 4000);
+  }
+
+  function stopBell() {
+    _bellActive = false;
+    _pending    = false;
+    if (_bellInterval) { clearInterval(_bellInterval); _bellInterval = null; }
+    stopTitleBlink();
+  }
+
+  document.addEventListener('visibilitychange', function() {
+    if (!document.hidden && _onQueuePage) stopBell();
+  });
+  window.addEventListener('focus', function() {
+    if (_onQueuePage) stopBell();
+  });
+
+  if (_onQueuePage) stopBell();
+  // ─────────────────────────────────────────────────────────────────────────
 
   fetchQueueBadge();
 
   var _qSock = typeof io !== 'undefined' ? io('/', { withCredentials: true }) : null;
   if (_qSock) {
-    _qSock.on('queue:new_request', function() { playQueueAlert(); fetchQueueBadge(); });
-    _qSock.on('queue:updated',     function() { fetchQueueBadge(); });
+    _qSock.on('queue:new_request', function() {
+      fetchQueueBadge();
+      if (!_onQueuePage) startBell();
+    });
+    _qSock.on('queue:updated', function() { fetchQueueBadge(); });
   }
 })();
 </script>

@@ -1533,7 +1533,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // ── UTILS ──────────────────────────────────────────────────
 
-function showPortalToast({ title, sender, priority, taskId, customText, customIcon }) {
+function showPortalToast({ title, sender, priority, taskId, customText, customIcon, href, onClickOverride }) {
   const container = document.getElementById('portalToastContainer');
   if (!container) return;
 
@@ -1555,9 +1555,13 @@ function showPortalToast({ title, sender, priority, taskId, customText, customIc
     <button class="toast-close" onclick="event.stopPropagation(); this.parentElement.classList.add('removing'); setTimeout(() => this.parentElement.remove(), 250);">&times;</button>
   `;
 
-  // Click toast to navigate to task
+  // Click toast to navigate
   toast.addEventListener('click', () => {
-    if (window.location.pathname !== '/portal/tasks') {
+    if (onClickOverride) {
+      onClickOverride();
+    } else if (href) {
+      window.location.href = href;
+    } else if (window.location.pathname !== '/portal/tasks') {
       window.location.href = '/portal/tasks';
     } else if (taskId) {
       openTask(taskId);

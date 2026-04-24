@@ -91,10 +91,11 @@ class ClientRequest {
        LEFT JOIN users completer ON cri.completed_by = completer.id
        LEFT JOIN users defaultAssignee ON cr.assigned_to = defaultAssignee.id
        WHERE (cri.instance_date = ? ${carryForward}) AND cr.is_active = 1
+         AND cri.status != 'cancelled'
        ORDER BY
          CASE WHEN cri.status IN ('open','picked') AND cri.instance_date < CURDATE() THEN 0 ELSE 1 END ASC,
          CASE cri.status WHEN 'open' THEN 0 WHEN 'picked' THEN 1 WHEN 'done' THEN 2
-                         WHEN 'missed' THEN 3 WHEN 'cancelled' THEN 4 END ASC,
+                         WHEN 'missed' THEN 3 END ASC,
          FIELD(cr.priority, 'urgent', 'high', 'normal') ASC,
          cr.due_time ASC`,
       queryParams
@@ -208,6 +209,17 @@ class ClientRequest {
       [result.insertId]
     );
     return comment;
+  }
+
+  static async getInstanceContext(instanceId) {
+    const [[row]] = await db.query(
+      `SELECT cri.id, cri.picked_by, cri.instance_date, cr.title, cr.created_by, cr.org_id
+       FROM client_request_instances cri
+       JOIN client_requests cr ON cri.request_id = cr.id
+       WHERE cri.id = ?`,
+      [instanceId]
+    );
+    return row || null;
   }
 
   // Stats summary for a date (used by both sides)
