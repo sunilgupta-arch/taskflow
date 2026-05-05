@@ -896,39 +896,88 @@
       </a>
 
       <div class="adm-nav-divider"></div>
-      <div class="adm-nav-label">Sections</div>
 
-      <a href="/admin/work" data-s="work"
-         class="adm-nav-link <%= section === 'work' ? 'active' : '' %>">
-        <div class="adm-nav-icon"><i class="bi bi-kanban"></i></div>
-        <span>Work</span>
-      </a>
+      <% if (user.role_name === 'LOCAL_USER') { %>
+        <div class="adm-nav-label">My Work</div>
 
-      <a href="/admin/team" data-s="team"
-         class="adm-nav-link <%= section === 'team' ? 'active' : '' %>">
-        <div class="adm-nav-icon"><i class="bi bi-people-fill"></i></div>
-        <span>Team</span>
-      </a>
+        <a href="/admin/my-tasks" data-s="my-tasks"
+           class="adm-nav-link <%= section === 'my-tasks' ? 'active' : '' %>">
+          <div class="adm-nav-icon"><i class="bi bi-person-check-fill"></i></div>
+          <span>My Tasks</span>
+        </a>
 
+        <a href="/admin/queue" data-s="queue"
+           class="adm-nav-link <%= section === 'queue' ? 'active' : '' %>">
+          <div class="adm-nav-icon"><i class="bi bi-list-task"></i></div>
+          <span>Client Queue</span>
+        </a>
 
+        <a href="/admin/leaves" data-s="leaves"
+           class="adm-nav-link <%= section === 'leaves' ? 'active' : '' %>">
+          <div class="adm-nav-icon"><i class="bi bi-calendar-check-fill"></i></div>
+          <span>Leaves</span>
+        </a>
 
-      <a href="/admin/reports" data-s="reports"
-         class="adm-nav-link <%= section === 'reports' ? 'active' : '' %>">
-        <div class="adm-nav-icon"><i class="bi bi-bar-chart-fill"></i></div>
-        <span>Reports</span>
-      </a>
+        <div class="adm-nav-divider"></div>
+        <div class="adm-nav-label">Communicate</div>
 
-      <a href="/admin/comms" data-s="comms"
-         class="adm-nav-link <%= section === 'comms' ? 'active' : '' %>">
-        <div class="adm-nav-icon"><i class="bi bi-chat-dots-fill"></i></div>
-        <span>Communications</span>
-      </a>
+        <a href="/admin/comms" data-s="comms"
+           class="adm-nav-link <%= section === 'comms' ? 'active' : '' %>">
+          <div class="adm-nav-icon"><i class="bi bi-chat-dots-fill"></i></div>
+          <span>Communications</span>
+        </a>
 
-      <a href="/admin/tools" data-s="tools"
-         class="adm-nav-link <%= section === 'tools' ? 'active' : '' %>">
-        <div class="adm-nav-icon"><i class="bi bi-tools"></i></div>
-        <span>Tools</span>
-      </a>
+        <a href="/admin/infoboard" data-s="infoboard"
+           class="adm-nav-link <%= section === 'infoboard' ? 'active' : '' %>">
+          <div class="adm-nav-icon"><i class="bi bi-pin-angle-fill"></i></div>
+          <span>Info Board</span>
+        </a>
+
+        <a href="/admin/notes" data-s="notes"
+           class="adm-nav-link <%= section === 'notes' ? 'active' : '' %>">
+          <div class="adm-nav-icon"><i class="bi bi-journal-text"></i></div>
+          <span>Notes</span>
+        </a>
+
+        <a href="/admin/helpcenter" data-s="helpcenter"
+           class="adm-nav-link <%= section === 'helpcenter' ? 'active' : '' %>">
+          <div class="adm-nav-icon"><i class="bi bi-question-circle-fill"></i></div>
+          <span>Help</span>
+        </a>
+
+      <% } else { %>
+        <div class="adm-nav-label">Sections</div>
+
+        <a href="/admin/work" data-s="work"
+           class="adm-nav-link <%= section === 'work' ? 'active' : '' %>">
+          <div class="adm-nav-icon"><i class="bi bi-kanban"></i></div>
+          <span>Work</span>
+        </a>
+
+        <a href="/admin/team" data-s="team"
+           class="adm-nav-link <%= section === 'team' ? 'active' : '' %>">
+          <div class="adm-nav-icon"><i class="bi bi-people-fill"></i></div>
+          <span>Team</span>
+        </a>
+
+        <a href="/admin/reports" data-s="reports"
+           class="adm-nav-link <%= section === 'reports' ? 'active' : '' %>">
+          <div class="adm-nav-icon"><i class="bi bi-bar-chart-fill"></i></div>
+          <span>Reports</span>
+        </a>
+
+        <a href="/admin/comms" data-s="comms"
+           class="adm-nav-link <%= section === 'comms' ? 'active' : '' %>">
+          <div class="adm-nav-icon"><i class="bi bi-chat-dots-fill"></i></div>
+          <span>Communications</span>
+        </a>
+
+        <a href="/admin/tools" data-s="tools"
+           class="adm-nav-link <%= section === 'tools' ? 'active' : '' %>">
+          <div class="adm-nav-icon"><i class="bi bi-tools"></i></div>
+          <span>Tools</span>
+        </a>
+      <% } %>
     </nav>
 
     <div class="adm-sidebar-footer">

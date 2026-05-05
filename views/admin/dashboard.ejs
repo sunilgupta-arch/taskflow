@@ -25,6 +25,46 @@
 
 <div class="adm-section-cards">
 
+<% if (user.role_name === 'LOCAL_USER') { %>
+
+  <a href="/admin/my-tasks" class="adm-section-card" style="--card-accent:#3b82f6;--card-rgb:59,130,246">
+    <div class="adm-section-card-icon"><i class="bi bi-person-check-fill"></i></div>
+    <div>
+      <div class="adm-section-card-title">My Tasks</div>
+      <div class="adm-section-card-desc">View and manage tasks assigned to you, start sessions and mark complete</div>
+    </div>
+    <i class="bi bi-chevron-right adm-section-card-arrow"></i>
+  </a>
+
+  <a href="/admin/queue" class="adm-section-card" style="--card-accent:#00d4ff;--card-rgb:0,212,255">
+    <div class="adm-section-card-icon"><i class="bi bi-list-task"></i></div>
+    <div>
+      <div class="adm-section-card-title">Client Queue</div>
+      <div class="adm-section-card-desc">Today's client requests waiting to be picked up and completed</div>
+    </div>
+    <i class="bi bi-chevron-right adm-section-card-arrow"></i>
+  </a>
+
+  <a href="/admin/comms" class="adm-section-card" style="--card-accent:#10b981;--card-rgb:16,185,129">
+    <div class="adm-section-card-icon"><i class="bi bi-chat-dots-fill"></i></div>
+    <div>
+      <div class="adm-section-card-title">Communications</div>
+      <div class="adm-section-card-desc">Group channel, direct chat, info board and team notes</div>
+    </div>
+    <i class="bi bi-chevron-right adm-section-card-arrow"></i>
+  </a>
+
+  <a href="/admin/leaves" class="adm-section-card" style="--card-accent:#8b5cf6;--card-rgb:139,92,246">
+    <div class="adm-section-card-icon"><i class="bi bi-calendar-check-fill"></i></div>
+    <div>
+      <div class="adm-section-card-title">Leaves</div>
+      <div class="adm-section-card-desc">Apply for leave and view the status of your requests</div>
+    </div>
+    <i class="bi bi-chevron-right adm-section-card-arrow"></i>
+  </a>
+
+<% } else { %>
+
   <a href="/admin/work" class="adm-section-card" style="--card-accent:#3b82f6;--card-rgb:59,130,246">
     <div class="adm-section-card-icon"><i class="bi bi-kanban"></i></div>
     <div>
@@ -69,5 +109,7 @@
     </div>
     <i class="bi bi-chevron-right adm-section-card-arrow"></i>
   </a>
+
+<% } %>
 
 </div>

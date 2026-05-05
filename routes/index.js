@@ -173,13 +173,23 @@ router.get('/channel/search', authenticate, GroupChannelController.search);
 router.get('/channel/unfurl', authenticate, GroupChannelController.unfurl);
 router.get('/channel/attachment/:messageId', authenticate, GroupChannelController.serveAttachment);
 
-// ── Admin Hub (new clean UI for LOCAL_ADMIN / LOCAL_MANAGER) ─
+// ── Admin Hub (new clean UI for LOCAL_ADMIN / LOCAL_MANAGER / LOCAL_USER) ─
 const AdminHubController = require('../controllers/adminHubController');
 const requireLocalAdmin = requireRoles('LOCAL_ADMIN', 'LOCAL_MANAGER');
-router.get('/admin',                    authenticate, requireLocalAdmin, AdminHubController.dashboard);
-router.get('/admin/queue',              authenticate, requireLocalAdmin, AdminHubController.queue);
-router.get('/admin/my-tasks',           authenticate, requireLocalAdmin, AdminHubController.myTasks);
-router.get('/admin/my-tasks/data',      authenticate, requireLocalAdmin, AdminHubController.myTasksData);
+const requireLocalAll   = requireRoles('LOCAL_ADMIN', 'LOCAL_MANAGER', 'LOCAL_USER');
+// Pages all local roles can access
+router.get('/admin',                    authenticate, requireLocalAll,   AdminHubController.dashboard);
+router.get('/admin/my-tasks',           authenticate, requireLocalAll,   AdminHubController.myTasks);
+router.get('/admin/my-tasks/data',      authenticate, requireLocalAll,   AdminHubController.myTasksData);
+router.get('/admin/queue',              authenticate, requireLocalAll,   AdminHubController.queue);
+router.get('/admin/comms',              authenticate, requireLocalAll,   AdminHubController.comms);
+router.get('/admin/chat',               authenticate, requireLocalAll,   AdminHubController.chat);
+router.get('/admin/channel',            authenticate, requireLocalAll,   AdminHubController.channel);
+router.get('/admin/infoboard',          authenticate, requireLocalAll,   AdminHubController.infoboard);
+router.get('/admin/notes',              authenticate, requireLocalAll,   AdminHubController.notes);
+router.get('/admin/leaves',             authenticate, requireLocalAll,   AdminHubController.leaves);
+router.get('/admin/helpcenter',         authenticate, requireLocalAll,   AdminHubController.helpcenter);
+// Pages admin/manager only
 router.get('/admin/all-tasks',          authenticate, requireLocalAdmin, AdminHubController.allTasks);
 router.get('/admin/taskboard',          authenticate, requireLocalAdmin, AdminHubController.taskboard);
 router.get('/admin/taskboard/data',     authenticate, requireLocalAdmin, AdminHubController.taskboardData);
@@ -188,20 +198,13 @@ router.get('/admin/team',               authenticate, requireLocalAdmin, AdminHu
 router.get('/admin/live-status',        authenticate, requireLocalAdmin, AdminHubController.liveStatus);
 router.get('/admin/live-status/data',   authenticate, requireLocalAdmin, AdminHubController.liveStatusData);
 router.get('/admin/users',              authenticate, requireLocalAdmin, AdminHubController.users);
-router.get('/admin/leaves',             authenticate, requireLocalAdmin, AdminHubController.leaves);
 router.get('/admin/attendance',         authenticate, requireLocalAdmin, AdminHubController.attendance);
 router.get('/admin/attendance/data',    authenticate, requireLocalAdmin, AdminHubController.attendanceDailyData);
 router.get('/admin/attendance/monthly', authenticate, requireLocalAdmin, AdminHubController.attendanceMonthlyData);
 router.get('/admin/reports',            authenticate, requireLocalAdmin, AdminHubController.reports);
 router.get('/admin/task-completion',    authenticate, requireLocalAdmin, AdminHubController.taskCompletion);
-router.get('/admin/comms',              authenticate, requireLocalAdmin, AdminHubController.comms);
-router.get('/admin/chat',               authenticate, requireLocalAdmin, AdminHubController.chat);
-router.get('/admin/channel',            authenticate, requireLocalAdmin, AdminHubController.channel);
-router.get('/admin/infoboard',          authenticate, requireLocalAdmin, AdminHubController.infoboard);
-router.get('/admin/notes',              authenticate, requireLocalAdmin, AdminHubController.notes);
 router.get('/admin/tools',              authenticate, requireLocalAdmin, AdminHubController.tools);
 router.get('/admin/drive',              authenticate, requireLocalAdmin, AdminHubController.drive);
-router.get('/admin/helpcenter',         authenticate, requireLocalAdmin, AdminHubController.helpcenter);
 router.get('/admin/backup',             authenticate, requireLocalAdmin, AdminHubController.backup);
 
 // ── Client Queue (local team works client-dispatched tasks) ─

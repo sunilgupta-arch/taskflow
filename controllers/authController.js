@@ -6,7 +6,7 @@ const ShiftHistory = require('../models/ShiftHistory');
 
 class AuthController {
   static showLogin(req, res) {
-    if (req.cookies?.token) return res.redirect('/tasks');
+    if (req.cookies?.token) return res.redirect('/admin');
     res.render('auth/login', { title: 'Login - TaskFlow', layout: false });
   }
 
@@ -26,14 +26,12 @@ class AuthController {
         maxAge: 12 * 60 * 60 * 1000 // 12 hours
       });
 
-      // Client roles go to portal; LOCAL_USER goes to tasks list; local admins/managers go to task board
+      // Client roles go to portal; all local roles go to new admin hub
       let redirectUrl;
       if (user.role_name.startsWith('CLIENT_')) {
         redirectUrl = '/portal';
-      } else if (user.role_name === 'LOCAL_USER') {
-        redirectUrl = '/tasks';
       } else {
-        redirectUrl = '/tasks/board';
+        redirectUrl = '/admin';
       }
       return ApiResponse.success(res, { user, redirectUrl }, 'Login successful');
     } catch (err) {
