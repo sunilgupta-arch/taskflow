@@ -1037,6 +1037,7 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.6.2/axios.min.js"></script>
 <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
 <script>
   // Clock
@@ -1576,6 +1577,20 @@
       _admPlayCommentSound();
       if (typeof window.admqOnComment === 'function') window.admqOnComment(data);
     });
+  }
+
+  var _typeAccent = { success: '#22c55e', error: '#ef4444', warning: '#f59e0b', info: 'var(--adm-accent)' };
+  function showToast(message, type, duration) {
+    var c = document.getElementById('_admToastContainer');
+    if (!c) return;
+    var accent = _typeAccent[type] || _typeAccent.info;
+    var t = document.createElement('div');
+    t.className = 'adm-toast';
+    t.style.borderTopColor = accent;
+    t.innerHTML = '<div class="adm-toast-body" style="flex:1"><div class="adm-toast-text" style="color:var(--adm-text);font-size:0.8rem">' + _admEsc(message) + '</div></div>'
+      + '<button class="adm-toast-close" onclick="this.parentElement.remove()">&times;</button>';
+    c.appendChild(t);
+    setTimeout(function() { if (t.parentElement) t.remove(); }, duration || 4000);
   }
 
   function _admPlayCommentSound() {

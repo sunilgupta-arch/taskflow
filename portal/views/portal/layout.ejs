@@ -1476,6 +1476,48 @@
   var _gcUnread = 0;
   var _gcBaseUrl = '/portal/channel';
 
+  // ── Chat audio — persistent context ────────────────────
+  var _gcAudioCtx      = null;
+  var _gcAudioUnlocked = false;
+  var _gcAudioPending  = false;
+  var _gcTitleInterval = null;
+  var _gcOrigTitle     = document.title;
+
+  function _gcUnlockAudio() {
+    if (_gcAudioUnlocked) return;
+    try {
+      if (!_gcAudioCtx) _gcAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      var p = _gcAudioCtx.resume();
+      if (p && p.then) p.then(function() {
+        var buf = _gcAudioCtx.createBuffer(1, 1, 22050);
+        var src = _gcAudioCtx.createBufferSource();
+        src.buffer = buf; src.connect(_gcAudioCtx.destination); src.start(0);
+        _gcAudioUnlocked = true;
+        if (_gcAudioPending) { _gcAudioPending = false; playGcAlert(); }
+      }).catch(function(){});
+    } catch(e) {}
+  }
+  document.addEventListener('click',   _gcUnlockAudio, { once: false });
+  document.addEventListener('keydown', _gcUnlockAudio, { once: false });
+
+  function _gcStartTitleBlink() {
+    if (_gcTitleInterval) return;
+    _gcOrigTitle = document.title;
+    var show = true;
+    _gcTitleInterval = setInterval(function() {
+      document.title = show ? '(!) New Message' : _gcOrigTitle;
+      show = !show;
+    }, 1000);
+  }
+  function _gcStopTitleBlink() {
+    if (_gcTitleInterval) { clearInterval(_gcTitleInterval); _gcTitleInterval = null; }
+    document.title = _gcOrigTitle;
+  }
+  document.addEventListener('visibilitychange', function() {
+    if (!document.hidden && !_gcCollapsed) _gcStopTitleBlink();
+  });
+  // ───────────────────────────────────────────────────────
+
   // ── Unread tracking + scroll-to-bottom ──────────
   var _gcLastReadKey = 'gc-last-read-' + _gcUserId;
   function _gcGetLastRead() { return parseInt(localStorage.getItem(_gcLastReadKey) || '0', 10); }
@@ -1987,6 +2029,7 @@
     document.querySelector('.portal-main').classList.toggle('gc-collapsed', _gcCollapsed);
     if (!_gcCollapsed) {
       _gcUnread = 0;
+      _gcStopTitleBlink();
       var badge = document.getElementById('gcHandleBadge');
       badge.style.display = 'none';
       loadGcMessages();
@@ -2255,25 +2298,28 @@
 
   // Socket: real-time messages
   function playGcAlert() {
+    if (!_gcAudioCtx || _gcAudioCtx.state !== 'running') { _gcAudioPending = true; return; }
     try {
-      var ctx = new (window.AudioContext || window.webkitAudioContext)();
-      var now = ctx.currentTime;
+      var now = _gcAudioCtx.currentTime;
       [784, 1046].forEach(function(freq, i) {
-        var o = ctx.createOscillator(); var g = ctx.createGain();
+        var o = _gcAudioCtx.createOscillator(), g = _gcAudioCtx.createGain();
         o.type = 'sine'; o.frequency.value = freq;
-        o.connect(g); g.connect(ctx.destination);
+        o.connect(g); g.connect(_gcAudioCtx.destination);
         var t = now + i * 0.08;
         g.gain.setValueAtTime(0, t);
         g.gain.linearRampToValueAtTime(0.12, t + 0.02);
         g.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
         o.start(t); o.stop(t + 0.25);
       });
-    } catch (e) {}
+    } catch(e) {}
   }
 
   mainSocket.on('channel:message', function(msg) {
     var isFromOther = msg.sender_id !== _gcUserId;
-    if (isFromOther) playGcAlert();
+    if (isFromOther) {
+      playGcAlert();
+      if (document.hidden || _gcCollapsed) _gcStartTitleBlink();
+    }
     _gcShowNotif(msg);
     if (_gcCollapsed) {
       if (isFromOther) {
