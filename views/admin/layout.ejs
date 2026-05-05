@@ -254,6 +254,48 @@
     .adm-footer-btn:hover { border-color: var(--adm-border-2); color: var(--adm-text); background: var(--adm-sidebar-2); }
     .adm-footer-btn i { font-size: 0.85rem; }
 
+    /* ── Change-password modal ────────────────────────────── */
+    .adm-cpwd-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.55);
+      z-index: 2000; display: none; align-items: center; justify-content: center;
+    }
+    .adm-cpwd-overlay.open { display: flex; }
+    .adm-cpwd-dialog {
+      background: var(--adm-surface); border: 1px solid var(--adm-border);
+      border-radius: 16px; width: 100%; max-width: 360px; padding: 24px;
+      display: flex; flex-direction: column; gap: 16px;
+    }
+    .adm-cpwd-title {
+      font-size: 0.9rem; font-weight: 700; color: var(--adm-text);
+      display: flex; align-items: center; gap: 8px; margin: 0;
+    }
+    .adm-cpwd-title i { color: var(--adm-accent); }
+    .adm-cpwd-field { display: flex; flex-direction: column; gap: 5px; }
+    .adm-cpwd-label { font-size: 0.7rem; font-family: var(--adm-mono); font-weight: 700; color: var(--adm-muted); text-transform: uppercase; letter-spacing: 0.4px; }
+    .adm-cpwd-input {
+      height: 38px; padding: 0 12px; border-radius: 9px;
+      border: 1px solid var(--adm-border); background: var(--adm-surface-2);
+      color: var(--adm-text); font-size: 0.85rem; font-family: var(--adm-font); width: 100%;
+    }
+    .adm-cpwd-input:focus { outline: none; border-color: var(--adm-accent); }
+    .adm-cpwd-msg { font-size: 0.78rem; text-align: center; min-height: 1em; }
+    .adm-cpwd-msg.ok  { color: #10b981; }
+    .adm-cpwd-msg.err { color: #ef4444; }
+    .adm-cpwd-actions { display: flex; gap: 8px; }
+    .adm-cpwd-cancel {
+      flex: 1; height: 36px; border-radius: 9px; border: 1px solid var(--adm-border);
+      background: transparent; color: var(--adm-muted); font-size: 0.8rem;
+      cursor: pointer; font-family: var(--adm-font);
+    }
+    .adm-cpwd-cancel:hover { color: var(--adm-text); border-color: var(--adm-border-2); }
+    .adm-cpwd-submit {
+      flex: 2; height: 36px; border-radius: 9px; border: none;
+      background: var(--adm-accent); color: #000; font-size: 0.8rem;
+      font-weight: 700; cursor: pointer; font-family: var(--adm-font);
+    }
+    .adm-cpwd-submit:hover { opacity: 0.88; }
+    .adm-cpwd-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+
     /* ── Main ─────────────────────────────────────────── */
     .adm-main {
       flex: 1;
@@ -554,6 +596,83 @@
       .adm-content { padding: 20px 16px; }
       .adm-cards { grid-template-columns: 1fr; }
       .adm-section-cards { grid-template-columns: 1fr; }
+    }
+
+    /* ── Notification bell ───────────────────────────── */
+    .adm-notif-btn {
+      position: relative; width: 34px; height: 34px; border-radius: 9px;
+      background: transparent; border: 1px solid var(--adm-border);
+      color: var(--adm-muted); cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.9rem; transition: all 0.15s; flex-shrink: 0;
+    }
+    .adm-notif-btn:hover { border-color: var(--adm-accent); color: var(--adm-accent); }
+    .adm-notif-btn.has-unread { border-color: #f59e0b; color: #f59e0b; }
+    .adm-notif-badge {
+      position: absolute; top: -5px; right: -5px;
+      background: #ef4444; color: #fff;
+      font-size: 0.58rem; font-weight: 700; font-family: var(--adm-mono);
+      min-width: 16px; height: 16px; padding: 0 4px;
+      border-radius: 8px; display: flex; align-items: center; justify-content: center;
+    }
+    .adm-notif-dropdown {
+      position: fixed; top: 56px; right: 12px;
+      width: 340px; max-width: calc(100vw - 24px);
+      background: var(--adm-surface); border: 1px solid var(--adm-border);
+      border-radius: 14px; box-shadow: 0 8px 32px rgba(0,0,0,0.35);
+      z-index: 900; display: none; flex-direction: column;
+      max-height: 420px; overflow: hidden;
+    }
+    .adm-notif-dropdown.open { display: flex; }
+    .adm-notif-dd-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 14px; border-bottom: 1px solid var(--adm-border); flex-shrink: 0;
+    }
+    .adm-notif-dd-title {
+      font-size: 0.75rem; font-weight: 700; font-family: var(--adm-mono);
+      color: var(--adm-text); text-transform: uppercase; letter-spacing: 0.4px;
+    }
+    .adm-notif-read-all {
+      font-size: 0.68rem; font-family: var(--adm-mono); color: var(--adm-accent);
+      background: none; border: none; cursor: pointer; padding: 0;
+    }
+    .adm-notif-read-all:hover { opacity: 0.75; }
+    .adm-notif-list { flex: 1; overflow-y: auto; }
+    .adm-notif-item {
+      display: flex; align-items: flex-start; gap: 10px;
+      padding: 11px 14px; border-bottom: 1px solid var(--adm-border);
+      cursor: pointer; transition: background 0.1s; text-decoration: none;
+    }
+    .adm-notif-item:last-child { border-bottom: none; }
+    .adm-notif-item:hover { background: var(--adm-surface-2); }
+    .adm-notif-item.unread { background: rgba(0,212,255,0.04); }
+    .adm-notif-icon {
+      width: 30px; height: 30px; border-radius: 8px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center; font-size: 0.82rem;
+    }
+    .adm-notif-icon.i-task     { background: rgba(59,130,246,0.12);  color: #3b82f6; }
+    .adm-notif-icon.i-leave    { background: rgba(16,185,129,0.12);  color: #10b981; }
+    .adm-notif-icon.i-default  { background: rgba(100,116,139,0.12); color: #94a3b8; }
+    .adm-notif-content { flex: 1; min-width: 0; }
+    .adm-notif-item-title {
+      font-size: 0.78rem; font-weight: 600; color: var(--adm-text);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .adm-notif-item-body {
+      font-size: 0.7rem; color: var(--adm-muted); margin-top: 1px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .adm-notif-item-time {
+      font-size: 0.62rem; font-family: var(--adm-mono); color: var(--adm-muted);
+      margin-top: 3px;
+    }
+    .adm-notif-unread-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--adm-accent); flex-shrink: 0; margin-top: 4px;
+    }
+    .adm-notif-empty {
+      text-align: center; color: var(--adm-muted);
+      font-size: 0.78rem; padding: 30px 16px;
     }
 
     /* ── Bridge Chat Slide-over ──────────────────────── */
@@ -918,6 +1037,18 @@
           <span>Leaves</span>
         </a>
 
+        <a href="/admin/my-attendance" data-s="my-attendance"
+           class="adm-nav-link <%= section === 'my-attendance' ? 'active' : '' %>">
+          <div class="adm-nav-icon"><i class="bi bi-clock-history"></i></div>
+          <span>My Attendance</span>
+        </a>
+
+        <a href="/admin/my-progress" data-s="my-progress"
+           class="adm-nav-link <%= section === 'my-progress' ? 'active' : '' %>">
+          <div class="adm-nav-icon"><i class="bi bi-graph-up-arrow"></i></div>
+          <span>My Progress</span>
+        </a>
+
         <div class="adm-nav-divider"></div>
         <div class="adm-nav-label">Communicate</div>
 
@@ -983,10 +1114,13 @@
     <div class="adm-sidebar-footer">
       <div class="adm-user-row">
         <div class="adm-user-avatar"><%= user.name.charAt(0).toUpperCase() %></div>
-        <div style="min-width:0">
+        <div style="min-width:0;flex:1">
           <span class="adm-user-name"><%= user.name %></span>
           <span class="adm-user-role"><%= user.role_name.replace('LOCAL_','') %></span>
         </div>
+        <button onclick="openAdmCpwd()" title="Change password" style="background:none;border:1px solid var(--adm-border);border-radius:7px;color:var(--adm-muted);cursor:pointer;padding:5px 7px;line-height:1;flex-shrink:0;transition:all 0.15s;" onmouseenter="this.style.borderColor='var(--adm-accent)';this.style.color='var(--adm-accent)'" onmouseleave="this.style.borderColor='var(--adm-border)';this.style.color='var(--adm-muted)'">
+          <i class="bi bi-key" style="font-size:0.85rem"></i>
+        </button>
       </div>
       <div class="adm-footer-btns">
         <a href="<%= user.role_name === 'LOCAL_USER' ? '/tasks' : '/tasks/board' %>" class="adm-footer-btn" title="Back to classic UI">
@@ -1009,6 +1143,10 @@
         <span>Queue</span>
         <span class="adm-queue-count" id="admQueueCount"></span>
       </a>
+      <button class="adm-notif-btn" id="admNotifBtn" onclick="toggleAdmNotif()" title="Notifications">
+        <i class="bi bi-bell-fill"></i>
+        <span class="adm-notif-badge" id="admNotifBadge" style="display:none"></span>
+      </button>
       <button class="adm-gc-btn" id="admGcBtn" onclick="toggleAdmGc()" title="Group Channel">
         <i class="bi bi-people-fill"></i>
         <span class="adm-gc-badge" id="admGcBadge" style="display:none"></span>
@@ -1025,6 +1163,17 @@
   </main>
 
 </div>
+<!-- Notification dropdown -->
+<div class="adm-notif-dropdown" id="admNotifDropdown">
+  <div class="adm-notif-dd-header">
+    <span class="adm-notif-dd-title"><i class="bi bi-bell" style="margin-right:6px"></i>Notifications</span>
+    <button class="adm-notif-read-all" onclick="admNotifReadAll()">Mark all read</button>
+  </div>
+  <div class="adm-notif-list" id="admNotifList">
+    <div class="adm-notif-empty">Loading…</div>
+  </div>
+</div>
+
 <!-- Bridge Chat Slide-over Drawer -->
 <div class="adm-bridge-overlay" id="admBridgeOverlay" onclick="closeAdmBridge()" style="display:none"></div>
 <div class="adm-bridge-drawer" id="admBridgeDrawer">
@@ -1678,6 +1827,196 @@
   function _admEsc(s) {
     return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
+</script>
+<!-- ── Notifications ──────────────────────────────────────────── -->
+<script>
+(function() {
+  var _notifOpen = false;
+  var _notifs    = [];
+
+  function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  function timeAgo(dateStr) {
+    var diff = Math.floor((Date.now() - new Date(dateStr)) / 1000);
+    if (diff < 60)   return 'just now';
+    if (diff < 3600) return Math.floor(diff/60) + 'm ago';
+    if (diff < 86400)return Math.floor(diff/3600) + 'h ago';
+    return Math.floor(diff/86400) + 'd ago';
+  }
+
+  function iconClass(type) {
+    if (type === 'task_assigned') return 'i-task bi-person-check-fill';
+    if (type === 'leave_approved' || type === 'leave_granted') return 'i-leave bi-calendar-check-fill';
+    return 'i-default bi-bell-fill';
+  }
+
+  function updateBadge(count) {
+    var badge = document.getElementById('admNotifBadge');
+    var btn   = document.getElementById('admNotifBtn');
+    if (count > 0) {
+      badge.textContent = count > 99 ? '99+' : count;
+      badge.style.display = 'flex';
+      btn.classList.add('has-unread');
+    } else {
+      badge.style.display = 'none';
+      btn.classList.remove('has-unread');
+    }
+  }
+
+  function renderList() {
+    var list = document.getElementById('admNotifList');
+    if (!_notifs.length) {
+      list.innerHTML = '<div class="adm-notif-empty"><i class="bi bi-bell-slash" style="font-size:1.5rem;opacity:0.3;display:block;margin-bottom:8px"></i>No notifications yet</div>';
+      return;
+    }
+    var html = '';
+    _notifs.forEach(function(n) {
+      var ic = iconClass(n.type).split(' ');
+      var linkAttr = n.link ? 'href="' + esc(n.link) + '"' : 'href="#"';
+      html += '<a ' + linkAttr + ' class="adm-notif-item' + (n.is_read ? '' : ' unread') + '" onclick="admNotifMarkRead(' + n.id + ',this,event)">' +
+        '<div class="adm-notif-icon ' + esc(ic[0]) + '"><i class="bi ' + esc(ic[1]) + '"></i></div>' +
+        '<div class="adm-notif-content">' +
+          '<div class="adm-notif-item-title">' + esc(n.title) + '</div>' +
+          '<div class="adm-notif-item-body">' + esc(n.body || '') + '</div>' +
+          '<div class="adm-notif-item-time">' + timeAgo(n.created_at) + '</div>' +
+        '</div>' +
+        (n.is_read ? '' : '<div class="adm-notif-unread-dot"></div>') +
+      '</a>';
+    });
+    list.innerHTML = html;
+  }
+
+  function loadNotifications() {
+    fetch('/notifications', { credentials: 'same-origin' })
+      .then(function(r){ return r.json(); })
+      .then(function(res) {
+        if (!res.success) return;
+        _notifs = res.data.notifications;
+        updateBadge(res.data.unreadCount);
+        renderList();
+      }).catch(function(){});
+  }
+
+  window.toggleAdmNotif = function() {
+    var dd = document.getElementById('admNotifDropdown');
+    _notifOpen = !_notifOpen;
+    dd.classList.toggle('open', _notifOpen);
+    if (_notifOpen) loadNotifications();
+  };
+
+  window.admNotifMarkRead = function(id, el, e) {
+    if (!el.getAttribute('href') || el.getAttribute('href') === '#') e.preventDefault();
+    var notif = _notifs.find(function(n){ return n.id === id; });
+    if (notif && !notif.is_read) {
+      notif.is_read = 1;
+      fetch('/notifications/' + id + '/read', { method: 'POST', credentials: 'same-origin' }).catch(function(){});
+      var unread = _notifs.filter(function(n){ return !n.is_read; }).length;
+      updateBadge(unread);
+      renderList();
+    }
+  };
+
+  window.admNotifReadAll = function() {
+    _notifs.forEach(function(n){ n.is_read = 1; });
+    updateBadge(0);
+    renderList();
+    fetch('/notifications/read-all', { method: 'POST', credentials: 'same-origin' }).catch(function(){});
+  };
+
+  /* Close dropdown when clicking outside */
+  document.addEventListener('click', function(e) {
+    if (!_notifOpen) return;
+    var btn = document.getElementById('admNotifBtn');
+    var dd  = document.getElementById('admNotifDropdown');
+    if (!btn.contains(e.target) && !dd.contains(e.target)) {
+      _notifOpen = false;
+      dd.classList.remove('open');
+    }
+  });
+
+  /* Socket listener for real-time notifications */
+  document.addEventListener('DOMContentLoaded', function() {
+    loadNotifications();
+    if (typeof io !== 'undefined') {
+      var sock = typeof admBdrSock !== 'undefined' ? admBdrSock : io('/', { withCredentials: true });
+      sock.on('notification:new', function(notif) {
+        _notifs.unshift(notif);
+        if (_notifs.length > 30) _notifs.pop();
+        var unread = _notifs.filter(function(n){ return !n.is_read; }).length;
+        updateBadge(unread);
+        if (_notifOpen) renderList();
+      });
+    }
+  });
+})();
+</script>
+
+<!-- ── Change password modal ──────────────────────────────────── -->
+<div class="adm-cpwd-overlay" id="admCpwdOverlay" onclick="if(event.target===this)closeAdmCpwd()">
+  <div class="adm-cpwd-dialog">
+    <p class="adm-cpwd-title"><i class="bi bi-key-fill"></i> Change Password</p>
+    <div class="adm-cpwd-field">
+      <label class="adm-cpwd-label">New Password</label>
+      <input type="password" class="adm-cpwd-input" id="admCpwdNew" placeholder="Min. 6 characters" autocomplete="new-password">
+    </div>
+    <div class="adm-cpwd-field">
+      <label class="adm-cpwd-label">Confirm Password</label>
+      <input type="password" class="adm-cpwd-input" id="admCpwdConfirm" placeholder="Repeat new password" autocomplete="new-password">
+    </div>
+    <div class="adm-cpwd-msg" id="admCpwdMsg"></div>
+    <div class="adm-cpwd-actions">
+      <button class="adm-cpwd-cancel" onclick="closeAdmCpwd()">Cancel</button>
+      <button class="adm-cpwd-submit" id="admCpwdSubmit" onclick="submitAdmCpwd()"><i class="bi bi-check-lg"></i> Update Password</button>
+    </div>
+  </div>
+</div>
+<script>
+(function() {
+  function msg(text, type) {
+    var el = document.getElementById('admCpwdMsg');
+    el.textContent = text; el.className = 'adm-cpwd-msg ' + (type || '');
+  }
+  window.openAdmCpwd = function() {
+    document.getElementById('admCpwdNew').value = '';
+    document.getElementById('admCpwdConfirm').value = '';
+    msg('');
+    document.getElementById('admCpwdSubmit').disabled = false;
+    document.getElementById('admCpwdOverlay').classList.add('open');
+    setTimeout(function(){ document.getElementById('admCpwdNew').focus(); }, 80);
+  };
+  window.closeAdmCpwd = function() {
+    document.getElementById('admCpwdOverlay').classList.remove('open');
+  };
+  window.submitAdmCpwd = function() {
+    var np = document.getElementById('admCpwdNew').value;
+    var cp = document.getElementById('admCpwdConfirm').value;
+    if (!np || !cp) { msg('Please fill in both fields.', 'err'); return; }
+    if (np.length < 6)  { msg('Password must be at least 6 characters.', 'err'); return; }
+    if (np !== cp)      { msg('Passwords do not match.', 'err'); return; }
+    var btn = document.getElementById('admCpwdSubmit');
+    btn.disabled = true; msg('Updating…');
+    fetch('/change-password', {
+      method: 'POST', credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ new_password: np, confirm_password: cp })
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(res) {
+      if (res.success) {
+        msg('Password updated successfully!', 'ok');
+        setTimeout(closeAdmCpwd, 1400);
+      } else {
+        btn.disabled = false;
+        msg(res.message || 'Failed to update password.', 'err');
+      }
+    })
+    .catch(function() { btn.disabled = false; msg('Network error. Try again.', 'err'); });
+  };
+  /* Enter key in confirm field submits */
+  document.getElementById('admCpwdConfirm').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') submitAdmCpwd();
+  });
+})();
 </script>
 <%- script %>
 </body>

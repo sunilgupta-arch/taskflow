@@ -7,6 +7,9 @@ const GoogleDriveService = require('../services/googleDriveService');
 const backupService = require('../services/backupService');
 const db = require('../config/db');
 const { getToday, getNow, getDayOfWeek, isScheduledForDate } = require('../utils/timezone');
+const ShiftHistory = require('../models/ShiftHistory');
+const TaskService  = require('../services/taskService');
+const RewardModel  = require('../models/Reward');
 
 class AdminHubController {
   static async dashboard(req, res) {
@@ -1019,6 +1022,208 @@ class AdminHubController {
     } catch (err) {
       console.error('AdminHub attendanceMonthlyData error:', err);
       return res.json({ success: false });
+    }
+  }
+  static async myProgress(req, res) {
+    try {
+      const userId = String(req.user.id);
+      const [[localOrg]] = await db.query("SELECT timezone FROM organizations WHERE org_type = 'LOCAL' LIMIT 1");
+      const tz = (localOrg && localOrg.timezone) || req.user.org_timezone || 'America/New_York';
+      const todayDate    = getToday(tz);
+      const selectedDate = req.query.date || todayDate;
+
+      const [taskStats, rewardSummary, activeTasks, recentAdhocCompleted, adhocDayTasks, recurringTasks] = await Promise.all([
+        TaskService.getTaskStats(userId, null, todayDate),
+        RewardModel.getUserSummary(userId),
+        db.query(
+          `SELECT t.id, t.title, t.type, t.due_date, u.name as created_by_name
+           FROM tasks t LEFT JOIN users u ON t.created_by = u.id
+           WHERE t.assigned_to = ? AND t.status = 'in_progress' AND t.is_deleted = 0
+           ORDER BY t.created_at DESC`, [userId]
+        ),
+        db.query(
+          `SELECT t.id, t.title, t.type, t.due_date, t.completed_at, u.name as created_by_name
+           FROM tasks t LEFT JOIN users u ON t.created_by = u.id
+           WHERE t.assigned_to = ? AND t.status = 'completed' AND t.type = 'once' AND t.is_deleted = 0
+           ORDER BY t.completed_at DESC LIMIT 10`, [userId]
+        ),
+        db.query(
+          `SELECT t.id, t.title, t.type, t.status, t.due_date, t.created_at, t.completed_at, u.name as created_by_name
+           FROM tasks t LEFT JOIN users u ON t.created_by = u.id
+           WHERE t.assigned_to = ? AND t.type = 'once' AND t.is_deleted = 0
+             AND (DATE(t.created_at) = ? OR DATE(t.completed_at) = ? OR DATE(t.due_date) = ?)
+           ORDER BY t.status DESC, t.created_at DESC`,
+          [userId, selectedDate, selectedDate, selectedDate]
+        ),
+        db.query(
+          `SELECT t.id, t.title, t.type, t.created_at, t.status, t.due_date,
+                  u.name as created_by_name,
+                  (tc.id IS NOT NULL AND tc.completed_at IS NOT NULL) as is_completed,
+                  (tc.id IS NOT NULL AND tc.started_at IS NOT NULL AND tc.completed_at IS NULL) as is_in_progress,
+                  tc.completed_at as completed_at, tc.started_at as started_at,
+                  tc.duration_minutes as duration_minutes
+           FROM tasks t
+           LEFT JOIN users u ON t.created_by = u.id
+           LEFT JOIN task_completions tc ON tc.task_id = t.id AND tc.user_id = t.assigned_to AND tc.completion_date = ?
+           WHERE t.assigned_to = ? AND t.type = 'recurring' AND t.status = 'active' AND t.is_deleted = 0
+             AND (
+               t.recurrence_pattern = 'daily'
+               OR (t.recurrence_pattern = 'weekly'  AND FIND_IN_SET(DAYOFWEEK(?) - 1, t.recurrence_days) > 0)
+               OR (t.recurrence_pattern = 'monthly' AND FIND_IN_SET(DAY(?), t.recurrence_days) > 0)
+             )
+             AND (t.recurrence_end_date IS NULL OR t.recurrence_end_date >= ?)
+           ORDER BY t.title`,
+          [selectedDate, userId, selectedDate, selectedDate, selectedDate]
+        )
+      ]);
+
+      const recurringDayTasks = recurringTasks[0].map(t => ({
+        ...t,
+        status: t.is_completed ? 'completed' : t.is_in_progress ? 'in_progress' : 'active',
+        is_recurring: true
+      }));
+      const dayTasks = [...recurringDayTasks, ...adhocDayTasks[0].map(t => ({ ...t, is_recurring: false }))];
+
+      const [recentRecurringCompleted] = await db.query(
+        `SELECT t.id, t.title, t.type, t.due_date, tc.created_at as completed_at, u.name as created_by_name
+         FROM task_completions tc
+         JOIN tasks t ON tc.task_id = t.id
+         LEFT JOIN users u ON t.created_by = u.id
+         WHERE tc.user_id = ? AND t.is_deleted = 0
+         ORDER BY tc.completion_date DESC LIMIT 10`, [userId]
+      );
+      const recentCompleted = [...recentAdhocCompleted[0], ...recentRecurringCompleted]
+        .sort((a, b) => new Date(b.completed_at) - new Date(a.completed_at))
+        .slice(0, 10);
+
+      const targetUser     = await UserModel.findById(userId);
+      const isWeekOff      = targetUser && targetUser.weekly_off_day === new Date(selectedDate + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long' });
+      const isPast         = selectedDate < todayDate;
+      const isViewingToday = selectedDate === todayDate;
+
+      res.render('admin/my-progress', {
+        title: 'My Progress', layout: 'admin/layout', section: 'my-progress',
+        targetUser, taskStats, rewardSummary,
+        activeTasks: activeTasks[0],
+        recentCompleted,
+        dayTasks: isWeekOff ? [] : dayTasks,
+        selectedDate, todayDate, isPast, isViewingToday, isWeekOff, orgTimezone: tz
+      });
+    } catch (err) {
+      console.error('AdminHub myProgress error:', err);
+      res.status(500).send('Server error');
+    }
+  }
+
+  static async myAttendance(req, res) {
+    try {
+      const userId = req.user.id;
+      const tz = req.user.org_timezone || 'America/New_York';
+      const today = getToday(tz);
+      const month = req.query.month || today.slice(0, 7);
+      const [yearStr, monStr] = month.split('-');
+      const year = parseInt(yearStr);
+      const mon  = parseInt(monStr);
+      const lastDay   = new Date(year, mon, 0).getDate();
+      const startDate = `${month}-01`;
+      const endDate   = `${month}-${String(lastDay).padStart(2, '0')}`;
+
+      const todayShift = await ShiftHistory.getShiftForDate(userId, today);
+      const [[userInfo], [monthlyLogs], [todaySessions]] = await Promise.all([
+        db.query(`SELECT shift_start, shift_hours, weekly_off_day FROM users WHERE id = ?`, [userId]),
+        db.query(
+          `SELECT date, logout_reason, late_login_reason,
+                  DATE_FORMAT(login_time,  '%h:%i %p') as loginFormatted,
+                  DATE_FORMAT(logout_time, '%h:%i %p') as logoutFormatted,
+                  TIMEDIFF(COALESCE(logout_time, NOW()), login_time) as duration,
+                  login_time, logout_time
+           FROM attendance_logs
+           WHERE user_id = ? AND date >= ? AND date <= ?
+           ORDER BY date DESC, login_time ASC`,
+          [userId, startDate, endDate]
+        ),
+        db.query(
+          `SELECT DATE_FORMAT(login_time,  '%h:%i %p') as loginFormatted,
+                  DATE_FORMAT(logout_time, '%h:%i %p') as logoutFormatted,
+                  TIMEDIFF(COALESCE(logout_time, NOW()), login_time) as duration,
+                  login_time, logout_time, logout_reason, late_login_reason
+           FROM attendance_logs
+           WHERE user_id = ? AND date = ?
+           ORDER BY login_time ASC`,
+          [userId, today]
+        )
+      ]);
+
+      const userRow = userInfo[0] || { shift_start: '10:00:00', shift_hours: 8.5, weekly_off_day: 'Sunday' };
+      const shift   = { ...userRow, shift_start: todayShift.shift_start, shift_hours: todayShift.shift_hours };
+      const ss = (shift.shift_start || '10:00').substring(0, 5);
+      const sh = parseFloat(shift.shift_hours || 8.5);
+
+      const logMap = {};
+      monthlyLogs.forEach(row => {
+        const d = row.date instanceof Date ? row.date.toISOString().split('T')[0] : String(row.date).split('T')[0];
+        if (!logMap[d]) logMap[d] = [];
+        logMap[d].push(row);
+      });
+
+      const [leaveData] = await db.query(
+        `SELECT from_date, to_date, status FROM leave_requests
+         WHERE user_id = ? AND from_date <= ? AND to_date >= ? AND status IN ('approved','pending')`,
+        [userId, endDate, startDate]
+      );
+      const leaveSet = new Set();
+      leaveData.forEach(l => {
+        const from = new Date(l.from_date), to = new Date(l.to_date);
+        for (let d = new Date(from); d <= to; d.setDate(d.getDate() + 1))
+          leaveSet.add(d.toISOString().split('T')[0] + '-' + l.status);
+      });
+
+      const [myHolidays] = await db.query(
+        `SELECT date, name FROM holidays
+         WHERE date >= ? AND date <= ? AND organization_id = (SELECT organization_id FROM users WHERE id = ?)
+         ORDER BY date`,
+        [startDate, endDate, userId]
+      );
+      const holidayMap = new Map();
+      myHolidays.forEach(h => {
+        const d = h.date instanceof Date ? h.date.toISOString().split('T')[0] : String(h.date).split('T')[0];
+        holidayMap.set(d, h.name);
+      });
+
+      const dayNames   = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+      const calendarData = {};
+      const uniqueDates  = new Set();
+      let leaveDaysCount = 0;
+
+      for (let d = 1; d <= lastDay; d++) {
+        const dateStr = `${year}-${String(mon).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+        const dayName = dayNames[new Date(year, mon - 1, d).getDay()];
+        const isOff     = dayName === shift.weekly_off_day;
+        const isHoliday = holidayMap.has(dateStr);
+        const sessions  = logMap[dateStr] || [];
+        const log       = sessions[0] || null;
+        let status = 'absent';
+        if (dateStr > today)                              status = 'future';
+        else if (isOff)                                   status = 'off';
+        else if (isHoliday)                               status = 'holiday';
+        else if (log)                                   { status = 'present'; uniqueDates.add(dateStr); }
+        else if (leaveSet.has(dateStr + '-approved'))   { status = 'leave';   leaveDaysCount++; }
+        else if (leaveSet.has(dateStr + '-pending'))      status = 'pending_leave';
+        calendarData[d] = { status, dayName, log, sessions, holidayName: isHoliday ? holidayMap.get(dateStr) : null };
+      }
+
+      const totalPresent  = uniqueDates.size;
+      const prevMonth = mon === 1  ? `${year-1}-12`                             : `${year}-${String(mon-1).padStart(2,'0')}`;
+      const nextMonth = mon === 12 ? `${year+1}-01`                             : `${year}-${String(mon+1).padStart(2,'0')}`;
+
+      res.render('admin/my-attendance', {
+        title: 'My Attendance', layout: 'admin/layout', section: 'my-attendance',
+        today, todaySessions, shift: { start: ss, hours: sh, offDay: shift.weekly_off_day },
+        calendarData, totalPresent, leaveDaysCount, month, year, mon, lastDay, prevMonth, nextMonth
+      });
+    } catch (err) {
+      console.error('AdminHub myAttendance error:', err);
+      res.status(500).send('Server error');
     }
   }
 }

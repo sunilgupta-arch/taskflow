@@ -1,0 +1,326 @@
+<style>
+/* ── Stats ─────────────────────────────────────────────────────── */
+.adma-stats {
+  display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px;
+}
+.adma-stat {
+  flex: 1; min-width: 120px;
+  background: var(--adm-surface); border: 1px solid var(--adm-border);
+  border-radius: 12px; padding: 14px 16px;
+  display: flex; flex-direction: column; gap: 4px;
+}
+.adma-stat-label {
+  font-size: 0.68rem; font-family: var(--adm-mono); font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.5px; color: var(--adm-muted);
+}
+.adma-stat-num {
+  font-size: 1.8rem; font-family: var(--adm-mono); font-weight: 700; line-height: 1;
+}
+.adma-stat.s-present  .adma-stat-num { color: #10b981; }
+.adma-stat.s-absent   .adma-stat-num { color: #ef4444; }
+.adma-stat.s-leave    .adma-stat-num { color: #00d4ff; }
+.adma-stat.s-rate     .adma-stat-num { color: var(--adm-text); }
+
+/* ── Toolbar ────────────────────────────────────────────────────── */
+.adma-toolbar {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.adma-month-nav { display: flex; align-items: center; gap: 6px; }
+.adma-nav-btn {
+  height: 34px; padding: 0 12px; border-radius: 9px;
+  border: 1px solid var(--adm-border); background: var(--adm-surface);
+  color: var(--adm-text-2); cursor: pointer; font-size: 0.85rem;
+  display: inline-flex; align-items: center;
+  transition: all 0.15s; font-family: var(--adm-font);
+}
+.adma-nav-btn:hover { border-color: var(--adm-accent); color: var(--adm-accent); }
+.adma-month-label {
+  font-size: 0.85rem; font-family: var(--adm-mono); font-weight: 700;
+  color: var(--adm-text); min-width: 140px; text-align: center;
+}
+
+/* ── Today card ─────────────────────────────────────────────────── */
+.adma-today-card {
+  background: var(--adm-surface); border: 1px solid var(--adm-border);
+  border-radius: 14px; margin-bottom: 16px; overflow: hidden;
+}
+.adma-today-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 16px; border-bottom: 1px solid var(--adm-border);
+  background: var(--adm-surface-2);
+}
+.adma-today-title {
+  font-size: 0.78rem; font-weight: 700; font-family: var(--adm-mono);
+  color: var(--adm-accent); text-transform: uppercase; letter-spacing: 0.4px;
+}
+.adma-today-shift {
+  font-size: 0.7rem; font-family: var(--adm-mono); color: var(--adm-muted);
+}
+.adma-today-body { padding: 14px 16px; }
+.adma-session {
+  display: grid; grid-template-columns: 40px 1fr 1fr 1fr; gap: 12px;
+  align-items: center; padding: 8px 0;
+}
+.adma-session + .adma-session { border-top: 1px dashed var(--adm-border); }
+.adma-session-num {
+  font-family: var(--adm-mono); font-size: 0.75rem; font-weight: 700;
+  color: var(--adm-accent);
+}
+.adma-session-label {
+  font-size: 0.65rem; font-family: var(--adm-mono); color: var(--adm-muted);
+  text-transform: uppercase; margin-bottom: 2px;
+}
+.adma-session-val {
+  font-family: var(--adm-mono); font-size: 0.88rem; color: var(--adm-text);
+}
+.adma-gap-row {
+  font-size: 0.68rem; color: #f59e0b; text-align: center;
+  padding: 4px 0; font-style: italic;
+}
+.adma-no-sessions {
+  text-align: center; color: var(--adm-muted); font-size: 0.82rem;
+  padding: 16px 0;
+}
+
+/* ── Calendar grid ──────────────────────────────────────────────── */
+.adma-cal-card {
+  background: var(--adm-surface); border: 1px solid var(--adm-border);
+  border-radius: 14px; overflow: hidden; margin-bottom: 16px;
+}
+.adma-cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px; padding: 14px 14px 10px;
+}
+.adma-cal-day {
+  border-radius: 10px; padding: 8px 6px;
+  border: 1px solid var(--adm-border); background: var(--adm-surface-2);
+  display: flex; flex-direction: column; gap: 2px; min-height: 64px;
+}
+.adma-cal-day.is-today { border-color: var(--adm-accent); box-shadow: 0 0 8px rgba(0,212,255,0.12); }
+.adma-cal-day.is-future { opacity: 0.4; }
+.adma-cal-day-num {
+  font-family: var(--adm-mono); font-size: 0.78rem; font-weight: 700;
+  color: var(--adm-text);
+}
+.adma-cal-day.is-today .adma-cal-day-num { color: var(--adm-accent); }
+.adma-cal-dow {
+  font-size: 0.55rem; font-family: var(--adm-mono); color: var(--adm-muted);
+}
+.adma-cal-status {
+  font-size: 0.6rem; font-weight: 700; margin-top: 2px;
+  display: flex; align-items: center; gap: 2px;
+}
+.adma-cal-time {
+  font-size: 0.55rem; font-family: var(--adm-mono); color: var(--adm-muted);
+}
+.adma-cal-legend {
+  display: flex; flex-wrap: wrap; gap: 12px; justify-content: center;
+  padding: 10px 14px; border-top: 1px solid var(--adm-border);
+}
+.adma-legend-item {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 0.65rem; color: var(--adm-muted);
+}
+.adma-legend-dot {
+  width: 10px; height: 10px; border-radius: 3px;
+}
+
+/* ── Page header ────────────────────────────────────────────────── */
+.adma-header {
+  margin-bottom: 22px; display: flex; align-items: flex-start;
+  justify-content: space-between; gap: 12px; flex-wrap: wrap;
+}
+.adma-breadcrumb {
+  font-size: 0.72rem; font-family: var(--adm-mono); color: var(--adm-muted);
+  margin-bottom: 6px; display: flex; align-items: center; gap: 5px;
+}
+.adma-breadcrumb a { color: var(--adm-muted); text-decoration: none; }
+.adma-breadcrumb a:hover { color: var(--adm-accent); }
+.adma-page-title {
+  font-size: 1.3rem; font-weight: 700; color: var(--adm-text);
+  display: flex; align-items: center; gap: 8px; margin: 0;
+}
+.adma-page-title i { color: #22d3ee; }
+
+@media (max-width: 640px) {
+  .adma-cal-grid { grid-template-columns: repeat(4, 1fr); }
+  .adma-session { grid-template-columns: 36px 1fr 1fr; }
+}
+</style>
+
+<%
+  var sH = parseInt(shift.start.split(':')[0]);
+  var sM = parseInt(shift.start.split(':')[1]);
+  var eMin = sH * 60 + sM + shift.hours * 60;
+  var eH = Math.floor(eMin / 60) % 24;
+  var eM = Math.round(eMin % 60);
+  var shiftEnd = String(eH).padStart(2,'0') + ':' + String(eM).padStart(2,'0');
+
+  /* compute stats */
+  var workingDays = 0, absenceDays = 0;
+  for (var d = 1; d <= lastDay; d++) {
+    var cd = calendarData[d];
+    if (cd.status !== 'off' && cd.status !== 'future' && cd.status !== 'holiday') workingDays++;
+  }
+  var expected = workingDays - leaveDaysCount;
+  absenceDays = Math.max(0, expected - totalPresent);
+  var rate = expected > 0 ? Math.min(100, Math.round(totalPresent / expected * 100)) : 0;
+  var rateColor = rate >= 80 ? '#10b981' : rate >= 50 ? '#f59e0b' : '#ef4444';
+
+  var todayDateStr = new Date(today + 'T12:00:00').toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric' });
+  var monthLabel   = new Date(year, mon - 1).toLocaleString('default', { month:'long', year:'numeric' });
+%>
+
+<!-- Header -->
+<div class="adma-header">
+  <div>
+    <div class="adma-breadcrumb">
+      <a href="/admin"><i class="bi bi-grid-1x2-fill"></i> Dashboard</a>
+      <i class="bi bi-chevron-right" style="font-size:0.6rem"></i>
+      <span>My Attendance</span>
+    </div>
+    <h1 class="adma-page-title"><i class="bi bi-clock-history"></i> My Attendance</h1>
+  </div>
+  <a href="/admin" class="adm-back-btn"><i class="bi bi-arrow-left"></i> Dashboard</a>
+</div>
+
+<!-- Stats -->
+<div class="adma-stats">
+  <div class="adma-stat s-present">
+    <div class="adma-stat-label">Days Present</div>
+    <div class="adma-stat-num"><%= totalPresent %></div>
+  </div>
+  <div class="adma-stat s-absent">
+    <div class="adma-stat-label">Days Absent</div>
+    <div class="adma-stat-num"><%= absenceDays %></div>
+  </div>
+  <div class="adma-stat s-leave">
+    <div class="adma-stat-label">On Leave</div>
+    <div class="adma-stat-num"><%= leaveDaysCount %></div>
+  </div>
+  <div class="adma-stat s-rate">
+    <div class="adma-stat-label">Attendance Rate</div>
+    <div class="adma-stat-num" style="color:<%= rateColor %>"><%= rate %>%</div>
+  </div>
+</div>
+
+<!-- Month nav toolbar -->
+<div class="adma-toolbar">
+  <div class="adma-month-nav">
+    <a href="/admin/my-attendance?month=<%= prevMonth %>" class="adma-nav-btn">
+      <i class="bi bi-chevron-left"></i>
+    </a>
+    <span class="adma-month-label"><%= monthLabel %></span>
+    <a href="/admin/my-attendance?month=<%= nextMonth %>" class="adma-nav-btn">
+      <i class="bi bi-chevron-right"></i>
+    </a>
+  </div>
+</div>
+
+<!-- Today's sessions -->
+<div class="adma-today-card">
+  <div class="adma-today-header">
+    <span class="adma-today-title"><i class="bi bi-person-check" style="margin-right:6px"></i>Today — <%= todayDateStr %></span>
+    <span class="adma-today-shift">Shift: <%= shift.start %> – <%= shiftEnd %> &nbsp;|&nbsp; Off: <%= shift.offDay %></span>
+  </div>
+  <div class="adma-today-body">
+    <% if (todaySessions && todaySessions.length > 0) { %>
+      <% todaySessions.forEach(function(s, si) { %>
+        <% if (si > 0 && todaySessions[si-1].logout_time && s.login_time) {
+          var gapMs  = new Date(s.login_time) - new Date(todaySessions[si-1].logout_time);
+          var gapMin = Math.round(gapMs / 60000);
+        %>
+        <div class="adma-gap-row">
+          <i class="bi bi-clock-history" style="margin-right:4px"></i>
+          Logged out for <%= gapMin >= 60 ? Math.floor(gapMin/60) + 'h ' + (gapMin % 60) + 'm' : gapMin + 'm' %>
+          <% if (todaySessions[si-1].logout_reason) { %>
+            — <span style="color:var(--adm-muted)"><%= todaySessions[si-1].logout_reason %></span>
+          <% } %>
+        </div>
+        <% } %>
+        <div class="adma-session">
+          <div>
+            <div class="adma-session-label">Session</div>
+            <div class="adma-session-num">#<%= si + 1 %></div>
+          </div>
+          <div>
+            <div class="adma-session-label">Login</div>
+            <div class="adma-session-val" style="color:#10b981"><%= s.loginFormatted || '—' %></div>
+            <% if (si === 0 && s.late_login_reason) { %>
+            <div style="font-size:0.6rem;color:#ef4444;margin-top:2px"><i class="bi bi-clock"></i> Late: <%= s.late_login_reason %></div>
+            <% } %>
+          </div>
+          <div>
+            <div class="adma-session-label">Logout</div>
+            <div class="adma-session-val" style="color:var(--adm-muted)">
+              <% if (s.logoutFormatted) { %>
+                <%= s.logoutFormatted %>
+                <% if (s.logout_reason && s.logout_reason.startsWith('Auto')) { %>
+                <div style="font-size:0.58rem;color:#f59e0b;margin-top:1px"><i class="bi bi-robot"></i> Auto</div>
+                <% } %>
+              <% } else { %>
+                <span style="color:#10b981">Active</span>
+              <% } %>
+            </div>
+          </div>
+          <div>
+            <div class="adma-session-label">Duration</div>
+            <div class="adma-session-val"><%= s.duration ? s.duration.substring(0,5) + 'h' : '—' %></div>
+          </div>
+        </div>
+      <% }) %>
+    <% } else { %>
+      <div class="adma-no-sessions"><i class="bi bi-dash-circle" style="margin-right:6px"></i>No login recorded today</div>
+    <% } %>
+  </div>
+</div>
+
+<!-- Calendar -->
+<div class="adma-cal-card">
+  <div class="adma-cal-grid">
+    <% for (var d = 1; d <= lastDay; d++) {
+      var cd = calendarData[d];
+      var dateStr = year + '-' + String(mon).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+      var isToday  = dateStr === today;
+      var isFuture = cd.status === 'future';
+
+      var bg = '', clr = '', icon = '', lbl = '';
+      if      (cd.status === 'present')      { bg='rgba(16,185,129,0.1)';  clr='#10b981'; icon='bi-check-circle-fill'; lbl='Present'; }
+      else if (cd.status === 'absent')       { bg='rgba(239,68,68,0.08)';  clr='#ef4444'; icon='bi-x-circle-fill';    lbl='Absent'; }
+      else if (cd.status === 'leave')        { bg='rgba(0,212,255,0.08)';  clr='#00d4ff'; icon='bi-calendar-check';   lbl='Leave'; }
+      else if (cd.status === 'pending_leave'){ bg='rgba(245,158,11,0.08)'; clr='#f59e0b'; icon='bi-hourglass-split';  lbl='Pending'; }
+      else if (cd.status === 'holiday')      { bg='rgba(168,85,247,0.1)';  clr='#a855f7'; icon='bi-calendar-heart';   lbl=cd.holidayName||'Holiday'; }
+      else if (cd.status === 'off')          { bg='rgba(100,116,139,0.06)';clr='#64748b'; icon='bi-moon';             lbl='Off'; }
+    %>
+    <div class="adma-cal-day<%= isToday ? ' is-today' : '' %><%= isFuture ? ' is-future' : '' %>"
+         style="<%= bg ? 'background:'+bg+';' : '' %>">
+      <div style="display:flex;justify-content:space-between;align-items:baseline">
+        <span class="adma-cal-day-num"><%= d %></span>
+        <span class="adma-cal-dow"><%= cd.dayName.substring(0,3) %></span>
+      </div>
+      <% if (icon && !isFuture) { %>
+      <div class="adma-cal-status" style="color:<%= clr %>">
+        <i class="bi <%= icon %>" style="font-size:0.58rem"></i>
+        <span><%= lbl.length > 8 ? lbl.substring(0,8)+'…' : lbl %></span>
+      </div>
+      <% } %>
+      <% if (cd.log) { %>
+      <div class="adma-cal-time"><%= cd.log.loginFormatted || '' %></div>
+      <% if (cd.sessions && cd.sessions.length > 1) { %>
+      <div style="font-size:0.52rem;color:#f59e0b"><i class="bi bi-arrow-repeat"></i> <%= cd.sessions.length %> sessions</div>
+      <% } %>
+      <% } %>
+    </div>
+    <% } %>
+  </div>
+  <div class="adma-cal-legend">
+    <div class="adma-legend-item"><div class="adma-legend-dot" style="background:rgba(16,185,129,0.3)"></div> Present</div>
+    <div class="adma-legend-item"><div class="adma-legend-dot" style="background:rgba(239,68,68,0.2)"></div> Absent</div>
+    <div class="adma-legend-item"><div class="adma-legend-dot" style="background:rgba(0,212,255,0.2)"></div> Leave</div>
+    <div class="adma-legend-item"><div class="adma-legend-dot" style="background:rgba(245,158,11,0.2)"></div> Pending Leave</div>
+    <div class="adma-legend-item"><div class="adma-legend-dot" style="background:rgba(168,85,247,0.2)"></div> Holiday</div>
+    <div class="adma-legend-item"><div class="adma-legend-dot" style="background:rgba(100,116,139,0.15)"></div> Week Off</div>
+  </div>
+</div>

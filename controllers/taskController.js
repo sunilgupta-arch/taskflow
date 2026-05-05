@@ -6,6 +6,7 @@ const { ApiResponse, getPagination, getPaginationMeta } = require('../utils/resp
 const db = require('../config/db');
 const { getIO } = require('../config/socket');
 const { getToday, getEffectiveWorkDate, getEffectiveWorkDateWithSession, isScheduledForDate } = require('../utils/timezone');
+const Notification = require('../models/Notification');
 
 // Helper: fetch the LOCAL org timezone (for employee date calculations)
 async function getLocalOrgTimezone() {
@@ -424,29 +425,27 @@ class TaskController {
       if (Array.isArray(assigned_to)) {
         await TaskService.updateGroupAssignees(task_id, assigned_to);
 
-        // Notify each assigned user via socket
+        // Notify each assigned user via socket + persistent notification
         const task = await TaskModel.findById(task_id);
         const io = getIO();
-        assigned_to.forEach(userId => {
-          io.to(`user:${userId}`).emit('task:assigned', {
-            message: `You have been assigned to "${task.title}"`,
-            taskId: task_id,
-            taskTitle: task.title
-          });
-        });
+        for (const userId of assigned_to) {
+          const msg = `You have been assigned to "${task.title}"`;
+          io.to(`user:${userId}`).emit('task:assigned', { message: msg, taskId: task_id, taskTitle: task.title });
+          const nid = await Notification.create(userId, 'task_assigned', 'Task Assigned', msg, '/admin/my-tasks');
+          io.to(`user:${userId}`).emit('notification:new', { id: nid, type: 'task_assigned', title: 'Task Assigned', body: msg, link: '/admin/my-tasks', is_read: 0, created_at: new Date() });
+        }
 
         return ApiResponse.success(res, {}, 'Task assignees updated successfully');
       }
       await TaskService.assignTask(task_id, assigned_to, req.user.role_name);
 
-      // Notify the assigned user via socket
+      // Notify the assigned user via socket + persistent notification
       const task = await TaskModel.findById(task_id);
       const io = getIO();
-      io.to(`user:${assigned_to}`).emit('task:assigned', {
-        message: `You have been assigned to "${task.title}"`,
-        taskId: task_id,
-        taskTitle: task.title
-      });
+      const assignMsg = `You have been assigned to "${task.title}"`;
+      io.to(`user:${assigned_to}`).emit('task:assigned', { message: assignMsg, taskId: task_id, taskTitle: task.title });
+      const nid2 = await Notification.create(assigned_to, 'task_assigned', 'Task Assigned', assignMsg, '/admin/my-tasks');
+      io.to(`user:${assigned_to}`).emit('notification:new', { id: nid2, type: 'task_assigned', title: 'Task Assigned', body: assignMsg, link: '/admin/my-tasks', is_read: 0, created_at: new Date() });
 
       return ApiResponse.success(res, {}, 'Task assigned successfully');
     } catch (err) {

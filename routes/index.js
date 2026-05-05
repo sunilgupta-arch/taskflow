@@ -12,6 +12,7 @@ const LeaveController = require('../controllers/leaveController');
 const BackupController = require('../controllers/backupController');
 const LiveStatusController = require('../controllers/liveStatusController');
 const AnnouncementController = require('../controllers/announcementController');
+const NotificationController = require('../controllers/notificationController');
 
 // Dashboard — old dashboard at /dashboard/overview; /dashboard redirects to task board
 router.get('/dashboard/overview', authenticate, DashboardController.show);
@@ -189,6 +190,8 @@ router.get('/admin/infoboard',          authenticate, requireLocalAll,   AdminHu
 router.get('/admin/notes',              authenticate, requireLocalAll,   AdminHubController.notes);
 router.get('/admin/leaves',             authenticate, requireLocalAll,   AdminHubController.leaves);
 router.get('/admin/helpcenter',         authenticate, requireLocalAll,   AdminHubController.helpcenter);
+router.get('/admin/my-attendance',      authenticate, requireLocalAll,   AdminHubController.myAttendance);
+router.get('/admin/my-progress',        authenticate, requireLocalAll,   AdminHubController.myProgress);
 // Pages admin/manager only
 router.get('/admin/all-tasks',          authenticate, requireLocalAdmin, AdminHubController.allTasks);
 router.get('/admin/taskboard',          authenticate, requireLocalAdmin, AdminHubController.taskboard);
@@ -230,5 +233,10 @@ router.get('/announcements', authenticate, requireRoles('LOCAL_ADMIN', 'LOCAL_MA
 router.post('/announcements', authenticate, requireRoles('LOCAL_ADMIN', 'CLIENT_ADMIN', 'CLIENT_MANAGER'), AnnouncementController.create);
 router.put('/announcements/:id/pin', authenticate, requireRoles('LOCAL_ADMIN', 'CLIENT_ADMIN'), AnnouncementController.togglePin);
 router.delete('/announcements/:id', authenticate, requireRoles('LOCAL_ADMIN', 'CLIENT_ADMIN'), AnnouncementController.destroy);
+
+// Notifications
+router.get('/notifications',           authenticate, NotificationController.list);
+router.post('/notifications/read-all', authenticate, NotificationController.markAllRead);
+router.post('/notifications/:id/read', authenticate, NotificationController.markRead);
 
 module.exports = router;

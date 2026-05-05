@@ -3,6 +3,7 @@ const db = require('../config/db');
 const { ApiResponse, getPaginationMeta } = require('../utils/response');
 const { getIO } = require('../config/socket');
 const { getToday } = require('../utils/timezone');
+const Notification = require('../models/Notification');
 
 // Helper: get LOCAL org timezone for leave date validation
 async function getLocalTz() {
@@ -121,10 +122,10 @@ class LeaveController {
 
       // Notify the user
       const io = getIO();
-      io.to(`user:${user_id}`).emit('leave:approved', {
-        message: `You have been granted leave from ${from_date} to ${to_date}`,
-        leaveId: id
-      });
+      const grantMsg = `You have been granted leave from ${from_date} to ${to_date}`;
+      io.to(`user:${user_id}`).emit('leave:approved', { message: grantMsg, leaveId: id });
+      const notifId = await Notification.create(user_id, 'leave_granted', 'Leave Granted', grantMsg, '/admin/leaves');
+      io.to(`user:${user_id}`).emit('notification:new', { id: notifId, type: 'leave_granted', title: 'Leave Granted', body: grantMsg, link: '/admin/leaves', is_read: 0, created_at: new Date() });
 
       return ApiResponse.success(res, { id }, 'Leave granted successfully', 201);
     } catch (err) {
@@ -148,10 +149,10 @@ class LeaveController {
 
       // Notify the user
       const io = getIO();
-      io.to(`user:${leave.user_id}`).emit('leave:approved', {
-        message: `Your leave request (${leave.from_date} to ${leave.to_date}) has been approved`,
-        leaveId: leave.id
-      });
+      const approveMsg = `Your leave request (${leave.from_date} to ${leave.to_date}) has been approved`;
+      io.to(`user:${leave.user_id}`).emit('leave:approved', { message: approveMsg, leaveId: leave.id });
+      const notifId2 = await Notification.create(leave.user_id, 'leave_approved', 'Leave Approved', approveMsg, '/admin/leaves');
+      io.to(`user:${leave.user_id}`).emit('notification:new', { id: notifId2, type: 'leave_approved', title: 'Leave Approved', body: approveMsg, link: '/admin/leaves', is_read: 0, created_at: new Date() });
 
       return ApiResponse.success(res, {}, 'Leave approved');
     } catch (err) {

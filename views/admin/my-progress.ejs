@@ -1,0 +1,495 @@
+<style>
+/* ── Page header ────────────────────────────────────────────────── */
+.admp-header {
+  margin-bottom: 20px; display: flex; align-items: flex-start;
+  justify-content: space-between; gap: 12px; flex-wrap: wrap;
+}
+.admp-breadcrumb {
+  font-size: 0.72rem; font-family: var(--adm-mono); color: var(--adm-muted);
+  margin-bottom: 6px; display: flex; align-items: center; gap: 5px;
+}
+.admp-breadcrumb a { color: var(--adm-muted); text-decoration: none; }
+.admp-breadcrumb a:hover { color: var(--adm-accent); }
+.admp-page-title {
+  font-size: 1.3rem; font-weight: 700; color: var(--adm-text);
+  display: flex; align-items: center; gap: 8px; margin: 0;
+}
+.admp-page-title i { color: #22d3ee; }
+
+/* ── Stats ──────────────────────────────────────────────────────── */
+.admp-stats { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+.admp-stat {
+  flex: 1; min-width: 100px;
+  background: var(--adm-surface); border: 1px solid var(--adm-border);
+  border-radius: 12px; padding: 12px 14px;
+  display: flex; flex-direction: column; gap: 3px;
+}
+.admp-stat-label {
+  font-size: 0.65rem; font-family: var(--adm-mono); font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.5px; color: var(--adm-muted);
+}
+.admp-stat-num { font-size: 1.7rem; font-family: var(--adm-mono); font-weight: 700; line-height: 1; }
+
+/* ── Date toolbar ───────────────────────────────────────────────── */
+.admp-toolbar {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 16px;
+}
+.admp-nav-btn {
+  height: 34px; padding: 0 12px; border-radius: 9px;
+  border: 1px solid var(--adm-border); background: var(--adm-surface);
+  color: var(--adm-text-2); cursor: pointer; font-size: 0.82rem;
+  display: inline-flex; align-items: center; text-decoration: none;
+  transition: all 0.15s; font-family: var(--adm-font); gap: 5px;
+}
+.admp-nav-btn:hover { border-color: var(--adm-accent); color: var(--adm-accent); }
+.admp-date-input {
+  height: 34px; padding: 0 12px; border-radius: 9px;
+  border: 1px solid var(--adm-border); background: var(--adm-surface-2);
+  color: var(--adm-text); font-size: 0.78rem; font-family: var(--adm-mono); cursor: pointer;
+}
+.admp-date-input:focus { outline: none; border-color: var(--adm-accent); }
+.admp-today-btn {
+  height: 34px; padding: 0 12px; border-radius: 9px;
+  border: 1px solid rgba(0,212,255,0.3); background: rgba(0,212,255,0.07);
+  color: var(--adm-accent); cursor: pointer; font-size: 0.72rem;
+  font-family: var(--adm-mono); font-weight: 600; text-decoration: none;
+  display: inline-flex; align-items: center; transition: all 0.15s;
+}
+.admp-today-btn:hover { background: rgba(0,212,255,0.14); }
+.admp-report-btn {
+  height: 34px; padding: 0 14px; border-radius: 9px; margin-left: auto;
+  border: 1px solid rgba(139,92,246,0.3); background: rgba(139,92,246,0.07);
+  color: #a78bfa; cursor: pointer; font-size: 0.75rem;
+  font-family: var(--adm-font); font-weight: 600;
+  display: inline-flex; align-items: center; gap: 6px; transition: all 0.15s;
+}
+.admp-report-btn:hover { background: rgba(139,92,246,0.14); }
+
+/* ── Cards ──────────────────────────────────────────────────────── */
+.admp-card {
+  background: var(--adm-surface); border: 1px solid var(--adm-border);
+  border-radius: 14px; overflow: hidden; margin-bottom: 14px;
+}
+.admp-card-header {
+  display: flex; align-items: center; gap: 8px;
+  padding: 11px 16px; border-bottom: 1px solid var(--adm-border);
+  background: var(--adm-surface-2);
+  font-size: 0.72rem; font-weight: 700; font-family: var(--adm-mono);
+  color: var(--adm-muted); text-transform: uppercase; letter-spacing: 0.5px;
+}
+.admp-card-body { padding: 14px 16px; }
+
+/* ── Table ──────────────────────────────────────────────────────── */
+.admp-table { width: 100%; border-collapse: collapse; }
+.admp-table thead th {
+  font-family: var(--adm-mono); font-size: 0.65rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.5px; color: var(--adm-muted);
+  padding: 8px 12px; border-bottom: 1px solid var(--adm-border);
+  text-align: left; background: var(--adm-surface-2);
+}
+.admp-table tbody tr { border-bottom: 1px solid var(--adm-border); transition: background 0.1s; }
+.admp-table tbody tr:last-child { border-bottom: none; }
+.admp-table tbody tr:hover { background: var(--adm-surface-2); }
+.admp-table tbody td { padding: 9px 12px; font-size: 0.83rem; color: var(--adm-text); vertical-align: middle; }
+.admp-badge {
+  display: inline-flex; align-items: center; gap: 3px;
+  font-size: 0.62rem; font-family: var(--adm-mono); font-weight: 700;
+  text-transform: uppercase; padding: 2px 7px; border-radius: 20px;
+}
+.admp-badge.b-recurring { background: rgba(139,92,246,0.1); color: #8b5cf6; border: 1px solid rgba(139,92,246,0.25); }
+.admp-badge.b-once      { background: rgba(249,115,22,0.1);  color: #f97316; border: 1px solid rgba(249,115,22,0.25); }
+.admp-status {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 8px; border-radius: 20px;
+  font-size: 0.62rem; font-weight: 700; font-family: var(--adm-mono); text-transform: uppercase;
+}
+.admp-status.s-done, .admp-status.s-completed { background: rgba(16,185,129,0.12); color: #10b981; }
+.admp-status.s-in_progress                    { background: rgba(59,130,246,0.12);  color: #3b82f6; }
+.admp-status.s-pending, .admp-status.s-active { background: rgba(249,115,22,0.12);  color: #f97316; }
+.admp-status.s-not_done                        { background: rgba(239,68,68,0.12);   color: #ef4444; }
+
+/* ── Task item (active/pending lists) ───────────────────────────── */
+.admp-task-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 12px; border-radius: 9px;
+  background: var(--adm-surface-2); margin-bottom: 7px;
+}
+.admp-task-item:last-child { margin-bottom: 0; }
+.admp-task-item-accent { width: 3px; height: 32px; border-radius: 2px; flex-shrink: 0; }
+.admp-task-name { font-size: 0.83rem; font-weight: 500; color: var(--adm-text); }
+.admp-task-sub { font-size: 0.68rem; color: var(--adm-muted); margin-top: 1px; }
+.admp-empty-msg { text-align: center; color: var(--adm-muted); font-size: 0.8rem; padding: 20px; }
+
+/* ── Progress bar ───────────────────────────────────────────────── */
+.admp-progress-bar-wrap {
+  height: 5px; background: var(--adm-surface-2);
+  border-radius: 3px; overflow: hidden; margin-top: 6px;
+}
+.admp-progress-bar { height: 100%; background: var(--adm-accent); border-radius: 3px; transition: width 0.4s; }
+
+/* ── Monthly report drawer ──────────────────────────────────────── */
+.admp-rpt-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 1000; display: none;
+}
+.admp-rpt-drawer {
+  position: fixed; top: 0; right: 0; height: 100%; width: 440px; max-width: 95vw;
+  background: var(--adm-surface); border-left: 1px solid var(--adm-border);
+  z-index: 1001; display: flex; flex-direction: column;
+  transform: translateX(100%); transition: transform 0.22s ease;
+}
+.admp-rpt-drawer.open { transform: translateX(0); }
+.admp-rpt-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 18px; border-bottom: 1px solid var(--adm-border); flex-shrink: 0;
+}
+.admp-rpt-title { font-size: 0.85rem; font-weight: 700; color: var(--adm-text); display: flex; align-items: center; gap: 8px; }
+.admp-rpt-close {
+  background: none; border: 1px solid var(--adm-border); border-radius: 7px;
+  color: var(--adm-muted); cursor: pointer; padding: 4px 8px; font-size: 0.85rem;
+}
+.admp-rpt-close:hover { color: var(--adm-text); border-color: var(--adm-border-2); }
+.admp-rpt-toolbar {
+  display: flex; align-items: center; gap: 8px;
+  padding: 12px 18px; border-bottom: 1px solid var(--adm-border); flex-shrink: 0;
+}
+.admp-rpt-month-input {
+  flex: 1; height: 34px; padding: 0 10px; border-radius: 8px;
+  border: 1px solid var(--adm-border); background: var(--adm-surface-2);
+  color: var(--adm-text); font-size: 0.82rem; font-family: var(--adm-mono);
+}
+.admp-rpt-month-input:focus { outline: none; border-color: var(--adm-accent); }
+.admp-rpt-load {
+  height: 34px; padding: 0 14px; border-radius: 8px;
+  background: var(--adm-accent); color: #000; border: none;
+  font-size: 0.78rem; font-weight: 700; cursor: pointer; font-family: var(--adm-font);
+}
+.admp-rpt-load:hover { opacity: 0.88; }
+.admp-rpt-body { flex: 1; overflow-y: auto; padding: 16px 18px; }
+.admp-rpt-stat-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px; }
+.admp-rpt-stat {
+  text-align: center; padding: 10px; background: var(--adm-surface-2);
+  border-radius: 10px; border: 1px solid var(--adm-border);
+}
+.admp-rpt-stat-num { font-size: 1.4rem; font-family: var(--adm-mono); font-weight: 700; }
+.admp-rpt-stat-label { font-size: 0.62rem; font-family: var(--adm-mono); color: var(--adm-muted); text-transform: uppercase; margin-top: 2px; }
+.admp-rpt-section-title {
+  font-size: 0.68rem; font-family: var(--adm-mono); font-weight: 700;
+  color: var(--adm-muted); text-transform: uppercase; letter-spacing: 0.4px;
+  margin: 14px 0 8px;
+}
+.admp-rpt-type-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+.admp-rpt-type {
+  padding: 9px 12px; background: var(--adm-surface-2); border-radius: 9px;
+}
+.admp-rpt-type-label { font-size: 0.68rem; color: var(--adm-muted); margin-bottom: 3px; }
+.admp-rpt-type-val { font-family: var(--adm-mono); font-size: 0.95rem; color: var(--adm-text); font-weight: 600; }
+.admp-rpt-daily-row {
+  display: grid; grid-template-columns: 1fr auto auto 80px; gap: 8px;
+  align-items: center; padding: 6px 0; border-bottom: 1px solid var(--adm-border);
+  font-size: 0.78rem;
+}
+.admp-rpt-daily-row:last-child { border-bottom: none; }
+</style>
+
+<%
+  var selObj   = new Date(selectedDate + 'T12:00:00Z');
+  var prevDate = new Date(selObj); prevDate.setUTCDate(prevDate.getUTCDate() - 1);
+  var nextDate = new Date(selObj); nextDate.setUTCDate(nextDate.getUTCDate() + 1);
+  var prevStr  = prevDate.toISOString().split('T')[0];
+  var nextStr  = nextDate.toISOString().split('T')[0];
+  var selLabel = isViewingToday ? 'Today' : selObj.toLocaleDateString('en-US', { timeZone:'UTC', month:'short', day:'numeric' });
+  var selFull  = selObj.toLocaleDateString('en-US', { timeZone:'UTC', weekday:'long', month:'long', day:'numeric' });
+
+  /* day stats */
+  var dayDone = 0, dayPending = 0;
+  dayTasks.forEach(function(t) {
+    if (t.is_recurring ? t.is_completed : (t.status === 'completed')) dayDone++;
+    else dayPending++;
+  });
+  var dayTotal    = dayTasks.length;
+  var dayRate     = dayTotal > 0 ? Math.min(100, Math.round(dayDone / dayTotal * 100)) : 0;
+  var rateColor   = dayRate >= 80 ? '#10b981' : dayRate >= 50 ? '#f59e0b' : '#ef4444';
+%>
+
+<!-- Header -->
+<div class="admp-header">
+  <div>
+    <div class="admp-breadcrumb">
+      <a href="/admin"><i class="bi bi-grid-1x2-fill"></i> Dashboard</a>
+      <i class="bi bi-chevron-right" style="font-size:0.6rem"></i>
+      <span>My Progress</span>
+    </div>
+    <h1 class="admp-page-title"><i class="bi bi-graph-up-arrow"></i> My Progress</h1>
+  </div>
+  <a href="/admin" class="adm-back-btn"><i class="bi bi-arrow-left"></i> Dashboard</a>
+</div>
+
+<!-- Stats -->
+<div class="admp-stats">
+  <div class="admp-stat">
+    <div class="admp-stat-label">Tasks — <%= selLabel %></div>
+    <div class="admp-stat-num" style="color:var(--adm-text)"><%= dayTotal %></div>
+  </div>
+  <div class="admp-stat">
+    <div class="admp-stat-label"><%= isPast ? 'Not Done' : 'Pending' %> — <%= selLabel %></div>
+    <div class="admp-stat-num" style="color:<%= isPast ? '#ef4444' : '#f97316' %>"><%= dayPending %></div>
+  </div>
+  <div class="admp-stat">
+    <div class="admp-stat-label">Done — <%= selLabel %></div>
+    <div class="admp-stat-num" style="color:#10b981"><%= dayDone %></div>
+  </div>
+  <div class="admp-stat">
+    <div class="admp-stat-label">Completion</div>
+    <div class="admp-stat-num" style="color:<%= rateColor %>"><%= dayRate %>%</div>
+    <div class="admp-progress-bar-wrap">
+      <div class="admp-progress-bar" style="width:<%= dayRate %>%;background:<%= rateColor %>"></div>
+    </div>
+  </div>
+  <% if (isViewingToday) { %>
+  <div class="admp-stat">
+    <div class="admp-stat-label">Completed Today</div>
+    <div class="admp-stat-num" style="color:#8b5cf6"><%= taskStats.completed_today || 0 %></div>
+  </div>
+  <div class="admp-stat">
+    <div class="admp-stat-label">This Month</div>
+    <div class="admp-stat-num" style="color:#8b5cf6"><%= taskStats.completed_this_month || 0 %></div>
+  </div>
+  <% } %>
+</div>
+
+<!-- Date toolbar -->
+<div class="admp-toolbar">
+  <a href="/admin/my-progress?date=<%= prevStr %>" class="admp-nav-btn"><i class="bi bi-chevron-left"></i> Prev</a>
+  <input type="date" class="admp-date-input" id="admpDateInput" value="<%= selectedDate %>"
+         onchange="window.location.href='/admin/my-progress?date='+this.value">
+  <a href="/admin/my-progress?date=<%= nextStr %>" class="admp-nav-btn">Next <i class="bi bi-chevron-right"></i></a>
+  <% if (!isViewingToday) { %>
+  <a href="/admin/my-progress" class="admp-today-btn">TODAY</a>
+  <% } %>
+  <button class="admp-report-btn" onclick="openAdmpRpt()">
+    <i class="bi bi-calendar-month"></i> Monthly Report
+  </button>
+</div>
+
+<!-- Tasks for the day -->
+<div class="admp-card">
+  <div class="admp-card-header">
+    <i class="bi bi-calendar-event" style="color:#06b6d4"></i>
+    Tasks for <%= selFull %>
+    <% if (isWeekOff) { %>
+    <span style="margin-left:6px;font-size:0.62rem;background:rgba(100,116,139,0.15);color:#94a3b8;padding:2px 8px;border-radius:20px;">WEEK OFF</span>
+    <% } else { %>
+    <span style="margin-left:4px;color:var(--adm-text-2)">(<%= dayTotal %>)</span>
+    <% } %>
+  </div>
+  <% if (isWeekOff) { %>
+  <div class="admp-empty-msg" style="padding:40px">
+    <i class="bi bi-moon-stars" style="font-size:2rem;opacity:0.25;display:block;margin-bottom:8px"></i>
+    Week off day
+  </div>
+  <% } else { %>
+  <table class="admp-table">
+    <thead>
+      <tr>
+        <th style="width:40%">Task</th>
+        <th style="width:12%">Type</th>
+        <th style="width:14%">Status</th>
+        <th style="width:34%">Time</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% if (dayTasks.length > 0) { %>
+        <% dayTasks.forEach(function(t) {
+          var statusKey, statusLabel;
+          if (t.is_recurring) {
+            if (t.is_completed)      { statusKey = 's-done';        statusLabel = 'Done'; }
+            else if (t.is_in_progress){ statusKey = 's-in_progress'; statusLabel = 'In Progress'; }
+            else if (isPast)          { statusKey = 's-not_done';    statusLabel = 'Not Done'; }
+            else                      { statusKey = 's-pending';     statusLabel = 'Pending'; }
+          } else {
+            if (t.status === 'completed')  { statusKey = 's-done';        statusLabel = 'Done'; }
+            else if (isPast)               { statusKey = 's-not_done';    statusLabel = 'Not Done'; }
+            else                           { statusKey = 's-' + t.status; statusLabel = t.status.replace('_',' '); }
+          }
+          var _tz = typeof orgTimezone !== 'undefined' ? orgTimezone : 'America/New_York';
+          var _fmt = { hour:'2-digit', minute:'2-digit', hour12:true, timeZone:_tz };
+        %>
+        <tr>
+          <td style="font-weight:500"><%= t.title %></td>
+          <td>
+            <span class="admp-badge <%= t.is_recurring || t.type === 'recurring' ? 'b-recurring' : 'b-once' %>">
+              <%= t.is_recurring || t.type === 'recurring' ? 'Recurring' : 'One-time' %>
+            </span>
+          </td>
+          <td><span class="admp-status <%= statusKey %>"><%= statusLabel %></span></td>
+          <td style="font-size:0.72rem;color:var(--adm-muted)">
+            <% if (t.started_at) { %><div><i class="bi bi-play-fill" style="color:#10b981"></i> <%= new Date(t.started_at).toLocaleTimeString('en-US', _fmt) %></div><% } %>
+            <% if (t.completed_at && (t.is_completed || t.status === 'completed')) { %><div><i class="bi bi-check-circle-fill" style="color:#10b981"></i> <%= new Date(t.completed_at).toLocaleTimeString('en-US', _fmt) %></div><% } %>
+            <% if (t.duration_minutes) { %><div style="color:#3b82f6"><i class="bi bi-clock"></i> <%= t.duration_minutes >= 60 ? Math.floor(t.duration_minutes/60)+'h '+(t.duration_minutes%60)+'m' : t.duration_minutes+'m' %></div><% } %>
+            <% if (!t.started_at && !t.completed_at) { %><span>—</span><% } %>
+          </td>
+        </tr>
+        <% }) %>
+      <% } else { %>
+      <tr><td colspan="4" class="admp-empty-msg">No task activity on this day</td></tr>
+      <% } %>
+    </tbody>
+  </table>
+  <% } %>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+
+<!-- Active tasks (today only) -->
+<% if (isViewingToday) { %>
+<div class="admp-card">
+  <div class="admp-card-header">
+    <i class="bi bi-play-circle" style="color:#00d4ff"></i>
+    Currently Working On (<%= activeTasks.length %>)
+  </div>
+  <div class="admp-card-body">
+    <% if (activeTasks.length > 0) { %>
+      <% activeTasks.forEach(function(t) { %>
+      <div class="admp-task-item">
+        <div class="admp-task-item-accent" style="background:#00d4ff"></div>
+        <div style="flex:1;min-width:0">
+          <div class="admp-task-name"><%= t.title %></div>
+          <div class="admp-task-sub">
+            <span class="admp-badge <%= t.type === 'recurring' ? 'b-recurring' : 'b-once' %>"><%= t.type === 'once' ? 'one-time' : t.type %></span>
+            <% if (t.created_by_name) { %> &nbsp;by <%= t.created_by_name %><% } %>
+          </div>
+        </div>
+        <span class="admp-status s-in_progress">In Progress</span>
+      </div>
+      <% }) %>
+    <% } else { %>
+    <div class="admp-empty-msg">No active tasks right now</div>
+    <% } %>
+  </div>
+</div>
+<% } %>
+
+<!-- Recently completed -->
+<div class="admp-card" style="<%= isViewingToday ? '' : 'grid-column:1/-1' %>">
+  <div class="admp-card-header">
+    <i class="bi bi-check-circle" style="color:#10b981"></i>
+    Recently Completed
+  </div>
+  <% if (recentCompleted.length > 0) { %>
+  <table class="admp-table">
+    <thead>
+      <tr><th>Task</th><th>Type</th><th>Completed</th></tr>
+    </thead>
+    <tbody>
+      <% recentCompleted.forEach(function(t) { %>
+      <tr>
+        <td style="font-weight:500"><%= t.title %></td>
+        <td><span class="admp-badge <%= t.type === 'recurring' ? 'b-recurring' : 'b-once' %>"><%= t.type === 'once' ? 'one-time' : 'recurring' %></span></td>
+        <td style="font-size:0.75rem;color:#10b981">
+          <%= t.completed_at ? new Date(t.completed_at).toLocaleString('en-US', { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit', hour12:true, timeZone: typeof orgTimezone !== 'undefined' ? orgTimezone : 'America/New_York' }) : '—' %>
+        </td>
+      </tr>
+      <% }) %>
+    </tbody>
+  </table>
+  <% } else { %>
+  <div class="admp-empty-msg">No completed tasks yet</div>
+  <% } %>
+</div>
+
+</div>
+
+<!-- Monthly report drawer -->
+<div class="admp-rpt-overlay" id="admpRptOverlay" onclick="if(event.target===this)closeAdmpRpt()"></div>
+<div class="admp-rpt-drawer" id="admpRptDrawer">
+  <div class="admp-rpt-header">
+    <span class="admp-rpt-title"><i class="bi bi-calendar-month"></i> Monthly Report</span>
+    <button class="admp-rpt-close" onclick="closeAdmpRpt()"><i class="bi bi-x-lg"></i></button>
+  </div>
+  <div class="admp-rpt-toolbar">
+    <input type="month" class="admp-rpt-month-input" id="admpRptMonth">
+    <button class="admp-rpt-load" onclick="loadAdmpRpt()"><i class="bi bi-arrow-clockwise"></i> Load</button>
+  </div>
+  <div class="admp-rpt-body" id="admpRptBody">
+    <div class="admp-empty-msg" style="margin-top:40px">Select a month and click Load</div>
+  </div>
+</div>
+
+<script>
+(function() {
+  function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  window.openAdmpRpt = function() {
+    var now = new Date();
+    document.getElementById('admpRptMonth').value = now.toISOString().slice(0,7);
+    document.getElementById('admpRptOverlay').style.display = 'block';
+    document.getElementById('admpRptDrawer').classList.add('open');
+    loadAdmpRpt();
+  };
+  window.closeAdmpRpt = function() {
+    document.getElementById('admpRptOverlay').style.display = 'none';
+    document.getElementById('admpRptDrawer').classList.remove('open');
+  };
+  window.loadAdmpRpt = function() {
+    var month = document.getElementById('admpRptMonth').value;
+    if (!month) return;
+    var body = document.getElementById('admpRptBody');
+    body.innerHTML = '<div class="admp-empty-msg" style="margin-top:40px"><div style="width:18px;height:18px;border-radius:50%;border:2px solid var(--adm-border);border-top-color:var(--adm-accent);animation:admt-spin 0.7s linear infinite;display:inline-block;margin-right:8px;vertical-align:middle"></div>Loading…</div>';
+
+    fetch('/my-monthly-report?month=' + month, { credentials: 'same-origin' })
+      .then(function(r){ return r.json(); })
+      .then(function(res) {
+        if (!res.success) throw new Error(res.message || 'Failed');
+        var d = res.data;
+        var stats = d.stats || {};
+        var breakdown = d.dailyBreakdown || [];
+        var parts = month.split('-');
+        var monthLabel = new Date(parseInt(parts[0]), parseInt(parts[1])-1).toLocaleString('default', { month:'long', year:'numeric' });
+
+        var total     = parseInt(stats.total)     || 0;
+        var completed = parseInt(stats.completed) || 0;
+        var rate      = total > 0 ? Math.min(100, Math.round(completed / total * 100)) : 0;
+        var rateColor = rate >= 80 ? '#10b981' : rate >= 50 ? '#f59e0b' : '#ef4444';
+
+        var html = '<div style="font-size:0.7rem;font-family:var(--adm-mono);font-weight:700;color:var(--adm-muted);text-transform:uppercase;margin-bottom:10px">' + esc(monthLabel) + '</div>';
+        html += '<div class="admp-rpt-stat-row">';
+        html += '<div class="admp-rpt-stat"><div class="admp-rpt-stat-num" style="color:var(--adm-accent)">' + total + '</div><div class="admp-rpt-stat-label">Total</div></div>';
+        html += '<div class="admp-rpt-stat"><div class="admp-rpt-stat-num" style="color:#10b981">' + completed + '</div><div class="admp-rpt-stat-label">Done</div></div>';
+        html += '<div class="admp-rpt-stat"><div class="admp-rpt-stat-num" style="color:' + rateColor + '">' + rate + '%</div><div class="admp-rpt-stat-label">Rate</div></div>';
+        html += '</div>';
+
+        var recurringDone = (parseInt(stats.daily_completed)||0) + (parseInt(stats.weekly_completed)||0);
+        var recurringTotal = (parseInt(stats.type_daily)||0) + (parseInt(stats.type_weekly)||0) + (parseInt(stats.type_monthly)||0);
+        var onceDone  = parseInt(stats.once_completed) || 0;
+        var onceTotal = parseInt(stats.type_once) || 0;
+        html += '<div class="admp-rpt-type-row">';
+        html += '<div class="admp-rpt-type" style="border-left:3px solid #8b5cf6"><div class="admp-rpt-type-label">Recurring</div><div class="admp-rpt-type-val">' + recurringDone + ' / ' + recurringTotal + '</div></div>';
+        html += '<div class="admp-rpt-type" style="border-left:3px solid #f97316"><div class="admp-rpt-type-label">One-time</div><div class="admp-rpt-type-val">' + onceDone + ' / ' + onceTotal + '</div></div>';
+        html += '</div>';
+
+        if (breakdown.length > 0) {
+          html += '<div class="admp-rpt-section-title">Daily Breakdown</div>';
+          breakdown.forEach(function(row) {
+            var dateVal = (row.date instanceof Date ? row.date.toISOString() : String(row.date)).split('T')[0];
+            var dateStr = new Date(dateVal + 'T12:00:00').toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' });
+            var dr = row.total > 0 ? Math.min(100, Math.round(row.completed / row.total * 100)) : 0;
+            var drColor = dr >= 80 ? '#10b981' : dr >= 50 ? '#f59e0b' : '#ef4444';
+            html += '<div class="admp-rpt-daily-row">';
+            html += '<a href="/admin/my-progress?date=' + esc(dateVal) + '" onclick="closeAdmpRpt()" style="color:var(--adm-accent);text-decoration:none;font-size:0.78rem">' + esc(dateStr) + '</a>';
+            html += '<span style="font-family:var(--adm-mono);font-size:0.78rem;color:var(--adm-text-2)">' + (row.total||0) + '</span>';
+            html += '<span style="font-family:var(--adm-mono);font-size:0.78rem;color:#10b981">' + (row.completed||0) + '</span>';
+            html += '<div style="display:flex;align-items:center;gap:5px"><div style="flex:1;height:4px;background:var(--adm-surface-2);border-radius:2px;overflow:hidden"><div style="height:100%;background:' + drColor + ';width:' + dr + '%"></div></div><span style="font-size:0.68rem;font-family:var(--adm-mono);color:var(--adm-muted)">' + dr + '%</span></div>';
+            html += '</div>';
+          });
+        } else {
+          html += '<div class="admp-empty-msg">No tasks in this month</div>';
+        }
+
+        body.innerHTML = html;
+      })
+      .catch(function(err) {
+        body.innerHTML = '<div class="admp-empty-msg" style="color:#ef4444">Failed to load: ' + esc(err.message) + '</div>';
+      });
+  };
+})();
+</script>

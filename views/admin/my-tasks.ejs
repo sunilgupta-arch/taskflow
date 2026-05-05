@@ -503,7 +503,7 @@
       html +=
         '<tr class="' + rowClass + '">' +
           '<td>' +
-            '<div class="admt-task-title admt-task-title-link" onclick="admtOpenDetail(' + JSON.stringify(t).replace(/</g,'\\u003c') + ')">' + esc(t.title) + '</div>' +
+            '<div class="admt-task-title admt-task-title-link" onclick="admtOpenDetail(' + JSON.stringify(t).replace(/</g,'\\u003c').replace(/"/g,'&quot;') + ')">' + esc(t.title) + '</div>' +
             (sub ? '<div class="admt-task-sub"><i class="bi bi-arrow-repeat"></i> ' + esc(sub) + '</div>' : '') +
           '</td>' +
           '<td>' + typeHtml + '</td>' +
