@@ -125,8 +125,10 @@ taskflow/
 ### New Admin Hub UI (`views/admin/layout.ejs`)
 - Self-contained layout — **no Bootstrap CSS**, only Bootstrap Icons CDN
 - CSS variables prefixed `--adm-*` (bg, surface, surface-2, border, accent, text, text-2, muted, mono, font)
-- 240px fixed sidebar with section nav (Work, Team, Reports, Comms, Tools)
-- Topbar: clock, **Client Queue badge button** (orange), **Group Channel off-canvas** (purple, `bi-people-fill`), **Client Messages off-canvas** (amber, `bi-chat-dots-fill`), theme toggle
+- **Dark theme uses neutral VSCode-style grays** anchored on `#242424` — no blue tint. Key values: `--adm-bg: #1a1a1a`, `--adm-surface: #242424`, `--adm-border: #383838`, `--adm-text: #e2e2e2`. Accent stays `#00d4ff`.
+- 240px fixed sidebar with section nav (Work, Team, Reports, Comms, Tools) + My Work section (My Tasks, Client Queue, Leaves, My Attendance, My Progress)
+- Topbar: clock, **Client Queue badge button** (orange), **Notification bell** (cyan, `bi-bell-fill`), **Group Channel off-canvas** (purple, `bi-people-fill`), **Client Messages off-canvas** (amber, `bi-chat-dots-fill`), theme toggle
+- Sidebar footer user row: name, role, **Change Password key icon button** (opens modal)
 - Both slide-over drawers are appended to `<body>` and share the same Socket.IO connection
 - `<%- style %>` in `<head>`, `<%- script %>` after layout's own `</script>` just before `</body>`
 - **CRITICAL**: Never put `</script>` literal text in comments inside view `<script>` blocks — `express-ejs-layouts` uses a non-greedy regex to extract scripts and will cut the block at that text
@@ -167,6 +169,11 @@ Key fields on `client_request_instances`: `id, request_id, instance_date, status
 Key methods: `getQueueForDate(dateStr), getDateStats(dateStr), autoMarkMissed(dateStr), pick(), release(), complete(), cancelInstance(), deleteFutureOpenInstances(), getOpenCountForOrg()`
 **Carry-forward rule:** One-time requests with `status=open` and `instance_date < today` are NOT auto-marked missed; they surface in today's queue with an "Overdue" badge.
 
+### `models/Notification.js` — table: `notifications`
+Key fields: `id, user_id, type, title, body, link, is_read, created_at`
+Key methods: `create(userId, type, title, body, link)`, `getForUser(userId, limit)`, `markRead(id, userId)`, `markAllRead(userId)`
+Types in use: `task_assigned`, `leave_approved`, `leave_granted`
+
 ### `models/LeaveRequest.js` — table: `leave_requests`
 Key methods: `findById(), create(), createApproved(), updateStatus(), getAll(), hasOverlapping(), getForRange()`
 
@@ -206,7 +213,8 @@ Calendar entries for CLIENT users; also surfaces portal tasks and reminders.
 
 | Controller | Key Methods |
 |-----------|-------------|
-| `AdminHubController` | `dashboard, work, queue, team, reports, comms, tools` — renders new hub pages with `layout: 'admin/layout'` |
+| `AdminHubController` | `dashboard, work, queue, team, reports, comms, tools, myTasks, myProgress, myAttendance` — renders new hub pages with `layout: 'admin/layout'` |
+| `NotificationController` | `list, markRead, markAllRead` — persistent notification API for admin hub bell |
 | `TaskController` | `board, index, myTasks, create, assign, pick, start, complete, startSession, completeSession, logCompletion, undoCompletion, deactivate, update, show, addComment, uploadAttachments` |
 | `UserController` | `index, create, update, resetPassword, toggleActive, showMyProgress, myMonthlyReport, showProgress, monthlyReport, changePassword` |
 | `ReportController` | `reportsIndex, completionReport, rewardReport, attendanceReport, taskCompletionReport, taskDayDetail, overdueReport, punctualityReport, workloadReport, myAttendance, attendanceOverride, forceLogout, addHoliday, removeHoliday` |
@@ -259,7 +267,7 @@ POST /tasks/:id/start     → start a session
 POST /tasks/:id/complete  → complete
 POST /tasks/:id/comments  → add comment
 
-# Admin Hub (LOCAL_ADMIN / LOCAL_MANAGER only)
+# Admin Hub (all LOCAL roles unless noted)
 GET  /admin               → dashboard
 GET  /admin/queue         → client queue (new UI)
 GET  /admin/work          → work hub page
@@ -267,6 +275,14 @@ GET  /admin/team          → team hub page
 GET  /admin/reports       → reports hub page
 GET  /admin/comms         → comms hub page
 GET  /admin/tools         → tools hub page
+GET  /admin/my-tasks      → my assigned tasks (all LOCAL roles)
+GET  /admin/my-attendance → my attendance calendar (all LOCAL roles)
+GET  /admin/my-progress   → my task progress (all LOCAL roles)
+
+# Notifications
+GET  /notifications              → list (last 30) + unread count
+POST /notifications/read-all     → mark all read
+POST /notifications/:id/read     → mark one read
 
 # Client Queue (LOCAL team works client tasks)
 GET  /queue               → classic queue page
@@ -344,6 +360,7 @@ All LOCAL users and CLIENT users with access to local-side features connect here
 | `call:offer/answer/ice-candidate/reject/end` | WebRTC relay | various | Peer-to-peer video calls |
 | `urgent:new` | server→all | urgent object | New urgent request |
 | `urgent:resolved` | server→all | urgent object | Urgent resolved |
+| `notification:new` | server→`user:<id>` | `{id, type, title, body, link, is_read, created_at}` | Persistent notification for bell |
 
 ### Portal Namespace `/portal`
 CLIENT users use this for portal-specific real-time features.
@@ -457,11 +474,32 @@ Auto-run on server start via `utils/auto-migrate.js`. Migration files are in `mi
 
 ---
 
-## 17. What's In Progress / Known State (as of April 21 2026)
+## 17. What's In Progress / Known State (as of May 5, 2026)
 
-- **New Admin Hub** (`/admin/*`) is built in parallel with the classic UI. Current migrated pages: Dashboard, Work, Queue, Team, Reports, Comms, Tools hub cards + Client Queue full page (`/admin/queue`).
-- Classic UI (`/`, `main.ejs`) remains fully functional and untouched.
-- The plan: migrate each classic page into the new hub one by one, then retire classic once complete.
-- **Client Queue (`/admin/queue`)** is the first fully functional page in the new hub — full pick/done/release lifecycle, detail drawer, comments, attachments, live socket updates.
-- Group Channel off-canvas drawer is live in `admin/layout.ejs` (purple icon, full message load + real-time append).
-- Bridge Chat off-canvas drawer is live in `admin/layout.ejs` (amber icon, conversation list + per-chat view).
+### New Admin Hub (`/admin/*`)
+Built in parallel with the classic UI. Fully migrated pages so far:
+
+| Page | Route | Notes |
+|------|-------|-------|
+| Dashboard | `/admin` | All LOCAL roles |
+| Client Queue | `/admin/queue` | Full pick/done/release lifecycle, detail drawer, comments, attachments, live socket |
+| My Tasks | `/admin/my-tasks` | Task list with detail drawer + comments |
+| My Attendance | `/admin/my-attendance` | Monthly calendar, session log, leave/holiday overlay |
+| My Progress | `/admin/my-progress` | Task stats, day tasks, recently completed, reward summary |
+| Work / Team / Reports / Comms / Tools | hub cards | Partially migrated — hub cards link to classic sub-pages |
+
+### Topbar / Layout features live in admin hub
+- Notification bell (persistent notifications for task assignment, leave grant/approve)
+- Group Channel off-canvas (purple, `bi-people-fill`)
+- Bridge Chat off-canvas (amber, `bi-chat-dots-fill`)
+- Change Password modal (key icon in sidebar user row)
+- Client Queue badge button (orange)
+
+### Classic UI
+Remains fully functional and untouched. Theme dark variables also updated to neutral grays (`#242424` base) matching the admin hub.
+
+### Still on classic UI (not yet migrated to hub)
+All admin/manager-only pages: all-tasks board, attendance management, users, reports, leaves management, drive, notes, backup, rewards, live-status, announcements.
+
+### Plan
+Migrate remaining classic pages into the new hub one by one, then retire classic once complete.

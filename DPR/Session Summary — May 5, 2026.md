@@ -36,8 +36,136 @@
 
 ---
 
-## Summary of Files Changed
+## Feature: Persistent Notification System
+
+**What was built:** A full persistent notification system so users receive bell notifications for task assignments and leave approvals/grants, even if they weren't connected via socket at the time.
+
+**Backend:**
+- `models/Notification.js` — wraps the `notifications` table. Key methods: `create(userId, type, title, body, link)`, `getForUser(userId, limit)`, `markRead(id, userId)`, `markAllRead(userId)`
+- `controllers/notificationController.js` — three endpoints: `list` (GET), `markRead` (POST /:id/read), `markAllRead` (POST /read-all)
+- `migrations/048_notifications_2026-05-05.sql` — creates `notifications` table (`id, user_id, type, title, body, link, is_read, created_at`)
+- `routes/index.js` — added `GET /notifications`, `POST /notifications/read-all`, `POST /notifications/:id/read`
+
+**Where notifications are created:**
+- `controllers/taskController.js` — task assignment (single and group). Both single-assignee and multi-assignee paths now call `Notification.create()` after emitting the socket event, then immediately emit `notification:new` with the new notification's id back to the user's room.
+- `controllers/leaveController.js` — leave granted (admin manually grants) and leave approved (from a pending request). Same pattern.
+
+**Frontend (admin hub layout):**
+- Bell icon button in the topbar (between Queue and Group Channel)
+- Badge: red count badge, hidden when 0; amber border + amber icon when any unread
+- Dropdown panel: fixed-position, 340px wide, max 420px tall, scrollable list
+- Each notification shows: type icon (task=blue, leave=green, default=gray), title, body, time-ago, unread dot
+- Click on a notification marks it read instantly (optimistic update) + fires POST to server; navigates to `link` if present
+- "Mark all read" button in dropdown header
+- Real-time: listens on `notification:new` socket event — prepends new notification and updates badge without page reload
+- On page load: `loadNotifications()` called immediately to hydrate the badge
+- Close on outside click
+
+**Files changed:**
+- `models/Notification.js` — new file
+- `controllers/notificationController.js` — new file
+- `migrations/048_notifications_2026-05-05.sql` — new file
+- `controllers/taskController.js` — added Notification.create() on assignment
+- `controllers/leaveController.js` — added Notification.create() on grant/approve
+- `routes/index.js` — 3 new notification routes
+- `views/admin/layout.ejs` — bell button, dropdown HTML, notification CSS, JS IIFE
+
+---
+
+## Feature: My Progress Page (Admin Hub)
+
+**Route:** `GET /admin/my-progress` — accessible to all LOCAL roles (`requireLocalAll`)
+
+**What it shows:**
+- Stat cards: Tasks Today, Pending Today, Done Today, Completion %, Completed Today, This Month
+- Date picker with Prev/Next navigation (defaults to today)
+- Tasks for selected date table: shows recurring tasks scheduled for that day + once tasks created/due/completed on that day. Columns: Task, Type, Status, Time (start/end for recurring, — for pending)
+- Currently Working On panel: tasks with `status = in_progress`
+- Recently Completed panel: last 10 completions (recurring + once, merged and sorted)
+- Monthly Report button (placeholder for now)
+
+**Controller:** `AdminHubController.myProgress` — queries TaskService.getTaskStats, RewardModel.getUserSummary, active tasks, recent completions, and day tasks (recurring filtered by schedule + once filtered by date)
+
+**Files changed:**
+- `controllers/adminHubController.js` — added `myProgress` static method; added imports for `ShiftHistory`, `TaskService`, `RewardModel`
+- `routes/index.js` — `GET /admin/my-progress`
+- `views/admin/my-progress.ejs` — new file, full page
+- `views/admin/layout.ejs` — added "My Progress" nav link (`bi-graph-up-arrow`)
+
+---
+
+## Feature: My Attendance Page (Admin Hub)
+
+**Route:** `GET /admin/my-attendance` — accessible to all LOCAL roles (`requireLocalAll`)
+
+**What it shows:**
+- Monthly calendar view with day-level status: present, absent, off, holiday, leave (approved/pending), future
+- Today's sessions panel: all login/logout pairs for today with duration
+- Summary counts: Present days, Leave days
+- Month navigation (Prev/Next)
+- Uses `ShiftHistory.getShiftForDate()` to get the user's shift for today (handles shift changes over time)
+- Cross-references `leave_requests`, `holidays` tables for accurate calendar colouring
+
+**Controller:** `AdminHubController.myAttendance`
+
+**Files changed:**
+- `controllers/adminHubController.js` — added `myAttendance` static method
+- `routes/index.js` — `GET /admin/my-attendance`
+- `views/admin/my-attendance.ejs` — new file, full page
+- `views/admin/layout.ejs` — added "My Attendance" nav link (`bi-clock-history`)
+
+---
+
+## UI: Dark Theme — Switched from Blue-Tinted to Neutral VSCode-Style Grays
+
+**Problem:** The admin hub and classic UI dark themes used deep blue-tinted backgrounds (`#060d18`, `#0a1528`, `#111827`, etc.) which gave the entire UI a cold blue cast.
+
+**Change:** Replaced all dark theme CSS variables with neutral dark grays anchored on `#242424` (VSCode dark theme style).
+
+**Admin hub (`views/admin/layout.ejs`):**
+| Variable | Before | After |
+|---|---|---|
+| `--adm-bg` | `#060d18` | `#1a1a1a` |
+| `--adm-sidebar` | `#0a1528` | `#222222` |
+| `--adm-sidebar-2` | `#0d1c35` | `#2a2a2a` |
+| `--adm-surface` | `#0e1d30` | `#242424` |
+| `--adm-surface-2` | `#132540` | `#2e2e2e` |
+| `--adm-border` | `#1a3050` | `#383838` |
+| `--adm-border-2` | `#1e3860` | `#484848` |
+| `--adm-text` | `#dceaf8` | `#e2e2e2` |
+| `--adm-text-2` | `#a8c0d8` | `#a0a0a0` |
+| `--adm-muted` | `#445e78` | `#666666` |
+| `--adm-topbar` | `rgba(6,13,24,0.85)` | `rgba(26,26,26,0.88)` |
+
+**Classic UI (`views/layouts/main.ejs`):**
+| Variable | Before | After |
+|---|---|---|
+| `--tf-bg` | `#0a0e1a` | `#1a1a1a` |
+| `--tf-surface` | `#111827` | `#242424` |
+| `--tf-surface-2` | `#1a2235` | `#2e2e2e` |
+| `--tf-border` | `#1e2d45` | `#383838` |
+| `--tf-text` | `#e2e8f0` | `#e2e2e2` |
+| `--tf-text-muted` | `#64748b` | `#666666` |
+| `--tf-nav-link` | `#94a3b8` | `#a0a0a0` |
+
+Accent (`#00d4ff`), success, warning, danger colours unchanged.
+
+---
+
+## Summary of All Files Changed
+
+**New files:**
+- `models/Notification.js`
+- `controllers/notificationController.js`
+- `migrations/048_notifications_2026-05-05.sql`
+- `views/admin/my-attendance.ejs`
+- `views/admin/my-progress.ejs`
 
 **Modified:**
 - `views/admin/my-tasks.ejs` — fix `onclick` JSON quote escaping
-- `views/admin/layout.ejs` — change password modal + key icon in sidebar user row
+- `views/admin/layout.ejs` — change password modal, notification bell + dropdown, My Attendance + My Progress nav links, dark theme neutralised
+- `views/layouts/main.ejs` — dark theme neutralised
+- `controllers/adminHubController.js` — `myProgress` and `myAttendance` methods
+- `controllers/taskController.js` — persistent notifications on task assignment
+- `controllers/leaveController.js` — persistent notifications on leave grant/approve
+- `routes/index.js` — `/admin/my-attendance`, `/admin/my-progress`, notification API routes
