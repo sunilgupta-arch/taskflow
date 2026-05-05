@@ -989,7 +989,7 @@
         </div>
       </div>
       <div class="adm-footer-btns">
-        <a href="/" class="adm-footer-btn" title="Back to classic UI">
+        <a href="<%= user.role_name === 'LOCAL_USER' ? '/tasks' : '/tasks/board' %>" class="adm-footer-btn" title="Back to classic UI">
           <i class="bi bi-grid"></i> Classic
         </a>
         <a href="/auth/logout" class="adm-footer-btn" title="Sign out">
