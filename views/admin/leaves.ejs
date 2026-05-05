@@ -166,7 +166,11 @@
     <button class="lvm-tab"        data-filter="rejected" onclick="lvmSetFilter('rejected')">Rejected <span class="lvm-tab-cnt" id="lvmCntRejected">0</span></button>
   </div>
   <div style="display:flex;align-items:center;gap:8px">
+    <% if (user.role_name === 'LOCAL_USER') { %>
+    <a href="/admin" class="adm-back-btn"><i class="bi bi-arrow-left"></i> Dashboard</a>
+    <% } else { %>
     <a href="/admin/team" class="adm-back-btn"><i class="bi bi-arrow-left"></i> Team</a>
+    <% } %>
     <button class="lvm-grant-btn" onclick="lvmOpenGrant()">
       <i class="bi bi-person-plus"></i> Grant Leave
     </button>

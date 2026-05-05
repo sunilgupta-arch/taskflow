@@ -94,7 +94,11 @@
       <div class="hc-page-title">Help Center</div>
       <div class="hc-page-sub">Guides and documentation to help you use TaskFlow effectively</div>
     </div>
+    <% if (user.role_name === 'LOCAL_USER') { %>
+    <a href="/admin" class="hc-back-btn"><i class="bi bi-arrow-left"></i> Dashboard</a>
+    <% } else { %>
     <a href="/admin/tools" class="hc-back-btn"><i class="bi bi-arrow-left"></i> Tools</a>
+    <% } %>
   </div>
 
   <!-- Search -->

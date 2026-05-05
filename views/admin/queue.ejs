@@ -293,7 +293,11 @@
   </div>
   <div style="display:flex;align-items:center;gap:10px">
     <div class="admq-stats" id="admqStats"></div>
+    <% if (user.role_name === 'LOCAL_USER') { %>
+    <a href="/admin" class="adm-back-btn"><i class="bi bi-arrow-left"></i> Dashboard</a>
+    <% } else { %>
     <a href="/admin/work" class="adm-back-btn"><i class="bi bi-arrow-left"></i> Work</a>
+    <% } %>
   </div>
 </div>
 
