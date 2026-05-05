@@ -163,6 +163,71 @@
 /* In-progress timer */
 .admt-timer { font-size: 0.72rem; font-family: var(--adm-mono); color: #3b82f6; white-space: nowrap; }
 
+/* Clickable task title */
+.admt-task-title-link { cursor: pointer; }
+.admt-task-title-link:hover { color: var(--adm-accent); }
+
+/* ── Task detail drawer ───────────────────────────────────── */
+.admt-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.45);
+  z-index: 1000; display: none;
+}
+.admt-drawer {
+  position: fixed; top: 0; right: 0; height: 100%; width: 420px; max-width: 95vw;
+  background: var(--adm-surface); border-left: 1px solid var(--adm-border);
+  z-index: 1001; display: flex; flex-direction: column;
+  transform: translateX(100%); transition: transform 0.22s ease;
+}
+.admt-drawer.open { transform: translateX(0); }
+.admt-drawer-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 18px; border-bottom: 1px solid var(--adm-border); flex-shrink: 0;
+}
+.admt-drawer-title { font-size: 0.85rem; font-weight: 700; color: var(--adm-text); display:flex; align-items:center; gap:8px; }
+.admt-drawer-close {
+  background: none; border: 1px solid var(--adm-border); border-radius: 7px;
+  color: var(--adm-muted); cursor: pointer; padding: 4px 8px; font-size: 0.85rem;
+  transition: all 0.13s;
+}
+.admt-drawer-close:hover { border-color: var(--adm-border-2); color: var(--adm-text); }
+.admt-drawer-meta {
+  display: flex; flex-wrap: wrap; gap: 8px;
+  padding: 14px 18px; border-bottom: 1px solid var(--adm-border); flex-shrink: 0;
+}
+.admt-drawer-actions {
+  display: flex; gap: 8px; flex-wrap: wrap;
+  padding: 12px 18px; border-bottom: 1px solid var(--adm-border); flex-shrink: 0;
+}
+.admt-drawer-body {
+  flex: 1; overflow-y: auto; padding: 16px 18px; display: flex; flex-direction: column; gap: 14px;
+}
+.admt-drawer-comments-title {
+  font-size: 0.7rem; font-weight: 700; font-family: var(--adm-mono);
+  color: var(--adm-muted); text-transform: uppercase; letter-spacing: 0.5px;
+}
+.admt-comment { display: flex; gap: 10px; }
+.admt-comment-avatar {
+  width: 28px; height: 28px; border-radius: 50%; background: var(--adm-surface-2);
+  border: 1px solid var(--adm-border); display: flex; align-items: center;
+  justify-content: center; font-size: 0.7rem; font-weight: 700; color: var(--adm-accent); flex-shrink: 0;
+}
+.admt-comment-meta { font-size: 0.65rem; color: var(--adm-muted); margin-bottom: 3px; }
+.admt-comment-body { font-size: 0.8rem; color: var(--adm-text-2); line-height: 1.5; white-space: pre-wrap; }
+.admt-comment-input-row { display: flex; gap: 8px; align-items: flex-end; padding: 12px 18px; border-top: 1px solid var(--adm-border); flex-shrink: 0; }
+.admt-comment-textarea {
+  flex: 1; background: var(--adm-surface-2); border: 1px solid var(--adm-border);
+  border-radius: 8px; color: var(--adm-text); font-size: 0.8rem; padding: 8px 10px;
+  resize: none; font-family: var(--adm-font); line-height: 1.4;
+}
+.admt-comment-textarea:focus { outline: none; border-color: var(--adm-accent); }
+.admt-comment-send {
+  height: 34px; padding: 0 14px; border-radius: 8px;
+  background: var(--adm-accent); color: #000; border: none;
+  font-size: 0.78rem; font-weight: 700; cursor: pointer; white-space: nowrap;
+}
+.admt-comment-send:hover { opacity: 0.88; }
+.admt-no-comments { font-size: 0.78rem; color: var(--adm-muted); text-align: center; padding: 20px 0; }
+
 /* Empty / Loading */
 .admt-empty {
   display: flex; flex-direction: column; align-items: center;
@@ -438,7 +503,7 @@
       html +=
         '<tr class="' + rowClass + '">' +
           '<td>' +
-            '<div class="admt-task-title">' + esc(t.title) + '</div>' +
+            '<div class="admt-task-title admt-task-title-link" onclick="admtOpenDetail(' + JSON.stringify(t).replace(/</g,'\\u003c') + ')">' + esc(t.title) + '</div>' +
             (sub ? '<div class="admt-task-sub"><i class="bi bi-arrow-repeat"></i> ' + esc(sub) + '</div>' : '') +
           '</td>' +
           '<td>' + typeHtml + '</td>' +
@@ -529,5 +594,133 @@
 
   /* ── initial load ────────────────────────────────────────────── */
   loadData();
+})();
+</script>
+
+<!-- ── Task detail drawer ─────────────────────────────────────── -->
+<div id="admtOverlay" class="admt-overlay" onclick="admtCloseDetail()"></div>
+<div id="admtDrawer" class="admt-drawer">
+  <div class="admt-drawer-header">
+    <div class="admt-drawer-title"><i class="bi bi-clipboard2-check"></i> <span id="admtDrawerTitle">Task Detail</span></div>
+    <button class="admt-drawer-close" onclick="admtCloseDetail()"><i class="bi bi-x-lg"></i></button>
+  </div>
+  <div class="admt-drawer-meta" id="admtDrawerMeta"></div>
+  <div class="admt-drawer-actions" id="admtDrawerActions"></div>
+  <div class="admt-drawer-body" id="admtDrawerBody">
+    <div class="admt-no-comments">Loading…</div>
+  </div>
+  <div class="admt-comment-input-row">
+    <textarea class="admt-comment-textarea" id="admtCommentInput" rows="2" placeholder="Add a comment…"></textarea>
+    <button class="admt-comment-send" onclick="admtSendComment()"><i class="bi bi-send-fill"></i></button>
+  </div>
+</div>
+
+<script>
+(function() {
+  var _task = null;
+
+  function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  function fmtTime(t) {
+    if (!t) return '—';
+    var p = t.split(':'); var h = parseInt(p[0],10); var m = p[1];
+    var ampm = h >= 12 ? 'PM' : 'AM'; h = h % 12 || 12;
+    return h + ':' + m + ' ' + ampm;
+  }
+
+  window.admtOpenDetail = function(task) {
+    _task = task;
+    document.getElementById('admtDrawerTitle').textContent = task.title;
+
+    /* meta row */
+    var priColor = { high:'#ef4444', medium:'#f59e0b', low:'#10b981' }[task.priority] || '#94a3b8';
+    var statusLabel = { done:'Done', in_progress:'In Progress', pending:'Pending', active:'Active', completed:'Completed' }[task.status] || task.status;
+    var statusColor = { done:'#10b981', in_progress:'#3b82f6', pending:'#f97316', active:'#8b5cf6', completed:'#94a3b8' }[task.status] || '#94a3b8';
+    var typeLabel   = task.type === 'recurring' ? (task.pattern ? task.pattern.charAt(0).toUpperCase() + task.pattern.slice(1) : 'Recurring') : 'One-time';
+    document.getElementById('admtDrawerMeta').innerHTML =
+      '<span style="font-size:0.7rem;font-family:var(--adm-mono);padding:3px 9px;border-radius:20px;border:1px solid var(--adm-border);color:var(--adm-muted)">' + esc(typeLabel) + '</span>' +
+      '<span style="font-size:0.7rem;font-family:var(--adm-mono);padding:3px 9px;border-radius:20px;background:rgba(255,255,255,0.04);color:' + priColor + '">' + esc((task.priority||'medium').charAt(0).toUpperCase()+(task.priority||'medium').slice(1)) + '</span>' +
+      '<span style="font-size:0.7rem;font-family:var(--adm-mono);padding:3px 9px;border-radius:20px;background:rgba(255,255,255,0.04);color:' + statusColor + '">' + esc(statusLabel) + '</span>' +
+      (task.deadline_time ? '<span style="font-size:0.7rem;font-family:var(--adm-mono);color:var(--adm-muted)"><i class="bi bi-clock" style="margin-right:3px"></i>' + esc(fmtTime(task.deadline_time)) + '</span>' : '');
+
+    /* action buttons */
+    var actHtml = '';
+    if (task.type === 'recurring') {
+      if (task.status === 'pending')      actHtml = '<button class="admt-btn btn-start"    onclick="startSession(' + task.id + ');admtRefreshActions(this.closest(\'.admt-drawer\'))"><i class="bi bi-play-fill"></i> Start</button>';
+      else if (task.status === 'in_progress') actHtml = '<button class="admt-btn btn-complete" onclick="completeSession(' + task.id + ');admtCloseDetail()"><i class="bi bi-check-lg"></i> Complete</button>';
+    } else {
+      if (task.status === 'pending')      actHtml = '<button class="admt-btn btn-start" onclick="startTask(' + task.id + ')"><i class="bi bi-play-fill"></i> Start</button><button class="admt-btn btn-complete" onclick="completeTask(' + task.id + ');admtCloseDetail()"><i class="bi bi-check-lg"></i> Done</button>';
+      else if (task.status === 'in_progress') actHtml = '<button class="admt-btn btn-complete" onclick="completeTask(' + task.id + ');admtCloseDetail()"><i class="bi bi-check-lg"></i> Complete</button>';
+    }
+    var actEl = document.getElementById('admtDrawerActions');
+    actEl.innerHTML   = actHtml;
+    actEl.style.display = actHtml ? 'flex' : 'none';
+
+    /* show drawer */
+    document.getElementById('admtOverlay').style.display = 'block';
+    document.getElementById('admtDrawer').classList.add('open');
+    document.getElementById('admtCommentInput').value = '';
+    admtLoadComments();
+  };
+
+  window.admtCloseDetail = function() {
+    document.getElementById('admtOverlay').style.display = 'none';
+    document.getElementById('admtDrawer').classList.remove('open');
+    _task = null;
+  };
+
+  function admtLoadComments() {
+    if (!_task) return;
+    document.getElementById('admtDrawerBody').innerHTML = '<div class="admt-no-comments">Loading comments…</div>';
+    fetch('/tasks/' + _task.id + '/comments', { credentials: 'same-origin' })
+      .then(function(r){ return r.json(); })
+      .then(function(res) {
+        var comments = (res.data && res.data.comments) || [];
+        var html = '<div class="admt-drawer-comments-title"><i class="bi bi-chat-left-text" style="margin-right:4px"></i>Comments (' + comments.length + ')</div>';
+        if (!comments.length) {
+          html += '<div class="admt-no-comments">No comments yet. Be the first to add one.</div>';
+        } else {
+          comments.forEach(function(c) {
+            html += '<div class="admt-comment">' +
+              '<div class="admt-comment-avatar">' + esc((c.user_name||'?').charAt(0).toUpperCase()) + '</div>' +
+              '<div style="flex:1;min-width:0">' +
+                '<div class="admt-comment-meta">' + esc(c.user_name) + ' &bull; ' + esc(new Date(c.created_at).toLocaleString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})) + '</div>' +
+                '<div class="admt-comment-body">' + esc(c.comment) + '</div>' +
+              '</div>' +
+            '</div>';
+          });
+        }
+        document.getElementById('admtDrawerBody').innerHTML = html;
+        document.getElementById('admtDrawerBody').scrollTop = 99999;
+      })
+      .catch(function() {
+        document.getElementById('admtDrawerBody').innerHTML = '<div class="admt-no-comments">Failed to load comments.</div>';
+      });
+  }
+
+  window.admtSendComment = function() {
+    if (!_task) return;
+    var input = document.getElementById('admtCommentInput');
+    var body  = input.value.trim();
+    if (!body) return;
+    input.disabled = true;
+    fetch('/tasks/' + _task.id + '/comments', {
+      method: 'POST', credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ comment: body })
+    })
+      .then(function(r){ return r.json(); })
+      .then(function(res) {
+        input.disabled = false;
+        if (res.success) { input.value = ''; admtLoadComments(); }
+        else alert(res.message || 'Failed to post comment');
+      })
+      .catch(function() { input.disabled = false; alert('Network error'); });
+  };
+
+  /* allow Enter to submit (Shift+Enter for newline) */
+  document.getElementById('admtCommentInput').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); admtSendComment(); }
+  });
 })();
 </script>
