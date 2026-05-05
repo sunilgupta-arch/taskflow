@@ -1675,6 +1675,11 @@
       <span class="badge" style="background:var(--tf-surface-2);color:var(--tf-text-muted);font-family:var(--tf-font-mono);font-size:0.65rem;">
         <%= new Date().toLocaleDateString('en-US', {weekday:'short',month:'short',day:'numeric'}) %>
       </span>
+      <% if (!isClient) { %>
+      <a href="/admin" class="btn-theme-toggle" title="Switch to new UI" style="text-decoration:none;font-size:0.65rem;font-family:var(--tf-font-mono);font-weight:700;gap:4px;padding:0 10px;">
+        <i class="bi bi-stars"></i> New UI
+      </a>
+      <% } %>
       <button id="themeToggle" class="btn-theme-toggle" aria-label="Toggle theme">
         <i class="bi bi-sun-fill" id="themeIconLight" style="display:none;"></i>
         <i class="bi bi-moon-stars-fill" id="themeIconDark"></i>
