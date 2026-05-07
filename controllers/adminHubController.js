@@ -944,6 +944,11 @@ class AdminHubController {
               calendarData[u.id][d] = ov.status === 'leave' ? 'approved_leave' : ov.status;
             } else if (attendanceSet.has(`${u.id}-${dateStr}`)) {
               calendarData[u.id][d] = 'present';
+            } else if (dateStr === today && u.shift_start) {
+              const nowObj  = getNow(tz);
+              const nowMins = nowObj.getUTCHours() * 60 + nowObj.getUTCMinutes();
+              const [sh, sm] = u.shift_start.split(':').map(Number);
+              calendarData[u.id][d] = nowMins < sh * 60 + sm ? 'off_shift' : 'absent';
             } else {
               calendarData[u.id][d] = 'absent';
             }

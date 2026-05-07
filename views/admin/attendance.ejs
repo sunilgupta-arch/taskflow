@@ -57,7 +57,8 @@
 .ata-stat.s-absent  { border-color: rgba(239,68,68,0.3);   background: rgba(239,68,68,0.06);   color: #ef4444; }
 .ata-stat.s-late    { border-color: rgba(245,158,11,0.3);  background: rgba(245,158,11,0.06);  color: #f59e0b; }
 .ata-stat.s-leave   { border-color: rgba(59,130,246,0.3);  background: rgba(59,130,246,0.06);  color: #3b82f6; }
-.ata-stat.s-off     { border-color: rgba(100,116,139,0.3); background: rgba(100,116,139,0.06); color: #94a3b8; }
+.ata-stat.s-off      { border-color: rgba(100,116,139,0.3); background: rgba(100,116,139,0.06); color: #94a3b8; }
+.ata-stat.s-offshift { border-color: rgba(100,116,139,0.2); background: rgba(100,116,139,0.04); color: #64748b; }
 
 /* ── Daily table ────────────────────────────────────────── */
 .ata-table-wrap { background: var(--adm-surface); border: 1px solid var(--adm-border); border-radius: 14px; overflow: hidden; }
@@ -101,6 +102,7 @@
 .ata-badge.half_day     { background: rgba(249,115,22,0.12);  color: #f97316; }
 .ata-badge.official_duty{ background: rgba(20,184,166,0.12);  color: #14b8a6; }
 .ata-badge.work_from_home{ background: rgba(6,182,212,0.12);  color: #06b6d4; }
+.ata-badge.off_shift    { background: rgba(100,116,139,0.10); color: #64748b; }
 
 /* Late chip */
 .ata-late-chip {
@@ -396,7 +398,8 @@
   function statusLabel(s) {
     var m = {present:'Present',absent:'Absent',weekoff:'Week Off',holiday:'Holiday',
              approved_leave:'On Leave',pending_leave:'Leave (Pending)',
-             half_day:'Half Day',official_duty:'Official Duty',work_from_home:'WFH',future:'—'};
+             half_day:'Half Day',official_duty:'Official Duty',work_from_home:'WFH',
+             off_shift:'Off Shift',future:'—'};
     return m[s] || s || '—';
   }
   function fmtDate(d) {
@@ -441,7 +444,7 @@
 
   // ── Compute stats ────────────────────────────────────────────────────
   function computeStats(userMap, dateStr) {
-    var present = 0, absent = 0, late = 0, onLeave = 0, off = 0;
+    var present = 0, absent = 0, late = 0, onLeave = 0, off = 0, offShift = 0;
     _users.forEach(function(u) {
       var entry = userMap[u.id];
       var sessions = entry ? entry.sessions : [];
@@ -450,6 +453,7 @@
       else if (status === 'absent') absent++;
       else if (status === 'approved_leave' || status === 'pending_leave') onLeave++;
       else if (status === 'weekoff' || status === 'holiday') off++;
+      else if (status === 'off_shift') offShift++;
       // Late detection: first session login vs shift_start
       if (sessions.length && u.shift_start) {
         var first = sessions[0];
@@ -462,18 +466,22 @@
         }
       }
     });
-    return { total: _users.length, present: present, absent: absent, late: late, onLeave: onLeave, off: off };
+    return { total: _users.length, present: present, absent: absent, late: late, onLeave: onLeave, off: off, offShift: offShift };
   }
 
   // ── Render stats bar ─────────────────────────────────────────────────
   function renderStats(s) {
+    var offShiftPill = s.offShift > 0
+      ? '<div class="ata-stat s-offshift"><span class="ata-stat-dot" style="background:#64748b"></span><span class="ata-stat-count">'+s.offShift+'</span>&nbsp;Off Shift</div>'
+      : '';
     document.getElementById('ataStats').innerHTML =
       '<div class="ata-stat"><span class="ata-stat-count">'+s.total+'</span>&nbsp;Total</div>'
      +'<div class="ata-stat s-present"><span class="ata-stat-dot" style="background:#10b981"></span><span class="ata-stat-count">'+s.present+'</span>&nbsp;Present</div>'
      +'<div class="ata-stat s-absent"><span class="ata-stat-dot" style="background:#ef4444"></span><span class="ata-stat-count">'+s.absent+'</span>&nbsp;Absent</div>'
      +'<div class="ata-stat s-late"><span class="ata-stat-dot" style="background:#f59e0b"></span><span class="ata-stat-count">'+s.late+'</span>&nbsp;Late</div>'
      +'<div class="ata-stat s-leave"><span class="ata-stat-dot" style="background:#3b82f6"></span><span class="ata-stat-count">'+s.onLeave+'</span>&nbsp;On Leave</div>'
-     +'<div class="ata-stat s-off"><span class="ata-stat-dot" style="background:#94a3b8"></span><span class="ata-stat-count">'+s.off+'</span>&nbsp;Day Off</div>';
+     +'<div class="ata-stat s-off"><span class="ata-stat-dot" style="background:#94a3b8"></span><span class="ata-stat-count">'+s.off+'</span>&nbsp;Day Off</div>'
+     + offShiftPill;
   }
 
   // ── Render daily nav ─────────────────────────────────────────────────
