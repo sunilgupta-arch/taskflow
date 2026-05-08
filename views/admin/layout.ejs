@@ -26,6 +26,9 @@
       --adm-sidebar-w: 240px;
     }
 
+    @keyframes fadeIn  { from { opacity:0; } to { opacity:1; } }
+    @keyframes scaleIn { from { opacity:0; transform:scale(0.92); } to { opacity:1; transform:none; } }
+
     [data-bs-theme="dark"] {
       --adm-bg:          #1a1a1a;
       --adm-sidebar:     #222222;
@@ -39,6 +42,13 @@
       --adm-text-2:      #a0a0a0;
       --adm-muted:       #666666;
       --adm-topbar:      rgba(26,26,26,0.88);
+      /* motivation.js compat aliases */
+      --tf-surface:      #242424;
+      --tf-border:       #383838;
+      --tf-text:         #e2e2e2;
+      --tf-text-muted:   #a0a0a0;
+      --tf-accent:       #00d4ff;
+      --tf-success:      #22c55e;
     }
 
     [data-bs-theme="light"] {
@@ -54,6 +64,13 @@
       --adm-text-2:      #3d5568;
       --adm-muted:       #8ca8c0;
       --adm-topbar:      rgba(240,244,249,0.9);
+      /* motivation.js compat aliases */
+      --tf-surface:      #ffffff;
+      --tf-border:       #dde5ef;
+      --tf-text:         #1a2c3d;
+      --tf-text-muted:   #3d5568;
+      --tf-accent:       #0284c7;
+      --tf-success:      #16a34a;
     }
 
     body {
@@ -1115,8 +1132,8 @@
       <div class="adm-user-row">
         <div class="adm-user-avatar"><%= user.name.charAt(0).toUpperCase() %></div>
         <div style="min-width:0;flex:1">
-          <span class="adm-user-name"><%= user.name %></span>
-          <span class="adm-user-role"><%= user.role_name.replace('LOCAL_','') %></span>
+          <span class="adm-user-name" data-user-name="<%= user.name %>"><%= user.name %></span>
+          <span class="adm-user-role" data-user-role="<%= user.role_name %>"><%= user.role_name.replace('LOCAL_','') %></span>
         </div>
         <button onclick="openAdmCpwd()" title="Change password" style="background:none;border:1px solid var(--adm-border);border-radius:7px;color:var(--adm-muted);cursor:pointer;padding:5px 7px;line-height:1;flex-shrink:0;transition:all 0.15s;" onmouseenter="this.style.borderColor='var(--adm-accent)';this.style.color='var(--adm-accent)'" onmouseleave="this.style.borderColor='var(--adm-border)';this.style.color='var(--adm-muted)'">
           <i class="bi bi-key" style="font-size:0.85rem"></i>
@@ -1126,7 +1143,7 @@
         <a href="<%= user.role_name === 'LOCAL_USER' ? '/tasks' : '/tasks/board' %>" class="adm-footer-btn" title="Back to classic UI">
           <i class="bi bi-grid"></i> Classic
         </a>
-        <a href="/auth/logout" class="adm-footer-btn" title="Sign out">
+        <a href="#" onclick="handleLogout();return false;" class="adm-footer-btn" title="Sign out">
           <i class="bi bi-box-arrow-right"></i> Sign out
         </a>
       </div>
@@ -1238,6 +1255,16 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.6.2/axios.min.js"></script>
 <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
 <script>
+  var USER_TIMEZONE = '<%= typeof user !== "undefined" && user.org_timezone ? user.org_timezone : "UTC" %>';
+
+  function autoLogoutWithReason(reason) {
+    fetch('/auth/logout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ logout_reason: reason })
+    }).finally(function() { window.location.href = '/auth/login'; });
+  }
+
   // Clock
   (function() {
     var el = document.getElementById('admClock');
@@ -2016,6 +2043,344 @@
   document.getElementById('admCpwdConfirm').addEventListener('keydown', function(e) {
     if (e.key === 'Enter') submitAdmCpwd();
   });
+})();
+</script>
+<!-- Shift End Warning Modal -->
+<div id="admShiftEndModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9980;align-items:center;justify-content:center;padding:1rem;">
+  <div style="background:var(--adm-surface);border:1px solid var(--adm-border);border-radius:16px;padding:2rem;width:100%;max-width:440px;text-align:center;">
+    <div style="width:64px;height:64px;border-radius:50%;background:rgba(239,68,68,0.15);display:flex;align-items:center;justify-content:center;margin:0 auto 1.25rem;">
+      <i class="bi bi-clock-history" style="font-size:1.75rem;color:#ef4444;"></i>
+    </div>
+    <h5 style="font-family:var(--adm-mono);font-weight:700;margin-bottom:0.5rem;color:var(--adm-text);">SHIFT HAS ENDED</h5>
+    <p style="font-size:0.85rem;color:var(--adm-text-2);margin-bottom:0.25rem;">Auto-logout in</p>
+    <div id="admShiftEndCountdown" style="font-family:var(--adm-mono);font-size:2.5rem;font-weight:700;color:#ef4444;margin:0.75rem 0;">15:00</div>
+    <p style="font-size:0.8rem;color:var(--adm-text-2);margin-bottom:1.5rem;">Your shift ended 15 minutes ago. You will be automatically logged out when the timer reaches zero.</p>
+    <div style="display:flex;gap:0.75rem;justify-content:center;">
+      <button onclick="admShiftEndLogoutNow()" style="display:inline-flex;align-items:center;gap:6px;padding:8px 20px;background:#ef4444;color:#fff;border:none;border-radius:8px;font-size:0.85rem;font-weight:600;cursor:pointer;">
+        <i class="bi bi-box-arrow-right"></i> Logout Now
+      </button>
+      <button onclick="admShiftEndContinue()" style="display:inline-flex;align-items:center;gap:6px;padding:8px 20px;background:var(--adm-accent);color:#000;border:none;border-radius:8px;font-size:0.85rem;font-weight:600;cursor:pointer;">
+        <i class="bi bi-clock"></i> Continue (2 hrs)
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Pending Tasks Reminder Modal -->
+<div id="admPendingTasksModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:9975;align-items:center;justify-content:center;padding:1rem;">
+  <div style="background:var(--adm-surface);border:1px solid var(--adm-border);border-radius:16px;width:100%;max-width:500px;overflow:hidden;">
+    <div style="padding:1.5rem 1.5rem 1rem;text-align:center;">
+      <div style="width:56px;height:56px;border-radius:50%;background:rgba(245,158,11,0.15);display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;">
+        <i class="bi bi-list-check" style="font-size:1.5rem;color:#f59e0b;"></i>
+      </div>
+      <h5 style="font-family:var(--adm-mono);margin-bottom:0.3rem;font-weight:700;color:var(--adm-text);">PENDING TASKS</h5>
+      <p style="font-size:0.8rem;color:var(--adm-text-2);margin-bottom:0;">Your shift ends in 1 hour. You have <strong id="admPendingCount" style="color:#f59e0b;">0</strong> pending task(s).</p>
+    </div>
+    <div id="admPendingList" style="max-height:300px;overflow-y:auto;border-top:1px solid var(--adm-border);"></div>
+    <div style="padding:1rem 1.5rem;border-top:1px solid var(--adm-border);display:flex;gap:0.75rem;justify-content:center;">
+      <button onclick="document.getElementById('admPendingTasksModal').style.display='none'" style="display:inline-flex;align-items:center;gap:6px;padding:8px 20px;background:var(--adm-accent);color:#000;border:none;border-radius:8px;font-size:0.85rem;font-weight:600;cursor:pointer;">
+        <i class="bi bi-check-lg"></i> Got it
+      </button>
+      <a href="/admin/my-tasks" style="display:inline-flex;align-items:center;gap:6px;padding:8px 20px;background:var(--adm-surface-2);color:var(--adm-text);border:1px solid var(--adm-border);border-radius:8px;font-size:0.85rem;font-weight:600;text-decoration:none;">
+        <i class="bi bi-arrow-right"></i> Go to My Tasks
+      </a>
+    </div>
+  </div>
+</div>
+
+<!-- Late Login Modal -->
+<div id="admLateLoginModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9990;align-items:center;justify-content:center;padding:1rem;">
+  <div style="background:var(--adm-surface);border:1px solid var(--adm-border);border-radius:16px;padding:2rem;width:100%;max-width:460px;">
+    <div style="text-align:center;margin-bottom:1.25rem;">
+      <div style="width:56px;height:56px;border-radius:50%;background:rgba(239,68,68,0.15);display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;">
+        <i class="bi bi-clock-history" style="font-size:1.5rem;color:#ef4444;"></i>
+      </div>
+      <h5 style="font-family:var(--adm-font-mono);font-weight:700;margin:0;color:var(--adm-text);">LATE LOGIN</h5>
+      <p id="admLateLoginSubtext" style="font-size:0.8rem;color:var(--adm-text-2);margin-top:0.5rem;">You logged in after your shift started. Please provide a reason.</p>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:0.5rem;margin-bottom:1rem;">
+      <label class="adm-late-opt" style="display:flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid var(--adm-border);border-radius:8px;cursor:pointer;font-size:0.8rem;transition:all 0.15s;color:var(--adm-text);">
+        <input type="radio" name="adm_late_reason" value="Traffic / Commute Delay" style="accent-color:var(--adm-accent);"> Traffic / Commute Delay
+      </label>
+      <label class="adm-late-opt" style="display:flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid var(--adm-border);border-radius:8px;cursor:pointer;font-size:0.8rem;transition:all 0.15s;color:var(--adm-text);">
+        <input type="radio" name="adm_late_reason" value="Health Issue" style="accent-color:var(--adm-accent);"> Health Issue
+      </label>
+      <label class="adm-late-opt" style="display:flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid var(--adm-border);border-radius:8px;cursor:pointer;font-size:0.8rem;transition:all 0.15s;color:var(--adm-text);">
+        <input type="radio" name="adm_late_reason" value="Family Emergency" style="accent-color:var(--adm-accent);"> Family Emergency
+      </label>
+      <label class="adm-late-opt" style="display:flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid var(--adm-border);border-radius:8px;cursor:pointer;font-size:0.8rem;transition:all 0.15s;color:var(--adm-text);">
+        <input type="radio" name="adm_late_reason" value="Power / Internet Outage" style="accent-color:var(--adm-accent);"> Power / Internet Outage
+      </label>
+      <label class="adm-late-opt" style="display:flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid var(--adm-border);border-radius:8px;cursor:pointer;font-size:0.8rem;transition:all 0.15s;color:var(--adm-text);">
+        <input type="radio" name="adm_late_reason" value="Approved Late Start" style="accent-color:var(--adm-accent);"> Approved Late Start
+      </label>
+      <label class="adm-late-opt" style="display:flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid var(--adm-border);border-radius:8px;cursor:pointer;font-size:0.8rem;transition:all 0.15s;color:var(--adm-text);">
+        <input type="radio" name="adm_late_reason" value="Forgot To Login" style="accent-color:var(--adm-accent);"> Forgot To Login
+      </label>
+      <label class="adm-late-opt" style="display:flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid var(--adm-border);border-radius:8px;cursor:pointer;font-size:0.8rem;transition:all 0.15s;color:var(--adm-text);">
+        <input type="radio" name="adm_late_reason" value="Other" id="admLateReasonOther" style="accent-color:var(--adm-accent);"> Other
+      </label>
+    </div>
+    <div id="admLateCustomWrap" style="display:none;margin-bottom:1rem;">
+      <textarea id="admLateCustomReason" rows="2" placeholder="Please specify your reason..." style="width:100%;box-sizing:border-box;background:var(--adm-surface-2);border:1px solid var(--adm-border);border-radius:8px;color:var(--adm-text);padding:8px 10px;font-size:0.8rem;resize:vertical;font-family:var(--adm-font);outline:none;"></textarea>
+    </div>
+    <div id="admLateReasonError" style="display:none;font-size:0.75rem;color:#ef4444;margin-bottom:0.75rem;"><i class="bi bi-exclamation-circle"></i> Please select a reason</div>
+    <div style="display:flex;justify-content:flex-end;">
+      <button id="admLateSubmitBtn" onclick="admSubmitLateReason()" style="display:inline-flex;align-items:center;gap:6px;padding:8px 20px;background:var(--adm-accent);color:#000;border:none;border-radius:8px;font-size:0.85rem;font-weight:600;cursor:pointer;">
+        <i class="bi bi-check-lg"></i> Submit
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  var role = '<%= user.role_name %>';
+  if (role === 'LOCAL_ADMIN') return;
+
+  document.querySelectorAll('.adm-late-opt input[type="radio"]').forEach(function(radio) {
+    radio.addEventListener('change', function() {
+      document.querySelectorAll('.adm-late-opt').forEach(function(lbl) {
+        lbl.style.borderColor = 'var(--adm-border)';
+        lbl.style.background = 'transparent';
+      });
+      this.closest('.adm-late-opt').style.borderColor = 'var(--adm-accent)';
+      this.closest('.adm-late-opt').style.background = 'rgba(0,212,255,0.05)';
+      document.getElementById('admLateReasonError').style.display = 'none';
+      document.getElementById('admLateCustomWrap').style.display = document.getElementById('admLateReasonOther').checked ? 'block' : 'none';
+    });
+  });
+
+  fetch('/auth/check-late').then(function(r) { return r.json(); }).then(function(data) {
+    if (data.success && data.data.needsReason) {
+      var mins = data.data.lateByMinutes || 0;
+      var lateText = mins >= 60 ? Math.floor(mins / 60) + 'h ' + (mins % 60) + 'm' : mins + ' minutes';
+      document.getElementById('admLateLoginSubtext').textContent = 'You logged in ' + lateText + ' after your shift started. Please provide a reason.';
+      document.getElementById('admLateLoginModal').style.display = 'flex';
+    }
+  }).catch(function() {});
+})();
+
+function admSubmitLateReason() {
+  var selected = document.querySelector('input[name="adm_late_reason"]:checked');
+  if (!selected) {
+    document.getElementById('admLateReasonError').style.display = 'block';
+    return;
+  }
+  var reason = selected.value;
+  if (reason === 'Other') {
+    var custom = document.getElementById('admLateCustomReason').value.trim();
+    if (!custom) {
+      document.getElementById('admLateReasonError').textContent = 'Please specify your reason';
+      document.getElementById('admLateReasonError').style.display = 'block';
+      return;
+    }
+    reason = 'Other: ' + custom;
+  }
+  var btn = document.getElementById('admLateSubmitBtn');
+  btn.disabled = true;
+  fetch('/auth/late-reason', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ reason: reason })
+  }).then(function(r) { return r.json(); }).then(function(data) {
+    if (data.success) document.getElementById('admLateLoginModal').style.display = 'none';
+    else btn.disabled = false;
+  }).catch(function() {
+    document.getElementById('admLateLoginModal').style.display = 'none';
+  });
+}
+</script>
+<script>
+// Shift-end warning & auto-logout (LOCAL_MANAGER and LOCAL_USER only)
+(function() {
+  var userRole = '<%= user.role_name %>';
+  if (userRole === 'LOCAL_ADMIN' || userRole.startsWith('CLIENT_')) return;
+
+  var SHIFT_START   = '<%= user.shift_start || "10:00:00" %>';
+  var SHIFT_HOURS   = parseFloat('<%= user.shift_hours || 8.5 %>');
+  var WARNING_AFTER = 15 * 60 * 1000;
+  var EXTENSION_MS  = 2  * 60 * 60 * 1000;
+
+  function getTzNow() {
+    var s = new Date().toLocaleTimeString('en-GB', { timeZone: USER_TIMEZONE, hour12: false });
+    var p = s.split(':');
+    return { h: parseInt(p[0]), m: parseInt(p[1]), s: parseInt(p[2] || 0) };
+  }
+
+  function msUntilShiftEnd() {
+    var parts = SHIFT_START.split(':');
+    var startMin = parseInt(parts[0]) * 60 + parseInt(parts[1]);
+    var endMin   = startMin + Math.round(SHIFT_HOURS * 60);
+    var tz = getTzNow();
+    var nowMin = tz.h * 60 + tz.m;
+    if (endMin > 1440) {
+      if (nowMin < (endMin - 1440)) return ((endMin - 1440 - nowMin) * 60 - tz.s) * 1000;
+      if (nowMin >= startMin) return ((endMin - nowMin) * 60 - tz.s) * 1000;
+    }
+    return ((endMin - nowMin) * 60 - tz.s) * 1000;
+  }
+
+  function playShiftEndSound() {
+    try {
+      var ctx = new (window.AudioContext || window.webkitAudioContext)();
+      [0, 0.3, 0.6].forEach(function(delay) {
+        var osc = ctx.createOscillator(), g = ctx.createGain();
+        osc.connect(g); g.connect(ctx.destination);
+        osc.frequency.value = 880; osc.type = 'sine';
+        g.gain.setValueAtTime(0.2, ctx.currentTime + delay);
+        g.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + delay + 0.25);
+        osc.start(ctx.currentTime + delay);
+        osc.stop(ctx.currentTime + delay + 0.25);
+      });
+    } catch(e) {}
+  }
+
+  var _countdownIv = null;
+
+  function showShiftWarning() {
+    var modal = document.getElementById('admShiftEndModal');
+    if (!modal) return;
+    modal.style.display = 'flex';
+    playShiftEndSound();
+
+    var remaining = Math.floor(WARNING_AFTER / 1000);
+    var el = document.getElementById('admShiftEndCountdown');
+    _countdownIv = setInterval(function() {
+      remaining--;
+      if (remaining <= 0) {
+        clearInterval(_countdownIv);
+        modal.style.display = 'none';
+        localStorage.removeItem('tf_login_at');
+        autoLogoutWithReason('Auto Logout');
+        return;
+      }
+      var m = Math.floor(remaining / 60), s = remaining % 60;
+      if (el) el.textContent = m + ':' + String(s).padStart(2, '0');
+    }, 1000);
+  }
+
+  window.admShiftEndLogoutNow = function() {
+    clearInterval(_countdownIv);
+    document.getElementById('admShiftEndModal').style.display = 'none';
+    localStorage.removeItem('tf_login_at');
+    localStorage.removeItem('tf_shift_extended');
+    autoLogoutWithReason('Shift Ended');
+  };
+
+  window.admShiftEndContinue = function() {
+    clearInterval(_countdownIv);
+    var modal = document.getElementById('admShiftEndModal');
+    if (modal) modal.style.display = 'none';
+    localStorage.setItem('tf_shift_extended', '1');
+    setTimeout(function() {
+      localStorage.removeItem('tf_login_at');
+      localStorage.removeItem('tf_shift_extended');
+      autoLogoutWithReason('Auto Logout');
+    }, EXTENSION_MS);
+  };
+
+  var extended = localStorage.getItem('tf_shift_extended');
+  var ms = msUntilShiftEnd();
+
+  if (extended) {
+    var msExtended = ms + EXTENSION_MS;
+    if (msExtended <= 0) { localStorage.removeItem('tf_shift_extended'); autoLogoutWithReason('Auto Logout'); }
+    else setTimeout(function() { localStorage.removeItem('tf_shift_extended'); autoLogoutWithReason('Auto Logout'); }, msExtended);
+    return;
+  }
+
+  if (ms <= -(WARNING_AFTER * 2)) { autoLogoutWithReason('Auto Logout'); return; }
+
+  var msUntilWarning = ms + WARNING_AFTER;
+  if (msUntilWarning <= 0) showShiftWarning();
+  else setTimeout(showShiftWarning, msUntilWarning);
+})();
+
+// Pending tasks reminder — 1 hour before shift ends
+(function() {
+  var userRole = '<%= user.role_name %>';
+  if (userRole === 'LOCAL_ADMIN' || userRole.startsWith('CLIENT_')) return;
+
+  var SHIFT_START    = '<%= user.shift_start || "10:00:00" %>';
+  var SHIFT_HOURS    = parseFloat('<%= user.shift_hours || 8.5 %>');
+  var REMIND_BEFORE  = 60;
+  var todayKey       = 'tf_pending_reminder_' + new Date().toISOString().split('T')[0];
+
+  if (localStorage.getItem(todayKey)) return;
+
+  var parts = SHIFT_START.split(':');
+  var startMin = parseInt(parts[0]) * 60 + parseInt(parts[1]);
+  var endMin   = startMin + Math.round(SHIFT_HOURS * 60);
+  var reminderMin = endMin - REMIND_BEFORE;
+
+  var tz = new Date().toLocaleTimeString('en-GB', { timeZone: USER_TIMEZONE, hour12: false }).split(':');
+  var nowMin = parseInt(tz[0]) * 60 + parseInt(tz[1]);
+  var nowSec = parseInt(tz[2] || 0);
+  var msUntilReminder = ((reminderMin - nowMin) * 60 - nowSec) * 1000;
+
+  if (msUntilReminder < 0) return;
+
+  setTimeout(function() {
+    localStorage.setItem(todayKey, '1');
+    fetch('/tasks/pending-today').then(function(r) { return r.json(); }).then(function(res) {
+      var data = res.data;
+      if (!data || !data.tasks || data.tasks.length === 0) return;
+      var tasks = data.tasks;
+      var modal = document.getElementById('admPendingTasksModal');
+      var list  = document.getElementById('admPendingList');
+      var count = document.getElementById('admPendingCount');
+      if (!modal || !list) return;
+      if (count) count.textContent = tasks.length;
+      list.innerHTML = '';
+      var colors = { urgent: '#ef4444', high: '#f59e0b', medium: '#3b82f6', low: '#6b7280' };
+      tasks.forEach(function(t) {
+        var clr = colors[t.priority] || '#6b7280';
+        var badge = t.type === 'recurring' ? '<span style="font-size:0.55rem;background:rgba(124,58,237,0.15);color:#a78bfa;padding:1px 5px;border-radius:4px;margin-left:4px;">Recurring</span>' : '';
+        list.innerHTML +=
+          '<div style="padding:0.6rem 0.75rem;border-bottom:1px solid var(--adm-border);display:flex;align-items:center;gap:0.5rem;">' +
+            '<span style="width:8px;height:8px;border-radius:50%;background:' + clr + ';flex-shrink:0;"></span>' +
+            '<span style="font-size:0.8rem;font-weight:500;color:var(--adm-text);">' + t.title + '</span>' + badge +
+          '</div>';
+      });
+      modal.style.display = 'flex';
+      try {
+        var ctx = new (window.AudioContext || window.webkitAudioContext)();
+        [0, 0.25, 0.5, 0.75].forEach(function(d) {
+          var osc = ctx.createOscillator(), g = ctx.createGain();
+          osc.connect(g); g.connect(ctx.destination);
+          osc.frequency.value = d < 0.5 ? 660 : 880; osc.type = 'sine';
+          g.gain.setValueAtTime(0.25, ctx.currentTime + d);
+          g.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + d + 0.2);
+          osc.start(ctx.currentTime + d); osc.stop(ctx.currentTime + d + 0.2);
+        });
+      } catch(e) {}
+    }).catch(function() {});
+  }, msUntilReminder);
+})();
+</script>
+
+<script>
+function handleLogout() {
+  window.location.href = '/auth/logout';
+}
+</script>
+<script src="/js/motivation.js"></script>
+<script>
+(function() {
+  // Show a toast when the cron fires a task reminder into the system chat
+  function attachChatSystemListener() {
+    if (typeof admBdrSock === 'undefined') {
+      setTimeout(attachChatSystemListener, 500);
+      return;
+    }
+    admBdrSock.on('chat:system', function(data) {
+      if (data && data.type === 'task_reminder' && typeof showToast === 'function') {
+        showToast('You have a task reminder — check your Messages!', 'info', 9000);
+      }
+    });
+  }
+  attachChatSystemListener();
 })();
 </script>
 <%- script %>

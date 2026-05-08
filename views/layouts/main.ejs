@@ -1619,7 +1619,7 @@
     </div>
   </nav>
 
-  <% if (['LOCAL_ADMIN', 'LOCAL_MANAGER'].includes(user.role_name)) { %>
+  <% if (['LOCAL_ADMIN', 'LOCAL_MANAGER', 'LOCAL_USER'].includes(user.role_name)) { %>
   <div style="padding: 0 0.75rem 0.5rem;">
     <a href="/admin" style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;background:linear-gradient(135deg,rgba(0,212,255,0.08),rgba(124,58,237,0.08));border:1px solid rgba(0,212,255,0.2);text-decoration:none;color:var(--tf-accent);font-size:0.75rem;font-weight:600;transition:all 0.15s;" onmouseover="this.style.background='linear-gradient(135deg,rgba(0,212,255,0.15),rgba(124,58,237,0.15))'" onmouseout="this.style.background='linear-gradient(135deg,rgba(0,212,255,0.08),rgba(124,58,237,0.08))'">
       <i class="bi bi-stars" style="font-size:0.9rem"></i>
