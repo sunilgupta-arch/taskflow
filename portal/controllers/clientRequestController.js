@@ -30,7 +30,7 @@ class ClientRequestController {
       const stats = statsFromInstances(instances);
 
       res.render('portal/requests', {
-        title: 'Requests Queue',
+        title: 'Allocate Task TI',
         layout: 'portal/layout',
         section: 'requests',
         instances,
