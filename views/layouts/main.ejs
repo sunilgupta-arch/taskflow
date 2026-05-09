@@ -2303,12 +2303,7 @@ function autoLogoutWithReason(reason) {
     return;
   }
 
-  if (msUntilShiftEnd <= -(WARNING_AFTER_MS + WARNING_AFTER_MS)) {
-    // More than 30 min past shift end and user never extended — logout now
-    localStorage.removeItem('tf_login_at');
-    autoLogoutWithReason('Auto Logout');
-    return;
-  }
+  if (msUntilShiftEnd <= 0) return; // already past shift end at login — no restriction
 
   // Schedule the warning modal 15 minutes after shift end
   var msUntilWarning = msUntilShiftEnd + WARNING_AFTER_MS;
@@ -2374,12 +2369,7 @@ function autoLogoutWithReason(reason) {
     } catch (e) {}
   }
 
-  if (msUntilWarning <= 0) {
-    // Already past 15 min after shift end — show warning immediately
-    showShiftWarning();
-  } else {
-    setTimeout(showShiftWarning, msUntilWarning);
-  }
+  setTimeout(showShiftWarning, msUntilWarning);
 })();
 
 // Pending tasks reminder — 1 hour before shift ends

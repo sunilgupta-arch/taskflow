@@ -264,6 +264,7 @@
   var _lastReadKey = 'gc-last-read-' + _userId;
   var _srchTimer = null;
   var _lpCache   = {};
+  var _sndCtx    = null;
   var _mActive   = false;
   var _mQuery    = '';
   var _mStart    = -1;
@@ -484,10 +485,17 @@
   /* ── Append a single new message ── */
   function appendMsg(m) {
     var el=document.getElementById('admchnMsgs');
+    if (el.querySelector('[data-mid="'+m.id+'"]')) return;
     var placeholder=el.querySelector('[style*="No messages"]');
     if (placeholder) el.innerHTML='';
     var wasAtBottom=isAtBottom(el);
-    el.insertAdjacentHTML('beforeend',buildBubble(m));
+    var mDate=dateLabel(m.created_at);
+    var dividers=el.querySelectorAll('.admchn-date-div');
+    var lastDiv=dividers.length?dividers[dividers.length-1].textContent.trim():'';
+    var html='';
+    if (mDate!==lastDiv) html+='<div class="admchn-date-div"><span>'+mDate+'</span></div>';
+    html+=buildBubble(m);
+    el.insertAdjacentHTML('beforeend',html);
     if (m.type==='text'&&m.content&&!m.is_deleted) {
       var b=el.querySelector('[data-mid="'+m.id+'"]');
       if (b) fetchLinkPreview(b,m.content);
@@ -504,7 +512,9 @@
     var payload={content:content};
     if (_replyingTo) payload.reply_to_id=_replyingTo.id;
     inp.value=''; inp.style.height='auto'; cancelReply();
-    apiFetch('/channel/messages',{method:'POST',json:payload}).catch(function(){});
+    apiFetch('/channel/messages',{method:'POST',json:payload})
+      .then(function(d){ if(d.success&&d.data&&d.data.message) appendMsg(d.data.message); })
+      .catch(function(){});
   }
 
   /* ── Send file ── */
@@ -782,15 +792,26 @@
       setTimeout(function(){try{n.close();}catch(e){}},mentMe?15000:8000);
     } catch(e) {}
   }
-  function playAlert() {
+  function _unlockSnd() {
+    if (_sndCtx) return;
     try {
-      var ctx=new(window.AudioContext||window.webkitAudioContext)();
-      var now=ctx.currentTime;
-      [784,1046].forEach(function(freq,i){
-        var o=ctx.createOscillator(), g=ctx.createGain();
-        o.type='sine'; o.frequency.value=freq; o.connect(g); g.connect(ctx.destination);
-        var t=now+i*0.08; g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(0.12,t+0.02); g.gain.exponentialRampToValueAtTime(0.001,t+0.22);
-        o.start(t); o.stop(t+0.25);
+      _sndCtx = new (window.AudioContext || window.webkitAudioContext)();
+      _sndCtx.resume();
+    } catch(e) {}
+  }
+
+  function playAlert() {
+    if (!_sndCtx || _sndCtx.state !== 'running') return;
+    try {
+      [1200, 1600].forEach(function(freq, i) {
+        var o = _sndCtx.createOscillator(), g = _sndCtx.createGain();
+        o.type = 'sine'; o.frequency.value = freq;
+        o.connect(g); g.connect(_sndCtx.destination);
+        var t = _sndCtx.currentTime + i * 0.15;
+        g.gain.setValueAtTime(0, t);
+        g.gain.linearRampToValueAtTime(0.4, t + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
+        o.start(t); o.stop(t + 0.22);
       });
     } catch(e) {}
   }
@@ -908,7 +929,8 @@
       if (this.scrollTop<80) loadOlder();
     });
     document.addEventListener('visibilitychange', function(){ if(!document.hidden) updateScrollBtn(); });
-    document.addEventListener('click', function _askNotif(){ requestNotifPerm(); document.removeEventListener('click',_askNotif); });
+    document.addEventListener('click', function _askNotif(){ requestNotifPerm(); _unlockSnd(); document.removeEventListener('click',_askNotif); });
+    document.addEventListener('keydown', _unlockSnd, { once: true });
 
     setupSocket();
     loadMessages();

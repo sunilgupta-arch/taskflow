@@ -373,15 +373,38 @@
         area.innerHTML = '<div class="usr-empty"><i class="bi bi-people"></i><p>No team members found</p></div>';
         return;
       }
-      // Sort: admin first, then managers, then users; active before inactive
-      filtered.sort(function(a,b) {
-        var order = {LOCAL_ADMIN:0,LOCAL_MANAGER:1,LOCAL_USER:2};
-        var ao = order[a.role_name]||3, bo = order[b.role_name]||3;
-        if (ao !== bo) return ao - bo;
-        if (b.is_active !== a.is_active) return b.is_active - a.is_active;
-        return (a.name||'').localeCompare(b.name||'');
+      // Group by role
+      var localRoleOrder  = ['LOCAL_ADMIN', 'LOCAL_MANAGER', 'LOCAL_USER'];
+      var localRoleLabels = {
+        LOCAL_ADMIN:   { title: 'Admin',    icon: 'bi-shield-lock-fill', color: '#a78bfa' },
+        LOCAL_MANAGER: { title: 'Managers', icon: 'bi-person-badge-fill', color: '#eab308' },
+        LOCAL_USER:    { title: 'Users',    icon: 'bi-person-fill',       color: '#94a3b8' }
+      };
+      var localGroups = {};
+      localRoleOrder.forEach(function(r) { localGroups[r] = []; });
+      filtered.forEach(function(u) {
+        if (localGroups[u.role_name]) localGroups[u.role_name].push(u);
       });
-      area.innerHTML = '<div class="usr-grid">'+filtered.map(renderCard).join('')+'</div>';
+      var html = '';
+      localRoleOrder.forEach(function(role) {
+        var members = localGroups[role];
+        if (!members || !members.length) return;
+        members.sort(function(a,b) {
+          if (b.is_active !== a.is_active) return b.is_active - a.is_active;
+          return (a.name||'').localeCompare(b.name||'');
+        });
+        var info = localRoleLabels[role];
+        html += '<div class="usr-org-section">'
+          +'<div class="usr-org-header">'
+            +'<span class="usr-org-pill" style="background:rgba(0,0,0,0.12);border-color:'+info.color+'40;color:'+info.color+';">'
+              +'<i class="bi '+info.icon+'"></i>'+info.title
+            +'</span>'
+            +'<span class="usr-org-sub">'+members.length+' member'+(members.length!==1?'s':'')+'</span>'
+          +'</div>'
+          +'<div class="usr-grid">'+members.map(renderCard).join('')+'</div>'
+          +'</div>';
+      });
+      area.innerHTML = html;
 
     } else {
       var area = document.getElementById('usrClientArea');
@@ -389,21 +412,34 @@
         area.innerHTML = '<div class="usr-empty"><i class="bi bi-briefcase"></i><p>No client users found</p></div>';
         return;
       }
-      // Group by org
+      // Group by role
+      var roleOrder  = ['CLIENT_ADMIN','CLIENT_TOP_MGMT','CLIENT_MGMT','CLIENT_MANAGER','CLIENT_SALES','CLIENT_USER'];
+      var roleLabels = {
+        CLIENT_ADMIN:    { title: 'Admin',          icon: 'bi-shield-lock-fill',  color: '#a78bfa' },
+        CLIENT_TOP_MGMT: { title: 'Top Management', icon: 'bi-star-fill',          color: '#3b82f6' },
+        CLIENT_MGMT:     { title: 'Management',     icon: 'bi-briefcase-fill',     color: '#22c55e' },
+        CLIENT_MANAGER:  { title: 'Managers',       icon: 'bi-person-badge-fill',  color: '#eab308' },
+        CLIENT_SALES:    { title: 'Sales',           icon: 'bi-cart-fill',          color: '#f97316' },
+        CLIENT_USER:     { title: 'Users',           icon: 'bi-person-fill',        color: '#94a3b8' }
+      };
       var groups = {};
+      roleOrder.forEach(function(r) { groups[r] = []; });
       filtered.forEach(function(u) {
-        var k = u.org_name || 'Unknown';
-        if (!groups[k]) groups[k] = [];
-        groups[k].push(u);
+        if (groups[u.role_name]) groups[u.role_name].push(u);
+        else { if (!groups.__other) groups.__other = []; groups.__other.push(u); }
       });
       var html = '';
-      Object.keys(groups).sort().forEach(function(orgName) {
-        var members = groups[orgName];
+      roleOrder.forEach(function(role) {
+        var members = groups[role];
+        if (!members || !members.length) return;
         members.sort(function(a,b){ return (a.name||'').localeCompare(b.name||''); });
+        var info = roleLabels[role];
         html += '<div class="usr-org-section">'
           +'<div class="usr-org-header">'
-            +'<span class="usr-org-pill"><i class="bi bi-briefcase"></i>'+esc(orgName)+'</span>'
-            +'<span class="usr-org-sub">'+members.length+' user'+(members.length!==1?'s':'')+'</span>'
+            +'<span class="usr-org-pill" style="background:rgba(0,0,0,0.12);border-color:'+info.color+'40;color:'+info.color+';">'
+              +'<i class="bi '+info.icon+'"></i>'+info.title
+            +'</span>'
+            +'<span class="usr-org-sub">'+members.length+' member'+(members.length!==1?'s':'')+'</span>'
           +'</div>'
           +'<div class="usr-grid">'+members.map(renderCard).join('')+'</div>'
           +'</div>';
