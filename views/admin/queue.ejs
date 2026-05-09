@@ -317,6 +317,9 @@
   </div>
   <div style="display:flex;align-items:center;gap:10px">
     <div class="admq-stats" id="admqStats"></div>
+    <button id="admqTestSoundBtn" class="admq-nav-btn" title="Test notification sound" onclick="admqTestSound()" style="color:var(--adm-muted);border-style:dashed">
+      <i class="bi bi-volume-up"></i> Test Sound
+    </button>
     <% if (user.role_name === 'LOCAL_USER') { %>
     <a href="/admin" class="adm-back-btn"><i class="bi bi-arrow-left"></i> Dashboard</a>
     <% } else { %>
@@ -713,6 +716,25 @@
   renderTable(_raw.instances, _date);
 
 })();
+
+// ── Sound test ───────────────────────────────────────────────────────
+function admqTestSound() {
+  var btn = document.getElementById('admqTestSoundBtn');
+  // The click itself is a user gesture — unlock the context first
+  if (typeof _admUnlockAudio === 'function') _admUnlockAudio();
+  // Give resume() a moment to settle, then play
+  setTimeout(function() {
+    if (typeof _admDoPlayBellTone === 'function') {
+      _admDoPlayBellTone();
+    } else if (typeof _admPlayBell === 'function') {
+      _admPlayBell();
+    }
+    if (btn) {
+      btn.innerHTML = '<i class="bi bi-check-lg"></i> Sound played';
+      setTimeout(function() { btn.innerHTML = '<i class="bi bi-volume-up"></i> Test Sound'; }, 2500);
+    }
+  }, 120);
+}
 
 // ── Description tooltip ──────────────────────────────────────────────
 (function() {

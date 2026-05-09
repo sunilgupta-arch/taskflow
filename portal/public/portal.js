@@ -1375,6 +1375,10 @@ portalSocket.on('portal:task:comment', (data) => {
   });
 });
 
+portalSocket.on('request:comment', (data) => {
+  playNotificationSound();
+});
+
 // ── INIT ───────────────────────────────────────────────────
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -2456,9 +2460,13 @@ var _sndUnlocked = false;
 var _sndPending  = false;
 
 function _unlockSnd() {
-  if (_sndUnlocked) return;
   try {
     if (!_sndCtx) _sndCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (_sndCtx.state === 'running') {
+      _sndUnlocked = true;
+      if (_sndPending) { _sndPending = false; _doPlaySndTone(); }
+      return;
+    }
     var p = _sndCtx.resume();
     if (p && p.then) {
       p.then(function() {
@@ -2466,7 +2474,7 @@ function _unlockSnd() {
         var src = _sndCtx.createBufferSource();
         src.buffer = buf; src.connect(_sndCtx.destination); src.start(0);
         _sndUnlocked = true;
-        if (_sndPending) { _sndPending = false; _doPlaySnd(); }
+        if (_sndPending) { _sndPending = false; _doPlaySndTone(); }
       }).catch(function(){});
     }
   } catch(e) {}
@@ -2476,7 +2484,13 @@ document.addEventListener('click',   _unlockSnd, { once: false });
 document.addEventListener('keydown', _unlockSnd, { once: false });
 
 function _doPlaySnd() {
-  if (!_sndCtx) return;
+  if (!_sndCtx || _sndCtx.state !== 'running') {
+    _sndPending = true;
+    return;
+  }
+  _doPlaySndTone();
+}
+function _doPlaySndTone() {
   try {
     var now = _sndCtx.currentTime;
     var o = _sndCtx.createOscillator(), g = _sndCtx.createGain();

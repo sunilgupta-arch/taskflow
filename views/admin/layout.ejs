@@ -1588,35 +1588,43 @@
   var _admBellUnlocked   = false;
   var _admBellPending    = false; // ring as soon as user interacts
 
-  // Create AudioContext and play a silent pulse to fully unlock it
+  // Unlock or re-resume the AudioContext on every user interaction.
+  // We intentionally do NOT short-circuit on _admBellUnlocked because Chrome
+  // auto-suspends AudioContexts after ~30s of silence, so we must call resume()
+  // again on the next gesture even if we unlocked successfully before.
   function _admUnlockAudio() {
-    if (_admBellUnlocked) return;
     try {
       if (!_admBellCtx) _admBellCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (_admBellCtx.state === 'running') {
+        _admBellUnlocked = true;
+        if (_admBellPending) { _admBellPending = false; _admPlayBell(); }
+        return;
+      }
       var p = _admBellCtx.resume();
       if (p && p.then) {
         p.then(function() {
-          // Play a truly silent buffer to satisfy autoplay policy
           var buf = _admBellCtx.createBuffer(1, 1, 22050);
           var src = _admBellCtx.createBufferSource();
           src.buffer = buf; src.connect(_admBellCtx.destination); src.start(0);
           _admBellUnlocked = true;
-          // If a bell was pending while audio was locked, play it now
           if (_admBellPending) { _admBellPending = false; _admPlayBell(); }
         }).catch(function(){});
       }
     } catch(e) {}
   }
 
-  // Unlock on first user interaction
+  // Unlock/re-resume on every user interaction
   document.addEventListener('click',   _admUnlockAudio, { once: false });
   document.addEventListener('keydown', _admUnlockAudio, { once: false });
 
   function _admPlayBell() {
     if (!_admBellCtx || _admBellCtx.state !== 'running') {
-      _admBellPending = true; // play as soon as ctx unlocks
+      _admBellPending = true; // fires via _admUnlockAudio on next user gesture
       return;
     }
+    _admDoPlayBellTone();
+  }
+  function _admDoPlayBellTone() {
     try {
       var ctx = _admBellCtx, now = ctx.currentTime;
       [[659, 0.20], [1318, 0.10], [1975, 0.05]].forEach(function(p) {
@@ -1803,7 +1811,11 @@
     // Queue live events
     admBdrSock.on('queue:new_request', function() {
       admQueueUpdateBadge();
-      if (!window.admqIsQueuePage) _admStartBell();
+      if (window.admqIsQueuePage) {
+        _admPlayBell(); // single ping — row already appears in the table
+      } else {
+        _admStartBell(); // full repeating bell + title blink when away from queue
+      }
       if (typeof window.admqSocketCallback === 'function') window.admqSocketCallback();
     });
     admBdrSock.on('queue:updated', function() {
@@ -1833,7 +1845,14 @@
   }
 
   function _admPlayCommentSound() {
-    if (!_admBellCtx || _admBellCtx.state !== 'running') return;
+    if (!_admBellCtx) return;
+    if (_admBellCtx.state === 'suspended') {
+      _admBellCtx.resume().then(function() { _admDoPlayCommentTone(); }).catch(function(){});
+    } else if (_admBellCtx.state === 'running') {
+      _admDoPlayCommentTone();
+    }
+  }
+  function _admDoPlayCommentTone() {
     try {
       var ctx = _admBellCtx;
       [[880, 0, 0.13], [1108, 0.11, 0.16]].forEach(function(p) {
