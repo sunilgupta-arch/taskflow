@@ -5,11 +5,11 @@ const { getToday, getEffectiveWorkDate } = require('../utils/timezone');
 const ChatModel = require('../models/Chat');
 
 class AuthService {
-  static generateToken(user) {
+  static generateToken(user, expiresIn = null) {
     return jwt.sign(
       { id: user.id, email: user.email, role: user.role_name },
       process.env.JWT_SECRET,
-      { expiresIn: process.env.JWT_EXPIRES_IN || '12h' }
+      { expiresIn: expiresIn || process.env.JWT_EXPIRES_IN || '12h' }
     );
   }
 
@@ -31,6 +31,25 @@ class AuthService {
     // Remove password from response
     const { password: _, ...userData } = user;
     return { token, user: userData };
+  }
+
+  static async loginWithGoogle(email, googleId) {
+    const user = await UserModel.findByEmail(email);
+    if (!user) throw new Error('not_registered');
+    if (!user.is_active) throw new Error('inactive');
+
+    if (googleId && !user.google_id) {
+      await db.query('UPDATE users SET google_id = ? WHERE id = ?', [googleId, user.id]);
+    }
+
+    if (!user.role_name.startsWith('CLIENT_')) {
+      await this.recordAttendance(user.id, user.org_timezone || 'America/New_York', user.shift_start, user.shift_hours);
+    }
+
+    const isClient = user.role_name.startsWith('CLIENT_');
+    const token = this.generateToken(user, isClient ? '365d' : null);
+    const { password: _, ...userData } = user;
+    return { token, user: userData, persistent: isClient };
   }
 
   static async recordAttendance(userId, timezone = 'America/New_York', shiftStart = null, shiftHours = null) {

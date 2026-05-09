@@ -209,6 +209,7 @@ router.get('/admin/task-completion',    authenticate, requireLocalAdmin, AdminHu
 router.get('/admin/tools',              authenticate, requireLocalAdmin, AdminHubController.tools);
 router.get('/admin/drive',              authenticate, requireLocalAdmin, AdminHubController.drive);
 router.get('/admin/backup',             authenticate, requireLocalAdmin, AdminHubController.backup);
+router.get('/admin/security',           authenticate, requireLocalAdmin, AdminHubController.securityAudit);
 
 // ── Client Queue (local team works client-dispatched tasks) ─
 const ClientQueueController = require('../controllers/clientQueueController');

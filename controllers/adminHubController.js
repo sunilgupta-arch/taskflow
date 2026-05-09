@@ -746,6 +746,141 @@ class AdminHubController {
     res.render('admin/tools', { title: 'Tools', layout: 'admin/layout', section: 'tools' });
   }
 
+  static async securityAudit(req, res) {
+    try {
+      // Pull last 21 days of attendance for all LOCAL users
+      const [rows] = await db.query(`
+        SELECT
+          u.id, u.name, u.email, u.shift_start, u.shift_hours,
+          al.login_time, al.logout_time, al.date
+        FROM users u
+        JOIN roles r ON u.role_id = r.id
+        JOIN attendance_logs al ON al.user_id = u.id
+        WHERE r.name LIKE 'LOCAL_%'
+          AND u.is_active = 1
+          AND al.date >= DATE_SUB(CURDATE(), INTERVAL 21 DAY)
+          AND al.login_time IS NOT NULL
+        ORDER BY u.id, al.date, al.login_time
+      `);
+
+      // Group sessions per user
+      const userMap = {};
+      for (const row of rows) {
+        if (!userMap[row.id]) {
+          userMap[row.id] = {
+            id: row.id, name: row.name, email: row.email,
+            shift_start: row.shift_start,
+            shift_hours: parseFloat(row.shift_hours || 0),
+            sessions: []
+          };
+        }
+        userMap[row.id].sessions.push({
+          date: row.date,
+          login_time: row.login_time,
+          logout_time: row.logout_time
+        });
+      }
+
+      const stdDev = (arr) => {
+        if (arr.length < 2) return 0;
+        const mean = arr.reduce((a, b) => a + b, 0) / arr.length;
+        return Math.sqrt(arr.reduce((s, v) => s + (v - mean) ** 2, 0) / arr.length);
+      };
+
+      const toSeconds = (dt) => {
+        const d = new Date(dt);
+        return d.getHours() * 3600 + d.getMinutes() * 60 + d.getSeconds();
+      };
+
+      const shiftStartSeconds = (shiftStart) => {
+        const [h, m] = (shiftStart || '09:00').split(':').map(Number);
+        return h * 3600 + (m || 0) * 60;
+      };
+
+      const results = [];
+
+      for (const user of Object.values(userMap)) {
+        if (user.sessions.length < 5) continue;
+
+        const loginSecs = user.sessions.map(s => toSeconds(s.login_time));
+        const loginSd = Math.round(stdDev(loginSecs));
+        const shiftSec = shiftStartSeconds(user.shift_start);
+        const shiftEndSec = shiftSec + user.shift_hours * 3600;
+
+        const meanLoginOffset = Math.round(
+          loginSecs.map(s => Math.abs(s - shiftSec)).reduce((a, b) => a + b, 0) / loginSecs.length
+        );
+
+        const logoutSessions = user.sessions.filter(s => s.logout_time);
+        let logoutSd = null;
+        let meanLogoutOffset = null;
+        if (logoutSessions.length >= 5) {
+          const logoutSecs = logoutSessions.map(s => toSeconds(s.logout_time));
+          logoutSd = Math.round(stdDev(logoutSecs));
+          meanLogoutOffset = Math.round(
+            logoutSecs.map(s => Math.abs(s - shiftEndSec)).reduce((a, b) => a + b, 0) / logoutSecs.length
+          );
+        }
+
+        const flags = [];
+        let risk = 'clean';
+
+        if (loginSd < 90) {
+          risk = 'high';
+          flags.push(`Login time barely varies — only ±${loginSd}s across ${user.sessions.length} days`);
+        } else if (loginSd < 300) {
+          risk = 'medium';
+          flags.push(`Login time is unusually consistent — ±${loginSd}s across ${user.sessions.length} days`);
+        }
+
+        if (meanLoginOffset < 45) {
+          risk = 'high';
+          flags.push(`Logs in within ${meanLoginOffset}s of shift start on average — bot-level precision`);
+        }
+
+        if (logoutSd !== null && logoutSd < 90) {
+          risk = 'high';
+          flags.push(`Logout time barely varies — only ±${logoutSd}s across ${logoutSessions.length} days`);
+        }
+
+        if (meanLogoutOffset !== null && meanLogoutOffset < 45) {
+          if (risk !== 'high') risk = 'medium';
+          flags.push(`Logs out within ${meanLogoutOffset}s of shift end on average`);
+        }
+
+        if (risk === 'clean') continue;
+
+        const recentSessions = user.sessions.slice(-7).map(s => ({
+          date: s.date instanceof Date ? s.date.toISOString().split('T')[0] : s.date,
+          login: s.login_time ? new Date(s.login_time).toTimeString().slice(0, 8) : '—',
+          logout: s.logout_time ? new Date(s.logout_time).toTimeString().slice(0, 8) : '—',
+        }));
+
+        results.push({
+          id: user.id, name: user.name, email: user.email,
+          shift_start: user.shift_start, shift_hours: user.shift_hours,
+          risk, flags,
+          loginSd, meanLoginOffset, logoutSd, meanLogoutOffset,
+          sessionCount: user.sessions.length,
+          recentSessions
+        });
+      }
+
+      results.sort((a, b) => (a.risk === 'high' ? -1 : 1));
+
+      res.render('admin/security', {
+        title: 'Security Audit', layout: 'admin/layout', section: 'security',
+        results,
+        highCount: results.filter(r => r.risk === 'high').length,
+        mediumCount: results.filter(r => r.risk === 'medium').length,
+        scannedAt: new Date().toLocaleString('en-US', { hour12: false })
+      });
+    } catch (err) {
+      console.error('Security audit error:', err);
+      res.status(500).send('Server error');
+    }
+  }
+
   static async drive(req, res) {
     try {
       const folderId = await GoogleDriveService.getUserFolder(req.user);

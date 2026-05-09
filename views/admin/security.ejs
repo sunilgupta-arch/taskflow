@@ -1,0 +1,265 @@
+<style>
+  .sec-summary {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 28px;
+    flex-wrap: wrap;
+  }
+  .sec-stat {
+    background: var(--adm-surface);
+    border: 1px solid var(--adm-border);
+    border-radius: 12px;
+    padding: 14px 20px;
+    min-width: 140px;
+  }
+  .sec-stat-val {
+    font-family: var(--adm-mono);
+    font-size: 1.6rem;
+    font-weight: 700;
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+  .sec-stat-label {
+    font-size: 0.72rem;
+    color: var(--adm-text-2);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .sec-stat.high  .sec-stat-val { color: #ef4444; }
+  .sec-stat.medium .sec-stat-val { color: #f59e0b; }
+  .sec-stat.clean  .sec-stat-val { color: #22c55e; }
+
+  .sec-user-card {
+    background: var(--adm-surface);
+    border: 1px solid var(--adm-border);
+    border-radius: 14px;
+    margin-bottom: 16px;
+    overflow: hidden;
+  }
+  .sec-user-card.high   { border-left: 3px solid #ef4444; }
+  .sec-user-card.medium { border-left: 3px solid #f59e0b; }
+
+  .sec-card-head {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 16px 20px;
+    cursor: pointer;
+    user-select: none;
+  }
+  .sec-card-head:hover { background: var(--adm-surface-2); }
+
+  .sec-avatar {
+    width: 38px; height: 38px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--adm-mono); font-size: 0.85rem; font-weight: 700; color: #fff;
+    flex-shrink: 0;
+  }
+  .sec-avatar.high   { background: linear-gradient(135deg,#ef4444,#b91c1c); }
+  .sec-avatar.medium { background: linear-gradient(135deg,#f59e0b,#b45309); }
+
+  .sec-user-info { flex: 1; min-width: 0; }
+  .sec-user-name {
+    font-size: 0.9rem; font-weight: 600; color: var(--adm-text);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .sec-user-email { font-size: 0.75rem; color: var(--adm-text-2); }
+
+  .sec-badge {
+    font-family: var(--adm-mono); font-size: 0.65rem; font-weight: 700;
+    padding: 3px 8px; border-radius: 20px; text-transform: uppercase;
+    letter-spacing: 0.5px; flex-shrink: 0;
+  }
+  .sec-badge.high   { background: rgba(239,68,68,0.15);  color: #ef4444; }
+  .sec-badge.medium { background: rgba(245,158,11,0.15); color: #f59e0b; }
+
+  .sec-chevron { color: var(--adm-muted); font-size: 0.85rem; flex-shrink: 0; transition: transform 0.2s; }
+  .sec-card-head.open .sec-chevron { transform: rotate(180deg); }
+
+  .sec-card-body { display: none; padding: 0 20px 20px; }
+  .sec-card-body.open { display: block; }
+
+  .sec-flags { margin-bottom: 16px; display: flex; flex-direction: column; gap: 6px; }
+  .sec-flag {
+    display: flex; align-items: flex-start; gap: 8px;
+    font-size: 0.8rem; color: var(--adm-text-2);
+  }
+  .sec-flag i { color: #ef4444; margin-top: 1px; flex-shrink: 0; }
+
+  .sec-metrics {
+    display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px;
+  }
+  .sec-metric {
+    background: var(--adm-surface-2); border: 1px solid var(--adm-border);
+    border-radius: 9px; padding: 10px 14px; min-width: 120px;
+  }
+  .sec-metric-val {
+    font-family: var(--adm-mono); font-size: 1rem; font-weight: 700; color: var(--adm-text);
+  }
+  .sec-metric-val.danger { color: #ef4444; }
+  .sec-metric-val.warn   { color: #f59e0b; }
+  .sec-metric-label { font-size: 0.68rem; color: var(--adm-muted); text-transform: uppercase; letter-spacing: 0.4px; margin-top: 2px; }
+
+  .sec-sessions-title {
+    font-size: 0.72rem; font-family: var(--adm-mono); color: var(--adm-muted);
+    text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;
+  }
+  .sec-table {
+    width: 100%; border-collapse: collapse; font-size: 0.8rem;
+  }
+  .sec-table th {
+    text-align: left; padding: 6px 10px;
+    font-size: 0.68rem; font-family: var(--adm-mono); color: var(--adm-muted);
+    text-transform: uppercase; letter-spacing: 0.4px;
+    border-bottom: 1px solid var(--adm-border);
+  }
+  .sec-table td {
+    padding: 7px 10px; color: var(--adm-text-2);
+    border-bottom: 1px solid var(--adm-border);
+  }
+  .sec-table tr:last-child td { border-bottom: none; }
+  .sec-table .time-cell { font-family: var(--adm-mono); color: var(--adm-text); }
+
+  .sec-clean {
+    text-align: center; padding: 60px 20px;
+    background: var(--adm-surface); border: 1px solid var(--adm-border);
+    border-radius: 14px;
+  }
+  .sec-clean i { font-size: 2.5rem; color: #22c55e; margin-bottom: 12px; display: block; }
+  .sec-clean-title { font-size: 1rem; font-weight: 600; color: var(--adm-text); margin-bottom: 6px; }
+  .sec-clean-sub { font-size: 0.82rem; color: var(--adm-text-2); }
+
+  .sec-scan-time {
+    font-size: 0.72rem; color: var(--adm-muted); font-family: var(--adm-mono);
+    margin-bottom: 20px;
+  }
+</style>
+
+<div class="adm-hub-header">
+  <div class="adm-section-pill" style="background:rgba(239,68,68,0.1);color:#ef4444;border:1px solid rgba(239,68,68,0.2)">
+    <i class="bi bi-shield-exclamation"></i> Security
+  </div>
+  <h1 class="adm-hub-title">Security Audit</h1>
+  <p class="adm-hub-sub">Detects login patterns that indicate automated or scripted attendance — based on the last 21 days</p>
+</div>
+
+<div class="sec-scan-time">Last scanned: <%= scannedAt %></div>
+
+<div class="sec-summary">
+  <div class="sec-stat high">
+    <div class="sec-stat-val"><%= highCount %></div>
+    <div class="sec-stat-label">High Risk</div>
+  </div>
+  <div class="sec-stat medium">
+    <div class="sec-stat-val"><%= mediumCount %></div>
+    <div class="sec-stat-label">Medium Risk</div>
+  </div>
+  <div class="sec-stat clean">
+    <div class="sec-stat-val"><%= results.length === 0 ? '✓' : (results.length - highCount - mediumCount) %></div>
+    <div class="sec-stat-label">Flagged Total</div>
+  </div>
+</div>
+
+<% if (results.length === 0) { %>
+  <div class="sec-clean">
+    <i class="bi bi-shield-check"></i>
+    <div class="sec-clean-title">No anomalies detected</div>
+    <div class="sec-clean-sub">All local user login patterns look normal over the last 21 days.</div>
+  </div>
+<% } else { %>
+  <% results.forEach(function(u) { %>
+    <div class="sec-user-card <%= u.risk %>">
+      <div class="sec-card-head" onclick="toggleCard(this)">
+        <div class="sec-avatar <%= u.risk %>"><%= u.name.charAt(0).toUpperCase() %></div>
+        <div class="sec-user-info">
+          <div class="sec-user-name"><%= u.name %></div>
+          <div class="sec-user-email"><%= u.email %></div>
+        </div>
+        <span class="sec-badge <%= u.risk %>"><%= u.risk === 'high' ? '⚠ High Risk' : '◆ Medium Risk' %></span>
+        <i class="bi bi-chevron-down sec-chevron"></i>
+      </div>
+
+      <div class="sec-card-body">
+        <div class="sec-flags">
+          <% u.flags.forEach(function(flag) { %>
+            <div class="sec-flag">
+              <i class="bi bi-exclamation-circle-fill"></i>
+              <span><%= flag %></span>
+            </div>
+          <% }); %>
+        </div>
+
+        <div class="sec-metrics">
+          <div class="sec-metric">
+            <div class="sec-metric-val <%= u.loginSd < 90 ? 'danger' : u.loginSd < 300 ? 'warn' : '' %>">
+              ±<%= u.loginSd %>s
+            </div>
+            <div class="sec-metric-label">Login Time SD</div>
+          </div>
+          <div class="sec-metric">
+            <div class="sec-metric-val <%= u.meanLoginOffset < 45 ? 'danger' : '' %>">
+              <%= u.meanLoginOffset %>s
+            </div>
+            <div class="sec-metric-label">Avg offset from shift start</div>
+          </div>
+          <% if (u.logoutSd !== null) { %>
+          <div class="sec-metric">
+            <div class="sec-metric-val <%= u.logoutSd < 90 ? 'danger' : u.logoutSd < 300 ? 'warn' : '' %>">
+              ±<%= u.logoutSd %>s
+            </div>
+            <div class="sec-metric-label">Logout Time SD</div>
+          </div>
+          <% } %>
+          <% if (u.meanLogoutOffset !== null) { %>
+          <div class="sec-metric">
+            <div class="sec-metric-val <%= u.meanLogoutOffset < 45 ? 'danger' : '' %>">
+              <%= u.meanLogoutOffset %>s
+            </div>
+            <div class="sec-metric-label">Avg offset from shift end</div>
+          </div>
+          <% } %>
+          <div class="sec-metric">
+            <div class="sec-metric-val"><%= u.sessionCount %></div>
+            <div class="sec-metric-label">Sessions analysed</div>
+          </div>
+          <div class="sec-metric">
+            <div class="sec-metric-val" style="font-size:0.85rem"><%= u.shift_start %> · <%= u.shift_hours %>h</div>
+            <div class="sec-metric-label">Shift</div>
+          </div>
+        </div>
+
+        <div class="sec-sessions-title">Recent sessions (last 7 days)</div>
+        <table class="sec-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Login</th>
+              <th>Logout</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% u.recentSessions.forEach(function(s) { %>
+              <tr>
+                <td><%= s.date %></td>
+                <td class="time-cell"><%= s.login %></td>
+                <td class="time-cell"><%= s.logout %></td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  <% }); %>
+<% } %>
+
+<script>
+  function toggleCard(head) {
+    head.classList.toggle('open');
+    head.nextElementSibling.classList.toggle('open');
+  }
+  // Auto-expand high risk cards
+  document.querySelectorAll('.sec-user-card.high .sec-card-head').forEach(h => {
+    h.classList.add('open');
+    h.nextElementSibling.classList.add('open');
+  });
+</script>

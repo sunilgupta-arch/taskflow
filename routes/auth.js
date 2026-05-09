@@ -2,9 +2,12 @@ const express = require('express');
 const router = express.Router();
 const AuthController = require('../controllers/authController');
 const authenticate = require('../middleware/authenticate');
+const botDetect = require('../middleware/botDetect');
 
 router.get('/login', AuthController.showLogin);
-router.post('/login', AuthController.login);
+router.post('/login', botDetect, AuthController.login);
+router.get('/google', AuthController.googleAuth);
+router.get('/google/callback', AuthController.googleCallback);
 router.get('/logout', authenticate, AuthController.logout);
 router.post('/logout', authenticate, AuthController.logout);
 router.get('/profile', authenticate, AuthController.getProfile);

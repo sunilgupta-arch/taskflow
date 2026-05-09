@@ -201,8 +201,10 @@
     .adm-nav-link[data-s="reports"].active .adm-nav-icon { background: rgba(249,115,22,0.14);  color: #f97316; }
     .adm-nav-link[data-s="comms"].active   { background: rgba(16,185,129,0.07);  border-left-color: #10b981; }
     .adm-nav-link[data-s="comms"].active .adm-nav-icon   { background: rgba(16,185,129,0.14);  color: #10b981; }
-    .adm-nav-link[data-s="tools"].active   { background: rgba(100,116,139,0.07); border-left-color: #64748b; }
-    .adm-nav-link[data-s="tools"].active .adm-nav-icon   { background: rgba(100,116,139,0.14); color: #94a3b8; }
+    .adm-nav-link[data-s="tools"].active    { background: rgba(100,116,139,0.07); border-left-color: #64748b; }
+    .adm-nav-link[data-s="tools"].active .adm-nav-icon    { background: rgba(100,116,139,0.14); color: #94a3b8; }
+    .adm-nav-link[data-s="security"].active { background: rgba(239,68,68,0.07);   border-left-color: #ef4444; }
+    .adm-nav-link[data-s="security"].active .adm-nav-icon { background: rgba(239,68,68,0.14);   color: #ef4444; }
 
     .adm-nav-divider {
       height: 1px;
@@ -1125,6 +1127,14 @@
           <div class="adm-nav-icon"><i class="bi bi-tools"></i></div>
           <span>Tools</span>
         </a>
+
+        <% if (user.role_name === 'LOCAL_ADMIN') { %>
+        <a href="/admin/security" data-s="security"
+           class="adm-nav-link <%= section === 'security' ? 'active' : '' %>">
+          <div class="adm-nav-icon"><i class="bi bi-shield-exclamation"></i></div>
+          <span>Security Audit</span>
+        </a>
+        <% } %>
       <% } %>
     </nav>
 
@@ -1478,7 +1488,7 @@
     fetch('/channel/messages').then(function(r){ return r.json(); }).then(function(res) {
       if (!res.success) return;
       admGcLoaded = true;
-      var msgs = res.data.messages.slice().reverse();
+      var msgs = res.data.messages;
       admGcRenderMessages(msgs);
       if (msgs.length) {
         var latestId = msgs[msgs.length - 1].id;
@@ -1527,6 +1537,7 @@
 
   function admGcAppend(m) {
     var box  = document.getElementById('admGcMessages');
+    if (box.querySelector('[data-gc-mid="'+m.id+'"]')) return;
     var sent = m.sender_id === admGcUserId;
     var cls  = sent ? 'sent' : 'received';
     var t    = new Date(m.created_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
@@ -1550,6 +1561,8 @@
     if (!txt) return;
     inp.value = '';
     fetch('/channel/messages', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({content:txt})})
+      .then(function(r){ return r.json(); })
+      .then(function(d){ if(d.success&&d.data&&d.data.message) admGcAppend(d.data.message); })
       .catch(function(){});
   };
 
@@ -1750,17 +1763,17 @@
         // Store latest msg id so page-load badge check works across sessions
         var lastRead = parseInt(localStorage.getItem(_admGcLastReadKey) || '0', 10);
         if (msg.id > lastRead) localStorage.setItem('gc-last-msg-' + admGcUserId, String(msg.id));
-        // Play notification tone
+        // Play notification tone — reuse the shared unlocked context
         try {
-          var _ac = new (window.AudioContext || window.webkitAudioContext)();
-          var _now = _ac.currentTime;
-          [784, 1046].forEach(function(freq, i) {
-            var o = _ac.createOscillator(), g = _ac.createGain();
-            o.type = 'sine'; o.frequency.value = freq; o.connect(g); g.connect(_ac.destination);
-            var t = _now + i * 0.08;
-            g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.11, t + 0.02); g.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
-            o.start(t); o.stop(t + 0.25);
-          });
+          if (_admBellCtx && _admBellCtx.state === 'running') {
+            [1200, 1600].forEach(function(freq, i) {
+              var o = _admBellCtx.createOscillator(), g = _admBellCtx.createGain();
+              o.type = 'sine'; o.frequency.value = freq; o.connect(g); g.connect(_admBellCtx.destination);
+              var t = _admBellCtx.currentTime + i * 0.15;
+              g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.4, t + 0.02); g.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
+              o.start(t); o.stop(t + 0.22);
+            });
+          }
         } catch(e) {}
       }
     });
@@ -2290,11 +2303,10 @@ function admSubmitLateReason() {
     return;
   }
 
-  if (ms <= -(WARNING_AFTER * 2)) { autoLogoutWithReason('Auto Logout'); return; }
+  if (ms <= 0) return; // already past shift end at login — no restriction
 
   var msUntilWarning = ms + WARNING_AFTER;
-  if (msUntilWarning <= 0) showShiftWarning();
-  else setTimeout(showShiftWarning, msUntilWarning);
+  setTimeout(showShiftWarning, msUntilWarning);
 })();
 
 // Pending tasks reminder — 1 hour before shift ends
