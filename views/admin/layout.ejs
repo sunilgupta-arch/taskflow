@@ -1861,11 +1861,7 @@
     // Queue live events
     admBdrSock.on('queue:new_request', function() {
       admQueueUpdateBadge();
-      if (window.admqIsQueuePage) {
-        _admPlayBell(); // single ping — row already appears in the table
-      } else {
-        _admStartBell(); // full repeating bell + title blink when away from queue
-      }
+      _admStartBell();
       if (typeof window.admqSocketCallback === 'function') window.admqSocketCallback();
     });
     admBdrSock.on('queue:updated', function() {

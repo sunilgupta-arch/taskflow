@@ -690,9 +690,7 @@
       }).finally(function(){ if(inp) inp.value=''; });
   };
 
-  // ── Mark this as the queue page so layout stops the bell on focus ────
   window.admqIsQueuePage = true;
-  if (typeof _admStopBell === 'function') _admStopBell();
 
   // ── Socket live reload (called by layout.ejs socket block) ───────────
   window.admqSocketCallback = function() { loadDate(_date); };
