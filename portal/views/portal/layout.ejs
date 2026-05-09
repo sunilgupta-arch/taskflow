@@ -2459,17 +2459,12 @@
     var strip = document.getElementById('gcPresenceStrip');
     if (!strip) return;
     var online = _gcAllUsers.filter(function(u) { return u.online; });
-    var offlineCount = _gcAllUsers.filter(function(u) {
-      return !u.online && u.role_name && u.role_name.indexOf('LOCAL_') === 0;
-    }).length;
-    var html = online.map(function(u) {
-      var initial = u.name.charAt(0).toUpperCase();
-      return '<div class="gc-presence-avatar online" title="' + escapeHtml(u.name) + '" data-gc-uid="' + u.id + '">' + initial + '<span class="gc-presence-dot"></span></div>';
+    if (!online.length) { strip.innerHTML = ''; return; }
+    strip.innerHTML = online.map(function(u) {
+      var initials = u.name.split(' ').map(function(p){ return p[0]; }).join('').substring(0, 2).toUpperCase();
+      return '<div class="gc-presence-avatar online" title="' + escapeHtml(u.name) + '" data-gc-uid="' + u.id + '">'
+        + initials + '<span class="gc-presence-dot"></span></div>';
     }).join('');
-    if (offlineCount > 0) {
-      html += '<span class="gc-presence-offline">' + offlineCount + ' offline</span>';
-    }
-    strip.innerHTML = html;
   }
 
   // Real-time presence updates

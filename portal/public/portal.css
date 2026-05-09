@@ -5108,38 +5108,33 @@ html.sidebar-expanded .portal-main {
   align-items: center;
   justify-content: center;
   font-size: 0.65rem;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--tf-text-muted);
   flex-shrink: 0;
   cursor: default;
 }
 
 .gc-presence-avatar.online {
-  border-color: #22c55e;
-  color: var(--tf-text);
+  background: linear-gradient(135deg, #a78bfa, #7c3aed);
+  border: none;
+  color: #fff;
 }
 
 .gc-presence-dot {
   position: absolute;
-  bottom: -1px;
-  right: -1px;
-  width: 9px;
-  height: 9px;
+  bottom: 0;
+  right: 0;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   background: #4b5563;
   border: 1.5px solid var(--tf-surface);
+  display: none;
 }
 
 .gc-presence-avatar.online .gc-presence-dot {
   background: #22c55e;
-}
-
-.gc-presence-offline {
-  font-size: 0.6rem;
-  color: var(--tf-text-muted);
-  white-space: nowrap;
-  padding-left: 4px;
-  opacity: 0.7;
+  display: block;
 }
 
 /* Upload placeholder bubble */

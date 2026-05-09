@@ -634,8 +634,11 @@
       +'<div class="admq-info-item"><div class="admq-info-key">Due Time</div><div class="admq-info-val" style="font-family:var(--adm-mono);font-size:0.8rem">'+(inst.due_time||'—')+'</div></div>'
       +'<div class="admq-info-item"><div class="admq-info-key">Client</div><div class="admq-info-val">'+esc(inst.client_org_name||'—')+'</div></div>'
       +'<div class="admq-info-item"><div class="admq-info-key">Raised By</div><div class="admq-info-val">'+esc(inst.created_by_name||'—')+'</div></div>'
+      +'<div class="admq-info-item"><div class="admq-info-key">Submitted</div><div class="admq-info-val" style="font-family:var(--adm-mono);font-size:0.78rem">'+fmtTs(inst.created_at)+'</div></div>'
       +(inst.picked_by_name?'<div class="admq-info-item"><div class="admq-info-key">Picked By</div><div class="admq-info-val">'+esc(inst.picked_by_name)+'</div></div>':'')
-      +'<div class="admq-info-item"><div class="admq-info-key">Date</div><div class="admq-info-val" style="font-family:var(--adm-mono);font-size:0.8rem">'+fmtDate(inst.instance_date)+'</div></div>'
+      +(inst.picked_at?'<div class="admq-info-item"><div class="admq-info-key">Picked At</div><div class="admq-info-val" style="font-family:var(--adm-mono);font-size:0.78rem">'+fmtTs(inst.picked_at)+'</div></div>':'')
+      +(inst.completed_at?'<div class="admq-info-item"><div class="admq-info-key">Completed At</div><div class="admq-info-val" style="font-family:var(--adm-mono);font-size:0.78rem">'+fmtTs(inst.completed_at)+'</div></div>':'')
+      +'<div class="admq-info-item"><div class="admq-info-key">Scheduled For</div><div class="admq-info-val" style="font-family:var(--adm-mono);font-size:0.8rem">'+fmtDate(inst.instance_date)+'</div></div>'
       +'</div></div>';
 
     // Description
