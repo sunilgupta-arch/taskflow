@@ -83,7 +83,27 @@
 /* Cell helpers */
 .admq-title-cell { color: var(--adm-text); font-weight: 500; max-width: 240px; }
 .admq-title-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; max-width: 240px; }
-.admq-org        { font-size: 0.72rem; color: var(--adm-muted); margin-top: 2px; display: block; }
+.admq-org        { font-size: 0.72rem; color: var(--adm-muted); margin-top: 2px; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 220px; }
+.admq-more-link  { color: var(--adm-accent); text-decoration: none; font-size: 0.72rem; }
+.admq-more-link:hover { text-decoration: underline; }
+.admq-tooltip {
+  position: fixed; z-index: 9999;
+  background: var(--adm-surface-2);
+  border: 1px solid var(--adm-border-2);
+  border-radius: 10px;
+  padding: 10px 14px;
+  max-width: 300px;
+  font-size: 0.8rem;
+  line-height: 1.55;
+  color: var(--adm-text);
+  box-shadow: 0 6px 24px rgba(0,0,0,0.22);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.admq-tooltip.visible { opacity: 1; }
 .admq-overdue-chip {
   display: inline-block; font-size: 0.58rem; font-weight: 700;
   font-family: var(--adm-mono); text-transform: uppercase;
@@ -116,11 +136,11 @@
 /* Action buttons in table */
 .admq-actions { display: flex; gap: 5px; white-space: nowrap; }
 .admq-btn {
-  height: 28px; padding: 0 10px; border-radius: 7px;
+  height: 28px; padding: 0 8px; border-radius: 7px;
   border: 1px solid var(--adm-border); background: transparent;
   color: var(--adm-text-2); cursor: pointer; font-size: 0.72rem; font-weight: 600;
   display: inline-flex; align-items: center; gap: 4px; transition: all 0.15s;
-  font-family: var(--adm-font);
+  font-family: var(--adm-font); min-width: 28px; justify-content: center;
 }
 .admq-btn.pick    { border-color: rgba(249,115,22,0.4); color: #f97316; }
 .admq-btn.pick:hover    { background: rgba(249,115,22,0.1); }
@@ -128,6 +148,10 @@
 .admq-btn.done:hover    { background: rgba(16,185,129,0.1); }
 .admq-btn.release { border-color: rgba(59,130,246,0.4);  color: #3b82f6; }
 .admq-btn.release:hover { background: rgba(59,130,246,0.1); }
+.admq-btn.comment { border-color: rgba(139,92,246,0.4); color: #8b5cf6; }
+.admq-btn.comment:hover { background: rgba(139,92,246,0.1); }
+.admq-comment-cell { max-width: 200px; }
+.admq-comment-snip { font-size: 0.75rem; color: var(--adm-muted); display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 190px; }
 
 /* ── Detail drawer (appended to body by JS) ───────────────── */
 .admq-overlay {
@@ -318,6 +342,20 @@
   </div>
   <div class="admq-drawer-actions" id="admqDrawerActions" style="display:none"></div>
 </div>
+<div id="admqTooltip" class="admq-tooltip"></div>
+
+<div id="admqCommentModal" class="admq-modal-backdrop" style="display:none">
+  <div class="admq-modal">
+    <div class="admq-modal-title"><i class="bi bi-chat-left-text"></i> Add Comment</div>
+    <div class="admq-modal-sub">Comment will be visible to the client and the local team.</div>
+    <textarea class="admq-modal-textarea" id="admqQuickCommentInput" placeholder="Type your comment…" rows="3"></textarea>
+    <div class="admq-modal-footer">
+      <button class="admq-modal-cancel" onclick="admqCloseCommentModal()">Cancel</button>
+      <button class="admq-modal-confirm" id="admqCommentSendBtn" onclick="admqConfirmComment()"><i class="bi bi-send"></i> Send</button>
+    </div>
+  </div>
+</div>
+
 <div id="admqReleaseModal" class="admq-modal-backdrop" style="display:none">
   <div class="admq-modal">
     <div class="admq-modal-title"><i class="bi bi-arrow-counterclockwise"></i> Release Task</div>
@@ -333,7 +371,7 @@
 <script>
 (function () {
   // ── Teleport fixed elements to <body> to escape overflow containers ──
-  ['admqOverlay','admqDrawer','admqReleaseModal'].forEach(function(id) {
+  ['admqOverlay','admqDrawer','admqReleaseModal','admqCommentModal'].forEach(function(id) {
     var el = document.getElementById(id);
     if (el) document.body.appendChild(el);
   });
@@ -346,6 +384,7 @@
   var _role      = '<%= user.role_name %>';
   var _detailId  = null;
   var _releaseId = null;
+  var _admqCommentInstanceId = null;
 
   // ── Helpers ──────────────────────────────────────────────────────────
   function isPast(d)  { return d < _today; }
@@ -360,6 +399,23 @@
     if (!ts) return '';
     return new Date(ts).toLocaleString([],{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',hour12:false});
   }
+  function descSnippet(inst) {
+    var desc = (inst.description || '').trim();
+    if (!desc) return '';
+    var limit = 52;
+    if (desc.length <= limit) return '<span class="admq-org">'+esc(desc)+'</span>';
+    return '<span class="admq-org">'+esc(desc.substring(0, limit))+'… <a class="admq-more-link" href="#" onclick="event.stopPropagation();admqOpenDetail('+inst.id+')">more</a></span>';
+  }
+
+  function commentSnippet(inst) {
+    var body = (inst.latest_comment || '').trim();
+    if (!body) return '<span style="color:var(--adm-muted);font-size:0.75rem">—</span>';
+    var by = inst.latest_comment_by ? '<span style="font-size:0.68rem;color:var(--adm-muted)"> · '+esc(inst.latest_comment_by)+'</span>' : '';
+    var limit = 45;
+    if (body.length <= limit) return '<span class="admq-comment-snip">'+esc(body)+'</span>'+by;
+    return '<span class="admq-comment-snip">'+esc(body.substring(0, limit))+'…</span>'+by;
+  }
+
   function recIcon(r) {
     var map = {daily:'bi-arrow-repeat',weekly:'bi-calendar-week',monthly:'bi-calendar-month'};
     return (r && r!=='none') ? '<i class="bi '+map[r]+' admq-rec-icon" title="'+r+'"></i>' : '';
@@ -404,13 +460,15 @@
       var actions = '';
       if (!past) {
         if (inst.status === 'open') {
-          actions = '<button class="admq-btn pick" onclick="event.stopPropagation();admqPick('+inst.id+')"><i class="bi bi-hand-index"></i> Pick</button>';
+          actions = '<button class="admq-btn pick" title="Pick up" onclick="event.stopPropagation();admqPick('+inst.id+')"><i class="bi bi-hand-index"></i> Pick</button>';
         } else if (inst.status === 'picked') {
           if (inst.picked_by === _userId) {
-            actions = '<button class="admq-btn done" onclick="event.stopPropagation();admqDone('+inst.id+')"><i class="bi bi-check-lg"></i> Done</button>'
-                    + '<button class="admq-btn release" onclick="event.stopPropagation();admqOpenRelease('+inst.id+')"><i class="bi bi-arrow-counterclockwise"></i> Release</button>';
+            actions = '<button class="admq-btn done" title="Mark done" onclick="event.stopPropagation();admqDone('+inst.id+')"><i class="bi bi-check-lg"></i></button>'
+                    + '<button class="admq-btn release" title="Release" onclick="event.stopPropagation();admqOpenRelease('+inst.id+')"><i class="bi bi-arrow-counterclockwise"></i></button>'
+                    + '<button class="admq-btn comment" title="Add comment" onclick="event.stopPropagation();admqOpenCommentModal('+inst.id+')"><i class="bi bi-chat-left-text"></i></button>';
           } else if (isAdmin()) {
-            actions = '<button class="admq-btn done" onclick="event.stopPropagation();admqDone('+inst.id+')"><i class="bi bi-check-lg"></i> Done</button>';
+            actions = '<button class="admq-btn done" title="Mark done" onclick="event.stopPropagation();admqDone('+inst.id+')"><i class="bi bi-check-lg"></i></button>'
+                    + '<button class="admq-btn comment" title="Add comment" onclick="event.stopPropagation();admqOpenCommentModal('+inst.id+')"><i class="bi bi-chat-left-text"></i></button>';
           } else {
             actions = '<span style="font-size:0.72rem;color:var(--adm-muted)">'+esc(inst.picked_by_name||'')+'</span>';
           }
@@ -420,20 +478,26 @@
       }
       var recLabels = {none:'One-time',daily:'Daily',weekly:'Weekly',monthly:'Monthly'};
       var freqLabel = recLabels[inst.recurrence] || inst.recurrence || '—';
+      var descAttr    = esc((inst.description||'').trim());
+      var commentAttr = esc((inst.latest_comment||'').trim());
       return '<tr class="'+rowCls+'" onclick="admqOpenDetail('+inst.id+')">'
-        +'<td class="admq-title-cell"><span class="admq-title-text">'+recIcon(inst.recurrence)+esc(inst.title)+badge+'</span><span class="admq-org">'+esc(inst.org_name||inst.client_org_name||'')+'</span></td>'
+        +'<td class="admq-title-cell"'+(descAttr?' data-tooltip="'+descAttr+'"':'')+'>'+
+          '<span class="admq-title-text">'+recIcon(inst.recurrence)+esc(inst.title)+badge+'</span>'+descSnippet(inst)+'</td>'
         +'<td style="white-space:nowrap">'+esc(inst.task_type||'—')+'</td>'
         +'<td>'+priorityHtml(inst.priority)+'</td>'
         +'<td style="font-family:var(--adm-mono);font-size:0.82rem">'+(inst.due_time||'—')+'</td>'
         +'<td style="white-space:nowrap">'+freqLabel+'</td>'
-        +'<td>'+(inst.created_by_name?esc(inst.created_by_name):'<span style="color:var(--adm-muted)">—</span>')+'</td>'
+        +'<td'+(inst.created_by_name?' data-tooltip="'+esc(inst.created_by_name)+'"':'')+'>'+
+          (inst.created_by_name?esc(inst.created_by_name.split(' ')[0]):'<span style="color:var(--adm-muted)">—</span>')+'</td>'
         +'<td>'+statusHtml(inst.status)+'</td>'
-        +'<td>'+(inst.picked_by_name?esc(inst.picked_by_name):'<span style="color:var(--adm-muted)">—</span>')+'</td>'
+        +'<td'+(inst.picked_by_name?' data-tooltip="'+esc(inst.picked_by_name)+'"':'')+'>'+
+          (inst.picked_by_name?esc(inst.picked_by_name.split(' ')[0]):'<span style="color:var(--adm-muted)">—</span>')+'</td>'
+        +'<td class="admq-comment-cell"'+(commentAttr?' data-tooltip="'+commentAttr+'"':'')+'>'+commentSnippet(inst)+'</td>'
         +'<td><div class="admq-actions">'+actions+'</div></td>'
         +'</tr>';
     }).join('');
     area.innerHTML = '<div class="admq-table-wrap"><table class="admq-table"><thead><tr>'
-      +'<th>Request</th><th>Type</th><th>Priority</th><th>Due</th><th>Frequency</th><th>Created By</th><th>Status</th><th>Picked By</th><th></th>'
+      +'<th>Request</th><th>Type</th><th>Priority</th><th>Due</th><th>Frequency</th><th>Creator</th><th>Status</th><th>Picked By</th><th>Latest Comment</th><th></th>'
       +'</tr></thead><tbody>'+rows+'</tbody></table></div>';
   }
 
@@ -492,6 +556,31 @@
         if (res.success) { loadDate(_date); if (_detailId===_releaseId) admqCloseDetail(); }
         else alert(res.message||'Failed');
       });
+  };
+
+  // ── Quick Comment modal ──────────────────────────────────────────────
+  window.admqOpenCommentModal = function(id) {
+    _admqCommentInstanceId = id;
+    document.getElementById('admqQuickCommentInput').value = '';
+    document.getElementById('admqCommentModal').style.display = 'flex';
+  };
+  window.admqCloseCommentModal = function() {
+    document.getElementById('admqCommentModal').style.display = 'none';
+    _admqCommentInstanceId = null;
+  };
+  window.admqConfirmComment = function() {
+    var id = _admqCommentInstanceId;
+    if (!id) return;
+    var body = document.getElementById('admqQuickCommentInput').value.trim();
+    if (!body) return;
+    var btn = document.getElementById('admqCommentSendBtn');
+    btn.disabled = true;
+    fetch('/queue/'+id+'/comments',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({body:body})})
+      .then(function(r){return r.json();}).then(function(res){
+        admqCloseCommentModal();
+        if (res.success) loadDate(_date);
+        else alert(res.message||'Failed to post comment');
+      }).finally(function(){ btn.disabled = false; });
   };
 
   // ── Detail drawer ────────────────────────────────────────────────────
@@ -623,5 +712,47 @@
   renderStats(_raw.stats, _date);
   renderTable(_raw.instances, _date);
 
+})();
+
+// ── Description tooltip ──────────────────────────────────────────────
+(function() {
+  var tt      = document.getElementById('admqTooltip');
+  var timer   = null;
+  var DELAY   = 400;
+
+  function show(cell) {
+    var desc = cell.getAttribute('data-tooltip');
+    if (!desc) return;
+    tt.textContent = desc;
+    var r    = cell.getBoundingClientRect();
+    var top  = r.bottom + 8;
+    var left = r.left;
+    // Keep within viewport horizontally
+    if (left + 310 > window.innerWidth) left = window.innerWidth - 318;
+    // Flip above row if too close to bottom
+    if (top + 120 > window.innerHeight) top = r.top - 8 - tt.offsetHeight;
+    tt.style.top  = top + 'px';
+    tt.style.left = left + 'px';
+    tt.classList.add('visible');
+  }
+
+  function hide() {
+    clearTimeout(timer);
+    tt.classList.remove('visible');
+  }
+
+  document.addEventListener('mouseover', function(e) {
+    var cell = e.target.closest('td[data-tooltip]');
+    if (!cell) { hide(); return; }
+    clearTimeout(timer);
+    timer = setTimeout(function() { show(cell); }, DELAY);
+  });
+
+  document.addEventListener('mouseout', function(e) {
+    if (e.target.closest('td[data-tooltip]')) hide();
+  });
+
+  // Hide on scroll or drawer open
+  document.addEventListener('scroll', hide, true);
 })();
 </script>

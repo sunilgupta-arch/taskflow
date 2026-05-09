@@ -82,7 +82,10 @@ class ClientRequest {
               cr.created_by, creator.name as created_by_name,
               picker.name as picked_by_name,
               completer.name as completed_by_name,
-              defaultAssignee.name as default_assigned_to_name
+              defaultAssignee.name as default_assigned_to_name,
+              lc.body as latest_comment,
+              lc_user.name as latest_comment_by,
+              lc.created_at as latest_comment_at
        FROM client_request_instances cri
        JOIN client_requests cr ON cri.request_id = cr.id
        JOIN organizations o ON cr.org_id = o.id
@@ -90,6 +93,10 @@ class ClientRequest {
        LEFT JOIN users picker ON cri.picked_by = picker.id
        LEFT JOIN users completer ON cri.completed_by = completer.id
        LEFT JOIN users defaultAssignee ON cr.assigned_to = defaultAssignee.id
+       LEFT JOIN client_request_comments lc ON lc.id = (
+         SELECT MAX(id) FROM client_request_comments WHERE instance_id = cri.id
+       )
+       LEFT JOIN users lc_user ON lc.user_id = lc_user.id
        WHERE (cri.instance_date = ? ${carryForward}) AND cr.is_active = 1
          AND cri.status != 'cancelled'
        ORDER BY
@@ -184,7 +191,7 @@ class ClientRequest {
 
   static async getComments(instanceId) {
     const [rows] = await db.query(
-      `SELECT crc.*, u.name as user_name, r.name as role_name
+      `SELECT crc.*, u.name as commenter_name, r.name as commenter_role
        FROM client_request_comments crc
        JOIN users u ON crc.user_id = u.id
        JOIN roles r ON u.role_id = r.id
@@ -201,7 +208,7 @@ class ClientRequest {
       [instanceId, userId, body]
     );
     const [[comment]] = await db.query(
-      `SELECT crc.*, u.name as user_name, r.name as role_name
+      `SELECT crc.*, u.name as commenter_name, r.name as commenter_role
        FROM client_request_comments crc
        JOIN users u ON crc.user_id = u.id
        JOIN roles r ON u.role_id = r.id
