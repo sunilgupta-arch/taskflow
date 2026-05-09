@@ -2451,20 +2451,49 @@ function stopFieldDictation() {
 
 // ── NOTIFICATION SOUND ─────────────────────────────────────
 
-function playNotificationSound() {
+var _sndCtx      = null;
+var _sndUnlocked = false;
+var _sndPending  = false;
+
+function _unlockSnd() {
+  if (_sndUnlocked) return;
   try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    const o = ctx.createOscillator();
-    const g = ctx.createGain();
-    o.connect(g); g.connect(ctx.destination);
+    if (!_sndCtx) _sndCtx = new (window.AudioContext || window.webkitAudioContext)();
+    var p = _sndCtx.resume();
+    if (p && p.then) {
+      p.then(function() {
+        var buf = _sndCtx.createBuffer(1, 1, 22050);
+        var src = _sndCtx.createBufferSource();
+        src.buffer = buf; src.connect(_sndCtx.destination); src.start(0);
+        _sndUnlocked = true;
+        if (_sndPending) { _sndPending = false; _doPlaySnd(); }
+      }).catch(function(){});
+    }
+  } catch(e) {}
+}
+
+document.addEventListener('click',   _unlockSnd, { once: false });
+document.addEventListener('keydown', _unlockSnd, { once: false });
+
+function _doPlaySnd() {
+  if (!_sndCtx) return;
+  try {
+    var now = _sndCtx.currentTime;
+    var o = _sndCtx.createOscillator(), g = _sndCtx.createGain();
+    o.connect(g); g.connect(_sndCtx.destination);
     o.type = 'sine';
-    o.frequency.setValueAtTime(880, ctx.currentTime);
-    o.frequency.setValueAtTime(1046, ctx.currentTime + 0.1);
-    g.gain.setValueAtTime(0.15, ctx.currentTime);
-    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
-    o.start(ctx.currentTime);
-    o.stop(ctx.currentTime + 0.3);
-  } catch (_) {}
+    o.frequency.setValueAtTime(880, now);
+    o.frequency.setValueAtTime(1046, now + 0.1);
+    g.gain.setValueAtTime(0.15, now);
+    g.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+    o.start(now);
+    o.stop(now + 0.3);
+  } catch(_) {}
+}
+
+function playNotificationSound() {
+  if (!_sndUnlocked) { _sndPending = true; return; }
+  _doPlaySnd();
 }
 
 // ── CHAT SEARCH ────────────────────────────────────────────

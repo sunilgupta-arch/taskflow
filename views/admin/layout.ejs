@@ -1724,14 +1724,15 @@
           admBdrUpdateBadge();
         }
         // Play notification sound
-        try {
-          var ac = new (window.AudioContext||window.webkitAudioContext)();
-          var o = ac.createOscillator(), g = ac.createGain();
-          o.connect(g); g.connect(ac.destination);
-          o.type='sine'; o.frequency.setValueAtTime(880,ac.currentTime); o.frequency.setValueAtTime(1046,ac.currentTime+0.1);
-          g.gain.setValueAtTime(0.15,ac.currentTime); g.gain.exponentialRampToValueAtTime(0.001,ac.currentTime+0.3);
-          o.start(ac.currentTime); o.stop(ac.currentTime+0.3);
-        } catch(e) {}
+        if (_admBellCtx && _admBellCtx.state === 'running') {
+          try {
+            var o = _admBellCtx.createOscillator(), g = _admBellCtx.createGain();
+            o.connect(g); g.connect(_admBellCtx.destination);
+            o.type='sine'; o.frequency.setValueAtTime(880,_admBellCtx.currentTime); o.frequency.setValueAtTime(1046,_admBellCtx.currentTime+0.1);
+            g.gain.setValueAtTime(0.15,_admBellCtx.currentTime); g.gain.exponentialRampToValueAtTime(0.001,_admBellCtx.currentTime+0.3);
+            o.start(_admBellCtx.currentTime); o.stop(_admBellCtx.currentTime+0.3);
+          } catch(e) {}
+        }
       }
 
       // Refresh conv list if it's visible
@@ -1832,8 +1833,9 @@
   }
 
   function _admPlayCommentSound() {
+    if (!_admBellCtx || _admBellCtx.state !== 'running') return;
     try {
-      var ctx = new (window.AudioContext || window.webkitAudioContext)();
+      var ctx = _admBellCtx;
       [[880, 0, 0.13], [1108, 0.11, 0.16]].forEach(function(p) {
         var osc = ctx.createOscillator(), g = ctx.createGain();
         osc.type = 'sine'; osc.frequency.value = p[0];
