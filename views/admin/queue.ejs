@@ -406,7 +406,7 @@
         if (inst.status === 'open') {
           actions = '<button class="admq-btn pick" onclick="event.stopPropagation();admqPick('+inst.id+')"><i class="bi bi-hand-index"></i> Pick</button>';
         } else if (inst.status === 'picked') {
-          if (inst.picked_by_id === _userId) {
+          if (inst.picked_by === _userId) {
             actions = '<button class="admq-btn done" onclick="event.stopPropagation();admqDone('+inst.id+')"><i class="bi bi-check-lg"></i> Done</button>'
                     + '<button class="admq-btn release" onclick="event.stopPropagation();admqOpenRelease('+inst.id+')"><i class="bi bi-arrow-counterclockwise"></i> Release</button>';
           } else if (isAdmin()) {
@@ -524,7 +524,7 @@
       if (inst.status==='open') {
         btns = '<button class="admq-drawer-btn pick" onclick="admqPick('+inst.id+')"><i class="bi bi-hand-index"></i> Pick Up</button>';
       } else if (inst.status==='picked') {
-        if (inst.picked_by_id===_userId) {
+        if (inst.picked_by===_userId) {
           btns = '<button class="admq-drawer-btn done" onclick="admqDone('+inst.id+')"><i class="bi bi-check-lg"></i> Mark Done</button>'
                + '<button class="admq-drawer-btn release" onclick="admqOpenRelease('+inst.id+')"><i class="bi bi-arrow-counterclockwise"></i> Release</button>';
         } else if (isAdmin()) {
