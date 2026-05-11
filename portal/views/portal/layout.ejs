@@ -511,6 +511,28 @@
     </div>
   </div>
 
+  <!-- Session Warning Modal -->
+  <div class="modal fade" id="sessionWarningModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title"><i class="bi bi-clock me-2"></i>Session Timeout Warning</h5>
+        </div>
+        <div class="modal-body">
+          <p class="mb-2">Your shift has ended. Your session will expire and you'll be automatically logged out.</p>
+          <div class="alert alert-warning mb-3">
+            <strong>Time remaining:</strong> <span id="sessionCountdownDisplay">--:--</span>
+          </div>
+          <p class="small text-muted mb-0">Click <strong>Continue Session</strong> to extend your login for 2 more hours. Otherwise, you will be logged out automatically.</p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-danger" onclick="portalLogoutNow()">Logout Now</button>
+          <button type="button" class="btn btn-primary" onclick="extendSession()">Continue Session (2 hrs)</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
   <script src="/socket.io/socket.io.js"></script>
   <script>
@@ -612,6 +634,132 @@
           }
         });
     }
+
+    // ── Session Management (Auto-logout after shift) ───────
+    var _sessionWarningShown = false;
+    var _sessionCountdownTimer = null;
+    var _sessionWarningTimeoutTimer = null;
+    var _sessionExtendedTime = 0; // Track when session was extended
+
+    function formatCountdown(seconds) {
+      const mins = Math.floor(seconds / 60);
+      const secs = seconds % 60;
+      return mins.toString().padStart(2, '0') + ':' + secs.toString().padStart(2, '0');
+    }
+
+    function updateSessionCountdown(remainingSeconds) {
+      const display = document.getElementById('sessionCountdownDisplay');
+      if (display) display.textContent = formatCountdown(remainingSeconds);
+    }
+
+    function startSessionCountdown(durationSeconds) {
+      if (_sessionCountdownTimer) clearInterval(_sessionCountdownTimer);
+      let remaining = durationSeconds;
+      updateSessionCountdown(remaining);
+      _sessionCountdownTimer = setInterval(() => {
+        remaining--;
+        updateSessionCountdown(remaining);
+        if (remaining <= 0) {
+          clearInterval(_sessionCountdownTimer);
+          // Time's up, logout automatically
+          portalLogoutNow();
+        }
+      }, 1000);
+    }
+
+    function showSessionWarning() {
+      if (_sessionWarningShown) return;
+      _sessionWarningShown = true;
+
+      // Show modal (15-minute countdown before auto-logout)
+      const warningModal = new bootstrap.Modal(document.getElementById('sessionWarningModal'));
+      warningModal.show();
+
+      // Start 15-minute countdown
+      startSessionCountdown(900); // 15 minutes = 900 seconds
+
+      // Auto-logout if no response within 15 minutes
+      if (_sessionWarningTimeoutTimer) clearTimeout(_sessionWarningTimeoutTimer);
+      _sessionWarningTimeoutTimer = setTimeout(() => {
+        // If modal is still showing (user didn't click Continue), logout
+        const modalEl = document.getElementById('sessionWarningModal');
+        if (modalEl && document.querySelector('[data-bs-dismiss="modal"].btn-close:not([style*="display: none"])')) {
+          portalLogoutNow();
+        }
+      }, 900000); // 15 minutes
+    }
+
+    function extendSession() {
+      // Clear previous timers
+      if (_sessionCountdownTimer) clearInterval(_sessionCountdownTimer);
+      if (_sessionWarningTimeoutTimer) clearTimeout(_sessionWarningTimeoutTimer);
+
+      // Send extend request to server
+      fetch('/portal/extend-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      })
+        .then(r => r.json())
+        .then(res => {
+          if (res.success) {
+            _sessionExtendedTime = Date.now();
+            _sessionWarningShown = false;
+
+            // Hide modal
+            const modalInstance = bootstrap.Modal.getInstance(document.getElementById('sessionWarningModal'));
+            if (modalInstance) modalInstance.hide();
+
+            // Schedule next warning (2 hours from now)
+            setTimeout(() => {
+              showSessionWarning();
+            }, 7200000); // 2 hours = 7,200,000 ms
+          } else {
+            alert(res.message || 'Failed to extend session');
+          }
+        })
+        .catch(err => {
+          console.error('Error extending session:', err);
+          alert('Error extending session');
+        });
+    }
+
+    function portalLogoutNow() {
+      if (_sessionCountdownTimer) clearInterval(_sessionCountdownTimer);
+      if (_sessionWarningTimeoutTimer) clearTimeout(_sessionWarningTimeoutTimer);
+      fetch('/auth/logout', { method: 'POST', headers: { 'Content-Type': 'application/json' } })
+        .then(() => window.location.href = '/auth/login');
+    }
+
+    function portalLogout() {
+      portalLogoutNow();
+    }
+
+    // ── Check if shift has ended (compare server time with shift end time) ──
+    // Only for LOCAL users, not for CLIENT users
+    (function initSessionManagement() {
+      const userRole = PORTAL_USER.role;
+      const isLocalUser = userRole && userRole.startsWith('LOCAL');
+      
+      if (!isLocalUser) {
+        // CLIENT users - no session timeout, can login for 365 days
+        return;
+      }
+      
+      fetch('/portal/check-shift-end')
+        .then(r => r.json())
+        .then(res => {
+          if (res.success && res.data.shift_ended) {
+            // Shift has ended, show warning
+            showSessionWarning();
+          } else if (res.success && res.data.time_until_shift_end > 0) {
+            // Schedule warning for when shift ends
+            setTimeout(() => {
+              showSessionWarning();
+            }, res.data.time_until_shift_end);
+          }
+        })
+        .catch(err => console.error('Error checking shift:', err));
+    })();
 
     // ── Support Chat (Primary + Delegate) ──────────────────
     var adminChatConvId = null;
@@ -1437,11 +1585,6 @@
         }
       }).catch(function(){});
     })();
-
-    function portalLogout() {
-      fetch('/auth/logout', { method: 'POST', headers: { 'Content-Type': 'application/json' } })
-        .then(() => window.location.href = '/auth/login');
-    }
 
     // DB stores timestamps in server timezone (Eastern = UTC-4)
 

@@ -1706,12 +1706,19 @@
   function _admStartBell() {
     if (_admBellActive) return;
     _admBellActive = true;
+    var _bellBeepsLeft = 1; // 1 more beep after the first = 2 total
     _admUnlockAudio();
     _admStartTitleBlink();
     _admPlayBell();
     _admBellInterval = setInterval(function() {
       if (!_admBellActive) { clearInterval(_admBellInterval); _admBellInterval = null; return; }
       _admPlayBell();
+      _bellBeepsLeft--;
+      if (_bellBeepsLeft <= 0) {
+        clearInterval(_admBellInterval);
+        _admBellInterval = null;
+        _admBellActive = false;
+      }
     }, 4000);
   }
 

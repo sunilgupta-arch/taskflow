@@ -283,6 +283,7 @@
     <label>Status</label>
     <select id="ataOverrideStatus">
       <option value="present">Present</option>
+      <option value="absent">Absent</option>
       <option value="half_day">Half Day</option>
       <option value="work_from_home">Work From Home</option>
       <option value="official_duty">Official Duty</option>
@@ -395,6 +396,17 @@
     var i = 0; for (var c of (name||'?')) i = (i + c.charCodeAt(0)) % colors.length;
     return colors[i];
   }
+  function fmtIST(dtStr) {
+    if (!dtStr) return '—';
+    var d = new Date(dtStr);
+    if (isNaN(d)) return '—';
+    var ist = new Date(d.getTime() + 330 * 60000);
+    var h = ist.getUTCHours(), m = ist.getUTCMinutes();
+    var ampm = h >= 12 ? 'PM' : 'AM';
+    h = h % 12 || 12;
+    return h + ':' + String(m).padStart(2,'0') + ' ' + ampm;
+  }
+
   function statusLabel(s) {
     var m = {present:'Present',absent:'Absent',weekoff:'Week Off',holiday:'Holiday',
              approved_leave:'On Leave',pending_leave:'Leave (Pending)',
@@ -526,12 +538,20 @@
 
       // First in / last out / total duration
       var firstIn = '—', lastOut = '—', totalDur = '—';
+      var firstInIST = '—', lastOutIST = '—';
       var hasOpen = false;
       if (sessions.length) {
         firstIn = sessions[0].loginFormatted || '—';
+        firstInIST = fmtIST(sessions[0].login_time);
         var last = sessions[sessions.length - 1];
-        if (last.logoutFormatted) { lastOut = last.logoutFormatted; }
-        else { lastOut = '<span class="ata-open-dot"></span>&nbsp;<span style="font-size:0.75rem;color:#10b981">Active</span>'; hasOpen = true; }
+        if (last.logoutFormatted) {
+          lastOut = last.logoutFormatted;
+          lastOutIST = fmtIST(last.logout_time);
+        } else {
+          lastOut = '<span class="ata-open-dot"></span>&nbsp;<span style="font-size:0.75rem;color:#10b981">Active</span>';
+          lastOutIST = '<span style="font-size:0.75rem;color:#10b981">Active</span>';
+          hasOpen = true;
+        }
         // Sum durations
         var totalMins = 0;
         sessions.forEach(function(s) {
@@ -595,14 +615,16 @@
             +'<div style="font-family:var(--adm-mono);font-size:0.78rem">'+dur+'</div>'
             +'<div>'+forceBtn+'</div></div>';
         }).join('');
-        sessHtml = '<td colspan="7"><div class="ata-sessions-inner">'+sessRows+'</div></td>';
+        sessHtml = '<td colspan="9"><div class="ata-sessions-inner">'+sessRows+'</div></td>';
       }
 
       return '<tr class="ata-user-row" onclick="ataToggleSessions(\''+rowId+'\')">'
         +'<td><div class="ata-user-cell"><div class="ata-avatar" style="background:'+color+'">'+initial+'</div><div><div class="ata-user-name">'+esc(u.name)+overrideIcon+'</div><div class="ata-shift-label">'+esc(shiftLabel)+'</div></div></div></td>'
         +'<td><span class="ata-badge '+status+'">'+statusLabel(status)+'</span></td>'
         +'<td style="font-family:var(--adm-mono);font-size:0.82rem">'+firstIn+'</td>'
+        +'<td style="font-family:var(--adm-mono);font-size:0.82rem;color:#60a5fa">'+firstInIST+'</td>'
         +'<td style="font-family:var(--adm-mono);font-size:0.82rem">'+lastOut+'</td>'
+        +'<td style="font-family:var(--adm-mono);font-size:0.82rem;color:#60a5fa">'+lastOutIST+'</td>'
         +'<td style="font-family:var(--adm-mono);font-size:0.82rem;color:var(--adm-muted)">'+totalDur+'</td>'
         +'<td>'+lateHtml+'</td>'
         +'<td>'+actionsHtml+'</td>'
@@ -611,7 +633,7 @@
     }).join('');
 
     area.innerHTML = '<div class="ata-table-wrap"><table class="ata-table">'
-      +'<thead><tr><th>Team Member</th><th>Status</th><th>First In</th><th>Last Out</th><th>Hours</th><th>Late</th><th></th></tr></thead>'
+      +'<thead><tr><th>Team Member</th><th>Status</th><th>Log In</th><th>LI IST</th><th>Log Out</th><th>LO IST</th><th>Hours</th><th>Late</th><th></th></tr></thead>'
       +'<tbody>'+rows+'</tbody></table></div>';
   }
 

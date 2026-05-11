@@ -99,12 +99,7 @@ class ClientRequest {
        LEFT JOIN users lc_user ON lc.user_id = lc_user.id
        WHERE (cri.instance_date = ? ${carryForward}) AND cr.is_active = 1
          AND cri.status != 'cancelled'
-       ORDER BY
-         CASE WHEN cri.status IN ('open','picked') AND cri.instance_date < CURDATE() THEN 0 ELSE 1 END ASC,
-         CASE cri.status WHEN 'open' THEN 0 WHEN 'picked' THEN 1 WHEN 'done' THEN 2
-                         WHEN 'missed' THEN 3 END ASC,
-         FIELD(cr.priority, 'urgent', 'high', 'normal') ASC,
-         cr.due_time ASC`,
+       ORDER BY cri.id ASC`,
       queryParams
     );
 
@@ -274,9 +269,9 @@ class ClientRequest {
        LEFT JOIN users completer ON cri.completed_by = completer.id
        WHERE (cri.instance_date = ? AND cr.org_id = ? AND cr.is_active = 1${salesFilter} ${carryForward})
        ORDER BY
-         CASE WHEN cri.status IN ('open','picked') AND cri.instance_date < CURDATE() THEN 0 ELSE 1 END ASC,
+         cr.due_time ASC,
          FIELD(cr.priority, 'urgent', 'high', 'normal') ASC,
-         cr.due_time ASC`,
+         CASE WHEN cri.status IN ('open','picked') AND cri.instance_date < CURDATE() THEN 0 ELSE 1 END ASC`,
       params
     );
     return instances;

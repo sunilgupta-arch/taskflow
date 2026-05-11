@@ -13,6 +13,9 @@
 /* ── Grant button ─────────────────────────────────────────── */
 .lvm-grant-btn { height:36px; padding:0 16px; border-radius:9px; border:1px solid rgba(139,92,246,0.4); background:rgba(139,92,246,0.08); color:#a78bfa; font-size:0.82rem; font-weight:600; font-family:var(--adm-font); cursor:pointer; display:inline-flex; align-items:center; gap:6px; transition:all 0.15s; white-space:nowrap; }
 .lvm-grant-btn:hover { background:rgba(139,92,246,0.16); border-color:rgba(139,92,246,0.6); }
+/* ── Apply button ─────────────────────────────────────────── */
+.lvm-apply-btn { height:36px; padding:0 16px; border-radius:9px; border:1px solid rgba(59,130,246,0.4); background:rgba(59,130,246,0.08); color:#60a5fa; font-size:0.82rem; font-weight:600; font-family:var(--adm-font); cursor:pointer; display:inline-flex; align-items:center; gap:6px; transition:all 0.15s; white-space:nowrap; }
+.lvm-apply-btn:hover { background:rgba(59,130,246,0.16); border-color:rgba(59,130,246,0.6); }
 
 /* ── Stats bar ────────────────────────────────────────────── */
 .lvm-stats { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; align-items:center; }
@@ -157,6 +160,30 @@
   </div>
 </div>
 
+<!-- ── Apply for Leave modal ──────────────────────────────────────────── -->
+<div id="lvmApplyModal" class="lvm-modal-bg" style="display:none">
+  <div class="lvm-modal">
+    <div class="lvm-modal-title"><i class="bi bi-calendar-plus" style="color:#60a5fa"></i> Apply for Leave</div>
+    <div class="lvm-modal-2col">
+      <div>
+        <label>From Date *</label>
+        <input type="date" id="lvmApplyFrom" onchange="lvmUpdateApplyDays()">
+      </div>
+      <div>
+        <label>To Date *</label>
+        <input type="date" id="lvmApplyTo" onchange="lvmUpdateApplyDays()">
+      </div>
+    </div>
+    <div class="lvm-days-hint" id="lvmApplyDaysHint"></div>
+    <label>Reason *</label>
+    <textarea id="lvmApplyReason" placeholder="Reason for leave…"></textarea>
+    <div class="lvm-modal-footer">
+      <button class="lvm-mbt cancel" onclick="document.getElementById('lvmApplyModal').style.display='none'">Cancel</button>
+      <button class="lvm-mbt" style="background:#3b82f6;color:#fff;border-color:#3b82f6" id="lvmApplySubmitBtn" onclick="lvmSubmitApply()"><i class="bi bi-send"></i> Submit</button>
+    </div>
+  </div>
+</div>
+
 <!-- ── Top bar ───────────────────────────────────────────────────────── -->
 <div class="lvm-topbar">
   <div class="lvm-tabs" id="lvmTabs">
@@ -171,9 +198,16 @@
     <% } else { %>
     <a href="/admin/team" class="adm-back-btn"><i class="bi bi-arrow-left"></i> Team</a>
     <% } %>
+    <% if (['LOCAL_ADMIN', 'LOCAL_MANAGER'].includes(user.role_name)) { %>
     <button class="lvm-grant-btn" onclick="lvmOpenGrant()">
       <i class="bi bi-person-plus"></i> Grant Leave
     </button>
+    <% } %>
+    <% if (['LOCAL_USER', 'LOCAL_MANAGER'].includes(user.role_name)) { %>
+    <button class="lvm-apply-btn" onclick="lvmOpenApply()">
+      <i class="bi bi-calendar-plus"></i> Apply Leave
+    </button>
+    <% } %>
   </div>
 </div>
 
@@ -199,7 +233,7 @@
 <script>
 (function () {
   // Teleport modals
-  ['lvmReviewModal','lvmGrantModal'].forEach(function(id) {
+  ['lvmReviewModal','lvmGrantModal','lvmApplyModal'].forEach(function(id) {
     var el = document.getElementById(id);
     if (el) document.body.appendChild(el);
   });
@@ -387,6 +421,66 @@
   };
 
   // ── Grant modal ───────────────────────────────────────────────────────
+  // ── Apply modal ───────────────────────────────────────────────────────
+  window.lvmOpenApply = function() {
+    var today = new Date().toISOString().split('T')[0];
+    document.getElementById('lvmApplyFrom').value   = today;
+    document.getElementById('lvmApplyTo').value     = today;
+    document.getElementById('lvmApplyReason').value = '';
+    document.getElementById('lvmApplyDaysHint').style.display = 'none';
+    document.getElementById('lvmApplyModal').style.display = 'flex';
+  };
+
+  window.lvmUpdateApplyDays = function() {
+    var from = document.getElementById('lvmApplyFrom').value;
+    var to   = document.getElementById('lvmApplyTo').value;
+    var hint = document.getElementById('lvmApplyDaysHint');
+    if (from && to && to >= from) {
+      var d = daysBetween(from, to);
+      hint.textContent = d + ' day' + (d!==1?'s':'') + ' of leave';
+      hint.style.display = 'block';
+      document.getElementById('lvmApplyTo').min = from;
+    } else {
+      hint.style.display = 'none';
+    }
+  };
+
+  window.lvmSubmitApply = function() {
+    var from_date = document.getElementById('lvmApplyFrom').value;
+    var to_date   = document.getElementById('lvmApplyTo').value;
+    var reason    = document.getElementById('lvmApplyReason').value.trim();
+    if (!from_date || !to_date) { alert('Please select both dates.'); return; }
+    if (to_date < from_date)    { alert('To date must be after from date.'); return; }
+    if (!reason)                { alert('Please enter a reason.'); return; }
+    var btn = document.getElementById('lvmApplySubmitBtn');
+    btn.disabled = true;
+    fetch('/leaves', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ from_date, to_date, reason })
+    }).then(function(r){ return r.json(); }).then(function(res) {
+      if (res.success) {
+        document.getElementById('lvmApplyModal').style.display = 'none';
+        _leaves.unshift({
+          id:            res.data && res.data.id,
+          user_id:       null,
+          user_name:     null,
+          from_date,
+          to_date,
+          reason,
+          status:        'pending',
+          reviewer_name: null,
+          review_remark: null,
+          reviewed_at:   null
+        });
+        render();
+      } else {
+        alert(res.message || 'Failed to submit leave request');
+      }
+      btn.disabled = false;
+    }).catch(function(){ alert('Network error'); btn.disabled = false; });
+  };
+
   window.lvmOpenGrant = function() {
     var today = new Date().toISOString().split('T')[0];
     document.getElementById('lvmGrantUser').value   = '';

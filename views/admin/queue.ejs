@@ -456,7 +456,7 @@
       return;
     }
     var past = isPast(date);
-    var rows = instances.map(function(inst) {
+    var rows = instances.map(function(inst, idx) {
       var overdue = inst.instance_date < _today && inst.status === 'open';
       var rowCls  = overdue ? 'row-overdue' : 'row-'+inst.status;
       var badge   = overdue ? '<span class="admq-overdue-chip">Overdue</span>' : '';
@@ -484,6 +484,7 @@
       var descAttr    = esc((inst.description||'').trim());
       var commentAttr = esc((inst.latest_comment||'').trim());
       return '<tr class="'+rowCls+'" onclick="admqOpenDetail('+inst.id+')">'
+        +'<td style="font-family:var(--adm-mono);font-size:0.75rem;color:var(--adm-muted);text-align:center;width:36px">'+(idx+1)+'</td>'
         +'<td class="admq-title-cell"'+(descAttr?' data-tooltip="'+descAttr+'"':'')+'>'+
           '<span class="admq-title-text">'+recIcon(inst.recurrence)+esc(inst.title)+badge+'</span>'+descSnippet(inst)+'</td>'
         +'<td style="white-space:nowrap">'+esc(inst.task_type||'—')+'</td>'
@@ -500,7 +501,7 @@
         +'</tr>';
     }).join('');
     area.innerHTML = '<div class="admq-table-wrap"><table class="admq-table"><thead><tr>'
-      +'<th>Request</th><th>Type</th><th>Priority</th><th>Due</th><th>Frequency</th><th>Creator</th><th>Status</th><th>Picked By</th><th>Latest Comment</th><th></th>'
+      +'<th style="text-align:center;width:36px">SN</th><th>Request</th><th>Type</th><th>Priority</th><th>Due</th><th>Frequency</th><th>Creator</th><th>Status</th><th>Picked By</th><th>Latest Comment</th><th></th>'
       +'</tr></thead><tbody>'+rows+'</tbody></table></div>';
   }
 

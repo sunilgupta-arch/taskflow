@@ -487,8 +487,9 @@ const isSalesUser = user.role_name === 'CLIENT_SALES';
         <td class="small text-muted">${recLabels[inst.recurrence] || inst.recurrence}</td>
         <td>${priorityBadge(inst.priority)}</td>
         <td class="small text-muted">${inst.due_time ? inst.due_time.substring(0,5) : '—'}</td>
+        <td class="small" title="${escHtml(inst.created_by_name || '—')}">${escHtml((inst.created_by_name || '—').split(' ')[0])}</td>
         <td>${statusBadge(inst.status)}</td>
-        <td class="small">${escHtml(inst.picked_by_name || inst.completed_by_name || '—')}</td>
+        <td class="small" title="${escHtml(inst.picked_by_name || inst.completed_by_name || '—')}">${escHtml(((inst.picked_by_name || inst.completed_by_name || '—').split(' ')[0]))}</td>
       </tr>`;
     });
     const cancelledFooter = cancelled.length > 0
@@ -500,7 +501,7 @@ const isSalesUser = user.role_name === 'CLIENT_SALES';
       : '';
     area.innerHTML = `<div class="portal-requests-table-wrap">
       <table class="portal-table" id="requestsTable">
-        <thead><tr><th>#</th><th>Title</th><th>Type</th><th>Frequency</th><th>Priority</th><th>Due Time</th><th>Status</th><th>Handled By</th></tr></thead>
+        <thead><tr><th>#</th><th>Title</th><th>Type</th><th>Frequency</th><th>Priority</th><th>Due Time</th><th>Creator</th><th>Status</th><th>Handled By</th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
     </div>${cancelledFooter}`;

@@ -150,8 +150,13 @@ Key methods: `findById(), create(), update(), softDelete(), getAll(), startSessi
 Key methods: `logCompletion(), startSession(), completeSession(), getTodaySession(), isCompletedForDate(), undoCompletion()`
 
 ### `models/Chat.js` — tables: `chat_conversations, chat_messages, chat_participants, chat_read_status`
-For LOCAL↔LOCAL private/group chat.
+For LOCAL↔LOCAL private/group chat (full chat page).
 Key methods: `findDirectConversation(), createConversation(), getConversationsForUser(), getMessages(), sendMessage(), markAsRead(), sendCallMessage()`
+
+### LOCAL team DM — tables: `local_dm_conversations, local_dm_messages` (migration 048)
+Lightweight 1-to-1 DM between LOCAL team members, accessible via slide-over in Live Status page.
+Real-time via `dm:message` socket event on main namespace.
+Routes: `POST /dm/conversations`, `GET/POST /dm/conversations/:id/messages`, `POST /dm/conversations/:id/read`
 
 ### `models/GroupChannel.js` — tables: `group_channel_messages, group_channel_attachments, group_channel_reactions`
 The shared cross-team group chat (visible to LOCAL and CLIENT users).
@@ -278,6 +283,15 @@ GET  /admin/tools         → tools hub page
 GET  /admin/my-tasks      → my assigned tasks (all LOCAL roles)
 GET  /admin/my-attendance → my attendance calendar (all LOCAL roles)
 GET  /admin/my-progress   → my task progress (all LOCAL roles)
+GET  /admin/taskboard     → today's operational task view (date nav + employee/type filter)
+GET  /admin/all-tasks     → task catalog management with New Task drawer
+GET  /admin/users         → user management (admin/manager only)
+GET  /admin/attendance    → daily/monthly attendance management (admin/manager only)
+GET  /admin/leaves        → leave review workflow (admin/manager only)
+GET  /admin/notes         → personal notes (all LOCAL roles)
+GET  /admin/helpcenter    → help articles (all LOCAL roles)
+GET  /admin/live-status   → real-time LOCAL team status (admin/manager only)
+GET  /admin/task-completion → monthly task completion grid per employee
 
 # Notifications
 GET  /notifications              → list (last 30) + unread count
@@ -306,12 +320,19 @@ DELETE /bridge/messages/:messageId
 # Group Channel
 GET  /channel             → full page
 GET  /channel/messages    → paginated (before_id param)
+GET  /channel/users       → JSON: all channel users with online presence state
 POST /channel/messages    → send text
 POST /channel/file        → send file (5MB)
 PUT  /channel/messages/:id → edit
 DELETE /channel/messages/:id → delete
 POST /channel/messages/:id/reactions → toggle emoji
 POST /channel/messages/:id/pin → toggle pin
+
+# LOCAL-team DM (used in Live Status slide-over)
+POST /dm/conversations                       → find or create DM with a user
+GET  /dm/conversations/:id/messages          → paginated messages
+POST /dm/conversations/:id/messages          → send message
+POST /dm/conversations/:id/read             → mark read
 
 # Users, Reports, Leaves, Backups, Rewards, Attendance — see section 4 above
 ```
@@ -361,6 +382,7 @@ All LOCAL users and CLIENT users with access to local-side features connect here
 | `urgent:new` | server→all | urgent object | New urgent request |
 | `urgent:resolved` | server→all | urgent object | Urgent resolved |
 | `notification:new` | server→`user:<id>` | `{id, type, title, body, link, is_read, created_at}` | Persistent notification for bell |
+| `dm:message` | server→room | full message object | New LOCAL team DM message |
 
 ### Portal Namespace `/portal`
 CLIENT users use this for portal-specific real-time features.
@@ -371,6 +393,7 @@ CLIENT users use this for portal-specific real-time features.
 | `portal:typing` / `portal:stop-typing` | relay | Typing in portal chat |
 | `portal:read` | relay | Read receipt in portal chat |
 | `portal:conv:join` | client→server | Join a conversation room |
+| `request:comment` | server→client portal users | Admin replied to a request; triggers notification sound on portal side |
 
 ---
 
@@ -383,13 +406,19 @@ CLIENT users use this for portal-specific real-time features.
 - Rewards: set as `reward_amount` on task, logged to `rewards_ledger` on completion, marked paid by LOCAL_ADMIN.
 
 ### Client Request Queue
-- CLIENT users create requests via portal (Requests Queue page).
+- CLIENT users create requests via portal (Allocate Task TI page at `/portal/requests`).
 - Backend generates `client_request_instances` rows for each applicable date.
 - LOCAL team sees today's instances at `/queue` (classic) or `/admin/queue` (new UI).
 - **Pick → Done → Release** lifecycle. Release requires a reason; released instances go back to `open`.
 - **Carry-forward:** one-time requests never auto-miss; they persist with "Overdue" badge until picked.
 - Live updates via `queue:new_request` and `queue:updated` socket events.
 - Queue badge in both classic nav and new admin hub topbar.
+- **New UI queue table columns:** Title, Recurrence, Priority, Creator (first name only, full name on hover), Scheduled For, Latest Comment (45-char snippet + commenter, full body on hover), Status, Picked By (first name only), Actions.
+- **Latest Comment:** populated via correlated subquery JOIN in `ClientRequest.getInstances()`; emitted as `latest_comment` and `latest_comment_by` fields on each instance.
+- **Action buttons are icon-only** (✓ Done, ↩ Release, 💬 Comment) with browser `title` tooltips — prevents column overflow.
+- **Quick comment modal:** purple Comment button opens an inline modal; does not navigate away from the queue.
+- **Request detail drawer** shows: Submitted (date + time), Picked At, Completed At, Scheduled For (due date), Priority, Recurrence — and a full comment thread + attachment list.
+- **Notification sound:** plays on `queue:new_request` unconditionally (even when the queue tab is active). Uses AudioContext with `_admBellPending` pattern to handle Chrome auto-suspend; always checks `state` rather than trusting a cached flag.
 
 ### Bridge Chat
 - One-to-one channel between a CLIENT user and the LOCAL support (LOCAL_ADMIN or a delegated LOCAL_USER set via `/users/delegate-support`).
@@ -402,6 +431,7 @@ CLIENT users use this for portal-specific real-time features.
 - Available as a full page (`/channel`, `/portal/channel`), and as a slide-over in `admin/layout.ejs`.
 - Supports: text, files (via Drive), emoji reactions, message pinning, edit, delete, search, link unfurling, reply-to.
 - Messages stored DESC in DB; reverse before rendering.
+- **Online users strip** shown at the top of the Group Channel off-canvas (admin hub) and above the message list (portal): purple gradient circle avatars with 2 initials + a green dot; fetched from `GET /channel/users` on drawer open and updated live on `channel:presence` socket events. Strip hides when no one else is online.
 
 ### Urgent Chat
 - CLIENT can buzz the LOCAL admin team for urgent matters.
@@ -474,32 +504,54 @@ Auto-run on server start via `utils/auto-migrate.js`. Migration files are in `mi
 
 ---
 
-## 17. What's In Progress / Known State (as of May 5, 2026)
+## 17. What's In Progress / Known State (as of May 9, 2026)
 
 ### New Admin Hub (`/admin/*`)
-Built in parallel with the classic UI. Fully migrated pages so far:
+Built in parallel with the classic UI. Fully migrated pages:
 
 | Page | Route | Notes |
 |------|-------|-------|
-| Dashboard | `/admin` | All LOCAL roles |
-| Client Queue | `/admin/queue` | Full pick/done/release lifecycle, detail drawer, comments, attachments, live socket |
+| Dashboard | `/admin` | Role-aware hub cards (4 for USER, 5 for admin/manager) |
+| Client Queue | `/admin/queue` | Full pick/done/release lifecycle, icon-only action buttons, Latest Comment column, timestamps in detail drawer, quick comment modal, Test Sound button, live socket |
 | My Tasks | `/admin/my-tasks` | Task list with detail drawer + comments |
 | My Attendance | `/admin/my-attendance` | Monthly calendar, session log, leave/holiday overlay |
 | My Progress | `/admin/my-progress` | Task stats, day tasks, recently completed, reward summary |
-| Work / Team / Reports / Comms / Tools | hub cards | Partially migrated — hub cards link to classic sub-pages |
+| Task Board | `/admin/taskboard` | Today's operational task view with date nav + employee/type filter |
+| All Tasks | `/admin/all-tasks` | Task catalog management with New Task drawer |
+| Users | `/admin/users` | User management (admin/manager only) |
+| Attendance | `/admin/attendance` | Daily/monthly attendance management (admin/manager only) |
+| Leaves | `/admin/leaves` | Leave review workflow (admin/manager only) |
+| Notes | `/admin/notes` | Personal notes (all LOCAL roles) |
+| Help Center | `/admin/helpcenter` | Help articles (all LOCAL roles) |
+| Live Status | `/admin/live-status` | Real-time LOCAL team status; includes LOCAL-team DM slide-over |
+| Task Completion Report | `/admin/task-completion` | Monthly grid per employee, colour-coded chips, day detail modal |
+| Work / Team / Reports / Comms / Tools | hub cards | Hub landing pages; remaining sub-pages still link to classic |
 
 ### Topbar / Layout features live in admin hub
 - Notification bell (persistent notifications for task assignment, leave grant/approve)
-- Group Channel off-canvas (purple, `bi-people-fill`)
+- Group Channel off-canvas (purple, `bi-people-fill`) — includes online users strip
 - Bridge Chat off-canvas (amber, `bi-chat-dots-fill`)
 - Change Password modal (key icon in sidebar user row)
 - Client Queue badge button (orange)
 
+### Authentication
+- Standard email/password login with JWT cookie
+- **Google SSO** — users can sign in with their Google account
+- **Bot-proof login** — honeypot field + additional checks to block automated login attempts
+- **Attendance anomaly detector** — flags suspicious login/logout patterns for admin review
+
+### AudioContext sound system (admin hub + portal)
+- Uses `AudioContext` API; Chrome starts contexts `suspended` and may re-suspend after ~30s silence
+- Pattern: `_admBellPending` flag set when context not ready; fires on next user gesture via `_admUnlockAudio()`
+- `_admUnlockAudio` always checks actual `context.state` — never trusts a cached `_admBellUnlocked` flag
+- Bell plays `queue:new_request` unconditionally, even when the queue tab is the active tab
+- Portal plays sound on both `portal:presence` (new message) and `request:comment` (admin reply) events
+
 ### Classic UI
-Remains fully functional and untouched. Theme dark variables also updated to neutral grays (`#242424` base) matching the admin hub.
+Remains fully functional. Theme dark variables updated to neutral VSCode-style grays (`#242424` base) matching the admin hub.
 
 ### Still on classic UI (not yet migrated to hub)
-All admin/manager-only pages: all-tasks board, attendance management, users, reports, leaves management, drive, notes, backup, rewards, live-status, announcements.
+Admin/manager-only pages: reports suite (completion, reward, attendance, overdue, punctuality, workload), Google Drive manager, database backup, rewards ledger, announcements.
 
 ### Plan
 Migrate remaining classic pages into the new hub one by one, then retire classic once complete.

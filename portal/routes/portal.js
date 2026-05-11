@@ -724,4 +724,71 @@ router.put('/users/:id', requireRoles('CLIENT_ADMIN'), PortalUserController.upda
 router.post('/users/:id/reset-password', requireRoles('CLIENT_ADMIN'), PortalUserController.resetPassword);
 router.patch('/users/:id/toggle', requireRoles('CLIENT_ADMIN'), PortalUserController.toggleActive);
 
+// ── Session Management (Auto-logout after shift) ─────────
+// Only for LOCAL users, not for CLIENT users
+router.get('/check-shift-end', (req, res) => {
+  const { ApiResponse } = require('../../utils/response');
+  try {
+    const user = req.user;
+    
+    // Only LOCAL users have shift-based logout
+    if (!user.role_name.startsWith('LOCAL')) {
+      return ApiResponse.error(res, 'This feature is not available for your user type', 403);
+    }
+    
+    // Parse shift start time (format: "HH:MM:SS")
+    const [hours, minutes] = user.shift_start.split(':').map(Number);
+    const shiftHours = user.shift_hours || 8.5;
+    
+    // Calculate shift end time
+    const now = new Date();
+    const shiftStartDate = new Date(now);
+    shiftStartDate.setHours(hours, minutes, 0);
+    
+    const shiftEndDate = new Date(shiftStartDate);
+    shiftEndDate.setHours(shiftEndDate.getHours() + Math.floor(shiftHours));
+    shiftEndDate.setMinutes(shiftEndDate.getMinutes() + Math.round((shiftHours % 1) * 60));
+    
+    // Check if shift has ended
+    const shiftEnded = now > shiftEndDate;
+    const timeUntilShiftEnd = Math.max(0, shiftEndDate - now);
+    
+    return ApiResponse.success(res, {
+      shift_ended: shiftEnded,
+      shift_start: user.shift_start,
+      shift_hours: shiftHours,
+      shift_end: shiftEndDate.toISOString(),
+      time_until_shift_end: timeUntilShiftEnd,
+      current_time: now.toISOString()
+    });
+  } catch (err) {
+    console.error('check-shift-end error:', err);
+    return ApiResponse.error(res, 'Error checking shift');
+  }
+});
+
+router.post('/extend-session', (req, res) => {
+  const { ApiResponse } = require('../../utils/response');
+  try {
+    const user = req.user;
+    
+    // Only LOCAL users can extend session
+    if (!user.role_name.startsWith('LOCAL')) {
+      return ApiResponse.error(res, 'This feature is not available for your user type', 403);
+    }
+    
+    // In this implementation, we're just validating that the user is authenticated
+    // and sending back success. The actual session extension is handled by:
+    // 1. Express session middleware automatically extends on each request
+    // 2. Client reschedules the warning for 2 more hours
+    
+    return ApiResponse.success(res, {
+      extended_until: new Date(Date.now() + 7200000).toISOString() // 2 hours from now
+    }, 'Session extended for 2 more hours');
+  } catch (err) {
+    console.error('extend-session error:', err);
+    return ApiResponse.error(res, 'Error extending session');
+  }
+});
+
 module.exports = router;
