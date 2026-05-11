@@ -167,10 +167,10 @@ class GroupChannel {
     return rows[0];
   }
 
-  static async saveAttachment({ message_id, drive_file_id, file_name, file_path, file_size, mime_type, uploaded_by }) {
+  static async saveAttachment({ message_id, drive_file_id, drive_view_link, file_name, file_path, file_size, mime_type, uploaded_by }) {
     await db.query(
-      'INSERT INTO group_channel_attachments (message_id, drive_file_id, file_name, file_path, file_size, mime_type, uploaded_by) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [message_id, drive_file_id || null, file_name, file_path || null, file_size, mime_type, uploaded_by]
+      'INSERT INTO group_channel_attachments (message_id, drive_file_id, drive_view_link, file_name, file_path, file_size, mime_type, uploaded_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      [message_id, drive_file_id || null, drive_view_link || null, file_name, file_path || null, file_size, mime_type, uploaded_by]
     );
   }
 
@@ -205,8 +205,10 @@ class GroupChannel {
     return { message: updated[0] };
   }
 
-  static async deleteMessage(messageId, senderId) {
-    const [rows] = await db.query('SELECT * FROM group_channel_messages WHERE id = ? AND sender_id = ?', [messageId, senderId]);
+  static async deleteMessage(messageId, senderId, isAdmin = false) {
+    const [rows] = isAdmin
+      ? await db.query('SELECT * FROM group_channel_messages WHERE id = ?', [messageId])
+      : await db.query('SELECT * FROM group_channel_messages WHERE id = ? AND sender_id = ?', [messageId, senderId]);
     if (!rows.length) return null;
 
     // Remove attached file — Drive first (new), then local disk (legacy)

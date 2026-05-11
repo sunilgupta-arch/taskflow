@@ -222,6 +222,7 @@ router.post('/queue/:id/pick', authenticate, ClientQueueController.pick);
 router.post('/queue/:id/release', authenticate, ClientQueueController.release);
 router.post('/queue/:id/complete', authenticate, ClientQueueController.complete);
 router.get('/queue/:id/detail', authenticate, ClientQueueController.getDetail);
+router.get('/queue/attachments/:attachmentId', authenticate, ClientQueueController.serveAttachment);
 router.post('/queue/:id/comments', authenticate, ClientQueueController.addComment);
 router.post('/queue/:id/attachments', authenticate, (req, res, next) => queueAttachUpload.single('file')(req, res, err => {
   if (err && err.code === 'LIMIT_FILE_SIZE') return res.status(413).json({ success: false, message: 'Attachment too large. Max 25 MB.' });

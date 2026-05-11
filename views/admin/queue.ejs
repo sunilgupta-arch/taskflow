@@ -481,11 +481,13 @@
       }
       var recLabels = {none:'One-time',daily:'Daily',weekly:'Weekly',monthly:'Monthly'};
       var freqLabel = recLabels[inst.recurrence] || inst.recurrence || '—';
+      var titleAttr   = esc(inst.title||'');
       var descAttr    = esc((inst.description||'').trim());
       var commentAttr = esc((inst.latest_comment||'').trim());
+      var titleTipAttrs = titleAttr ? ' data-tooltip="'+descAttr+'" data-tip-title="'+titleAttr+'"' : '';
       return '<tr class="'+rowCls+'" onclick="admqOpenDetail('+inst.id+')">'
         +'<td style="font-family:var(--adm-mono);font-size:0.75rem;color:var(--adm-muted);text-align:center;width:36px">'+(idx+1)+'</td>'
-        +'<td class="admq-title-cell"'+(descAttr?' data-tooltip="'+descAttr+'"':'')+'>'+
+        +'<td class="admq-title-cell"'+titleTipAttrs+'>'+
           '<span class="admq-title-text">'+recIcon(inst.recurrence)+esc(inst.title)+badge+'</span>'+descSnippet(inst)+'</td>'
         +'<td style="white-space:nowrap">'+esc(inst.task_type||'—')+'</td>'
         +'<td>'+priorityHtml(inst.priority)+'</td>'
@@ -648,8 +650,19 @@
     }
 
     // Attachments
+    var ADMQ_IMG_EXTS = ['jpg','jpeg','png','gif','webp','bmp','svg','avif'];
+    function admqRenderAttachment(a) {
+      var ext = (a.file_name||'').split('.').pop().toLowerCase();
+      var proxyUrl = '/queue/attachments/' + a.id;
+      var viewUrl  = a.drive_view_link || proxyUrl;
+      if (ADMQ_IMG_EXTS.indexOf(ext) !== -1) {
+        return '<a href="'+proxyUrl+'" target="_blank" style="display:inline-block;margin-bottom:6px;border-radius:10px;overflow:hidden;border:1px solid var(--adm-border,#1a3050);background:var(--adm-surface-2,#132540)">'
+          +'<img src="'+proxyUrl+'" style="display:block;max-width:500px;max-height:500px;width:100%;height:auto;object-fit:contain" alt="'+esc(a.file_name)+'" loading="lazy"></a>';
+      }
+      return '<a class="admq-attach-item" href="'+viewUrl+'" target="_blank"><i class="bi '+fileIcon(a.file_name)+'" style="font-size:1.1rem;flex-shrink:0"></i><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(a.file_name)+'</span><i class="bi bi-box-arrow-up-right" style="font-size:0.7rem;color:var(--adm-muted)"></i></a>';
+    }
     var attItems = attachments.length
-      ? attachments.map(function(a){ return '<a class="admq-attach-item" href="'+(a.drive_view_link||'#')+'" target="_blank"><i class="bi '+fileIcon(a.file_name)+'" style="font-size:1.1rem;flex-shrink:0"></i><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(a.file_name)+'</span><i class="bi bi-box-arrow-up-right" style="font-size:0.7rem;color:var(--adm-muted)"></i></a>'; }).join('')
+      ? attachments.map(admqRenderAttachment).join('')
       : '<div style="font-size:0.78rem;color:var(--adm-muted)">No attachments yet</div>';
     var uploadBtn = !past ? '<input type="file" id="admqFileInput" style="display:none" onchange="admqUpload('+inst.id+')">'
       +'<label class="admq-upload-label" for="admqFileInput"><i class="bi bi-paperclip"></i> Attach file</label>' : '';
@@ -744,10 +757,17 @@ function admqTestSound() {
   var timer   = null;
   var DELAY   = 400;
 
+  function tipEsc(s) { var d=document.createElement('div'); d.appendChild(document.createTextNode(s||'')); return d.innerHTML; }
   function show(cell) {
-    var desc = cell.getAttribute('data-tooltip');
-    if (!desc) return;
-    tt.textContent = desc;
+    var desc  = cell.getAttribute('data-tooltip');
+    var title = cell.getAttribute('data-tip-title');
+    if (!title && !desc) return;
+    if (title) {
+      tt.innerHTML = '<div style="font-weight:600;font-size:0.82rem;margin-bottom:'+(desc?'5px':'0')+'">'+tipEsc(title)+'</div>'
+        + (desc ? '<div style="color:var(--adm-muted,#445e78);font-size:0.77rem;line-height:1.5">'+tipEsc(desc)+'</div>' : '');
+    } else {
+      tt.textContent = desc;
+    }
     var r    = cell.getBoundingClientRect();
     var top  = r.bottom + 8;
     var left = r.left;

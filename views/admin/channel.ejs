@@ -67,9 +67,9 @@
 .admchn-edited { font-size:0.57rem; opacity:0.48; font-style:italic; margin-left:2px; }
 
 /* ── Action buttons (appear on hover) ── */
-/* WhatsApp-style message menu */
-.admchn-menu-btn { position:absolute; top:4px; right:4px; width:21px; height:21px; border-radius:50%; background:rgba(0,0,0,0.55); color:#fff; border:none; cursor:pointer; padding:0; display:flex; align-items:center; justify-content:center; font-size:0.65rem; opacity:0; visibility:hidden; transition:opacity 0.12s, visibility 0s 0.12s; z-index:5; }
-.admchn-bubble:hover .admchn-menu-btn,.admchn-menu-btn.admchn-menu-open { opacity:1; visibility:visible; transition:opacity 0.1s, visibility 0s; }
+/* Hover-reveal menu — same pattern as classic channel view */
+.admchn-menu-btn { position:absolute; top:4px; right:4px; width:22px; height:22px; border-radius:50%; background:rgba(0,0,0,0.55); color:#fff; border:none; cursor:pointer; padding:0; display:flex; align-items:center; justify-content:center; font-size:0.65rem; opacity:0; pointer-events:none; transition:opacity 0.15s; z-index:5; }
+.admchn-bubble:hover .admchn-menu-btn,.admchn-menu-btn.admchn-menu-open { opacity:1; pointer-events:auto; }
 .admchn-menu-btn:hover { background:rgba(0,0,0,0.8); }
 .admchn-bubble.sent .admchn-menu-btn { background:rgba(0,0,0,0.3); }
 .admchn-menu { position:fixed; background:var(--adm-surface-2,#0d1f35); border:1px solid var(--adm-border,#1a3050); border-radius:9px; box-shadow:0 6px 24px rgba(0,0,0,0.55); z-index:9999; min-width:145px; overflow:hidden; animation:admchnMenuIn 0.12s ease; }
@@ -238,7 +238,7 @@
   <div class="admchn-input-area">
     <div class="admchn-mention-popup" id="admchnMentionPopup" style="display:none"></div>
     <button class="admchn-ibtn admchn-attach" onclick="document.getElementById('admchnFile').click()" title="Attach file"><i class="bi bi-paperclip"></i></button>
-    <input type="file" id="admchnFile" style="display:none" onchange="ADMCHN.sendFile()">
+    <input type="file" id="admchnFile" style="position:fixed;top:-200px;left:-200px;opacity:0;width:0;height:0;pointer-events:none" onchange="ADMCHN.sendFile()">
     <textarea class="admchn-textarea" id="admchnInput" placeholder="Type a message… use @ to mention" rows="1"></textarea>
     <button class="admchn-ibtn admchn-send" onclick="ADMCHN.sendMessage()" title="Send"><i class="bi bi-send-fill"></i></button>
   </div>
@@ -271,7 +271,7 @@
   var _mIdx      = 0;
   var EDIT_WIN   = 15 * 60 * 1000;
   var EMOJI      = ['😀','😂','😊','😍','🥰','😎','🤔','🤩','😐','😢','😭','😤','😡','🤯','😱','🥳','👍','👎','👌','✌️','🤞','🙏','👏','🙌','❤️','🧡','💛','💚','💙','💜','🖤','💔','🎉','🔥','✨','💯','✅','❌','⚠️','💡','👀','💪','🚀','⚡','🌟','🎯','📌','📎'];
-  var IMG_EXTS   = ['jpg','jpeg','png','gif','webp','bmp','svg'];
+  var IMG_EXTS   = ['jpg','jpeg','png','gif','webp','bmp','svg','avif'];
 
   function esc(s) { var d=document.createElement('div'); d.appendChild(document.createTextNode(s||'')); return d.innerHTML; }
 
@@ -327,10 +327,12 @@
 
   /* ── File rendering ── */
   function renderFile(att, msgId) {
-    var fn=att.file_name, ext=fn.split('.').pop().toLowerCase(), url='/channel/attachment/'+msgId;
-    if (IMG_EXTS.indexOf(ext)!==-1) return '<a href="'+url+'" target="_blank"><img src="'+url+'" class="admchn-file-img" alt="'+esc(fn)+'"></a>';
+    var fn=att.file_name, ext=fn.split('.').pop().toLowerCase();
+    var proxyUrl='/channel/attachment/'+msgId;
+    var viewUrl=att.drive_view_link||proxyUrl;
+    if (IMG_EXTS.indexOf(ext)!==-1) return '<a href="'+proxyUrl+'" target="_blank"><img src="'+proxyUrl+'" class="admchn-file-img" alt="'+esc(fn)+'" loading="lazy"></a>';
     var short=fn.length>28?fn.substring(0,25)+'…':fn, sz=fmtBytes(att.file_size), meta=fileIconMeta(ext);
-    return '<a class="admchn-file-box" href="'+url+'" target="_blank"><div class="admchn-file-icon"><i class="bi '+meta.i+'" style="color:'+meta.c+'"></i></div><div style="min-width:0"><div class="admchn-file-name">'+esc(short)+'</div>'+(sz?'<div class="admchn-file-size">'+sz+'</div>':'')+'</div></a>';
+    return '<a class="admchn-file-box" href="'+viewUrl+'" target="_blank"><div class="admchn-file-icon"><i class="bi '+meta.i+'" style="color:'+meta.c+'"></i></div><div style="min-width:0"><div class="admchn-file-name">'+esc(short)+'</div>'+(sz?'<div class="admchn-file-size">'+sz+'</div>':'')+'</div></a>';
   }
 
   /* ── Render with @mentions and links ── */
@@ -382,7 +384,16 @@
     var senderEl=!sent&&m.sender_name?'<div class="admchn-sender">'+esc(m.sender_name)+'</div>':'';
     var content='';
     if (m.is_deleted) content='<em style="font-size:0.75rem"><i class="bi bi-ban me-1"></i>deleted</em>';
-    else if (m.type==='file'&&m.attachment) content=renderFile(m.attachment,m.id);
+    else if (m.type==='file') {
+      if (m.attachment) content=renderFile(m.attachment,m.id);
+      else {
+        /* Legacy file message — no attachment record, use server route as best effort */
+        var _fbUrl='/channel/attachment/'+m.id;
+        var _fbExt=(m.content||'').split('.').pop().toLowerCase();
+        if (IMG_EXTS.indexOf(_fbExt)!==-1) content='<a href="'+_fbUrl+'" target="_blank"><img src="'+_fbUrl+'" class="admchn-file-img" loading="lazy" onerror="this.onerror=null;this.style.display=\'none\'"></a>';
+        else content='<a class="admchn-file-box" href="'+_fbUrl+'" target="_blank"><div class="admchn-file-icon"><i class="bi bi-file-earmark-fill" style="color:#94a3b8"></i></div><div style="min-width:0"><div class="admchn-file-name">'+esc(m.content||'File')+'</div></div></a>';
+      }
+    }
     else content=renderWithMentions(m.content);
     var reactions=buildReactions(m);
     var quote=buildQuote(m);
@@ -410,7 +421,7 @@
       items.push({icon:'bi-emoji-smile',label:'React',fn:function(r){showEmojiPicker({currentTarget:{getBoundingClientRect:function(){return r;}}},msgId);}});
       if (_isAdmin) items.push({icon:'bi-pin-angle-fill',label:isPinned?'Unpin':'Pin',fn:function(){togglePin(msgId);}});
       if (ce) items.push({icon:'bi-pencil',label:'Edit',fn:function(){editMsg(msgId);}});
-      if (sent) items.push({icon:'bi-trash',label:'Delete',danger:true,fn:function(){deleteMsg(msgId);}});
+      if (sent || _isAdmin) items.push({icon:'bi-trash',label:'Delete',danger:true,fn:function(){deleteMsg(msgId);}});
     }
     if (!items.length) return;
     var trigBtn=evt.currentTarget; trigBtn.classList.add('admchn-menu-open');
@@ -902,6 +913,10 @@
 
   /* ── Init ── */
   function init() {
+    /* Signal layout.ejs to skip GC badge/audio — this page handles its own notifications */
+    window.admGcFullPage = true;
+    /* Clear any stale unread badge from the GC drawer button */
+    if (typeof admGcSetBadge === 'function') admGcSetBadge(0);
     /* Hide the GC drawer button in topbar since we're on the full channel page */
     var gcBtn=document.getElementById('admGcBtn'); if(gcBtn) gcBtn.style.display='none';
 

@@ -205,7 +205,7 @@ class GoogleDriveService {
         mimeType: file.mimetype,
         body: stream
       },
-      fields: 'id,name,mimeType,size',
+      fields: 'id,name,mimeType,size,webViewLink',
       ...SHARED_DRIVE_PARAMS
     });
 

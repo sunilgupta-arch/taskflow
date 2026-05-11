@@ -59,6 +59,7 @@ class GroupChannelController {
       await GroupChannel.saveAttachment({
         message_id: message.id,
         drive_file_id: driveFile.id,
+        drive_view_link: driveFile.webViewLink || null,
         file_name: req.file.originalname,
         file_size: req.file.size,
         mime_type: req.file.mimetype,
@@ -101,7 +102,8 @@ class GroupChannelController {
   static async deleteMessage(req, res) {
     try {
       const messageId = parseInt(req.params.messageId);
-      const result = await GroupChannel.deleteMessage(messageId, req.user.id);
+      const isAdmin = ['LOCAL_ADMIN', 'CLIENT_ADMIN'].includes(req.user.role_name || '');
+      const result = await GroupChannel.deleteMessage(messageId, req.user.id, isAdmin);
       if (!result) return ApiResponse.error(res, 'Cannot delete this message', 403);
 
       const { getIO } = require('../config/socket');
@@ -120,26 +122,46 @@ class GroupChannelController {
     try {
       const messageId = parseInt(req.params.messageId);
       const attachment = await GroupChannel.getAttachment(messageId);
-      if (!attachment) return res.status(404).json({ success: false, message: 'Not found' });
 
-      res.setHeader('Content-Disposition', `inline; filename="${attachment.file_name}"`);
-      res.setHeader('Content-Type', attachment.mime_type || 'application/octet-stream');
+      if (attachment) {
+        res.setHeader('Content-Disposition', `inline; filename="${attachment.file_name}"`);
+        res.setHeader('Content-Type', attachment.mime_type || 'application/octet-stream');
 
-      // New: stream from Google Drive
-      if (attachment.drive_file_id) {
-        const GoogleDriveService = require('../services/googleDriveService');
-        const { stream } = await GoogleDriveService.downloadFile(attachment.drive_file_id);
-        return stream.pipe(res);
+        if (attachment.drive_file_id) {
+          const GoogleDriveService = require('../services/googleDriveService');
+          try {
+            const { stream } = await GoogleDriveService.downloadFile(attachment.drive_file_id);
+            stream.on('error', (e) => { console.error('GC attachment stream error:', e.message); if (!res.headersSent) res.status(500).end(); });
+            return stream.pipe(res);
+          } catch (e) {
+            console.error('GC attachment Drive download failed:', attachment.drive_file_id, e.message);
+            return res.status(502).json({ success: false, message: 'File unavailable' });
+          }
+        }
+
+        if (attachment.file_path) {
+          const filePath = path.join(__dirname, '../uploads', attachment.file_path);
+          if (!fs.existsSync(filePath)) return res.status(404).json({ success: false, message: 'File not found' });
+          return res.sendFile(filePath);
+        }
       }
 
-      // Legacy: serve from local disk
-      if (attachment.file_path) {
-        const filePath = path.join(__dirname, '../uploads', attachment.file_path);
-        if (!fs.existsSync(filePath)) return res.status(404).json({ success: false, message: 'File not found' });
-        return res.sendFile(filePath);
+      // No attachment record — check if message content contains a Drive file ID (legacy uploads)
+      const db = require('../config/db');
+      const [msgs] = await db.query('SELECT content, type FROM group_channel_messages WHERE id = ? AND type = ?', [messageId, 'file']);
+      if (msgs.length && msgs[0].content) {
+        const m = msgs[0].content.match(/\/d\/([a-zA-Z0-9_-]{20,})|id=([a-zA-Z0-9_-]{20,})/);
+        const driveId = m ? (m[1] || m[2]) : null;
+        if (driveId) {
+          try {
+            const GoogleDriveService = require('../services/googleDriveService');
+            const { stream } = await GoogleDriveService.downloadFile(driveId);
+            return stream.pipe(res);
+          } catch (_) {}
+        }
       }
 
-      return res.status(404).json({ success: false, message: 'File not found' });
+      return res.status(404).json({ success: false, message: 'Not found' });
     } catch (err) {
       console.error('GroupChannel serveAttachment error:', err);
       return res.status(500).json({ success: false, message: 'Failed to serve file' });

@@ -403,6 +403,34 @@ const isSalesUser = user.role_name === 'CLIENT_SALES';
 .fs-sm { font-size:0.8rem; }
 </style>
 
+<style>
+.preq-tooltip {
+  position:fixed; z-index:9999; pointer-events:none;
+  background:var(--tf-surface-2,#1e293b); border:1px solid var(--tf-border,#334155);
+  border-radius:10px; padding:9px 13px; max-width:300px;
+  box-shadow:0 6px 24px rgba(0,0,0,0.28);
+  opacity:0; transition:opacity 0.15s; white-space:pre-wrap; word-break:break-word;
+}
+.preq-tooltip.visible { opacity:1; }
+.preq-tooltip-title { font-weight:600; font-size:0.82rem; color:var(--tf-text,#e2e8f0); }
+.preq-tooltip-desc  { font-size:0.77rem; color:var(--tf-text-muted,#94a3b8); margin-top:4px; line-height:1.5; }
+.preq-attach-img { display:inline-block; margin-bottom:8px; border-radius:8px; overflow:hidden; border:1px solid var(--tf-border,#334155); }
+.preq-attach-img img { display:block; max-width:500px; max-height:500px; width:100%; height:auto; object-fit:contain; }
+.preq-desc-snip { font-size:0.72rem; color:var(--tf-text-muted,#94a3b8); margin-top:2px; display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:220px; }
+.preq-more-link { font-size:0.72rem; color:var(--tf-text-muted,#94a3b8); text-decoration:underline dotted; }
+.preq-comment-cell { max-width:200px; }
+.preq-comment-snip { font-size:0.75rem; color:var(--tf-text-muted,#94a3b8); display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:185px; }
+#preqActionMenu { position:fixed; z-index:10000; background:var(--tf-surface,#0f172a); border:1px solid var(--tf-border,#334155); border-radius:10px; padding:4px 0; min-width:162px; box-shadow:0 8px 28px rgba(0,0,0,0.38); opacity:0; pointer-events:none; transition:opacity 0.12s; }
+#preqActionMenu.visible { opacity:1; pointer-events:auto; }
+.preq-menu-item { display:flex; align-items:center; gap:9px; padding:8px 14px; font-size:0.82rem; color:var(--tf-text,#e2e8f0); text-decoration:none; cursor:pointer; white-space:nowrap; }
+.preq-menu-item:hover { background:var(--tf-surface-2,#1e293b); color:var(--tf-text,#e2e8f0); }
+.preq-menu-item.item-danger { color:#f87171!important; }
+.preq-menu-item.item-warning { color:#fbbf24!important; }
+.preq-menu-divider { border:none; border-top:1px solid var(--tf-border,#334155); margin:4px 0; }
+</style>
+<div id="preqTooltip" class="preq-tooltip"></div>
+<div id="preqActionMenu"></div>
+
 <script>
 (function() {
   const PAGE_DATE  = '<%= selectedDate %>';
@@ -432,6 +460,23 @@ const isSalesUser = user.role_name === 'CLIENT_SALES';
 
   const recLabels = { none: 'One-time', daily: 'Daily', weekly: 'Weekly', monthly: 'Monthly' };
 
+  function commentSnippet(inst) {
+    var body = (inst.latest_comment || '').trim();
+    if (!body) return '<span class="preq-comment-snip" style="opacity:0.35">—</span>';
+    var by = inst.latest_comment_by ? '<span style="font-size:0.68rem;color:var(--tf-text-muted,#94a3b8)"> · ' + escHtml(inst.latest_comment_by) + '</span>' : '';
+    var limit = 35;
+    var snippet = body.length <= limit ? escHtml(body) : escHtml(body.substring(0, limit)) + '…';
+    return '<span class="preq-comment-snip">' + snippet + '</span>' + by;
+  }
+
+  function descSnippet(inst) {
+    var desc = (inst.description || '').trim();
+    if (!desc) return '';
+    var limit = 50;
+    if (desc.length <= limit) return '<span class="preq-desc-snip">' + escHtml(desc) + '</span>';
+    return '<span class="preq-desc-snip">' + escHtml(desc.substring(0, limit)) + '… <a class="preq-more-link" href="#" onclick="event.preventDefault();event.stopPropagation();document.querySelector(\'.portal-req-detail-link[data-id=&quot;' + inst.id + '&quot;]\').click()">'+'more</a></span>';
+  }
+
   // ── Render instances table ──────────────────────────────
   function renderInstances(instances) {
     const area = document.getElementById('reqInstancesArea');
@@ -451,37 +496,37 @@ const isSalesUser = user.role_name === 'CLIENT_SALES';
       const isOverdue = IS_PAST && ['open','picked'].includes(inst.status);
       const recLabel = inst.recurrence !== 'none' ? 'recurring' : 'one-time';
       const canEdit = CAN_CREATE && ['open', 'picked'].includes(inst.status);
-      const editBtn = canEdit
-        ? `<button class="btn btn-xs btn-link p-0 ms-2 req-edit-btn" style="opacity:0.5;vertical-align:baseline"
-             data-id="${inst.request_id}"
+      const hasMenu = canEdit || (CAN_CREATE && inst.status === 'open') || (CAN_CREATE && !IS_PAST && inst.status === 'open');
+      const actionsDropdown = hasMenu
+        ? `<button class="btn btn-xs btn-link p-0 preq-dots-btn ms-2" style="vertical-align:middle" title="Actions"
+             onclick="event.preventDefault();event.stopPropagation();window.preqOpenMenu(this)"
+             data-instance-id="${inst.id}"
+             data-request-id="${inst.request_id}"
              data-title="${escHtml(inst.title)}"
              data-type="${escHtml(inst.task_type)}"
              data-priority="${inst.priority}"
              data-desc="${escHtml(inst.description||'')}"
              data-duetime="${inst.due_time||''}"
-             data-enddate=""
              data-assignto="${inst.default_assigned_to||''}"
              data-recurrence="${inst.recurrence||'none'}"
              data-status="${inst.status}"
-             title="Edit request"><i class="bi bi-pencil" style="font-size:0.7rem"></i></button>`
-        : '';
-      const deleteBtn = CAN_CREATE && inst.status === 'open'
-        ? `<button class="btn btn-xs btn-link p-0 ms-1 req-deactivate-btn" style="opacity:0.5;color:var(--bs-danger);vertical-align:baseline"
-             data-id="${inst.request_id}"
-             data-recurrence="${inst.recurrence}"
-             title="${inst.recurrence !== 'none' ? 'Stop recurring request' : 'Delete request'}"><i class="bi bi-trash" style="font-size:0.7rem"></i></button>`
-        : '';
-      const cancelBtn = CAN_CREATE && !IS_PAST && inst.status === 'open'
-        ? `<button class="btn btn-xs btn-outline-danger req-cancel-btn ms-1" data-id="${inst.id}" title="Cancel this request">✕</button>`
+             data-can-edit="${canEdit?'1':''}"
+             data-can-delete="${CAN_CREATE && inst.status==='open'?'1':''}"
+             data-can-cancel="${CAN_CREATE && !IS_PAST && inst.status==='open'?'1':''}">
+             <i class="bi bi-three-dots-vertical" style="font-size:0.8rem;opacity:0.45"></i>
+           </button>`
         : '';
       const isCancelled = inst.status === 'cancelled';
+      const titleTipAttrs = inst.title
+        ? ` data-tooltip="${escHtml((inst.description||'').trim())}" data-tip-title="${escHtml(inst.title)}"`
+        : '';
       rows += `<tr class="${isOverdue ? 'req-row-overdue' : ''} req-row${isCancelled ? ' req-row-cancelled' : ''}" data-id="${inst.id}" ${isCancelled ? 'style="display:none"' : ''}>
         <td class="text-muted small">${idx + 1}</td>
-        <td>
+        <td${titleTipAttrs}>
           <a href="#" class="portal-req-detail-link" data-id="${inst.id}">${escHtml(inst.title)}</a>
-          ${editBtn}${deleteBtn}
+          ${actionsDropdown}
           ${isOverdue ? '<span class="badge bg-danger ms-1 small">Overdue</span>' : ''}
-          ${cancelBtn}
+          ${descSnippet(inst)}
         </td>
         <td><span class="badge" style="background:var(--bs-info-bg-subtle);color:var(--bs-info-text-emphasis)">${escHtml(inst.task_type)}</span></td>
         <td class="small text-muted">${recLabels[inst.recurrence] || inst.recurrence}</td>
@@ -490,6 +535,7 @@ const isSalesUser = user.role_name === 'CLIENT_SALES';
         <td class="small" title="${escHtml(inst.created_by_name || '—')}">${escHtml((inst.created_by_name || '—').split(' ')[0])}</td>
         <td>${statusBadge(inst.status)}</td>
         <td class="small" title="${escHtml(inst.picked_by_name || inst.completed_by_name || '—')}">${escHtml(((inst.picked_by_name || inst.completed_by_name || '—').split(' ')[0]))}</td>
+        <td class="preq-comment-cell"${inst.latest_comment ? ' data-tooltip="'+escHtml((inst.latest_comment||'').trim())+'"' : ''}>${commentSnippet(inst)}</td>
       </tr>`;
     });
     const cancelledFooter = cancelled.length > 0
@@ -501,7 +547,7 @@ const isSalesUser = user.role_name === 'CLIENT_SALES';
       : '';
     area.innerHTML = `<div class="portal-requests-table-wrap">
       <table class="portal-table" id="requestsTable">
-        <thead><tr><th>#</th><th>Title</th><th>Type</th><th>Frequency</th><th>Priority</th><th>Due Time</th><th>Creator</th><th>Status</th><th>Handled By</th></tr></thead>
+        <thead><tr><th>#</th><th>Title</th><th>Type</th><th>Frequency</th><th>Priority</th><th>Due Time</th><th>Creator</th><th>Status</th><th>Handled By</th><th>Latest Comment</th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
     </div>${cancelledFooter}`;
@@ -675,7 +721,7 @@ const isSalesUser = user.role_name === 'CLIENT_SALES';
   document.addEventListener('click', function(e) {
     const btn = e.target.closest('.req-edit-btn');
     if (!btn) return;
-    e.stopPropagation();
+    e.preventDefault(); e.stopPropagation();
     document.getElementById('erRequestId').value   = btn.dataset.id;
     document.getElementById('erTitle').value        = btn.dataset.title || '';
     document.getElementById('erTaskType').value     = btn.dataset.type || 'General';
@@ -777,7 +823,7 @@ const isSalesUser = user.role_name === 'CLIENT_SALES';
   document.addEventListener('click', async function(e) {
     const btn = e.target.closest('.req-cancel-btn');
     if (!btn) return;
-    e.stopPropagation();
+    e.preventDefault(); e.stopPropagation();
     if (!confirm('Cancel this request? The local team will no longer see it.')) return;
     const id = btn.dataset.id;
     try {
@@ -842,14 +888,22 @@ const isSalesUser = user.role_name === 'CLIENT_SALES';
       <div class="col-6"><div class="small text-muted mb-1">Handled By</div>${escHtml(inst.picked_by_name || inst.completed_by_name || '—')}</div>
     </div>`;
     if (inst.description) html += `<div class="mb-3"><div class="small text-muted mb-1">Description</div><div class="p-2 rounded" style="background:var(--tf-surface-2);white-space:pre-wrap">${escHtml(inst.description)}</div></div>`;
+    const PREQ_IMG_EXTS = ['jpg','jpeg','png','gif','webp','bmp','svg','avif'];
     if (attachments && attachments.length > 0) {
       html += `<div class="mb-3"><div class="small text-muted mb-1 fw-semibold">Attachments</div>`;
       attachments.forEach(a => {
-        html += `<div class="d-flex align-items-center gap-2 mb-1 small">
+        const ext = (a.file_name||'').split('.').pop().toLowerCase();
+        const proxyUrl = '/portal/requests/attachments/' + a.id;
+        const viewUrl  = a.drive_view_link || proxyUrl;
+        if (PREQ_IMG_EXTS.indexOf(ext) !== -1) {
+          html += `<div class="mb-2"><a href="${proxyUrl}" target="_blank" class="preq-attach-img"><img src="${proxyUrl}" alt="${escHtml(a.file_name)}" loading="lazy"></a><div class="small text-muted mt-1">${escHtml(a.file_name)} (${escHtml(a.uploaded_by_name)})</div></div>`;
+        } else {
+          html += `<div class="d-flex align-items-center gap-2 mb-1 small">
           <i class="bi bi-paperclip text-muted"></i>
-          <a href="${escHtml(a.drive_view_link || '#')}" target="_blank" rel="noopener">${escHtml(a.file_name)}</a>
+          <a href="${escHtml(viewUrl)}" target="_blank" rel="noopener">${escHtml(a.file_name)}</a>
           <span class="text-muted">(${escHtml(a.uploaded_by_name)})</span>
         </div>`;
+        }
       });
       html += `</div>`;
     }
@@ -900,7 +954,7 @@ const isSalesUser = user.role_name === 'CLIENT_SALES';
   document.addEventListener('click', async function(e) {
     const btn = e.target.closest('.req-deactivate-btn');
     if (!btn) return;
-    e.stopPropagation();
+    e.preventDefault(); e.stopPropagation();
     const isRecurring = btn.dataset.recurrence && btn.dataset.recurrence !== 'none';
     const msg = isRecurring
       ? 'Stop this recurring request? No new instances will be created after today.'
@@ -942,5 +996,104 @@ const isSalesUser = user.role_name === 'CLIENT_SALES';
 
   // Fetch initial badge count
   updateBadge();
+
+  // ── Tooltip: title + description on hover ──────────────
+  (function() {
+    var tt = document.getElementById('preqTooltip');
+    if (!tt) return;
+    var timer = null, DELAY = 400;
+    function tipEsc(s) { var d = document.createElement('div'); d.appendChild(document.createTextNode(s || '')); return d.innerHTML; }
+    function show(cell) {
+      var desc  = cell.getAttribute('data-tooltip');
+      var title = cell.getAttribute('data-tip-title');
+      if (!title && !desc) return;
+      if (title) {
+        tt.innerHTML = '<div class="preq-tooltip-title">' + tipEsc(title) + '</div>'
+          + (desc ? '<div class="preq-tooltip-desc">' + tipEsc(desc) + '</div>' : '');
+      } else {
+        tt.textContent = desc;
+      }
+      var r = cell.getBoundingClientRect();
+      var top = r.bottom + 8, left = r.left;
+      if (left + 320 > window.innerWidth) left = window.innerWidth - 328;
+      if (top + 140 > window.innerHeight) top = r.top - 8 - tt.offsetHeight;
+      tt.style.top = top + 'px'; tt.style.left = left + 'px';
+      tt.classList.add('visible');
+    }
+    function hide() { clearTimeout(timer); tt.classList.remove('visible'); }
+    document.addEventListener('mouseover', function(e) {
+      if (e.target.closest('.preq-dots-btn, .preq-action-menu')) { hide(); return; }
+      var cell = e.target.closest('td[data-tip-title],td[data-tooltip]');
+      if (!cell) { hide(); return; }
+      clearTimeout(timer);
+      timer = setTimeout(function() { show(cell); }, DELAY);
+    });
+    document.addEventListener('mouseout', function(e) {
+      if (e.target.closest('td[data-tip-title],td[data-tooltip]')) hide();
+    });
+    document.addEventListener('scroll', hide, true);
+  })();
+
+  // ── Floating action menu (body-level, no table overflow issues) ─
+  (function() {
+    var menu = document.getElementById('preqActionMenu');
+    if (!menu) return;
+    var activeTrigger = null;
+
+    function ea(s) {
+      return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+    function closeMenu() { activeTrigger = null; menu.classList.remove('visible'); }
+
+    window.preqOpenMenu = function(btn) {
+      if (activeTrigger === btn && menu.classList.contains('visible')) { closeMenu(); return; }
+      activeTrigger = btn;
+      var d = btn.dataset;
+      var html = '';
+      if (d.canEdit) {
+        html += '<a class="preq-menu-item req-edit-btn" href="#"'
+          +' data-id="'+ea(d.requestId)+'"'
+          +' data-title="'+ea(d.title)+'"'
+          +' data-type="'+ea(d.type)+'"'
+          +' data-priority="'+ea(d.priority)+'"'
+          +' data-desc="'+ea(d.desc)+'"'
+          +' data-duetime="'+ea(d.duetime)+'"'
+          +' data-enddate=""'
+          +' data-assignto="'+ea(d.assignto)+'"'
+          +' data-recurrence="'+ea(d.recurrence)+'"'
+          +' data-status="'+ea(d.status)+'">'
+          +'<i class="bi bi-pencil"></i>Edit</a>';
+      }
+      if (d.canDelete) {
+        var lbl = d.recurrence !== 'none' ? 'Stop recurring' : 'Delete';
+        html += '<a class="preq-menu-item item-danger req-deactivate-btn" href="#"'
+          +' data-id="'+ea(d.requestId)+'"'
+          +' data-recurrence="'+ea(d.recurrence)+'">'
+          +'<i class="bi bi-trash"></i>'+lbl+'</a>';
+      }
+      if (d.canCancel) {
+        if (d.canEdit || d.canDelete) html += '<hr class="preq-menu-divider">';
+        html += '<a class="preq-menu-item item-warning req-cancel-btn" href="#"'
+          +' data-id="'+ea(d.instanceId)+'">'
+          +'<i class="bi bi-x-circle"></i>Cancel today</a>';
+      }
+      menu.innerHTML = html;
+      var r = btn.getBoundingClientRect();
+      var top = r.bottom + 4;
+      var left = r.right;
+      if (left + 170 > window.innerWidth) left = r.left - 170;
+      menu.style.top  = top + 'px';
+      menu.style.left = Math.max(4, left) + 'px';
+      menu.classList.add('visible');
+    };
+
+    document.addEventListener('click', function(e) {
+      if (!menu.classList.contains('visible')) return;
+      if (e.target.closest('#preqActionMenu') || e.target.closest('.preq-dots-btn')) return;
+      closeMenu();
+    });
+    document.addEventListener('scroll', closeMenu, true);
+    document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeMenu(); });
+  })();
 })();
 </script>

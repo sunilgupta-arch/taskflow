@@ -1548,16 +1548,17 @@
     }).catch(function(){});
   }
 
-  var GC_IMG_EXTS = ['jpg','jpeg','png','gif','webp'];
+  var GC_IMG_EXTS = ['jpg','jpeg','png','gif','webp','bmp','svg','avif'];
   function admGcRenderFile(att, msgId) {
     if (!att) return '<em style="opacity:0.5">File</em>';
-    var url = att.drive_view_link || '#';
+    var proxyUrl = '/channel/attachment/' + msgId;
+    var viewUrl  = att.drive_view_link || proxyUrl;
     var fn  = att.file_name || 'file';
     var ext = fn.split('.').pop().toLowerCase();
-    if (GC_IMG_EXTS.indexOf(ext) !== -1) return '<a href="'+url+'" target="_blank"><img src="'+url+'" class="adm-gc-img" alt="'+admEsc(fn)+'"></a>';
+    if (GC_IMG_EXTS.indexOf(ext) !== -1) return '<a href="'+proxyUrl+'" target="_blank"><img src="'+proxyUrl+'" class="adm-gc-img" alt="'+admEsc(fn)+'" loading="lazy"></a>';
     var icons = {pdf:'bi-file-earmark-pdf-fill',doc:'bi-file-earmark-word-fill',docx:'bi-file-earmark-word-fill',xls:'bi-file-earmark-excel-fill',xlsx:'bi-file-earmark-excel-fill',zip:'bi-file-earmark-zip-fill'};
     var ic = icons[ext] || 'bi-file-earmark-fill';
-    return '<a class="adm-gc-file" href="'+url+'" target="_blank"><i class="bi '+ic+'" style="font-size:1.4rem"></i><span>'+admEsc(fn)+'</span></a>';
+    return '<a class="adm-gc-file" href="'+viewUrl+'" target="_blank"><i class="bi '+ic+'" style="font-size:1.4rem"></i><span>'+admEsc(fn)+'</span></a>';
   }
 
   function admGcRenderMessages(messages) {
@@ -1824,7 +1825,7 @@
     // Group Channel live events
     admBdrSock.on('channel:message', function(msg) {
       if (admGcLoaded) admGcAppend(msg);
-      if (msg.sender_id !== admGcUserId && !admGcIsOpen) {
+      if (msg.sender_id !== admGcUserId && !admGcIsOpen && !window.admGcFullPage) {
         admGcSetBadge(admGcUnread + 1);
         // Store latest msg id so page-load badge check works across sessions
         var lastRead = parseInt(localStorage.getItem(_admGcLastReadKey) || '0', 10);

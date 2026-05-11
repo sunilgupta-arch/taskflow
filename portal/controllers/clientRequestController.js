@@ -254,6 +254,32 @@ class ClientRequestController {
       return ApiResponse.error(res, 'Failed to add comment');
     }
   }
+
+  static async serveAttachment(req, res) {
+    try {
+      const db = require('../../config/db');
+      const attachmentId = parseInt(req.params.attachmentId);
+      const [rows] = await db.query('SELECT * FROM client_request_attachments WHERE id = ?', [attachmentId]);
+      if (!rows.length) return res.status(404).json({ success: false, message: 'Not found' });
+      const att = rows[0];
+      res.setHeader('Content-Disposition', `inline; filename="${att.file_name}"`);
+      res.setHeader('Content-Type', att.mime_type || 'application/octet-stream');
+      if (att.drive_file_id) {
+        try {
+          const { stream } = await GoogleDriveService.downloadFile(att.drive_file_id);
+          stream.on('error', (e) => { console.error('Portal request attachment stream error:', e.message); if (!res.headersSent) res.status(500).end(); });
+          return stream.pipe(res);
+        } catch (e) {
+          console.error('Portal request attachment Drive error:', att.drive_file_id, e.message);
+          return res.status(502).json({ success: false, message: 'File unavailable' });
+        }
+      }
+      return res.status(404).json({ success: false, message: 'Not found' });
+    } catch (err) {
+      console.error('Portal serveAttachment error:', err);
+      return ApiResponse.error(res, 'Failed to serve file');
+    }
+  }
 }
 
 module.exports = ClientRequestController;
