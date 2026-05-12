@@ -131,11 +131,11 @@ class ClientRequest {
     const [[inst]] = await db.query(
       'SELECT status FROM client_request_instances WHERE id = ?', [instanceId]
     );
-    if (!inst || inst.status !== 'open') throw new Error('Task is not open');
+    if (!inst || !['open', 'missed'].includes(inst.status)) throw new Error('Task cannot be picked');
     await db.query(
       `UPDATE client_request_instances
        SET status = 'picked', picked_by = ?, picked_at = NOW()
-       WHERE id = ? AND status = 'open'`,
+       WHERE id = ? AND status IN ('open', 'missed')`,
       [userId, instanceId]
     );
   }
@@ -159,15 +159,18 @@ class ClientRequest {
 
   static async complete(instanceId, userId) {
     const [[inst]] = await db.query(
-      'SELECT status FROM client_request_instances WHERE id = ?', [instanceId]
+      'SELECT status, instance_date FROM client_request_instances WHERE id = ?', [instanceId]
     );
     if (!inst || !['picked', 'open'].includes(inst.status)) throw new Error('Cannot complete this task');
+    const today = new Date().toISOString().split('T')[0];
+    const isLate = inst.instance_date < today ? 1 : 0;
     await db.query(
       `UPDATE client_request_instances
        SET status = 'done', completed_by = ?, completed_at = NOW(),
-           picked_by = COALESCE(picked_by, ?), picked_at = COALESCE(picked_at, NOW())
+           picked_by = COALESCE(picked_by, ?), picked_at = COALESCE(picked_at, NOW()),
+           completed_late = ?
        WHERE id = ?`,
-      [userId, userId, instanceId]
+      [userId, userId, isLate, instanceId]
     );
   }
 

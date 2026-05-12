@@ -129,7 +129,8 @@
 .admq-status.s-picked   { background: rgba(59,130,246,0.12);  color: #3b82f6; }
 .admq-status.s-done     { background: rgba(16,185,129,0.12);  color: #10b981; }
 .admq-status.s-missed   { background: rgba(239,68,68,0.12);   color: #ef4444; }
-.admq-status.s-cancelled{ background: rgba(100,116,139,0.12); color: #94a3b8; }
+.admq-status.s-cancelled  { background: rgba(100,116,139,0.12); color: #94a3b8; }
+.admq-status.s-done-late  { background: rgba(168,85,247,0.12);  color: #a855f7; }
 
 /* Priority */
 .admq-priority { display: inline-flex; align-items: center; gap: 5px; font-size: 0.75rem; font-weight: 500; }
@@ -432,7 +433,8 @@
     var lbl = {high:'High',medium:'Medium',low:'Low'};
     return '<span class="admq-priority p-'+(p||'low')+'"><span class="admq-priority-dot"></span>'+(lbl[p]||p||'—')+'</span>';
   }
-  function statusHtml(s) {
+  function statusHtml(s, late) {
+    if (s === 'done' && late) return '<span class="admq-status s-done-late">Delayed Done</span>';
     var lbl = {open:'Open',picked:'In Progress',done:'Done',missed:'Missed',cancelled:'Cancelled'};
     return '<span class="admq-status s-'+(s||'open')+'">'+(lbl[s]||s||'—')+'</span>';
   }
@@ -469,7 +471,9 @@
       var rowCls  = overdue ? 'row-overdue' : 'row-'+inst.status;
       var badge   = overdue ? '<span class="admq-overdue-chip">Overdue</span>' : '';
       var actions = '';
-      if (!past) {
+      if (inst.status === 'missed') {
+        actions = '<button class="admq-btn pick" title="Pick up (late)" onclick="event.stopPropagation();admqPick('+inst.id+')"><i class="bi bi-hand-index"></i> Pick</button>';
+      } else if (!past) {
         if (inst.status === 'open') {
           actions = '<button class="admq-btn pick" title="Pick up" onclick="event.stopPropagation();admqPick('+inst.id+')"><i class="bi bi-hand-index"></i> Pick</button>';
         } else if (inst.status === 'picked') {
@@ -485,6 +489,10 @@
           }
         } else if (inst.status === 'done') {
           actions = '<i class="bi bi-check-circle-fill" style="color:#10b981;font-size:1rem"></i>';
+        }
+      } else if (past && inst.status === 'picked') {
+        if (inst.picked_by === _userId || isAdmin()) {
+          actions = '<button class="admq-btn done" title="Mark done (late)" onclick="event.stopPropagation();admqDone('+inst.id+')"><i class="bi bi-check-lg"></i></button>';
         }
       }
       if (inst.status === 'cancelled' && isAdmin()) {
@@ -506,7 +514,7 @@
         +'<td style="white-space:nowrap">'+freqLabel+'</td>'
         +'<td'+(inst.created_by_name?' data-tooltip="'+esc(inst.created_by_name)+'"':'')+'>'+
           (inst.created_by_name?esc(inst.created_by_name.split(' ')[0]):'<span style="color:var(--adm-muted)">—</span>')+'</td>'
-        +'<td>'+statusHtml(inst.status)+'</td>'
+        +'<td>'+statusHtml(inst.status, inst.completed_late)+'</td>'
         +'<td'+(inst.picked_by_name?' data-tooltip="'+esc(inst.picked_by_name)+'"':'')+'>'+
           (inst.picked_by_name?esc(inst.picked_by_name.split(' ')[0]):'<span style="color:var(--adm-muted)">—</span>')+'</td>'
         +'<td class="admq-comment-cell"'+(commentAttr?' data-tooltip="'+commentAttr+'"':'')+'>'+commentSnippet(inst)+'</td>'
@@ -659,7 +667,9 @@
 
     // Action buttons
     var actEl = document.getElementById('admqDrawerActions'), btns = '';
-    if (!past) {
+    if (inst.status === 'missed') {
+      btns = '<button class="admq-drawer-btn pick" onclick="admqPick('+inst.id+')"><i class="bi bi-hand-index"></i> Pick Up (Late)</button>';
+    } else if (!past) {
       if (inst.status==='open') {
         btns = '<button class="admq-drawer-btn pick" onclick="admqPick('+inst.id+')"><i class="bi bi-hand-index"></i> Pick Up</button>';
       } else if (inst.status==='picked') {
@@ -670,12 +680,16 @@
           btns = '<button class="admq-drawer-btn done" onclick="admqDone('+inst.id+')"><i class="bi bi-check-lg"></i> Mark Done</button>';
         }
       }
+    } else if (past && inst.status === 'picked') {
+      if (inst.picked_by === _userId || isAdmin()) {
+        btns = '<button class="admq-drawer-btn done" onclick="admqDone('+inst.id+')"><i class="bi bi-check-lg"></i> Mark Done (Late)</button>';
+      }
     }
     if (btns) { actEl.innerHTML = btns; actEl.style.display = ''; } else { actEl.style.display = 'none'; }
 
     // Info grid
     var html = '<div><div class="admq-section-label">Details</div><div class="admq-info-grid">'
-      +'<div class="admq-info-item"><div class="admq-info-key">Status</div><div class="admq-info-val">'+statusHtml(inst.status)+'</div></div>'
+      +'<div class="admq-info-item"><div class="admq-info-key">Status</div><div class="admq-info-val">'+statusHtml(inst.status, inst.completed_late)+'</div></div>'
       +'<div class="admq-info-item"><div class="admq-info-key">Priority</div><div class="admq-info-val">'+priorityHtml(inst.priority)+'</div></div>'
       +'<div class="admq-info-item"><div class="admq-info-key">Type</div><div class="admq-info-val">'+esc(inst.task_type||'—')+'</div></div>'
       +'<div class="admq-info-item"><div class="admq-info-key">Due Time</div><div class="admq-info-val" style="font-family:var(--adm-mono);font-size:0.8rem">'+(inst.due_time||'—')+'</div></div>'
