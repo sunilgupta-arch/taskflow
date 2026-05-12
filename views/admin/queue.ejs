@@ -365,6 +365,18 @@
   </div>
 </div>
 
+<div id="admqDoneModal" class="admq-modal-backdrop" style="display:none">
+  <div class="admq-modal">
+    <div class="admq-modal-title"><i class="bi bi-check-circle"></i> Mark as Done</div>
+    <div class="admq-modal-sub">Add a completion remark before closing this task. This is required.</div>
+    <textarea class="admq-modal-textarea" id="admqDoneRemark" placeholder="What was done? Any notes for the client…" rows="3"></textarea>
+    <div class="admq-modal-footer">
+      <button class="admq-modal-cancel" onclick="admqCloseDoneModal()">Cancel</button>
+      <button class="admq-modal-confirm" id="admqDoneConfirmBtn" onclick="admqConfirmDone()"><i class="bi bi-check-lg"></i> Mark Done</button>
+    </div>
+  </div>
+</div>
+
 <div id="admqReleaseModal" class="admq-modal-backdrop" style="display:none">
   <div class="admq-modal">
     <div class="admq-modal-title"><i class="bi bi-arrow-counterclockwise"></i> Release Task</div>
@@ -471,7 +483,7 @@
       var rowCls  = overdue ? 'row-overdue' : 'row-'+inst.status;
       var badge   = overdue ? '<span class="admq-overdue-chip">Overdue</span>' : '';
       var actions = '';
-      if (inst.status === 'missed') {
+      if (inst.status === 'missed' || (past && inst.status === 'open')) {
         actions = '<button class="admq-btn pick" title="Pick up (late)" onclick="event.stopPropagation();admqPick('+inst.id+')"><i class="bi bi-hand-index"></i> Pick</button>';
       } else if (!past) {
         if (inst.status === 'open') {
@@ -492,7 +504,8 @@
         }
       } else if (past && inst.status === 'picked') {
         if (inst.picked_by === _userId || isAdmin()) {
-          actions = '<button class="admq-btn done" title="Mark done (late)" onclick="event.stopPropagation();admqDone('+inst.id+')"><i class="bi bi-check-lg"></i></button>';
+          actions = '<button class="admq-btn done" title="Mark done (late)" onclick="event.stopPropagation();admqDone('+inst.id+')"><i class="bi bi-check-lg"></i></button>'
+                  + '<button class="admq-btn release" title="Release" onclick="event.stopPropagation();admqOpenRelease('+inst.id+')"><i class="bi bi-arrow-counterclockwise"></i></button>';
         }
       }
       if (inst.status === 'cancelled' && isAdmin()) {
@@ -590,11 +603,31 @@
       else alert(res.message||'Failed to pick');
     });
   };
+  var _doneInstanceId = null;
   window.admqDone = function(id) {
-    postJson('/queue/'+id+'/complete').then(function(res){
-      if (res.success) { loadDate(_date); if (_detailId===id) admqCloseDetail(); }
-      else alert(res.message||'Failed');
-    });
+    _doneInstanceId = id;
+    document.getElementById('admqDoneRemark').value = '';
+    document.getElementById('admqDoneModal').style.display = 'flex';
+    setTimeout(function(){ document.getElementById('admqDoneRemark').focus(); }, 50);
+  };
+  window.admqCloseDoneModal = function() {
+    document.getElementById('admqDoneModal').style.display = 'none';
+    _doneInstanceId = null;
+  };
+  window.admqConfirmDone = function() {
+    var id = _doneInstanceId;
+    if (!id) return;
+    var remark = document.getElementById('admqDoneRemark').value.trim();
+    if (!remark) { document.getElementById('admqDoneRemark').focus(); return; }
+    var btn = document.getElementById('admqDoneConfirmBtn');
+    btn.disabled = true;
+    fetch('/queue/'+id+'/complete', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({remark:remark})})
+      .then(function(r){ return r.json(); })
+      .then(function(res){
+        admqCloseDoneModal();
+        if (res.success) { loadDate(_date); if (_detailId===id) admqCloseDetail(); }
+        else alert(res.message||'Failed to complete');
+      }).finally(function(){ btn.disabled = false; });
   };
   window.admqOpenRelease = function(id) {
     _releaseId = id;
@@ -667,7 +700,7 @@
 
     // Action buttons
     var actEl = document.getElementById('admqDrawerActions'), btns = '';
-    if (inst.status === 'missed') {
+    if (inst.status === 'missed' || (past && inst.status === 'open')) {
       btns = '<button class="admq-drawer-btn pick" onclick="admqPick('+inst.id+')"><i class="bi bi-hand-index"></i> Pick Up (Late)</button>';
     } else if (!past) {
       if (inst.status==='open') {
@@ -682,7 +715,8 @@
       }
     } else if (past && inst.status === 'picked') {
       if (inst.picked_by === _userId || isAdmin()) {
-        btns = '<button class="admq-drawer-btn done" onclick="admqDone('+inst.id+')"><i class="bi bi-check-lg"></i> Mark Done (Late)</button>';
+        btns = '<button class="admq-drawer-btn done" onclick="admqDone('+inst.id+')"><i class="bi bi-check-lg"></i> Mark Done (Late)</button>'
+             + '<button class="admq-drawer-btn release" onclick="admqOpenRelease('+inst.id+')"><i class="bi bi-arrow-counterclockwise"></i> Release</button>';
       }
     }
     if (btns) { actEl.innerHTML = btns; actEl.style.display = ''; } else { actEl.style.display = 'none'; }

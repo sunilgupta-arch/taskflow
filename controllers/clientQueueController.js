@@ -73,7 +73,10 @@ class ClientQueueController {
   static async complete(req, res) {
     try {
       const instanceId = parseInt(req.params.id);
+      const { remark } = req.body;
+      if (!remark || !remark.trim()) return ApiResponse.error(res, 'A completion remark is required', 400);
       await ClientRequest.complete(instanceId, req.user.id);
+      await ClientRequest.addComment(instanceId, req.user.id, remark.trim());
       const instance = await ClientRequest.getInstanceById(instanceId);
       try { const io = getIO(); io.emit('queue:updated', { instance }); io.of('/portal').emit('queue:updated', { instance }); } catch (_) {}
       return ApiResponse.success(res, { instance });
