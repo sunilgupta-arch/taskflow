@@ -32,10 +32,8 @@ class ClientRequest {
        JOIN client_requests cr ON cri.request_id = cr.id
        SET cri.status = 'missed'
        WHERE cri.instance_date = ?
-         AND (
-           cri.status = 'picked'
-           OR (cri.status = 'open' AND cr.recurrence != 'none')
-         )`,
+         AND cri.status = 'open'
+         AND cr.recurrence != 'none'`,
       [dateStr]
     );
   }
