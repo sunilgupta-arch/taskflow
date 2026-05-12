@@ -1204,14 +1204,10 @@
     var strip = document.getElementById('gcPresenceStrip');
     if (!strip) return;
     var online = _allUsers.filter(function(u) { return u.online; });
-    var offlineCount = _allUsers.filter(function(u) {
-      return !u.online && u.role_name && u.role_name.indexOf('LOCAL_') === 0;
-    }).length;
     var html = online.map(function(u) {
       var initial = u.name.charAt(0).toUpperCase();
       return '<div class="gc-presence-avatar online" title="' + escapeHtml(u.name) + '" data-gc-uid="' + u.id + '">' + initial + '<span class="gc-presence-dot"></span></div>';
     }).join('');
-    if (offlineCount > 0) html += '<span class="gc-presence-offline">' + offlineCount + ' offline</span>';
     strip.innerHTML = html;
   }
 
