@@ -513,8 +513,8 @@
         +'<td><div class="admq-actions">'+actions+'</div></td>'
         +'</tr>';
     };
-    var activeRows    = active.map(function(inst, i)    { return buildRow(inst, i + 1, false); }).join('');
-    var cancelledRows = cancelled.map(function(inst, i) { return buildRow(inst, active.length + i + 1, true); }).join('');
+    var activeRows    = active.map(function(inst, i)    { return buildRow(inst, i, false); }).join('');
+    var cancelledRows = cancelled.map(function(inst, i) { return buildRow(inst, active.length + i, true); }).join('');
     var cancelledFooter = cancelled.length > 0
       ? '<tr id="admqCancelledToggle" onclick="admqToggleCancelled()" style="cursor:pointer">'
           +'<td colspan="11"><div class="admq-cancelled-toggle">'

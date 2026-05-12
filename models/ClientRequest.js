@@ -263,12 +263,19 @@ class ClientRequest {
               cr.recurrence, cr.due_time, cr.created_by,
               creator.name as created_by_name,
               picker.name as picked_by_name,
-              completer.name as completed_by_name
+              completer.name as completed_by_name,
+              lc.body as latest_comment,
+              lc_user.name as latest_comment_by,
+              lc.created_at as latest_comment_at
        FROM client_request_instances cri
        JOIN client_requests cr ON cri.request_id = cr.id
        JOIN users creator ON cr.created_by = creator.id
        LEFT JOIN users picker ON cri.picked_by = picker.id
        LEFT JOIN users completer ON cri.completed_by = completer.id
+       LEFT JOIN client_request_comments lc ON lc.id = (
+         SELECT MAX(id) FROM client_request_comments WHERE instance_id = cri.id
+       )
+       LEFT JOIN users lc_user ON lc.user_id = lc_user.id
        WHERE (cri.instance_date = ? AND cr.org_id = ? AND cr.is_active = 1${salesFilter} ${carryForward})
        ORDER BY
          cr.due_time ASC,

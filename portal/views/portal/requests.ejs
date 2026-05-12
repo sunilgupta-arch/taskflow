@@ -935,10 +935,11 @@ const isSalesUser = user.role_name === 'CLIENT_SALES';
     html += `<hr><div class="mb-2 small fw-semibold">Comments</div><div id="reqCommentsList">`;
     if (comments.length === 0) html += `<p class="text-muted small" id="reqNoComments">No comments yet.</p>`;
     comments.forEach(c => {
-      const isClient = c.role_name && c.role_name.startsWith('CLIENT');
+      const isClient = c.commenter_role && c.commenter_role.startsWith('CLIENT');
+      const name = c.commenter_name || '?';
       html += `<div class="d-flex gap-2 mb-2">
-        <div class="flex-shrink-0 rounded-circle d-flex align-items-center justify-content-center text-white small fw-bold" style="width:32px;height:32px;background:${isClient?'#0d6efd':'#198754'}">${c.user_name[0]}</div>
-        <div><div class="small fw-semibold">${escHtml(c.user_name)} <span class="text-muted fw-normal">${new Date(c.created_at).toLocaleString()}</span></div>
+        <div class="flex-shrink-0 rounded-circle d-flex align-items-center justify-content-center text-white small fw-bold" style="width:32px;height:32px;background:${isClient?'#0d6efd':'#198754'}">${escHtml(name[0])}</div>
+        <div><div class="small fw-semibold">${escHtml(name)} <span class="text-muted fw-normal">${new Date(c.created_at).toLocaleString()}</span></div>
         <div class="small" style="white-space:pre-wrap">${escHtml(c.body)}</div></div>
       </div>`;
     });
