@@ -234,17 +234,19 @@ class PortalTask {
   }
 
   // Get assignable users based on role hierarchy
-  // ADMIN → everyone | TOP_MGMT → all except admin | MGMT → mgmt+manager+user | MANAGER → manager+user
+  // ADMIN → everyone | TOP_MGMT → all except admin | MGMT → mgmt+manager+sales+user | MANAGER → manager+sales+user | SALES → sales+user
   static async getAssignableUsers(currentUserId, currentRole) {
     let roleFilter;
     if (currentRole === 'CLIENT_ADMIN') {
-      roleFilter = "r.name IN ('CLIENT_ADMIN', 'CLIENT_TOP_MGMT', 'CLIENT_MGMT', 'CLIENT_MANAGER', 'CLIENT_USER')";
+      roleFilter = "r.name IN ('CLIENT_ADMIN', 'CLIENT_TOP_MGMT', 'CLIENT_MGMT', 'CLIENT_MANAGER', 'CLIENT_SALES', 'CLIENT_USER')";
     } else if (currentRole === 'CLIENT_TOP_MGMT') {
-      roleFilter = "r.name IN ('CLIENT_TOP_MGMT', 'CLIENT_MGMT', 'CLIENT_MANAGER', 'CLIENT_USER')";
+      roleFilter = "r.name IN ('CLIENT_TOP_MGMT', 'CLIENT_MGMT', 'CLIENT_MANAGER', 'CLIENT_SALES', 'CLIENT_USER')";
     } else if (currentRole === 'CLIENT_MGMT') {
-      roleFilter = "r.name IN ('CLIENT_MGMT', 'CLIENT_MANAGER', 'CLIENT_USER')";
+      roleFilter = "r.name IN ('CLIENT_MGMT', 'CLIENT_MANAGER', 'CLIENT_SALES', 'CLIENT_USER')";
     } else if (currentRole === 'CLIENT_MANAGER') {
-      roleFilter = "r.name IN ('CLIENT_MANAGER', 'CLIENT_USER')";
+      roleFilter = "r.name IN ('CLIENT_MANAGER', 'CLIENT_SALES', 'CLIENT_USER')";
+    } else if (currentRole === 'CLIENT_SALES') {
+      roleFilter = "r.name IN ('CLIENT_SALES', 'CLIENT_USER')";
     } else {
       return [];
     }

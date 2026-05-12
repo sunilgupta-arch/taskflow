@@ -32,7 +32,8 @@
 .admq-stat.s-open   { border-color: rgba(249,115,22,0.3); background: rgba(249,115,22,0.06); color: #f97316; }
 .admq-stat.s-picked { border-color: rgba(59,130,246,0.3);  background: rgba(59,130,246,0.06);  color: #3b82f6; }
 .admq-stat.s-done   { border-color: rgba(16,185,129,0.3);  background: rgba(16,185,129,0.06);  color: #10b981; }
-.admq-stat.s-missed { border-color: rgba(239,68,68,0.3);   background: rgba(239,68,68,0.06);   color: #ef4444; }
+.admq-stat.s-missed     { border-color: rgba(239,68,68,0.3);   background: rgba(239,68,68,0.06);   color: #ef4444; }
+.admq-stat.s-cancelled  { border-color: rgba(75,85,99,0.3);    background: rgba(75,85,99,0.06);    color: #9ca3af; }
 .admq-past-notice {
   display: flex; align-items: center; gap: 6px;
   padding: 8px 14px; border-radius: 10px;
@@ -78,7 +79,11 @@
 .admq-table tbody tr.row-picked td:first-child { border-left-color: #3b82f6; }
 .admq-table tbody tr.row-done   td:first-child { border-left-color: #10b981; }
 .admq-table tbody tr.row-missed td:first-child { border-left-color: #ef4444; }
-.admq-table tbody tr.row-overdue td:first-child { border-left-color: #ef4444; }
+.admq-table tbody tr.row-overdue   td:first-child { border-left-color: #ef4444; }
+.admq-table tbody tr.row-cancelled td:first-child { border-left-color: #4b5563; }
+.admq-table tbody tr.row-cancelled { opacity: 0.45; }
+.admq-cancelled-toggle { padding: 10px 16px; font-size: 0.78rem; color: var(--adm-muted); cursor: pointer; border-top: 1px solid var(--adm-border); display: flex; align-items: center; gap: 6px; transition: color 0.15s; user-select: none; }
+.admq-cancelled-toggle:hover { color: var(--adm-text-2); }
 
 /* Cell helpers */
 .admq-title-cell { color: var(--adm-text); font-weight: 500; max-width: 240px; }
@@ -445,18 +450,21 @@
       +'<div class="admq-stat s-picked"><span class="admq-stat-dot" style="background:#3b82f6"></span><span class="admq-stat-count">'+(stats.picked||0)+'</span>&nbsp;In Progress</div>'
       +'<div class="admq-stat s-done"><span class="admq-stat-dot" style="background:#10b981"></span><span class="admq-stat-count">'+(stats.done||0)+'</span>&nbsp;Done</div>'
       +'<div class="admq-stat s-missed"><span class="admq-stat-dot" style="background:#ef4444"></span><span class="admq-stat-count">'+(stats.missed||0)+'</span>&nbsp;Missed</div>'
+      +((stats.cancelled||0)>0?'<div class="admq-stat s-cancelled"><span class="admq-stat-dot" style="background:#4b5563"></span><span class="admq-stat-count">'+(stats.cancelled||0)+'</span>&nbsp;Cancelled</div>':'')
       +(isPast(date)?'<div class="admq-past-notice"><i class="bi bi-lock"></i> Past date — read only</div>':'');
   }
 
   // ── Table ────────────────────────────────────────────────────────────
   function renderTable(instances, date) {
     var area = document.getElementById('admqTableArea');
-    if (!instances||!instances.length) {
+    var active    = (instances || []).filter(function(i) { return i.status !== 'cancelled'; });
+    var cancelled = (instances || []).filter(function(i) { return i.status === 'cancelled'; });
+    if (!active.length && !cancelled.length) {
       area.innerHTML = '<div class="admq-empty"><i class="bi bi-inbox"></i><div class="admq-empty-title">Queue is empty</div><div class="admq-empty-sub">No requests for '+fmtDate(date)+'</div></div>';
       return;
     }
     var past = isPast(date);
-    var rows = instances.map(function(inst, idx) {
+    var buildRow = function(inst, idx, hidden) {
       var overdue = inst.instance_date < _today && inst.status === 'open';
       var rowCls  = overdue ? 'row-overdue' : 'row-'+inst.status;
       var badge   = overdue ? '<span class="admq-overdue-chip">Overdue</span>' : '';
@@ -479,13 +487,16 @@
           actions = '<i class="bi bi-check-circle-fill" style="color:#10b981;font-size:1rem"></i>';
         }
       }
+      if (inst.status === 'cancelled' && isAdmin()) {
+        actions = '<button class="admq-btn act" title="Restore to open" onclick="event.stopPropagation();admqUncancel('+inst.id+')"><i class="bi bi-arrow-counterclockwise"></i> Restore</button>';
+      }
       var recLabels = {none:'One-time',daily:'Daily',weekly:'Weekly',monthly:'Monthly'};
       var freqLabel = recLabels[inst.recurrence] || inst.recurrence || '—';
       var titleAttr   = esc(inst.title||'');
       var descAttr    = esc((inst.description||'').trim());
       var commentAttr = esc((inst.latest_comment||'').trim());
       var titleTipAttrs = titleAttr ? ' data-tooltip="'+descAttr+'" data-tip-title="'+titleAttr+'"' : '';
-      return '<tr class="'+rowCls+'" onclick="admqOpenDetail('+inst.id+')">'
+      return '<tr class="'+rowCls+'"'+(hidden?' style="display:none"':'')+' onclick="admqOpenDetail('+inst.id+')">'
         +'<td style="font-family:var(--adm-mono);font-size:0.75rem;color:var(--adm-muted);text-align:center;width:36px">'+(idx+1)+'</td>'
         +'<td class="admq-title-cell"'+titleTipAttrs+'>'+
           '<span class="admq-title-text">'+recIcon(inst.recurrence)+esc(inst.title)+badge+'</span>'+descSnippet(inst)+'</td>'
@@ -501,11 +512,44 @@
         +'<td class="admq-comment-cell"'+(commentAttr?' data-tooltip="'+commentAttr+'"':'')+'>'+commentSnippet(inst)+'</td>'
         +'<td><div class="admq-actions">'+actions+'</div></td>'
         +'</tr>';
-    }).join('');
+    };
+    var activeRows    = active.map(function(inst, i)    { return buildRow(inst, i + 1, false); }).join('');
+    var cancelledRows = cancelled.map(function(inst, i) { return buildRow(inst, active.length + i + 1, true); }).join('');
+    var cancelledFooter = cancelled.length > 0
+      ? '<tr id="admqCancelledToggle" onclick="admqToggleCancelled()" style="cursor:pointer">'
+          +'<td colspan="11"><div class="admq-cancelled-toggle">'
+            +'<i class="bi bi-chevron-right" id="admqCancelledChevron" style="transition:transform 0.2s"></i>'
+            +'Show '+cancelled.length+' cancelled request'+(cancelled.length > 1 ? 's' : '')
+          +'</div></td>'
+        +'</tr>'
+      : '';
     area.innerHTML = '<div class="admq-table-wrap"><table class="admq-table"><thead><tr>'
       +'<th style="text-align:center;width:36px">SN</th><th>Request</th><th>Type</th><th>Priority</th><th>Due</th><th>Frequency</th><th>Creator</th><th>Status</th><th>Picked By</th><th>Latest Comment</th><th></th>'
-      +'</tr></thead><tbody>'+rows+'</tbody></table></div>';
+      +'</tr></thead><tbody>'+activeRows+cancelledFooter+cancelledRows+'</tbody></table></div>';
   }
+
+  window.admqToggleCancelled = function() {
+    var rows     = document.querySelectorAll('.admq-table tbody tr.row-cancelled');
+    var chevron  = document.getElementById('admqCancelledChevron');
+    var toggle   = document.getElementById('admqCancelledToggle');
+    var hidden   = rows.length && rows[0].style.display === 'none';
+    rows.forEach(function(r) { r.style.display = hidden ? '' : 'none'; });
+    if (chevron) chevron.style.transform = hidden ? 'rotate(90deg)' : '';
+    if (toggle) {
+      var count = rows.length;
+      toggle.querySelector('.admq-cancelled-toggle').innerHTML =
+        '<i class="bi bi-chevron-'+(hidden?'down':'right')+'" id="admqCancelledChevron" style="transition:transform 0.2s"></i>'
+        +(hidden ? 'Hide' : 'Show')+' '+count+' cancelled request'+(count>1?'s':'');
+    }
+  };
+
+  window.admqUncancel = function(id) {
+    if (!confirm('Restore this request to open?')) return;
+    fetch('/queue/'+id+'/uncancel', { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+      .then(function(r){ return r.json(); })
+      .then(function(res){ if (res.success) loadDate(_date); else alert(res.message || 'Failed to restore'); })
+      .catch(function(){ alert('Network error'); });
+  };
 
   // ── Load date via API ────────────────────────────────────────────────
   function loadDate(date) {

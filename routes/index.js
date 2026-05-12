@@ -221,6 +221,7 @@ router.get('/queue/badge', authenticate, ClientQueueController.getBadgeCount);
 router.post('/queue/:id/pick', authenticate, ClientQueueController.pick);
 router.post('/queue/:id/release', authenticate, ClientQueueController.release);
 router.post('/queue/:id/complete', authenticate, ClientQueueController.complete);
+router.post('/queue/:id/uncancel', authenticate, requireRoles('LOCAL_ADMIN', 'LOCAL_MANAGER'), ClientQueueController.uncancel);
 router.get('/queue/:id/detail', authenticate, ClientQueueController.getDetail);
 router.get('/queue/attachments/:attachmentId', authenticate, ClientQueueController.serveAttachment);
 router.post('/queue/:id/comments', authenticate, ClientQueueController.addComment);

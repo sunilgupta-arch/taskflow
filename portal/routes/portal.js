@@ -554,6 +554,7 @@ router.get('/requests/task-types', ClientRequestController.getTaskTypes);
 router.post('/requests/:id/attachments', (req, res, next) => reqAttachUpload.single('file')(req, res, err => handleReqUploadError(err, req, res, next)), ClientRequestController.uploadAttachment);
 router.get('/requests/instances/:id', ClientRequestController.getDetail);
 router.patch('/requests/instances/:id/cancel', ClientRequestController.cancelInstance);
+router.post('/requests/instances/:id/uncancel', ClientRequestController.uncancelInstance);
 router.post('/requests/instances/:id/comments', ClientRequestController.addComment);
 router.get('/requests/attachments/:attachmentId', ClientRequestController.serveAttachment);
 

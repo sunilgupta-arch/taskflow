@@ -5,7 +5,10 @@ const GoogleDriveService = require('../../services/googleDriveService');
 
 function statsFromInstances(instances) {
   const s = { total: 0, open: 0, picked: 0, done: 0, missed: 0, cancelled: 0 };
-  for (const inst of instances) { s.total++; if (inst.status in s) s[inst.status]++; }
+  for (const inst of instances) {
+    if (inst.status in s) s[inst.status]++;
+    if (inst.status !== 'cancelled') s.total++;
+  }
   return s;
 }
 
@@ -153,6 +156,24 @@ class ClientRequestController {
     } catch (err) {
       console.error('ClientRequest cancelInstance error:', err);
       return ApiResponse.error(res, err.message || 'Failed to cancel', 400);
+    }
+  }
+
+  static async uncancelInstance(req, res) {
+    try {
+      const instanceId = parseInt(req.params.id);
+      const instance = await ClientRequest.getInstanceById(instanceId);
+      if (!instance || instance.org_id !== req.user.organization_id)
+        return ApiResponse.error(res, 'Not found', 404);
+      if (instance.created_by !== req.user.id)
+        return ApiResponse.error(res, 'Only the request creator can restore it', 403);
+      await ClientRequest.uncancelInstance(instanceId);
+      const updated = await ClientRequest.getInstanceById(instanceId);
+      try { const io = getIO(); io.emit('queue:updated', { instance: updated }); io.of('/portal').emit('queue:updated', { instance: updated }); } catch (_) {}
+      return ApiResponse.success(res, { instance: updated }, 'Request restored to open');
+    } catch (err) {
+      console.error('ClientRequest uncancelInstance error:', err);
+      return ApiResponse.error(res, err.message || 'Failed to restore', 400);
     }
   }
 

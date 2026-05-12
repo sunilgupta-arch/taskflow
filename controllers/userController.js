@@ -71,10 +71,14 @@ class UserController {
 
   static async toggleActive(req, res) {
     try {
-      const user = await UserModel.findById(req.params.id);
+      const targetId = parseInt(req.params.id);
+      if (targetId === req.user.id) {
+        return ApiResponse.error(res, 'You cannot deactivate your own account', 403);
+      }
+      const user = await UserModel.findById(targetId);
       if (!user) return ApiResponse.error(res, 'User not found', 404);
-      await UserModel.update(req.params.id, { is_active: user.is_active ? 0 : 1 });
-      return ApiResponse.success(res, {}, `User ${user.is_active ? 'deactivated' : 'activated'}`);
+      await UserModel.update(targetId, { is_active: user.is_active ? 0 : 1 });
+      return ApiResponse.success(res, { is_active: !user.is_active }, `User ${user.is_active ? 'deactivated' : 'activated'}`);
     } catch (err) {
       return ApiResponse.error(res, err.message, 400);
     }

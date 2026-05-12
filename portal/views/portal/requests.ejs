@@ -437,6 +437,7 @@ const isSalesUser = user.role_name === 'CLIENT_SALES';
   const IS_PAST    = '<%= isPast %>' === 'true';
   const CAN_CREATE = '<%= canCreate %>' === 'true';
   const IS_SALES   = <%- isSalesUser %>;
+  const CURRENT_USER_ID = <%= user.id %>;
   const _hashOpen  = (function() { var m = window.location.hash.match(/^#open=(\d+)$/); return m ? parseInt(m[1]) : null; })();
   let _openDetailId = null;
 
@@ -496,7 +497,8 @@ const isSalesUser = user.role_name === 'CLIENT_SALES';
       const isOverdue = IS_PAST && ['open','picked'].includes(inst.status);
       const recLabel = inst.recurrence !== 'none' ? 'recurring' : 'one-time';
       const canEdit = CAN_CREATE && ['open', 'picked'].includes(inst.status);
-      const hasMenu = canEdit || (CAN_CREATE && inst.status === 'open') || (CAN_CREATE && !IS_PAST && inst.status === 'open');
+      const canRestore = inst.status === 'cancelled' && inst.created_by === CURRENT_USER_ID;
+      const hasMenu = canEdit || (CAN_CREATE && inst.status === 'open') || (CAN_CREATE && !IS_PAST && inst.status === 'open') || canRestore;
       const actionsDropdown = hasMenu
         ? `<button class="btn btn-xs btn-link p-0 preq-dots-btn ms-2" style="vertical-align:middle" title="Actions"
              onclick="event.preventDefault();event.stopPropagation();window.preqOpenMenu(this)"
@@ -512,7 +514,8 @@ const isSalesUser = user.role_name === 'CLIENT_SALES';
              data-status="${inst.status}"
              data-can-edit="${canEdit?'1':''}"
              data-can-delete="${CAN_CREATE && inst.status==='open'?'1':''}"
-             data-can-cancel="${CAN_CREATE && !IS_PAST && inst.status==='open'?'1':''}">
+             data-can-cancel="${CAN_CREATE && !IS_PAST && inst.status==='open'?'1':''}"
+             data-can-restore="${canRestore?'1':''}">
              <i class="bi bi-three-dots-vertical" style="font-size:0.8rem;opacity:0.45"></i>
            </button>`
         : '';
@@ -836,6 +839,23 @@ const isSalesUser = user.role_name === 'CLIENT_SALES';
     } catch {}
   });
 
+  // ── Restore (uncancel) instance ─────────────────────────
+  document.addEventListener('click', async function(e) {
+    const btn = e.target.closest('.req-restore-btn');
+    if (!btn) return;
+    e.preventDefault(); e.stopPropagation();
+    if (!confirm('Restore this request? It will be visible to the local team again.')) return;
+    const id = btn.dataset.id;
+    try {
+      const r = await fetch('/portal/requests/instances/' + id + '/uncancel', {
+        method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' }
+      });
+      const data = await r.json();
+      if (data.success) loadInstances(PAGE_DATE);
+      else alert(data.message || 'Failed to restore');
+    } catch {}
+  });
+
   // ── Detail modal ────────────────────────────────────────
   const _detailModalEl = document.getElementById('reqDetailModal');
   _detailModalEl.addEventListener('hidden.bs.modal', function() { _openDetailId = null; });
@@ -1076,6 +1096,11 @@ const isSalesUser = user.role_name === 'CLIENT_SALES';
         html += '<a class="preq-menu-item item-warning req-cancel-btn" href="#"'
           +' data-id="'+ea(d.instanceId)+'">'
           +'<i class="bi bi-x-circle"></i>Cancel today</a>';
+      }
+      if (d.canRestore) {
+        html += '<a class="preq-menu-item req-restore-btn" href="#"'
+          +' data-id="'+ea(d.instanceId)+'">'
+          +'<i class="bi bi-arrow-counterclockwise"></i>Restore</a>';
       }
       menu.innerHTML = html;
       var r = btn.getBoundingClientRect();

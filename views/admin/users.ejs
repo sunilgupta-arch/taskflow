@@ -574,9 +574,20 @@
     var u      = _users.find(function(x){ return x.id === userId; });
     var action = (u && u.is_active) ? 'deactivate' : 'activate';
     if (!confirm('Are you sure you want to ' + action + ' this user?')) return;
-    fetch('/users/'+userId+'/toggle', { method: 'PATCH' })
+    fetch('/users/'+userId+'/toggle', {
+      method: 'PATCH',
+      headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
       .then(function(r){ return r.json(); })
-      .then(function(res){ if (res.success) location.reload(); else alert(res.message || 'Error'); });
+      .then(function(res){
+        if (res.success) {
+          u.is_active = u.is_active ? 0 : 1;
+          location.reload();
+        } else {
+          alert(res.message || 'Failed to update user status');
+        }
+      })
+      .catch(function() { alert('Network error — could not update user status'); });
   };
 
   // ── Reset password ────────────────────────────────────────────────────

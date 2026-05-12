@@ -83,6 +83,19 @@ class ClientQueueController {
     }
   }
 
+  static async uncancel(req, res) {
+    try {
+      const instanceId = parseInt(req.params.id);
+      await ClientRequest.uncancelInstance(instanceId);
+      const instance = await ClientRequest.getInstanceById(instanceId);
+      try { const io = getIO(); io.emit('queue:updated', { instance }); io.of('/portal').emit('queue:updated', { instance }); } catch (_) {}
+      return ApiResponse.success(res, { instance }, 'Request restored to open');
+    } catch (err) {
+      console.error('ClientQueue uncancel error:', err);
+      return ApiResponse.error(res, err.message || 'Failed to restore request', 400);
+    }
+  }
+
   static async getBadgeCount(req, res) {
     try {
       const today = new Date().toISOString().split('T')[0];

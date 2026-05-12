@@ -82,8 +82,8 @@ class PortalTaskController {
   // Create task
   static async create(req, res) {
     try {
-      // Only admin, top_mgmt, mgmt, and managers can create
-      if (!['CLIENT_ADMIN', 'CLIENT_TOP_MGMT', 'CLIENT_MGMT', 'CLIENT_MANAGER'].includes(req.user.role_name)) {
+      // Only admin, top_mgmt, mgmt, managers, and sales can create
+      if (!['CLIENT_ADMIN', 'CLIENT_TOP_MGMT', 'CLIENT_MGMT', 'CLIENT_MANAGER', 'CLIENT_SALES'].includes(req.user.role_name)) {
         return ApiResponse.error(res, 'You cannot create tasks', 403);
       }
 

@@ -974,7 +974,7 @@ class AdminHubController {
              SELECT MAX(sh3.id) FROM shift_history sh3
              WHERE sh3.user_id = u.id AND sh3.effective_date = sh.effective_date
            )
-         WHERE al.date = ? AND r.name IN ('LOCAL_USER','LOCAL_MANAGER')
+         WHERE al.date = ? AND u.is_active = 1 AND r.name IN ('LOCAL_USER','LOCAL_MANAGER')
          ORDER BY u.name, al.login_time`,
         [selectedDate]
       ),

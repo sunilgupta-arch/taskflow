@@ -98,8 +98,7 @@ class ClientRequest {
        )
        LEFT JOIN users lc_user ON lc.user_id = lc_user.id
        WHERE (cri.instance_date = ? ${carryForward}) AND cr.is_active = 1
-         AND cri.status != 'cancelled'
-       ORDER BY cri.id ASC`,
+       ORDER BY cri.status = 'cancelled' ASC, cri.id ASC`,
       queryParams
     );
 
@@ -233,8 +232,11 @@ class ClientRequest {
        GROUP BY status`,
       [dateStr]
     );
-    const stats = { open: 0, picked: 0, done: 0, missed: 0, total: 0 };
-    rows.forEach(r => { stats[r.status] = r.cnt; stats.total += r.cnt; });
+    const stats = { open: 0, picked: 0, done: 0, missed: 0, cancelled: 0, total: 0 };
+    rows.forEach(r => {
+      stats[r.status] = r.cnt;
+      if (r.status !== 'cancelled') stats.total += r.cnt;
+    });
     return stats;
   }
 
@@ -375,6 +377,21 @@ class ClientRequest {
     if (inst.status !== 'open') throw new Error('Only open tasks can be cancelled');
     await db.query(
       `UPDATE client_request_instances SET status = 'cancelled' WHERE id = ?`,
+      [instanceId]
+    );
+  }
+
+  static async uncancelInstance(instanceId) {
+    const [[inst]] = await db.query(
+      `SELECT cri.status, cri.instance_date
+       FROM client_request_instances cri
+       WHERE cri.id = ?`,
+      [instanceId]
+    );
+    if (!inst) throw new Error('Not found');
+    if (inst.status !== 'cancelled') throw new Error('Only cancelled requests can be restored');
+    await db.query(
+      `UPDATE client_request_instances SET status = 'open' WHERE id = ?`,
       [instanceId]
     );
   }
