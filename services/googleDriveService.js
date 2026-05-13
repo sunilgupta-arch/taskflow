@@ -4,12 +4,12 @@ const db = require('../config/db');
 
 // OAuth2 client setup
 const oauth2Client = new google.auth.OAuth2(
-  process.env.GOOGLE_CLIENT_ID,
-  process.env.GOOGLE_CLIENT_SECRET
+  process.env.GDRIVE_CLIENT_ID,
+  process.env.GDRIVE_CLIENT_SECRET
 );
 
 oauth2Client.setCredentials({
-  refresh_token: process.env.GOOGLE_REFRESH_TOKEN
+  refresh_token: process.env.GDRIVE_REFRESH_TOKEN
 });
 
 const drive = google.drive({ version: 'v3', auth: oauth2Client });
