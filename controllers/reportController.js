@@ -201,39 +201,39 @@ class ReportController {
               }
             }
             calendarData[u.id][d] = futureStatus;
-          } else if (dayName === u.weekly_off_day) {
-            calendarData[u.id][d] = 'weekoff';
-          } else if (holidayMap.has(dateStr)) {
-            calendarData[u.id][d] = 'holiday';
           } else {
-            // Check leaves
-            let onLeave = false;
-            for (const lv of leaveData[0]) {
-              const from = lv.from_date instanceof Date ? lv.from_date.toISOString().split('T')[0] : String(lv.from_date).split('T')[0];
-              const to = lv.to_date instanceof Date ? lv.to_date.toISOString().split('T')[0] : String(lv.to_date).split('T')[0];
-              if (lv.user_id === u.id && dateStr >= from && dateStr <= to) {
-                calendarData[u.id][d] = lv.status === 'approved' ? 'approved_leave' : 'pending_leave';
-                onLeave = true;
-                break;
+            // Override always takes precedence over weekly off, holiday, and absence
+            const overrideKey = `${u.id}-${dateStr}`;
+            const override = overrideMap.get(overrideKey);
+            if (override) {
+              calendarData[u.id][d] = override.status === 'leave' ? 'approved_leave' : override.status;
+            } else if (dayName === u.weekly_off_day) {
+              calendarData[u.id][d] = 'weekoff';
+            } else if (holidayMap.has(dateStr)) {
+              calendarData[u.id][d] = 'holiday';
+            } else {
+              let onLeave = false;
+              for (const lv of leaveData[0]) {
+                const from = lv.from_date instanceof Date ? lv.from_date.toISOString().split('T')[0] : String(lv.from_date).split('T')[0];
+                const to = lv.to_date instanceof Date ? lv.to_date.toISOString().split('T')[0] : String(lv.to_date).split('T')[0];
+                if (lv.user_id === u.id && dateStr >= from && dateStr <= to) {
+                  calendarData[u.id][d] = lv.status === 'approved' ? 'approved_leave' : 'pending_leave';
+                  onLeave = true;
+                  break;
+                }
               }
-            }
-            if (!onLeave) {
-              // Check for manual override first
-              const overrideKey = `${u.id}-${dateStr}`;
-              const override = overrideMap.get(overrideKey);
-              if (override) {
-                calendarData[u.id][d] = override.status === 'leave' ? 'approved_leave' : override.status;
-              } else if (attendanceSet.has(`${u.id}-${dateStr}`)) {
-                calendarData[u.id][d] = 'present';
-              } else if (dateStr === today && u.shift_start) {
-                // Don't mark absent if shift hasn't started yet
-                const nowInTz = new Date(getNow(tz));
-                const nowMins = nowInTz.getUTCHours() * 60 + nowInTz.getUTCMinutes();
-                const [sh, sm] = u.shift_start.split(':').map(Number);
-                const shiftMins = sh * 60 + sm;
-                calendarData[u.id][d] = nowMins >= shiftMins ? 'absent' : 'future';
-              } else {
-                calendarData[u.id][d] = 'absent';
+              if (!onLeave) {
+                if (attendanceSet.has(`${u.id}-${dateStr}`)) {
+                  calendarData[u.id][d] = 'present';
+                } else if (dateStr === today && u.shift_start) {
+                  const nowInTz = new Date(getNow(tz));
+                  const nowMins = nowInTz.getUTCHours() * 60 + nowInTz.getUTCMinutes();
+                  const [sh, sm] = u.shift_start.split(':').map(Number);
+                  const shiftMins = sh * 60 + sm;
+                  calendarData[u.id][d] = nowMins >= shiftMins ? 'absent' : 'future';
+                } else {
+                  calendarData[u.id][d] = 'absent';
+                }
               }
             }
           }
@@ -296,7 +296,8 @@ class ReportController {
           `SELECT date, logout_reason, late_login_reason,
                   DATE_FORMAT(login_time, '%h:%i %p') as loginFormatted,
                   DATE_FORMAT(logout_time, '%h:%i %p') as logoutFormatted,
-                  TIMEDIFF(COALESCE(logout_time, NOW()), login_time) as duration
+                  TIMEDIFF(COALESCE(logout_time, NOW()), login_time) as duration,
+                  is_manual, manual_status
            FROM attendance_logs
            WHERE user_id = ? AND date >= ? AND date <= ?
            ORDER BY date DESC, login_time ASC`,
@@ -375,13 +376,15 @@ class ReportController {
         const isHoliday = myHolidayMap.has(dateStr);
         const sessions = logMap[dateStr] || [];
         const log = sessions[0] || null;
+        const manualEntry = sessions.find(s => s.is_manual && s.manual_status);
         let status = 'absent';
-        if (dateStr > today) status = 'future';
-        else if (isOff) status = 'off';
-        else if (isHoliday) status = 'holiday';
-        else if (log) status = 'present';
+        if (dateStr > today)       status = 'future';
+        else if (manualEntry)      status = manualEntry.manual_status === 'leave' ? 'leave' : manualEntry.manual_status;
+        else if (isOff)            status = 'off';
+        else if (isHoliday)        status = 'holiday';
+        else if (log)              status = 'present';
         else if (leaveSet.has(dateStr + '-approved')) status = 'leave';
-        else if (leaveSet.has(dateStr + '-pending')) status = 'pending_leave';
+        else if (leaveSet.has(dateStr + '-pending'))  status = 'pending_leave';
 
         calendarData[d] = { status, dayName, log, sessions, isOff, holidayName: isHoliday ? myHolidayMap.get(dateStr) : null };
       }

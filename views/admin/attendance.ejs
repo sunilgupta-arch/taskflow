@@ -324,8 +324,9 @@
 <div class="ata-topbar">
   <div style="display:flex;align-items:center;gap:10px">
     <div class="ata-tabs">
-      <button class="ata-tab active" id="ataTabDaily"   onclick="ataSetTab('daily')"><i class="bi bi-list-ul"></i> Daily</button>
-      <button class="ata-tab"        id="ataTabMonthly" onclick="ataSetTab('monthly')"><i class="bi bi-calendar3"></i> Monthly</button>
+      <button class="ata-tab active" id="ataTabDaily"    onclick="ataSetTab('daily')"><i class="bi bi-list-ul"></i> Daily</button>
+      <button class="ata-tab"        id="ataTabMonthly"  onclick="ataSetTab('monthly')"><i class="bi bi-calendar3"></i> Monthly</button>
+      <button class="ata-tab"        id="ataTabCompOff"  onclick="ataSetTab('compoff')"><i class="bi bi-gift"></i> Comp-Off</button>
     </div>
   </div>
   <div style="display:flex;align-items:center;gap:8px">
@@ -339,7 +340,8 @@
 
 <!-- Content areas -->
 <div id="ataDailyArea"></div>
-<div id="ataMonthlyArea" style="display:none"></div>
+<div id="ataMonthlyArea"  style="display:none"></div>
+<div id="ataCompOffArea"  style="display:none"></div>
 
 <script>
 (function () {
@@ -702,13 +704,49 @@
   // ── Tab switch ───────────────────────────────────────────────────────
   window.ataSetTab = function(tab) {
     _tab = tab;
-    document.getElementById('ataTabDaily').classList.toggle('active', tab === 'daily');
+    document.getElementById('ataTabDaily').classList.toggle('active',   tab === 'daily');
     document.getElementById('ataTabMonthly').classList.toggle('active', tab === 'monthly');
-    document.getElementById('ataDailyArea').style.display   = tab === 'daily'   ? '' : 'none';
-    document.getElementById('ataMonthlyArea').style.display = tab === 'monthly' ? '' : 'none';
+    document.getElementById('ataTabCompOff').classList.toggle('active', tab === 'compoff');
+    document.getElementById('ataDailyArea').style.display    = tab === 'daily'   ? '' : 'none';
+    document.getElementById('ataMonthlyArea').style.display  = tab === 'monthly' ? '' : 'none';
+    document.getElementById('ataCompOffArea').style.display  = tab === 'compoff' ? '' : 'none';
     if (tab === 'daily')   renderDailyNav(_date);
     if (tab === 'monthly') renderMonthlyNav();
+    if (tab === 'compoff') loadCompOffSummary();
   };
+
+  function loadCompOffSummary() {
+    var area = document.getElementById('ataCompOffArea');
+    area.innerHTML = '<div class="ata-loading"><div class="ata-spinner"></div></div>';
+    fetch('/comp-off/admin-summary', { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+      .then(function(r){ return r.json(); })
+      .then(function(res) {
+        if (!res.success) { area.innerHTML = '<div style="padding:40px;text-align:center;color:var(--adm-muted)">Failed to load</div>'; return; }
+        var rows = (res.data.summary || []).map(function(u) {
+          var lastEarned = u.last_earned
+            ? new Date(u.last_earned + 'T12:00:00').toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' })
+            : '—';
+          var avail = parseInt(u.available);
+          var availColor = avail > 0 ? '#a78bfa' : 'var(--adm-muted)';
+          return '<tr>'
+            + '<td style="padding:10px 14px;font-weight:500">' + u.name + '</td>'
+            + '<td style="padding:10px 14px"><span style="font-size:0.72rem;background:var(--adm-surface-2);padding:2px 8px;border-radius:6px;color:var(--adm-muted)">' + u.role_name.replace('LOCAL_','') + '</span></td>'
+            + '<td style="padding:10px 14px;font-family:var(--adm-mono);font-weight:700;color:'+availColor+';font-size:1rem">' + avail + '</td>'
+            + '<td style="padding:10px 14px;font-family:var(--adm-mono);color:var(--adm-muted)">' + u.used + '</td>'
+            + '<td style="padding:10px 14px;font-family:var(--adm-mono);font-size:0.78rem;color:var(--adm-muted)">' + lastEarned + '</td>'
+            + '</tr>';
+        }).join('');
+        if (!rows) { area.innerHTML = '<div style="padding:40px;text-align:center;color:var(--adm-muted)"><i class="bi bi-gift" style="font-size:2rem;opacity:0.2;display:block;margin-bottom:8px"></i>No comp-off data yet</div>'; return; }
+        area.innerHTML = '<div class="ata-table-wrap"><table class="ata-table">'
+          + '<thead><tr>'
+          + '<th>Team Member</th><th>Role</th>'
+          + '<th><i class="bi bi-gift" style="color:#a78bfa;margin-right:4px"></i>Available</th>'
+          + '<th>Used</th><th>Last Earned</th>'
+          + '</tr></thead><tbody>' + rows + '</tbody></table></div>';
+      }).catch(function() {
+        area.innerHTML = '<div style="padding:40px;text-align:center;color:var(--adm-muted)">Failed to load</div>';
+      });
+  }
 
   // ── Load daily via AJAX ──────────────────────────────────────────────
   window.ataLoadDaily = function(date) {

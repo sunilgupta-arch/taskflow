@@ -1059,33 +1059,36 @@ class AdminHubController {
             }
           }
           calendarData[u.id][d] = st;
-        } else if (dayName === u.weekly_off_day) {
-          calendarData[u.id][d] = 'weekoff';
-        } else if (holidayMap[dateStr]) {
-          calendarData[u.id][d] = 'holiday';
         } else {
-          let onLeave = false;
-          for (const lv of leaveData[0]) {
-            const from = lv.from_date instanceof Date ? lv.from_date.toISOString().split('T')[0] : String(lv.from_date).split('T')[0];
-            const to   = lv.to_date   instanceof Date ? lv.to_date.toISOString().split('T')[0]   : String(lv.to_date).split('T')[0];
-            if (lv.user_id === u.id && dateStr >= from && dateStr <= to) {
-              calendarData[u.id][d] = lv.status === 'approved' ? 'approved_leave' : 'pending_leave';
-              onLeave = true; break;
+          // Override always takes precedence over weekly off, holiday, leave, and absence
+          const ov = overrideMap[`${u.id}-${dateStr}`];
+          if (ov) {
+            calendarData[u.id][d] = ov.status === 'leave' ? 'approved_leave' : ov.status;
+          } else if (dayName === u.weekly_off_day) {
+            calendarData[u.id][d] = 'weekoff';
+          } else if (holidayMap[dateStr]) {
+            calendarData[u.id][d] = 'holiday';
+          } else {
+            let onLeave = false;
+            for (const lv of leaveData[0]) {
+              const from = lv.from_date instanceof Date ? lv.from_date.toISOString().split('T')[0] : String(lv.from_date).split('T')[0];
+              const to   = lv.to_date   instanceof Date ? lv.to_date.toISOString().split('T')[0]   : String(lv.to_date).split('T')[0];
+              if (lv.user_id === u.id && dateStr >= from && dateStr <= to) {
+                calendarData[u.id][d] = lv.status === 'approved' ? 'approved_leave' : 'pending_leave';
+                onLeave = true; break;
+              }
             }
-          }
-          if (!onLeave) {
-            const ov = overrideMap[`${u.id}-${dateStr}`];
-            if (ov) {
-              calendarData[u.id][d] = ov.status === 'leave' ? 'approved_leave' : ov.status;
-            } else if (attendanceSet.has(`${u.id}-${dateStr}`)) {
-              calendarData[u.id][d] = 'present';
-            } else if (dateStr === today && u.shift_start) {
-              const nowObj  = getNow(tz);
-              const nowMins = nowObj.getUTCHours() * 60 + nowObj.getUTCMinutes();
-              const [sh, sm] = u.shift_start.split(':').map(Number);
-              calendarData[u.id][d] = nowMins < sh * 60 + sm ? 'off_shift' : 'absent';
-            } else {
-              calendarData[u.id][d] = 'absent';
+            if (!onLeave) {
+              if (attendanceSet.has(`${u.id}-${dateStr}`)) {
+                calendarData[u.id][d] = 'present';
+              } else if (dateStr === today && u.shift_start) {
+                const nowObj  = getNow(tz);
+                const nowMins = nowObj.getUTCHours() * 60 + nowObj.getUTCMinutes();
+                const [sh, sm] = u.shift_start.split(':').map(Number);
+                calendarData[u.id][d] = nowMins < sh * 60 + sm ? 'off_shift' : 'absent';
+              } else {
+                calendarData[u.id][d] = 'absent';
+              }
             }
           }
         }
@@ -1276,7 +1279,7 @@ class AdminHubController {
                   DATE_FORMAT(login_time,  '%h:%i %p') as loginFormatted,
                   DATE_FORMAT(logout_time, '%h:%i %p') as logoutFormatted,
                   TIMEDIFF(COALESCE(logout_time, NOW()), login_time) as duration,
-                  login_time, logout_time
+                  login_time, logout_time, is_manual, manual_status
            FROM attendance_logs
            WHERE user_id = ? AND date >= ? AND date <= ?
            ORDER BY date DESC, login_time ASC`,
@@ -1342,13 +1345,25 @@ class AdminHubController {
         const isHoliday = holidayMap.has(dateStr);
         const sessions  = logMap[dateStr] || [];
         const log       = sessions[0] || null;
+        const manualEntry = sessions.find(s => s.is_manual && s.manual_status);
         let status = 'absent';
-        if (dateStr > today)                              status = 'future';
-        else if (isOff)                                   status = 'off';
-        else if (isHoliday)                               status = 'holiday';
-        else if (log)                                   { status = 'present'; uniqueDates.add(dateStr); }
-        else if (leaveSet.has(dateStr + '-approved'))   { status = 'leave';   leaveDaysCount++; }
-        else if (leaveSet.has(dateStr + '-pending'))      status = 'pending_leave';
+        if (dateStr > today) {
+          status = 'future';
+        } else if (manualEntry) {
+          // Admin override always wins
+          status = manualEntry.manual_status === 'leave' ? 'leave' : manualEntry.manual_status;
+          if (status === 'present' || (log && !manualEntry)) uniqueDates.add(dateStr);
+        } else if (isOff) {
+          status = 'off';
+        } else if (isHoliday) {
+          status = 'holiday';
+        } else if (log) {
+          status = 'present'; uniqueDates.add(dateStr);
+        } else if (leaveSet.has(dateStr + '-approved')) {
+          status = 'leave'; leaveDaysCount++;
+        } else if (leaveSet.has(dateStr + '-pending')) {
+          status = 'pending_leave';
+        }
         calendarData[d] = { status, dayName, log, sessions, holidayName: isHoliday ? holidayMap.get(dateStr) : null };
       }
 

@@ -2473,6 +2473,131 @@ function handleLogout() {
   attachChatSystemListener();
 })();
 </script>
+<!-- ── Comp-off off-day modal ──────────────────────────────────────── -->
+<div id="coModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.72);z-index:10000;align-items:center;justify-content:center">
+  <div style="background:var(--adm-surface);border:1px solid var(--adm-border-2);border-radius:16px;padding:28px 28px 24px;max-width:400px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.5);animation:scaleIn 0.2s ease">
+    <div style="font-family:var(--adm-mono);font-size:1rem;font-weight:700;color:var(--adm-text);margin-bottom:6px"><i class="bi bi-moon-stars" style="color:#a78bfa;margin-right:8px"></i>Today is your day off</div>
+    <div style="font-size:0.8rem;color:var(--adm-muted);margin-bottom:22px">What brings you in today?</div>
+
+    <!-- Step 1: action choice -->
+    <div id="coStep1">
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <button class="co-choice-btn" onclick="coChoose('check_in')">
+          <i class="bi bi-eye" style="font-size:1.1rem;color:#64748b"></i>
+          <div><div style="font-weight:600;font-size:0.88rem">Just checking in</div><div style="font-size:0.72rem;color:var(--adm-muted)">Activity tracked, no attendance impact</div></div>
+        </button>
+        <button class="co-choice-btn" onclick="coChoose('half_day')">
+          <i class="bi bi-sun-half" style="font-size:1.1rem;color:#f59e0b"></i>
+          <div><div style="font-weight:600;font-size:0.88rem">Working half day</div><div style="font-size:0.72rem;color:var(--adm-muted)">Marked for payroll, half salary applicable</div></div>
+        </button>
+        <button class="co-choice-btn" onclick="coChoose('working')">
+          <i class="bi bi-briefcase-fill" style="font-size:1.1rem;color:#10b981"></i>
+          <div><div style="font-weight:600;font-size:0.88rem">Working full day</div><div style="font-size:0.72rem;color:var(--adm-muted)">Earn 1 comp-off credit to use later</div></div>
+        </button>
+      </div>
+    </div>
+
+    <!-- Step 2: pick comp-off date -->
+    <div id="coStep2" style="display:none">
+      <div style="font-size:0.82rem;color:var(--adm-text-2);margin-bottom:14px">Great! You've earned a comp-off credit.<br>Would you like to apply it to a day this week?</div>
+      <div id="coWeekDays" style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px"></div>
+      <button class="co-choice-btn" onclick="coSubmitWorking(null)" style="border-color:rgba(100,116,139,0.3)">
+        <i class="bi bi-clock-history" style="color:var(--adm-muted)"></i>
+        <div><div style="font-weight:600;font-size:0.88rem">Decide later</div><div style="font-size:0.72rem;color:var(--adm-muted)">Credit saved to your balance</div></div>
+      </button>
+      <button onclick="document.getElementById('coStep2').style.display='none';document.getElementById('coStep1').style.display=''" style="margin-top:10px;background:none;border:none;color:var(--adm-muted);font-size:0.78rem;cursor:pointer;font-family:var(--adm-font)"><i class="bi bi-arrow-left"></i> Back</button>
+    </div>
+  </div>
+</div>
+
+<style>
+.co-choice-btn {
+  display:flex;align-items:center;gap:14px;padding:12px 14px;
+  border-radius:10px;border:1px solid var(--adm-border);background:var(--adm-surface-2);
+  color:var(--adm-text);cursor:pointer;text-align:left;width:100%;
+  font-family:var(--adm-font);transition:border-color 0.15s,background 0.15s;
+}
+.co-choice-btn:hover { border-color:var(--adm-accent);background:rgba(0,212,255,0.04); }
+.co-day-btn {
+  display:flex;align-items:center;justify-content:space-between;padding:10px 14px;
+  border-radius:10px;border:1px solid var(--adm-border);background:var(--adm-surface-2);
+  color:var(--adm-text);cursor:pointer;width:100%;
+  font-family:var(--adm-font);font-size:0.85rem;transition:all 0.15s;
+}
+.co-day-btn:hover { border-color:#10b981;background:rgba(16,185,129,0.07); }
+</style>
+
+<script>
+(function() {
+  <% if (typeof user !== 'undefined' && user && !user.role_name.startsWith('CLIENT_')) { %>
+  var _coSelectedDate = null;
+
+  fetch('/comp-off/check-today', { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+    .then(function(r){ return r.json(); })
+    .then(function(res) {
+      if (res.success && res.data.showModal) {
+        document.getElementById('coModal').style.display = 'flex';
+      }
+    }).catch(function(){});
+
+  window.coChoose = function(action) {
+    if (action === 'working') {
+      document.getElementById('coStep1').style.display = 'none';
+      document.getElementById('coStep2').style.display = '';
+      buildWeekDays();
+    } else {
+      submitAction(action, null);
+    }
+  };
+
+  function buildWeekDays() {
+    var today = new Date();
+    var todayStr = today.toISOString().split('T')[0];
+    var dayOfWeek = today.getDay(); // 0=Sun
+    var startOfWeek = new Date(today);
+    startOfWeek.setDate(today.getDate() - dayOfWeek + 1); // Monday
+    var container = document.getElementById('coWeekDays');
+    container.innerHTML = '';
+    var found = false;
+    for (var i = 0; i < 7; i++) {
+      var d = new Date(startOfWeek);
+      d.setDate(startOfWeek.getDate() + i);
+      var ds = d.toISOString().split('T')[0];
+      if (ds <= todayStr) continue;
+      found = true;
+      var label = d.toLocaleDateString('en-GB', { weekday: 'long', day: '2-digit', month: 'short' });
+      var btn = document.createElement('button');
+      btn.className = 'co-day-btn';
+      btn.innerHTML = '<span>' + label + '</span><i class="bi bi-check-circle" style="color:#10b981;opacity:0.5"></i>';
+      btn.onclick = (function(date){ return function(){ coSubmitWorking(date); }; })(ds);
+      container.appendChild(btn);
+    }
+    if (!found) {
+      container.innerHTML = '<div style="font-size:0.78rem;color:var(--adm-muted);padding:8px 0">No remaining days this week — use \'Decide later\' to apply your credit anytime.</div>';
+    }
+  }
+
+  window.coSubmitWorking = function(date) {
+    submitAction('working', date);
+  };
+
+  function submitAction(action, compOffDate) {
+    var body = { action: action };
+    if (compOffDate) body.comp_off_date = compOffDate;
+    fetch('/comp-off/off-day-action', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+      body: JSON.stringify(body)
+    }).then(function(r){ return r.json(); })
+      .then(function(res) {
+        document.getElementById('coModal').style.display = 'none';
+        if (!res.success) console.warn('Comp-off action failed:', res.message);
+      }).catch(function(){});
+  }
+  <% } %>
+})();
+</script>
+
 <%- script %>
 </body>
 </html>

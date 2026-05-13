@@ -9,6 +9,7 @@ const RewardController = require('../controllers/rewardController');
 const ReportController = require('../controllers/reportController');
 const NoteController = require('../controllers/noteController');
 const LeaveController = require('../controllers/leaveController');
+const CompOffController = require('../controllers/compOffController');
 const BackupController = require('../controllers/backupController');
 const LiveStatusController = require('../controllers/liveStatusController');
 const AnnouncementController = require('../controllers/announcementController');
@@ -64,6 +65,13 @@ router.post('/leaves', authenticate, requireRoles('LOCAL_MANAGER', 'LOCAL_USER')
 router.post('/leaves/grant', authenticate, requireRoles('LOCAL_ADMIN', 'LOCAL_MANAGER'), LeaveController.grant);
 router.patch('/leaves/:id/approve', authenticate, requireRoles('LOCAL_ADMIN', 'LOCAL_MANAGER'), LeaveController.approve);
 router.patch('/leaves/:id/reject', authenticate, requireRoles('LOCAL_ADMIN', 'LOCAL_MANAGER'), LeaveController.reject);
+
+// Comp-off
+router.get('/comp-off/check-today',  authenticate, requireRoles('LOCAL_ADMIN','LOCAL_MANAGER','LOCAL_USER'), CompOffController.checkToday);
+router.post('/comp-off/off-day-action', authenticate, requireRoles('LOCAL_ADMIN','LOCAL_MANAGER','LOCAL_USER'), CompOffController.offDayAction);
+router.post('/comp-off/apply',       authenticate, requireRoles('LOCAL_ADMIN','LOCAL_MANAGER','LOCAL_USER'), CompOffController.applyCompOff);
+router.get('/comp-off/my-balance',   authenticate, requireRoles('LOCAL_ADMIN','LOCAL_MANAGER','LOCAL_USER'), CompOffController.getMyBalance);
+router.get('/comp-off/admin-summary',authenticate, requireRoles('LOCAL_ADMIN','LOCAL_MANAGER'), CompOffController.getAdminSummary);
 
 // ── Urgent Chat (Local team responds to client urgent) ──────
 const UrgentController = require('../portal/controllers/urgentController');
