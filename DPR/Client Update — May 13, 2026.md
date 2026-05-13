@@ -24,8 +24,21 @@ The system is ready and will be connected to specific features as needed. Emails
 
 ---
 
-### 3. Group Channel — @mention and Message Actions Fixed
-In the new admin hub, typing `@` to mention a team member and the message action menu (reply, react, pin, delete) were not working, while the classic interface had them working fine. Both issues have been fixed — the features now work correctly in the new hub as well.
+### 3. Group Channel Drawer — @mention and Reply Fixed (Multiple Attempts)
+
+The Group Channel quick-access panel (the drawer that opens from the top bar) was missing the ability to reply to messages and to type `@` to mention a team member. These were fixed and are now working.
+
+However, this fix required several rounds of investigation and correction, which is worth being transparent about:
+
+**Round 1 — Wrong location fixed:** The first fix was applied to the wrong part of the system (the full channel page instead of the drawer panel). This was committed and deployed without being tested in the browser first, which was a mistake that should not happen. The user had to report back that nothing had changed before this was caught.
+
+**Round 2 — Reply and actions fixed, mention still broken:** Once the correct component (the drawer) was identified, reply and delete actions were added and worked. But the `@` mention popup still did not appear.
+
+**Round 3 — Wrong theory about user data:** The investigation pointed to a database query that was only returning client-type accounts. This was corrected to return all staff members too — but this turned out not to be the actual cause of the popup problem.
+
+**Round 4 — True root cause found:** The drawer slides onto the screen using a CSS animation technique (`transform`). A known but non-obvious browser rule is that this type of animation breaks the way "fixed position" pop-up elements are placed on screen — they get anchored to the drawer panel itself rather than the screen, so they were rendering completely off-screen and invisible. Once the popup was changed to position itself relative to the input box inside the drawer (rather than the full screen), it appeared correctly.
+
+**This issue took longer than it should have** because the popup was technically rendering with no errors — it just appeared in the wrong place. There was nothing in the code to indicate it was broken; it had to be ruled out step by step. The lesson for future work: whenever a pop-up is placed inside a sliding or animated panel, `position:fixed` cannot be used.
 
 ---
 
