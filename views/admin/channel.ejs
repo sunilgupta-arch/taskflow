@@ -113,7 +113,8 @@
 .admchn-file-size { font-size:0.56rem; color:rgba(255,255,255,0.5); font-family:var(--adm-mono,'Space Mono',monospace); }
 
 /* ── Mentions ── */
-.admchn-mention-popup { position:absolute; bottom:calc(100% + 4px); left:1rem; right:1rem; max-height:200px; overflow-y:auto; background:var(--adm-surface,#0e1d30); border:1px solid var(--adm-border,#1a3050); border-radius:10px; padding:3px; box-shadow:0 -4px 14px rgba(0,0,0,0.4); z-index:20; }
+/* position:fixed so overflow:hidden on .admchn-wrap / .adm-content never clips it */
+.admchn-mention-popup { position:fixed; max-height:200px; overflow-y:auto; background:var(--adm-surface,#0e1d30); border:1px solid var(--adm-border,#1a3050); border-radius:10px; padding:3px; box-shadow:0 -4px 14px rgba(0,0,0,0.4); z-index:9999; }
 .admchn-mention-item { padding:5px 8px; cursor:pointer; font-size:0.76rem; border-radius:7px; display:flex; align-items:center; gap:7px; }
 .admchn-mention-item.active,.admchn-mention-item:hover { background:rgba(59,130,246,0.18); }
 .admchn-m-av { width:22px; height:22px; border-radius:50%; background:#3b82f6; color:#fff; font-size:0.6rem; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
@@ -733,6 +734,14 @@
     p.innerHTML=list.map(function(u,i){
       return '<div class="admchn-mention-item'+(i===_mIdx?' active':'')+'" onmousedown="ADMCHN.selectMention('+i+')"><div class="admchn-m-av">'+esc(u.name.charAt(0).toUpperCase())+'</div><div class="admchn-mention-name">'+esc(u.name)+'</div><div class="admchn-mention-role">'+esc((u.role_name||'').replace(/^LOCAL_|^CLIENT_/,''))+'</div></div>';
     }).join('');
+    var inp=document.getElementById('admchnInput');
+    if (inp) {
+      var r=inp.getBoundingClientRect();
+      p.style.left=r.left+'px';
+      p.style.width=r.width+'px';
+      p.style.bottom=(window.innerHeight-r.top+4)+'px';
+      p.style.top='auto';
+    }
     p.style.display='';
   }
   function selectMention(idx) {
@@ -987,6 +996,10 @@
     onSearch: onSearch,
   };
 
-  document.addEventListener('DOMContentLoaded', init);
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
 })();
 </script>
