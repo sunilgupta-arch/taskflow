@@ -1028,6 +1028,41 @@
       border: none; background: #a78bfa; color: #fff; cursor: pointer;
       display: flex; align-items: center; justify-content: center; font-size: 0.85rem;
     }
+    /* ── @Mention popup ── */
+    .adm-gc-mention-popup { position:absolute; bottom:100%; left:0; right:0; max-height:180px; overflow-y:auto; background:var(--adm-surface); border:1px solid var(--adm-border); border-radius:9px; padding:3px; box-shadow:0 -4px 14px rgba(0,0,0,0.5); z-index:200; }
+    .adm-gc-mention-item { display:flex; align-items:center; gap:7px; padding:5px 8px; cursor:pointer; font-size:0.76rem; border-radius:6px; color:var(--adm-text); }
+    .adm-gc-mention-item.active, .adm-gc-mention-item:hover { background:rgba(167,139,250,0.15); }
+    .adm-gc-m-av { width:22px; height:22px; border-radius:50%; background:#a78bfa; color:#fff; font-size:0.6rem; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+    .adm-gc-m-role { font-size:0.6rem; color:var(--adm-muted); }
+    /* ── Mention highlight in messages ── */
+    .adm-gc-mention { background:rgba(167,139,250,0.18); color:#c4b5fd; padding:0 3px; border-radius:3px; font-weight:500; }
+    .adm-gc-mention-me { background:rgba(239,68,68,0.18); color:#fca5a5; }
+    .adm-gc-bubble.sent .adm-gc-mention { background:rgba(255,255,255,0.2); color:#fff; }
+    .adm-gc-bubble.sent .adm-gc-mention-me { background:rgba(252,165,165,0.3); color:#fff; }
+    /* ── Message action button ── */
+    .adm-gc-bubble-wrap { position:relative; max-width:100%; }
+    .adm-gc-menu-btn { position:absolute; top:2px; right:-6px; width:20px; height:20px; border-radius:50%; background:rgba(0,0,0,0.55); color:#fff; border:none; cursor:pointer; padding:0; display:flex; align-items:center; justify-content:center; font-size:0.6rem; opacity:0; pointer-events:none; transition:opacity 0.15s; z-index:5; }
+    .adm-gc-bubble-wrap:hover .adm-gc-menu-btn, .adm-gc-menu-btn.active { opacity:1; pointer-events:auto; }
+    .adm-gc-bubble.sent .adm-gc-menu-btn { background:rgba(0,0,0,0.3); }
+    /* ── Action menu ── */
+    .adm-gc-menu { position:fixed; background:var(--adm-surface-2); border:1px solid var(--adm-border); border-radius:9px; box-shadow:0 6px 20px rgba(0,0,0,0.5); z-index:2000; min-width:130px; overflow:hidden; }
+    .adm-gc-menu-item { display:flex; align-items:center; gap:8px; padding:8px 13px; font-size:0.78rem; cursor:pointer; color:var(--adm-text); background:none; border:none; width:100%; text-align:left; font-family:inherit; }
+    .adm-gc-menu-item:hover { background:rgba(255,255,255,0.07); }
+    .adm-gc-menu-item.danger { color:#f87171; }
+    .adm-gc-menu-item.danger:hover { background:rgba(248,113,113,0.1); }
+    /* ── Reply bar ── */
+    .adm-gc-reply-bar { display:flex; align-items:center; gap:7px; padding:5px 10px; background:rgba(167,139,250,0.07); border-top:1px solid rgba(167,139,250,0.2); border-left:3px solid #a78bfa; font-size:0.73rem; flex-shrink:0; }
+    .adm-gc-reply-sender { font-weight:600; color:#a78bfa; margin-right:3px; }
+    .adm-gc-reply-text { flex:1; color:var(--adm-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .adm-gc-reply-close { background:none; border:none; color:var(--adm-muted); cursor:pointer; font-size:0.78rem; padding:2px; border-radius:4px; }
+    .adm-gc-reply-close:hover { color:#ef4444; }
+    /* ── Quote in messages ── */
+    .adm-gc-quote { border-left:3px solid rgba(167,139,250,0.5); background:rgba(255,255,255,0.05); padding:3px 7px; margin-bottom:4px; border-radius:4px; font-size:0.7rem; }
+    .adm-gc-bubble.sent .adm-gc-quote { background:rgba(0,0,0,0.15); border-left-color:rgba(255,255,255,0.4); }
+    .adm-gc-quote-sender { font-weight:600; color:#a78bfa; font-size:0.65rem; }
+    .adm-gc-bubble.sent .adm-gc-quote-sender { color:rgba(255,255,255,0.85); }
+    .adm-gc-quote-text { color:var(--adm-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .adm-gc-bubble.sent .adm-gc-quote-text { color:rgba(255,255,255,0.65); }
   </style>
 </head>
 <body>
@@ -1270,10 +1305,19 @@
   <div class="adm-gc-messages" id="admGcMessages">
     <div style="text-align:center;color:var(--adm-muted);padding:24px;font-size:0.82rem">Loading…</div>
   </div>
-  <div class="adm-gc-input-area">
+  <div class="adm-gc-reply-bar" id="admGcReplyBar" style="display:none">
+    <i class="bi bi-reply-fill" style="color:#a78bfa;flex-shrink:0"></i>
+    <div class="adm-gc-reply-text">
+      <span class="adm-gc-reply-sender" id="admGcReplySender"></span>
+      <span id="admGcReplyPreview"></span>
+    </div>
+    <button class="adm-gc-reply-close" onclick="admGcCancelReply()"><i class="bi bi-x-lg"></i></button>
+  </div>
+  <div class="adm-gc-input-area" style="position:relative">
+    <div id="admGcMentionPopup" style="display:none"></div>
     <input type="file" id="admGcFile" style="display:none" onchange="admGcSendFile()">
     <div class="adm-gc-input-row">
-      <textarea class="adm-gc-textarea" id="admGcInput" placeholder="Message the team…" rows="2"></textarea>
+      <textarea class="adm-gc-textarea" id="admGcInput" placeholder="Message the team… use @ to mention" rows="2"></textarea>
       <div class="adm-gc-input-btns">
         <button class="adm-gc-icon-btn" onclick="document.getElementById('admGcFile').click()" title="Attach"><i class="bi bi-paperclip"></i></button>
         <button class="adm-gc-send-btn" onclick="admGcSend()"><i class="bi bi-send"></i></button>
@@ -1561,6 +1605,41 @@
     return '<a class="adm-gc-file" href="'+viewUrl+'" target="_blank"><i class="bi '+ic+'" style="font-size:1.4rem"></i><span>'+admEsc(fn)+'</span></a>';
   }
 
+  var _gcMyName = '<%- typeof user !== "undefined" ? user.name.replace(/\x27/g,"\\x27") : "" %>';
+  var _gcReplyingTo = null;
+  var _gcMActive = false, _gcMQuery = '', _gcMIdx = 0, _gcMStart = -1;
+
+  function admGcEsc(s) { var d=document.createElement('div'); d.textContent=s||''; return d.innerHTML; }
+
+  function admGcRenderWithMentions(text) {
+    var html = admGcEsc(text);
+    return html.replace(/@\[([^\]]+)\]/g, function(_, name) {
+      var cls = name === _gcMyName ? 'adm-gc-mention adm-gc-mention-me' : 'adm-gc-mention';
+      return '<span class="'+cls+'">@'+admGcEsc(name)+'</span>';
+    });
+  }
+
+  function _gcBuildBubble(m) {
+    var sent = m.sender_id === admGcUserId;
+    var cls  = sent ? 'sent' : 'received';
+    var t    = new Date(m.created_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+    var content = m.is_deleted ? '<em>This message was deleted</em>'
+      : (m.type==='file' && m.attachment ? admGcRenderFile(m.attachment, m.id)
+        : admGcRenderWithMentions(m.content||''));
+    var sender = !sent ? '<div class="adm-gc-sender">'+admGcEsc(m.sender_name||'')+'</div>' : '';
+    var menuBtn = m.is_deleted ? '' : '<button class="adm-gc-menu-btn" onclick="event.stopPropagation();_gcShowMenu(event,'+m.id+')" title="Actions"><i class="bi bi-chevron-down"></i></button>';
+    var quote = '';
+    if (m.reply_to_id && m.reply_to_sender) {
+      var qText = m.reply_to_type==='file' ? '📎 attachment' : admGcEsc((m.reply_to_content||'').substring(0,80));
+      quote = '<div class="adm-gc-quote"><div class="adm-gc-quote-sender">'+admGcEsc(m.reply_to_sender)+'</div><div class="adm-gc-quote-text">'+qText+'</div></div>';
+    }
+    return '<div class="adm-gc-bubble '+cls+(m.is_deleted?' deleted':'')+'" data-gc-mid="'+m.id+'">'
+      +sender
+      +'<div class="adm-gc-bubble-wrap">'+menuBtn+'<div class="adm-gc-content">'+quote+content+'</div></div>'
+      +'<div class="adm-gc-footer"><span class="adm-gc-time">'+t+'</span></div>'
+      +'</div>';
+  }
+
   function admGcRenderMessages(messages) {
     var box = document.getElementById('admGcMessages');
     if (!messages.length) {
@@ -1569,49 +1648,132 @@
     }
     var html = '', lastDate = '';
     messages.forEach(function(m) {
-      var sent = m.sender_id === admGcUserId;
-      var cls  = sent ? 'sent' : 'received';
-      var t    = new Date(m.created_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
-      var dl   = new Date(m.created_at).toLocaleDateString([],{month:'short',day:'numeric'});
+      var dl = new Date(m.created_at).toLocaleDateString([],{month:'short',day:'numeric'});
       if (dl !== lastDate) { html += '<div class="adm-gc-date-div"><span>'+dl+'</span></div>'; lastDate = dl; }
-      var content = m.is_deleted ? '<em>This message was deleted</em>'
-        : (m.type==='file' && m.attachment ? admGcRenderFile(m.attachment, m.id)
-          : (function(){ var d=document.createElement('div'); d.textContent=m.content||''; return d.innerHTML; })());
-      var sender = !sent ? '<div class="adm-gc-sender">'+admEsc(m.sender_name||'')+'</div>' : '';
-      html += '<div class="adm-gc-bubble '+cls+(m.is_deleted?' deleted':'')+'" data-gc-mid="'+m.id+'">'
-        +sender+'<div class="adm-gc-content">'+content+'</div>'
-        +'<div class="adm-gc-footer"><span class="adm-gc-time">'+t+'</span></div></div>';
+      html += _gcBuildBubble(m);
     });
     box.innerHTML = html;
     box.scrollTop = box.scrollHeight;
   }
 
   function admGcAppend(m) {
-    var box  = document.getElementById('admGcMessages');
+    var box = document.getElementById('admGcMessages');
     if (box.querySelector('[data-gc-mid="'+m.id+'"]')) return;
-    var sent = m.sender_id === admGcUserId;
-    var cls  = sent ? 'sent' : 'received';
-    var t    = new Date(m.created_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
-    var content = m.type==='file' && m.attachment ? admGcRenderFile(m.attachment, m.id)
-      : (function(){ var d=document.createElement('div'); d.textContent=m.content||''; return d.innerHTML; })();
-    var sender = !sent ? '<div class="adm-gc-sender">'+admEsc(m.sender_name||'')+'</div>' : '';
-    var el = document.createElement('div');
-    el.className = 'adm-gc-bubble '+cls;
-    el.setAttribute('data-gc-mid', m.id);
-    el.innerHTML = sender+'<div class="adm-gc-content">'+content+'</div>'
-      +'<div class="adm-gc-footer"><span class="adm-gc-time">'+t+'</span></div>';
     var placeholder = box.querySelector('div[style*="No messages"]');
     if (placeholder) box.innerHTML = '';
-    box.appendChild(el);
+    box.insertAdjacentHTML('beforeend', _gcBuildBubble(m));
     box.scrollTop = box.scrollHeight;
   }
+
+  function _gcShowMenu(evt, msgId) {
+    var existing = document.getElementById('_admGcMenu');
+    if (existing) { existing.remove(); var ob=document.querySelector('.adm-gc-menu-btn.active'); if(ob) ob.classList.remove('active'); return; }
+    var bubble = document.querySelector('[data-gc-mid="'+msgId+'"]'); if (!bubble) return;
+    var sent = bubble.classList.contains('sent');
+    var items = [];
+    items.push({ icon:'bi-reply-fill', label:'Reply', fn:function(){ _gcSetReply(msgId, bubble); } });
+    if (sent) items.push({ icon:'bi-trash', label:'Delete', danger:true, fn:function(){ _gcDeleteMsg(msgId); } });
+    if (!items.length) return;
+    var trigBtn = evt.currentTarget; trigBtn.classList.add('active');
+    var menu = document.createElement('div'); menu.id = '_admGcMenu'; menu.className = 'adm-gc-menu';
+    items.forEach(function(item) {
+      var el = document.createElement('button');
+      el.className = 'adm-gc-menu-item' + (item.danger ? ' danger' : '');
+      el.innerHTML = '<i class="bi '+item.icon+'"></i>'+item.label;
+      el.addEventListener('click', function(e) {
+        e.stopPropagation();
+        menu.remove(); trigBtn.classList.remove('active');
+        item.fn();
+      });
+      menu.appendChild(el);
+    });
+    document.body.appendChild(menu);
+    var br = trigBtn.getBoundingClientRect(), mh = menu.offsetHeight, mw = menu.offsetWidth;
+    var top = br.bottom + 4; if (top + mh > window.innerHeight - 8) top = br.top - mh - 4;
+    var left = br.right - mw; if (left < 8) left = br.left;
+    menu.style.top = top+'px'; menu.style.left = left+'px';
+    setTimeout(function() {
+      document.addEventListener('click', function _close(e) { if (!menu.contains(e.target)) { menu.remove(); trigBtn.classList.remove('active'); document.removeEventListener('click',_close); } });
+    }, 10);
+  }
+
+  function _gcSetReply(msgId, bubble) {
+    var senderEl = bubble.querySelector('.adm-gc-sender');
+    var sender = senderEl ? senderEl.textContent : 'You';
+    var contentEl = bubble.querySelector('.adm-gc-content');
+    var preview = contentEl ? (contentEl.textContent||'').substring(0,60) : '';
+    _gcReplyingTo = { id: msgId, sender: sender, preview: preview };
+    document.getElementById('admGcReplySender').textContent = sender;
+    document.getElementById('admGcReplyPreview').textContent = preview;
+    document.getElementById('admGcReplyBar').style.display = '';
+    document.getElementById('admGcInput').focus();
+  }
+
+  window.admGcCancelReply = function() {
+    _gcReplyingTo = null;
+    document.getElementById('admGcReplyBar').style.display = 'none';
+  };
+
+  function _gcDeleteMsg(msgId) {
+    if (!confirm('Delete this message?')) return;
+    fetch('/channel/messages/'+msgId, {method:'DELETE'})
+      .then(function(r){ return r.json(); })
+      .then(function(res) {
+        if (!res.success) return;
+        var b = document.querySelector('[data-gc-mid="'+msgId+'"]'); if (!b) return;
+        b.classList.add('deleted');
+        var c = b.querySelector('.adm-gc-content'); if (c) c.innerHTML = '<em>This message was deleted</em>';
+        var mb = b.querySelector('.adm-gc-menu-btn'); if (mb) mb.remove();
+      }).catch(function(){});
+  }
+
+  /* ── @Mention ── */
+  function _gcMentionCandidates() {
+    var all = Object.values(_gcOnlineUsers).filter(function(u){ return u.id !== admGcUserId; });
+    var q = _gcMQuery.toLowerCase();
+    return all.filter(function(u){ return u.name.toLowerCase().indexOf(q) !== -1; }).slice(0,8);
+  }
+
+  function _gcHideMention() {
+    _gcMActive = false; _gcMStart = -1; _gcMQuery = '';
+    var p = document.getElementById('admGcMentionPopup'); if (p) p.style.display = 'none';
+  }
+
+  function _gcRenderMentionPopup() {
+    var p = document.getElementById('admGcMentionPopup'); if (!p) return;
+    var list = _gcMentionCandidates();
+    if (!list.length) { _gcHideMention(); return; }
+    if (_gcMIdx >= list.length) _gcMIdx = 0;
+    p.className = 'adm-gc-mention-popup';
+    p.innerHTML = list.map(function(u, i) {
+      return '<div class="adm-gc-mention-item'+(i===_gcMIdx?' active':'')+'" onmousedown="_gcSelectMention('+i+')">'
+        +'<div class="adm-gc-m-av">'+admGcEsc(u.name.charAt(0).toUpperCase())+'</div>'
+        +'<div style="flex:1;min-width:0"><div style="font-size:0.78rem">'+admGcEsc(u.name)+'</div>'
+        +'<div class="adm-gc-m-role">'+admGcEsc((u.role_name||'').replace(/^LOCAL_|^CLIENT_/,''))+'</div></div>'
+        +'</div>';
+    }).join('');
+    p.style.display = '';
+  }
+
+  window._gcSelectMention = function(idx) {
+    var list = _gcMentionCandidates(); if (!list[idx]) return;
+    var inp = document.getElementById('admGcInput'); if (!inp) return;
+    var v = inp.value, caret = inp.selectionStart;
+    var before = v.substring(0, _gcMStart), after = v.substring(caret);
+    var insert = '@['+list[idx].name+'] ';
+    inp.value = before + insert + after;
+    var nc = before.length + insert.length; inp.setSelectionRange(nc, nc); inp.focus();
+    _gcHideMention();
+  };
 
   window.admGcSend = function() {
     var inp = document.getElementById('admGcInput');
     var txt = inp ? inp.value.trim() : '';
     if (!txt) return;
-    inp.value = '';
-    fetch('/channel/messages', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({content:txt})})
+    inp.value = ''; inp.style.height = '';
+    var body = { content: txt };
+    if (_gcReplyingTo) { body.reply_to_id = _gcReplyingTo.id; admGcCancelReply(); }
+    fetch('/channel/messages', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)})
       .then(function(r){ return r.json(); })
       .then(function(d){ if(d.success&&d.data&&d.data.message) admGcAppend(d.data.message); })
       .catch(function(){});
@@ -1622,13 +1784,34 @@
     if (!f) return;
     if (f.size > 5*1024*1024) { alert('File too large. Max 5 MB.'); return; }
     var fd = new FormData(); fd.append('file', f);
+    if (_gcReplyingTo) { fd.append('reply_to_id', _gcReplyingTo.id); admGcCancelReply(); }
     fetch('/channel/file', {method:'POST', body:fd}).catch(function(){});
     document.getElementById('admGcFile').value = '';
   };
 
   document.getElementById('admGcInput').addEventListener('keydown', function(e) {
+    if (_gcMActive) {
+      var list = _gcMentionCandidates();
+      if (e.key==='ArrowDown') { e.preventDefault(); _gcMIdx=(_gcMIdx+1)%list.length; _gcRenderMentionPopup(); return; }
+      if (e.key==='ArrowUp')   { e.preventDefault(); _gcMIdx=(_gcMIdx-1+list.length)%list.length; _gcRenderMentionPopup(); return; }
+      if (e.key==='Enter'||e.key==='Tab') { e.preventDefault(); _gcSelectMention(_gcMIdx); return; }
+      if (e.key==='Escape')    { e.preventDefault(); _gcHideMention(); return; }
+    }
     if (e.key==='Enter' && !e.shiftKey) { e.preventDefault(); admGcSend(); }
   });
+  document.getElementById('admGcInput').addEventListener('input', function() {
+    this.style.height = 'auto'; this.style.height = Math.min(this.scrollHeight, 110) + 'px';
+    var val = this.value, caret = this.selectionStart, at = -1;
+    for (var i = caret-1; i >= 0; i--) {
+      var c = val.charAt(i);
+      if (c==='@') { at=i; break; }
+      if (/\s/.test(c)||c==='['||c===']') break;
+    }
+    if (at === -1 || (at > 0 && !/\s/.test(val.charAt(at-1)))) { _gcHideMention(); return; }
+    _gcMActive = true; _gcMStart = at; _gcMQuery = val.substring(at+1, caret); _gcMIdx = 0;
+    _gcRenderMentionPopup();
+  });
+  document.getElementById('admGcInput').addEventListener('blur', function() { setTimeout(_gcHideMention, 150); });
 
   // ── Continuous queue bell + tab title blink ─────────────
   var _admBellCtx        = null;

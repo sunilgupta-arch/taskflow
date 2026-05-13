@@ -247,13 +247,12 @@ class GroupChannelController {
   static async getUsers(req, res) {
     try {
       const db = require('../config/db');
-      // Only portal (CLIENT_*) users, excluding CLIENT_SALES
+      // All active users who participate in the channel (LOCAL_* + CLIENT_*, excluding CLIENT_SALES)
       const [users] = await db.query(
         `SELECT u.id, u.name, r.name AS role_name
          FROM users u
          JOIN roles r ON u.role_id = r.id
          WHERE u.is_active = 1
-           AND r.name LIKE 'CLIENT_%'
            AND r.name != 'CLIENT_SALES'
          ORDER BY u.name`
       );
