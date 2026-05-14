@@ -80,7 +80,30 @@ The report is skipped in the development environment — it only runs on the liv
 
 ---
 
-### 8. Queue — Client Online Status Indicator
+### 8. Queue — Cleaner Top Bar Layout
+
+The top section of the local queue has been reorganised into two rows so it no longer feels cluttered as more buttons were added.
+
+- **Top row**: Date navigation on the left; Test Sound, Monthly Report, and the back button on the right.
+- **Second row**: The status filter cards (Total, Open, In Progress, Done, etc.) sit on their own line, giving them more breathing room.
+
+---
+
+### 9. Queue — Monthly Requests Report (On-Demand)
+
+Local admins and managers can now generate and receive a **monthly client requests report** directly from the queue page.
+
+A **Monthly Report** button sits in the top bar of the queue. Clicking it opens a small panel where you select a month — the list only shows months that have actual request data in the system, so there are no empty options. After selecting a month and clicking Send, the report is emailed directly to the signed-in admin's email address.
+
+The report email includes:
+- A summary row with counts for: Total, Done, In Progress, Open, Missed, Approved, Rejected, and Rescheduled
+- A full request table listing every request for that month with its date, title, who created it, current status, priority, who handled it, and the latest comment
+
+This works for the current month as well as any previous month on record.
+
+---
+
+### 9. Queue — Client Online Status Indicator
 
 The local request queue now shows a small **green dot** next to the name of the client who created a request, when that client is currently active on the portal.
 

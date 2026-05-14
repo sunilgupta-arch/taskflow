@@ -154,6 +154,39 @@ class ClientQueueController {
     return ApiResponse.success(res, { online: getOnlineClientIds() });
   }
 
+  static async getAvailableMonths(req, res) {
+    try {
+      const months = await ClientRequest.getAvailableMonths();
+      return ApiResponse.success(res, { months });
+    } catch (err) {
+      return ApiResponse.error(res, 'Failed to load months');
+    }
+  }
+
+  static async sendMonthlyReport(req, res) {
+    try {
+      const { year_month } = req.body;
+      if (!year_month || !/^\d{4}-\d{2}$/.test(year_month)) {
+        return ApiResponse.error(res, 'Invalid month format', 400);
+      }
+      if (!req.user.email) {
+        return ApiResponse.error(res, 'Your account has no email address configured', 400);
+      }
+      const { stats, requests } = await ClientRequest.getMonthlyReport(year_month);
+      if (!stats.total && !stats.cancelled && !stats.rescheduled && !requests.length) {
+        return ApiResponse.error(res, 'No data found for the selected month', 404);
+      }
+      await EmailService.send({
+        to: req.user.email,
+        templateName: 'monthlyRequestsReport',
+        templateData: { yearMonth: year_month, stats, requests }
+      });
+      return ApiResponse.success(res, null, `Monthly report sent to ${req.user.email}`);
+    } catch (err) {
+      return ApiResponse.error(res, 'Failed to send report');
+    }
+  }
+
   static async getDetail(req, res) {
     try {
       const instanceId = parseInt(req.params.id);

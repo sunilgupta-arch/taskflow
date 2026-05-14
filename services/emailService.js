@@ -257,6 +257,87 @@ const templates = {
     return { subject, html, text };
   },
 
+  monthlyRequestsReport({ yearMonth, stats, requests }) {
+    const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    const [y, m] = yearMonth.split('-');
+    const monthLabel = `${monthNames[parseInt(m) - 1]} ${y}`;
+    const subject = `Monthly Requests Report — ${monthLabel}`;
+
+    const card = (label, count, color) =>
+      `<td style="text-align:center;padding:14px 6px;background:${color}18;border-radius:8px">
+        <div style="font-size:24px;font-weight:700;color:${color}">${count}</div>
+        <div style="font-size:10px;color:#666;margin-top:4px;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap">${label}</div>
+      </td>
+      <td style="width:6px"></td>`;
+
+    const statusStyle = s => {
+      const map = { open:'#f97316', picked:'#3b82f6', done:'#10b981', missed:'#ef4444', rescheduled:'#8b5cf6', approved:'#10b981', rejected:'#f43f5e', cancelled:'#4b5563' };
+      return `display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:600;background:${(map[s]||'#888')}20;color:${map[s]||'#888'};text-transform:uppercase;letter-spacing:.4px`;
+    };
+    const statusLabel = s => ({ open:'Open', picked:'In Progress', done:'Done', missed:'Missed', rescheduled:'Rescheduled', approved:'Approved', rejected:'Rejected', cancelled:'Cancelled' }[s] || s);
+    const priorityColor = p => ({ high:'#f97316', urgent:'#ef4444' }[p] || '#888');
+    const fmtDate = d => { if (!d) return '—'; const p = String(d).split('T')[0].split('-'), mn = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']; return `${mn[parseInt(p[1])-1]} ${parseInt(p[2])}`; };
+
+    const rows = (requests || []).map((r, i) =>
+      `<tr style="border-bottom:1px solid #f0f0f0">
+        <td style="padding:9px 8px;text-align:center;color:#999;font-size:11px">${i + 1}</td>
+        <td style="padding:9px 8px;font-size:12px;color:#555;white-space:nowrap">${fmtDate(r.instance_date)}</td>
+        <td style="padding:9px 8px">
+          <div style="font-weight:600;font-size:13px;color:#1a1a2e">${r.title || '—'}</div>
+          ${r.description ? `<div style="font-size:11px;color:#888;margin-top:2px">${r.description.substring(0, 70)}${r.description.length > 70 ? '…' : ''}</div>` : ''}
+        </td>
+        <td style="padding:9px 8px;font-size:12px;color:#555;white-space:nowrap">${r.created_by_name || '—'}</td>
+        <td style="padding:9px 8px"><span style="${statusStyle(r.status)}">${statusLabel(r.status)}</span></td>
+        <td style="padding:9px 8px;font-size:12px;white-space:nowrap"><span style="color:${priorityColor(r.priority)};font-weight:600">${(r.priority||'normal').charAt(0).toUpperCase()+(r.priority||'normal').slice(1)}</span></td>
+        <td style="padding:9px 8px;font-size:12px;color:#555">${r.picked_by_name || '—'}</td>
+        <td style="padding:9px 8px;font-size:11px;color:#777;max-width:160px">${r.latest_comment ? r.latest_comment.substring(0, 70) + (r.latest_comment.length > 70 ? '…' : '') : '—'}</td>
+      </tr>`
+    ).join('');
+
+    const html = wrapHtmlFull(subject, `
+      <p style="margin:0 0 20px;color:#333">Monthly client requests summary for <strong>${monthLabel}</strong>.</p>
+
+      <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:separate;margin-bottom:10px">
+        <tr>
+          ${card('Total', stats.total || 0, '#1a1a2e')}
+          ${card('Done', stats.done || 0, '#10b981')}
+          ${card('In Progress', stats.picked || 0, '#3b82f6')}
+          ${card('Open', stats.open || 0, '#f97316')}
+        </tr>
+      </table>
+      <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:separate;margin-bottom:28px">
+        <tr>
+          ${card('Missed', stats.missed || 0, '#ef4444')}
+          ${card('Approved', stats.approved || 0, '#10b981')}
+          ${card('Rejected', stats.rejected || 0, '#f43f5e')}
+          ${card('Rescheduled', stats.rescheduled || 0, '#8b5cf6')}
+        </tr>
+      </table>
+
+      ${requests && requests.length > 0 ? `
+      <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;font-size:13px">
+        <thead>
+          <tr style="background:#f5f5f8">
+            <th style="padding:8px;text-align:center;font-size:11px;color:#888;font-weight:600;width:28px">#</th>
+            <th style="padding:8px;text-align:left;font-size:11px;color:#888;font-weight:600;white-space:nowrap">Date</th>
+            <th style="padding:8px;text-align:left;font-size:11px;color:#888;font-weight:600">Request</th>
+            <th style="padding:8px;text-align:left;font-size:11px;color:#888;font-weight:600">Created By</th>
+            <th style="padding:8px;text-align:left;font-size:11px;color:#888;font-weight:600">Status</th>
+            <th style="padding:8px;text-align:left;font-size:11px;color:#888;font-weight:600">Priority</th>
+            <th style="padding:8px;text-align:left;font-size:11px;color:#888;font-weight:600">Handled By</th>
+            <th style="padding:8px;text-align:left;font-size:11px;color:#888;font-weight:600">Latest Comment</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>` : '<p style="color:#999;text-align:center;padding:20px 0">No requests were recorded for this month.</p>'}
+    `);
+
+    const text = `Monthly Requests Report — ${monthLabel}\n\nTotal: ${stats.total||0} | Done: ${stats.done||0} | In Progress: ${stats.picked||0} | Open: ${stats.open||0} | Missed: ${stats.missed||0} | Approved: ${stats.approved||0} | Rejected: ${stats.rejected||0} | Rescheduled: ${stats.rescheduled||0}\n\n`
+      + (requests||[]).map((r,i) => `${i+1}. [${(r.status||'').toUpperCase()}] ${fmtDate(r.instance_date)} — ${r.title} (${r.picked_by_name||'unassigned'})`).join('\n');
+
+    return { subject, html, text };
+  },
+
   requestRescheduled({ creatorName, requestTitle, newDate, rescheduledBy, reason }) {
     const subject = `Your request has been rescheduled: ${requestTitle}`;
     const html = wrapHtml(subject, `

@@ -334,18 +334,20 @@
 }
 </style>
 
-<!-- Top bar: date nav + stats + back -->
-<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px">
+<!-- Row 1: date nav + action buttons -->
+<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:8px">
   <div class="admq-date-nav">
     <button class="admq-nav-btn" id="admqPrev"><i class="bi bi-chevron-left"></i></button>
     <input type="date" class="admq-date-input" id="admqDatePicker" value="<%= selectedDate %>">
     <button class="admq-nav-btn" id="admqToday"><i class="bi bi-calendar-check"></i> Today</button>
     <button class="admq-nav-btn" id="admqNext"><i class="bi bi-chevron-right"></i></button>
   </div>
-  <div style="display:flex;align-items:center;gap:10px">
-    <div class="admq-stats" id="admqStats"></div>
+  <div style="display:flex;align-items:center;gap:8px">
     <button id="admqTestSoundBtn" class="admq-nav-btn" title="Test notification sound" onclick="admqTestSound()" style="color:var(--adm-muted);border-style:dashed">
       <i class="bi bi-volume-up"></i> Test Sound
+    </button>
+    <button class="admq-nav-btn" onclick="admqOpenMonthlyReport()" title="Send monthly report to your email" style="color:#8b5cf6;border-color:rgba(139,92,246,0.35)">
+      <i class="bi bi-file-earmark-bar-graph"></i> Monthly Report
     </button>
     <% if (user.role_name === 'LOCAL_USER') { %>
     <a href="/admin" class="adm-back-btn"><i class="bi bi-arrow-left"></i> Dashboard</a>
@@ -353,6 +355,11 @@
     <a href="/admin/work" class="adm-back-btn"><i class="bi bi-arrow-left"></i> Work</a>
     <% } %>
   </div>
+</div>
+
+<!-- Row 2: stat cards -->
+<div style="margin-bottom:12px">
+  <div class="admq-stats" id="admqStats"></div>
 </div>
 
 <!-- Table -->
@@ -410,6 +417,24 @@
   </div>
 </div>
 
+<div id="admqMonthlyReportModal" class="admq-modal-backdrop" style="display:none">
+  <div class="admq-modal">
+    <div class="admq-modal-title"><i class="bi bi-file-earmark-bar-graph"></i> Monthly Requests Report</div>
+    <div class="admq-modal-sub">Select a month to generate and send the report to your email address.</div>
+    <label style="font-size:0.78rem;color:var(--adm-text-2);margin-bottom:6px;display:block">Month</label>
+    <select class="admq-modal-textarea" id="admqMonthSelect" style="padding:8px 12px;cursor:pointer">
+      <option value="">Loading months…</option>
+    </select>
+    <div id="admqMonthlyStatus" style="margin-top:10px;font-size:0.78rem;min-height:18px"></div>
+    <div class="admq-modal-footer">
+      <button class="admq-modal-cancel" onclick="admqCloseMonthlyReport()">Cancel</button>
+      <button class="admq-modal-confirm" id="admqMonthlyReportBtn" onclick="admqConfirmMonthlyReport()" style="background:#8b5cf6">
+        <i class="bi bi-send"></i> Send Report
+      </button>
+    </div>
+  </div>
+</div>
+
 <div id="admqRescheduleModal" class="admq-modal-backdrop" style="display:none">
   <div class="admq-modal">
     <div class="admq-modal-title"><i class="bi bi-calendar-plus"></i> Reschedule Request</div>
@@ -432,7 +457,7 @@
 <script>
 (function () {
   // ── Teleport fixed elements to <body> to escape overflow containers ──
-  ['admqOverlay','admqDrawer','admqReleaseModal','admqCommentModal','admqRescheduleModal'].forEach(function(id) {
+  ['admqOverlay','admqDrawer','admqReleaseModal','admqCommentModal','admqRescheduleModal','admqMonthlyReportModal'].forEach(function(id) {
     var el = document.getElementById(id);
     if (el) document.body.appendChild(el);
   });
@@ -945,6 +970,61 @@
       .then(function(r){return r.json();}).then(function(res){
         if (res.success) admqOpenDetail(id); else alert(res.message||'Upload failed');
       }).finally(function(){ if(inp) inp.value=''; });
+  };
+
+  // ── Monthly Report modal ─────────────────────────────────────────────
+  var _monthlyMonthsLoaded = false;
+  window.admqOpenMonthlyReport = function() {
+    document.getElementById('admqMonthlyStatus').textContent = '';
+    document.getElementById('admqMonthlyReportBtn').disabled = false;
+    document.getElementById('admqMonthlyReportModal').style.display = 'flex';
+    if (_monthlyMonthsLoaded) return;
+    var sel = document.getElementById('admqMonthSelect');
+    sel.innerHTML = '<option value="">Loading…</option>';
+    fetch('/queue/available-months').then(function(r){ return r.json(); }).then(function(res) {
+      _monthlyMonthsLoaded = true;
+      var months = (res.data && res.data.months) || [];
+      if (!months.length) {
+        sel.innerHTML = '<option value="">No data available</option>';
+        return;
+      }
+      sel.innerHTML = months.map(function(m) {
+        return '<option value="'+m.value+'">'+m.label+'</option>';
+      }).join('');
+    }).catch(function() {
+      sel.innerHTML = '<option value="">Failed to load</option>';
+    });
+  };
+  window.admqCloseMonthlyReport = function() {
+    document.getElementById('admqMonthlyReportModal').style.display = 'none';
+  };
+  window.admqConfirmMonthlyReport = function() {
+    var yearMonth = document.getElementById('admqMonthSelect').value;
+    if (!yearMonth) return;
+    var btn = document.getElementById('admqMonthlyReportBtn');
+    var status = document.getElementById('admqMonthlyStatus');
+    btn.disabled = true;
+    status.style.color = 'var(--adm-muted)';
+    status.textContent = 'Sending…';
+    fetch('/queue/monthly-report', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ year_month: yearMonth })
+    }).then(function(r){ return r.json(); }).then(function(res) {
+      if (res.success) {
+        status.style.color = '#10b981';
+        status.textContent = res.message || 'Report sent successfully.';
+        setTimeout(function() { admqCloseMonthlyReport(); }, 2200);
+      } else {
+        status.style.color = '#ef4444';
+        status.textContent = res.message || 'Failed to send report.';
+        btn.disabled = false;
+      }
+    }).catch(function() {
+      status.style.color = '#ef4444';
+      status.textContent = 'Network error. Please try again.';
+      btn.disabled = false;
+    });
   };
 
   window.admqIsQueuePage = true;

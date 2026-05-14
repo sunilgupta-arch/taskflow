@@ -227,6 +227,8 @@ router.get('/queue', authenticate, ClientQueueController.index);
 router.get('/queue/data', authenticate, ClientQueueController.getQueue);
 router.get('/queue/badge', authenticate, ClientQueueController.getBadgeCount);
 router.get('/queue/client-online', authenticate, ClientQueueController.getOnlineClients);
+router.get('/queue/available-months', authenticate, ClientQueueController.getAvailableMonths);
+router.post('/queue/monthly-report', authenticate, requireRoles('LOCAL_ADMIN', 'LOCAL_MANAGER'), ClientQueueController.sendMonthlyReport);
 router.post('/queue/:id/pick', authenticate, ClientQueueController.pick);
 router.post('/queue/:id/release', authenticate, ClientQueueController.release);
 router.post('/queue/:id/reschedule', authenticate, ClientQueueController.reschedule);

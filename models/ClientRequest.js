@@ -244,6 +244,57 @@ class ClientRequest {
     return stats;
   }
 
+  static async getAvailableMonths() {
+    const [rows] = await db.query(
+      `SELECT DISTINCT DATE_FORMAT(instance_date, '%Y-%m') as year_month
+       FROM client_request_instances
+       WHERE instance_date <= CURDATE()
+       ORDER BY year_month DESC`
+    );
+    const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    return rows.map(r => {
+      const [y, m] = r.year_month.split('-');
+      return { value: r.year_month, label: `${monthNames[parseInt(m) - 1]} ${y}` };
+    });
+  }
+
+  static async getMonthlyReport(yearMonth) {
+    const [statsRows] = await db.query(
+      `SELECT status, COUNT(*) as cnt
+       FROM client_request_instances
+       WHERE DATE_FORMAT(instance_date, '%Y-%m') = ?
+       GROUP BY status`,
+      [yearMonth]
+    );
+    const stats = { open: 0, picked: 0, done: 0, missed: 0, cancelled: 0, approved: 0, rejected: 0, rescheduled: 0, total: 0 };
+    statsRows.forEach(r => {
+      if (stats.hasOwnProperty(r.status)) stats[r.status] = r.cnt;
+      if (!['cancelled', 'rescheduled'].includes(r.status)) stats.total += r.cnt;
+    });
+
+    const [requests] = await db.query(
+      `SELECT cri.id, cri.status, cri.instance_date, cri.picked_by,
+              cr.title, cr.description, cr.priority,
+              creator.name as created_by_name,
+              picker.name as picked_by_name,
+              lc.body as latest_comment
+       FROM client_request_instances cri
+       JOIN client_requests cr ON cri.request_id = cr.id
+       JOIN users creator ON cr.created_by = creator.id
+       LEFT JOIN users picker ON cri.picked_by = picker.id
+       LEFT JOIN client_request_comments lc ON lc.id = (
+         SELECT MAX(id) FROM client_request_comments WHERE instance_id = cri.id
+       )
+       WHERE DATE_FORMAT(cri.instance_date, '%Y-%m') = ?
+       ORDER BY cri.instance_date ASC,
+                FIELD(cri.status,'open','picked','missed','rescheduled','done','approved','rejected','cancelled'),
+                cri.id ASC`,
+      [yearMonth]
+    );
+
+    return { stats, requests };
+  }
+
   // Used by portal: get instances for a specific org + date
   static async getInstancesForOrg(orgId, dateStr, userId = null, isSales = false) {
     await ClientRequest.autoMarkMissed(dateStr);

@@ -214,6 +214,56 @@ Full-width email using `wrapHtmlFull()` (100% width, `min-width: 648px`, table-b
 
 ---
 
+## Queue Top Bar — Layout Reorganised
+
+**`views/admin/queue.ejs`**
+
+Previously, the date nav, stat cards, action buttons, and back button were all in a single flex row, which caused crowding as more buttons were added.
+
+Split into two rows:
+- **Row 1**: Date navigation (left) + Test Sound · Monthly Report · Work/Dashboard button (right)
+- **Row 2**: Stat cards on their own line with `margin-bottom:12px`
+
+Row 1 gap tightened from `10px` to `8px` between action buttons.
+
+---
+
+## Monthly Requests Report — On-Demand Email
+
+### Overview
+Admin or manager clicks **Monthly Report** button on the queue page → selects a month from a dropdown → report is emailed to their own account. Only months with actual data in the database appear in the list.
+
+### `models/ClientRequest.js`
+- `getAvailableMonths()` — queries `DISTINCT DATE_FORMAT(instance_date, '%Y-%m')` where `instance_date <= CURDATE()`, returns `[{ value: 'YYYY-MM', label: 'Month YYYY' }]` descending
+- `getMonthlyReport(yearMonth)` — returns `{ stats, requests }`:
+  - Stats: same shape as `getDateStats` (open/picked/done/missed/cancelled/approved/rejected/rescheduled/total)
+  - Requests: full join with creator, picker, latest comment; includes `instance_date`; ordered by date ASC then status priority
+
+### `services/emailService.js` — `monthlyRequestsReport` template
+- Uses `wrapHtmlFull()` (same as daily report)
+- **Two rows of 4 stat cards**: Row 1 = Total, Done, In Progress, Open; Row 2 = Missed, Approved, Rejected, Rescheduled
+- Request table adds **Date** column (showing "Month Day" format) before the title column
+- 8 columns total: #, Date, Request, Created By, Status, Priority, Handled By, Latest Comment
+
+### `controllers/clientQueueController.js`
+- `getAvailableMonths()` — returns months JSON
+- `sendMonthlyReport()` — validates `year_month` format, checks user has email, checks data exists, sends via `EmailService.send`, returns success message with recipient email
+
+### `routes/index.js`
+```js
+GET  /queue/available-months  → getAvailableMonths (authenticated)
+POST /queue/monthly-report    → sendMonthlyReport  (LOCAL_ADMIN or LOCAL_MANAGER only)
+```
+
+### `views/admin/queue.ejs`
+- **Monthly Report button** added to top bar (purple, `bi-file-earmark-bar-graph`)
+- `#admqMonthlyReportModal` — month `<select>` (lazy-loaded on first open via `/queue/available-months`), status message area, Send Report button (purple)
+- `_monthlyMonthsLoaded` flag — months fetched only once per page load
+- On submit: POST → shows "Sending…" → on success shows green confirmation for 2.2s then auto-closes; on error shows red message and re-enables button
+- Modal added to teleport list
+
+---
+
 ## Client Online Presence Dot — Local Queue
 
 Shows a live green dot next to the request creator's name in the local queue table when that client user is currently online on the portal.
