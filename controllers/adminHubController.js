@@ -361,11 +361,12 @@ class AdminHubController {
     try {
       const today = new Date().toISOString().split('T')[0];
       const dateStr = req.query.date || today;
-      const [instances, stats] = await Promise.all([
+      const [instances, stats, localUsers] = await Promise.all([
         ClientRequest.getQueueForDate(dateStr),
-        ClientRequest.getDateStats(dateStr)
+        ClientRequest.getDateStats(dateStr),
+        ClientRequest.getLocalUsers()
       ]);
-      res.render('admin/queue', { title: 'Client Queue', layout: 'admin/layout', section: 'work', instances, stats, selectedDate: dateStr, today });
+      res.render('admin/queue', { title: 'Client Queue', layout: 'admin/layout', section: 'work', instances, stats, localUsers, selectedDate: dateStr, today });
     } catch (err) {
       console.error('AdminHub queue error:', err);
       res.status(500).send('Server error');

@@ -81,6 +81,8 @@ class ClientRequest {
               picker.name as picked_by_name,
               completer.name as completed_by_name,
               defaultAssignee.name as default_assigned_to_name,
+              COALESCE(cri.assigned_to, cr.assigned_to) as effective_assigned_to,
+              COALESCE(instanceAssignee.name, defaultAssignee.name) as effective_assigned_to_name,
               lc.body as latest_comment,
               lc_user.name as latest_comment_by,
               lc.created_at as latest_comment_at
@@ -91,6 +93,7 @@ class ClientRequest {
        LEFT JOIN users picker ON cri.picked_by = picker.id
        LEFT JOIN users completer ON cri.completed_by = completer.id
        LEFT JOIN users defaultAssignee ON cr.assigned_to = defaultAssignee.id
+       LEFT JOIN users instanceAssignee ON cri.assigned_to = instanceAssignee.id
        LEFT JOIN client_request_comments lc ON lc.id = (
          SELECT MAX(id) FROM client_request_comments WHERE instance_id = cri.id
        )
@@ -110,7 +113,7 @@ class ClientRequest {
               cr.recurrence, cr.recurrence_days, cr.due_time,
               cr.start_date, cr.recurrence_end_date,
               cr.org_id, o.name as org_name,
-              cr.created_by, creator.name as created_by_name,
+              cr.created_by, creator.name as created_by_name, creator.email as creator_email,
               picker.name as picked_by_name,
               completer.name as completed_by_name
        FROM client_request_instances cri
@@ -129,11 +132,11 @@ class ClientRequest {
     const [[inst]] = await db.query(
       'SELECT status FROM client_request_instances WHERE id = ?', [instanceId]
     );
-    if (!inst || !['open', 'missed'].includes(inst.status)) throw new Error('Task cannot be picked');
+    if (!inst || !['open', 'missed', 'rejected'].includes(inst.status)) throw new Error('Task cannot be picked');
     await db.query(
       `UPDATE client_request_instances
        SET status = 'picked', picked_by = ?, picked_at = NOW()
-       WHERE id = ? AND status IN ('open', 'missed')`,
+       WHERE id = ? AND status IN ('open', 'missed', 'rejected')`,
       [userId, instanceId]
     );
   }
@@ -233,10 +236,10 @@ class ClientRequest {
        GROUP BY status`,
       [dateStr]
     );
-    const stats = { open: 0, picked: 0, done: 0, missed: 0, cancelled: 0, total: 0 };
+    const stats = { open: 0, picked: 0, done: 0, missed: 0, cancelled: 0, approved: 0, rejected: 0, rescheduled: 0, total: 0 };
     rows.forEach(r => {
       stats[r.status] = r.cnt;
-      if (r.status !== 'cancelled') stats.total += r.cnt;
+      if (!['cancelled', 'rescheduled'].includes(r.status)) stats.total += r.cnt;
     });
     return stats;
   }
@@ -404,6 +407,63 @@ class ClientRequest {
     );
   }
 
+  static async rescheduleInstance(instanceId, userId, newDate, reason, assignedTo = null) {
+    const [[inst]] = await db.query(
+      'SELECT status, request_id FROM client_request_instances WHERE id = ?', [instanceId]
+    );
+    if (!inst) throw new Error('Not found');
+    if (inst.status !== 'open') throw new Error('Only open requests can be rescheduled');
+
+    // Create the new instance for the new date
+    const [result] = await db.query(
+      `INSERT INTO client_request_instances (request_id, instance_date, status, assigned_to)
+       VALUES (?, ?, 'open', ?)`,
+      [inst.request_id, newDate, assignedTo || null]
+    );
+    const newInstanceId = result.insertId;
+
+    // Mark original as rescheduled
+    await db.query(
+      `UPDATE client_request_instances
+       SET status = 'rescheduled', rescheduled_to = ?, rescheduled_by = ?, rescheduled_instance_id = ?
+       WHERE id = ?`,
+      [newDate, userId, newInstanceId, instanceId]
+    );
+
+    // Add comment so both sides can see the reason
+    const commentBody = `Rescheduled to ${newDate}: ${reason}`;
+    await ClientRequest.addComment(instanceId, userId, commentBody);
+  }
+
+  static async approveInstance(instanceId, userId) {
+    const [[inst]] = await db.query(
+      'SELECT status FROM client_request_instances WHERE id = ?', [instanceId]
+    );
+    if (!inst) throw new Error('Not found');
+    if (inst.status !== 'done') throw new Error('Only completed requests can be approved');
+    await db.query(
+      `UPDATE client_request_instances
+       SET status = 'approved', approved_by = ?, approved_at = NOW()
+       WHERE id = ?`,
+      [userId, instanceId]
+    );
+  }
+
+  static async rejectInstance(instanceId, userId) {
+    const [[inst]] = await db.query(
+      'SELECT status FROM client_request_instances WHERE id = ?', [instanceId]
+    );
+    if (!inst) throw new Error('Not found');
+    if (inst.status !== 'done') throw new Error('Only completed requests can be rejected');
+    await db.query(
+      `UPDATE client_request_instances
+       SET status = 'rejected', rejected_by = ?, rejected_at = NOW(),
+           picked_by = NULL, picked_at = NULL, completed_by = NULL, completed_at = NULL
+       WHERE id = ?`,
+      [userId, instanceId]
+    );
+  }
+
   // Badge count: open instances for today for an org (filtered by creator for CLIENT_SALES)
   static async getOpenCountForOrg(orgId, userId = null, isSales = false) {
     const today = new Date().toISOString().split('T')[0];
@@ -460,6 +520,7 @@ class ClientRequest {
        JOIN roles r ON u.role_id = r.id
        JOIN organizations o ON u.organization_id = o.id
        WHERE o.org_type = 'LOCAL' AND u.is_active = 1
+         AND r.name IN ('LOCAL_USER', 'LOCAL_MANAGER')
        ORDER BY u.name ASC`
     );
     return rows;

@@ -555,6 +555,8 @@ router.post('/requests/:id/attachments', (req, res, next) => reqAttachUpload.sin
 router.get('/requests/instances/:id', ClientRequestController.getDetail);
 router.patch('/requests/instances/:id/cancel', ClientRequestController.cancelInstance);
 router.post('/requests/instances/:id/uncancel', ClientRequestController.uncancelInstance);
+router.patch('/requests/instances/:id/approve', ClientRequestController.approveInstance);
+router.patch('/requests/instances/:id/reject', ClientRequestController.rejectInstance);
 router.post('/requests/instances/:id/comments', ClientRequestController.addComment);
 router.get('/requests/attachments/:attachmentId', ClientRequestController.serveAttachment);
 

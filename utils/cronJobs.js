@@ -605,6 +605,83 @@ const weeklyDigestHandler = async () => {
 };
 
 /**
+ * Daily client requests report — runs at midnight in LOCAL org timezone.
+ * Sends a summary of yesterday's requests to all LOCAL_ADMIN users.
+ * Skipped entirely in development environment.
+ */
+let dailyRequestsReportJob = null;
+const dailyRequestsReportHandler = async () => {
+  if (process.env.MAIL_ENABLED !== 'true') {
+    console.log('[CRON] Daily requests report skipped (MAIL_ENABLED is not true)');
+    return;
+  }
+  try {
+    const [[org]] = await db.query("SELECT timezone FROM organizations WHERE org_type = 'LOCAL' LIMIT 1");
+    const tz = (org && org.timezone) || 'America/New_York';
+    const today = getToday(tz);
+    // Report covers the day that just ended (yesterday relative to midnight)
+    const yesterday = new Date(new Date(today + 'T12:00:00Z').getTime() - 86400000).toISOString().split('T')[0];
+
+    // Fetch LOCAL_ADMIN users with emails
+    const [admins] = await db.query(
+      `SELECT u.name, u.email
+       FROM users u
+       JOIN roles r ON u.role_id = r.id
+       JOIN organizations o ON u.organization_id = o.id
+       WHERE o.org_type = 'LOCAL' AND u.is_active = 1
+         AND r.name = 'LOCAL_ADMIN'
+         AND u.email IS NOT NULL AND u.email != ''`
+    );
+    if (!admins.length) {
+      console.log('[CRON] Daily requests report: no LOCAL_ADMIN recipients found');
+      return;
+    }
+
+    // Fetch stats
+    const [statsRows] = await db.query(
+      `SELECT status, COUNT(*) as cnt FROM client_request_instances WHERE instance_date = ? GROUP BY status`,
+      [yesterday]
+    );
+    const stats = { open: 0, picked: 0, done: 0, missed: 0, cancelled: 0, approved: 0, rejected: 0, rescheduled: 0, total: 0 };
+    statsRows.forEach(r => {
+      stats[r.status] = r.cnt;
+      if (!['cancelled', 'rescheduled'].includes(r.status)) stats.total += r.cnt;
+    });
+
+    // Fetch request details for the report
+    const [requests] = await db.query(
+      `SELECT cri.status, cri.picked_by,
+              cr.title, cr.description, cr.priority,
+              creator.name as created_by_name,
+              picker.name as picked_by_name,
+              lc.body as latest_comment
+       FROM client_request_instances cri
+       JOIN client_requests cr ON cri.request_id = cr.id
+       JOIN users creator ON cr.created_by = creator.id
+       LEFT JOIN users picker ON cri.picked_by = picker.id
+       LEFT JOIN client_request_comments lc ON lc.id = (
+         SELECT MAX(id) FROM client_request_comments WHERE instance_id = cri.id
+       )
+       WHERE cri.instance_date = ?
+       ORDER BY FIELD(cri.status, 'open','picked','missed','rescheduled','done','approved','rejected','cancelled'), cri.id ASC`,
+      [yesterday]
+    );
+
+    const EmailService = require('../services/emailService');
+    for (const admin of admins) {
+      await EmailService.send({
+        to: admin.email,
+        templateName: 'dailyRequestsReport',
+        templateData: { reportDate: yesterday, stats, requests }
+      });
+    }
+    console.log(`[CRON] Daily requests report sent to ${admins.length} admin(s) for ${yesterday}`);
+  } catch (err) {
+    console.error('[CRON] Daily requests report error:', err.message);
+  }
+};
+
+/**
  * Portal reminder notifications — runs every minute.
  * Checks for portal reminders that are due and sends Socket.IO notifications.
  */
@@ -684,6 +761,7 @@ const startCronJobs = async () => {
 
   overdueAlertJob.start();
   weeklyDigestJob = cron.schedule('30 9 * * 1', weeklyDigestHandler, { timezone: orgTz });
+  dailyRequestsReportJob = cron.schedule('0 0 * * *', dailyRequestsReportHandler, { timezone: orgTz });
 
   // These jobs already self-check timing via getNow()/getToday(), safe with any server TZ
   scheduledBackupJob.start();
@@ -694,7 +772,7 @@ const startCronJobs = async () => {
 
   portalReminderJob.start();
 
-  console.log(`⏰ Cron jobs started (timezone: ${orgTz}) — attendance, auto-logout, backup, reminders, deadline, overdue, summary, weekly, portal-reminders`);
+  console.log(`⏰ Cron jobs started (timezone: ${orgTz}) — attendance, auto-logout, backup, reminders, deadline, overdue, summary, weekly, portal-reminders, daily-requests-report`);
 };
 
 module.exports = { startCronJobs };

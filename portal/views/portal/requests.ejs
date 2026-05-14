@@ -20,10 +20,13 @@ function nextDate(d) {
   return dt.toISOString().split('T')[0];
 }
 
-function statusBadge(s) {
-  if (s === 'done')   return '<span class="badge bg-success">Done</span>';
-  if (s === 'picked') return '<span class="badge bg-primary">In Progress</span>';
-  if (s === 'missed') return '<span class="badge bg-danger">Missed</span>';
+function statusBadge(s, rescheduledTo) {
+  if (s === 'approved')     return '<span class="badge bg-success"><i class="bi bi-check-circle-fill me-1"></i>Approved</span>';
+  if (s === 'rejected')     return '<span class="badge bg-danger"><i class="bi bi-x-circle-fill me-1"></i>Rejected</span>';
+  if (s === 'rescheduled')  return '<span class="badge bg-secondary"><i class="bi bi-calendar-arrow-up me-1"></i>Rescheduled' + (rescheduledTo ? ' → ' + rescheduledTo : '') + '</span>';
+  if (s === 'done')         return '<span class="badge bg-success">Done</span>';
+  if (s === 'picked')       return '<span class="badge bg-primary">In Progress</span>';
+  if (s === 'missed')       return '<span class="badge bg-danger">Missed</span>';
   return '<span class="badge bg-secondary">Pending</span>';
 }
 
@@ -123,6 +126,29 @@ const isSalesUser = user.role_name === 'CLIENT_SALES';
 <% } %>
 
 </div><!-- /portal-requests-wrap -->
+
+<!-- Reject Reason Modal -->
+<div class="modal fade" id="rejectReasonModal" tabindex="-1">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <div class="modal-header py-2">
+        <h6 class="modal-title"><i class="bi bi-x-circle-fill text-danger me-2"></i>Reject Request</h6>
+        <button type="button" class="btn-close btn-close-sm" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p class="small text-muted mb-2">Tell the team why this needs to be redone.</p>
+        <textarea id="rejectReasonText" class="form-control form-control-sm" rows="3"
+          placeholder="Reason for rejection…"></textarea>
+      </div>
+      <div class="modal-footer py-2">
+        <button class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button class="btn btn-sm btn-danger" id="rejectReasonConfirmBtn" onclick="preqConfirmReject()">
+          <i class="bi bi-x-lg me-1"></i>Reject
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- Detail Modal -->
 <div class="modal fade" id="reqDetailModal" tabindex="-1">
@@ -446,11 +472,14 @@ const isSalesUser = user.role_name === 'CLIENT_SALES';
     return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 
-  function statusBadge(s) {
-    if (s === 'done')      return '<span class="badge bg-success">Done</span>';
-    if (s === 'picked')    return '<span class="badge bg-primary">In Progress</span>';
-    if (s === 'missed')    return '<span class="badge bg-danger">Missed</span>';
-    if (s === 'cancelled') return '<span class="badge bg-secondary">Cancelled</span>';
+  function statusBadge(s, rescheduledTo) {
+    if (s === 'approved')    return '<span class="badge bg-success"><i class="bi bi-check-circle-fill me-1"></i>Approved</span>';
+    if (s === 'rejected')    return '<span class="badge bg-danger"><i class="bi bi-x-circle-fill me-1"></i>Rejected</span>';
+    if (s === 'rescheduled') return '<span class="badge bg-secondary"><i class="bi bi-calendar-arrow-up me-1"></i>Rescheduled' + (rescheduledTo ? ' → ' + rescheduledTo : '') + '</span>';
+    if (s === 'done')        return '<span class="badge bg-success">Done</span>';
+    if (s === 'picked')      return '<span class="badge bg-primary">In Progress</span>';
+    if (s === 'missed')      return '<span class="badge bg-danger">Missed</span>';
+    if (s === 'cancelled')   return '<span class="badge bg-secondary">Cancelled</span>';
     return '<span class="badge bg-secondary">Pending</span>';
   }
   function priorityBadge(p) {
@@ -536,7 +565,15 @@ const isSalesUser = user.role_name === 'CLIENT_SALES';
         <td>${priorityBadge(inst.priority)}</td>
         <td class="small text-muted">${inst.due_time ? inst.due_time.substring(0,5) : '—'}</td>
         <td class="small" title="${escHtml(inst.created_by_name || '—')}">${escHtml((inst.created_by_name || '—').split(' ')[0])}</td>
-        <td>${statusBadge(inst.status)}</td>
+        <td>
+          ${statusBadge(inst.status, inst.rescheduled_to)}
+          ${inst.status === 'done' && inst.created_by === CURRENT_USER_ID
+            ? `<div class="d-flex gap-1 mt-1">
+                <button class="btn btn-xs btn-outline-success py-0 px-1" style="font-size:0.68rem" onclick="event.stopPropagation();preqApprove(${inst.id})" title="Approve"><i class="bi bi-check-lg"></i> Approve</button>
+                <button class="btn btn-xs btn-outline-danger py-0 px-1" style="font-size:0.68rem" onclick="event.stopPropagation();preqReject(${inst.id})" title="Reject"><i class="bi bi-x-lg"></i> Reject</button>
+              </div>`
+            : ''}
+        </td>
         <td class="small" title="${escHtml(inst.picked_by_name || inst.completed_by_name || '—')}">${escHtml(((inst.picked_by_name || inst.completed_by_name || '—').split(' ')[0]))}</td>
         <td class="preq-comment-cell"${inst.latest_comment ? ' data-tooltip="'+escHtml((inst.latest_comment||'').trim())+'"' : ''}>${commentSnippet(inst)}</td>
       </tr>`;
@@ -555,6 +592,49 @@ const isSalesUser = user.role_name === 'CLIENT_SALES';
       </table>
     </div>${cancelledFooter}`;
   }
+
+  window.preqApprove = async function(instanceId) {
+    if (!confirm('Approve this request? This marks it as fully complete.')) return;
+    try {
+      const r = await fetch('/portal/requests/instances/' + instanceId + '/approve', {
+        method: 'PATCH', headers: { 'X-Requested-With': 'XMLHttpRequest' }
+      });
+      const data = await r.json();
+      if (data.success) loadInstances(PAGE_DATE);
+      else alert(data.message || 'Failed to approve');
+    } catch (_) { alert('Network error'); }
+  };
+
+  var _rejectInstanceId = null;
+  window.preqReject = function(instanceId) {
+    _rejectInstanceId = instanceId;
+    document.getElementById('rejectReasonText').value = '';
+    document.getElementById('rejectReasonConfirmBtn').disabled = false;
+    bootstrap.Modal.getOrCreate(document.getElementById('rejectReasonModal')).show();
+    setTimeout(function() { document.getElementById('rejectReasonText').focus(); }, 300);
+  };
+
+  window.preqConfirmReject = async function() {
+    if (!_rejectInstanceId) return;
+    const reason = document.getElementById('rejectReasonText').value.trim();
+    const btn = document.getElementById('rejectReasonConfirmBtn');
+    btn.disabled = true;
+    try {
+      const r = await fetch('/portal/requests/instances/' + _rejectInstanceId + '/reject', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+        body: JSON.stringify({ reason })
+      });
+      const data = await r.json();
+      if (data.success) {
+        bootstrap.Modal.getInstance(document.getElementById('rejectReasonModal')).hide();
+        loadInstances(PAGE_DATE);
+      } else {
+        alert(data.message || 'Failed to reject');
+      }
+    } catch (_) { alert('Network error'); }
+    finally { btn.disabled = false; _rejectInstanceId = null; }
+  };
 
   var _cancelledVisible = false;
   window.toggleCancelledRows = function(e) {
@@ -581,6 +661,7 @@ const isSalesUser = user.role_name === 'CLIENT_SALES';
       <span class="badge bg-secondary" style="font-size:0.75rem;font-weight:400">${stats.open} Pending</span>
       <span class="badge bg-primary"   style="font-size:0.75rem;font-weight:400">${stats.picked} In Progress</span>
       <span class="badge bg-success"   style="font-size:0.75rem;font-weight:400">${stats.done} Done</span>
+      ${(stats.approved||0) > 0 ? `<span class="badge bg-success" style="font-size:0.75rem;font-weight:400"><i class="bi bi-check-circle-fill me-1"></i>${stats.approved} Approved</span>` : ''}
       ${stats.missed > 0 ? `<span class="badge bg-danger" style="font-size:0.75rem;font-weight:400">${stats.missed} Missed</span>` : ''}
       ${IS_PAST ? '<span class="badge bg-warning text-dark ms-auto" style="font-size:0.75rem;font-weight:400">Past — read only</span>' : ''}`;
   }
@@ -904,7 +985,7 @@ const isSalesUser = user.role_name === 'CLIENT_SALES';
       <div class="col-6"><div class="small text-muted mb-1">Priority</div>${priorityBadge(inst.priority)}</div>
       <div class="col-6"><div class="small text-muted mb-1">Recurrence</div>${recLabels[inst.recurrence] || inst.recurrence}</div>
       <div class="col-6"><div class="small text-muted mb-1">Due Time</div>${inst.due_time ? inst.due_time.substring(0,5) : '—'}</div>
-      <div class="col-6"><div class="small text-muted mb-1">Status</div>${statusBadge(inst.status)}</div>
+      <div class="col-6"><div class="small text-muted mb-1">Status</div>${statusBadge(inst.status, inst.rescheduled_to)}</div>
       <div class="col-6"><div class="small text-muted mb-1">Handled By</div>${escHtml(inst.picked_by_name || inst.completed_by_name || '—')}</div>
     </div>`;
     if (inst.description) html += `<div class="mb-3"><div class="small text-muted mb-1">Description</div><div class="p-2 rounded" style="background:var(--tf-surface-2);white-space:pre-wrap">${escHtml(inst.description)}</div></div>`;

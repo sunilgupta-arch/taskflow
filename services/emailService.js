@@ -30,7 +30,7 @@ function getTransporter() {
 // ---------------------------------------------------------------------------
 // Base HTML wrapper — all notification emails share this shell
 // ---------------------------------------------------------------------------
-function wrapHtml(title, bodyHtml) {
+function wrapHtml(title, bodyHtml, maxWidth = '600px') {
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -39,7 +39,7 @@ function wrapHtml(title, bodyHtml) {
   <title>${title}</title>
   <style>
     body { margin:0; padding:0; background:#f4f4f4; font-family:Arial,sans-serif; }
-    .wrapper { max-width:600px; margin:32px auto; background:#ffffff; border-radius:8px; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,.08); }
+    .wrapper { max-width:${maxWidth}; margin:32px auto; background:#ffffff; border-radius:8px; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,.08); }
     .header { background:#1a1a2e; padding:24px 32px; }
     .header h1 { margin:0; color:#ffffff; font-size:20px; font-weight:600; }
     .header span { color:#a0a0b0; font-size:13px; }
@@ -64,6 +64,44 @@ function wrapHtml(title, bodyHtml) {
       This is an automated notification from TaskFlow. Do not reply to this email.
     </div>
   </div>
+</body>
+</html>`;
+}
+
+// Full-width wrapper — used for wide reports. Fills the email client window
+// with a min-width so columns don't collapse on narrow clients.
+function wrapHtmlFull(title, bodyHtml) {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>${title}</title>
+</head>
+<body style="margin:0;padding:0;background:#f4f4f4;font-family:Arial,sans-serif">
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f4f4f4;min-width:680px">
+    <tr><td style="padding:24px 16px">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0"
+             style="background:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.08);min-width:648px">
+        <tr>
+          <td style="background:#1a1a2e;padding:24px 32px;border-radius:8px 8px 0 0">
+            <div style="margin:0;color:#ffffff;font-size:20px;font-weight:600">TaskFlow</div>
+            <div style="color:#a0a0b0;font-size:13px;margin-top:2px">Internal Management System</div>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:28px 32px;color:#333333;font-size:15px;line-height:1.6">
+            ${bodyHtml}
+          </td>
+        </tr>
+        <tr>
+          <td style="background:#f9f9f9;padding:16px 32px;font-size:12px;color:#999999;border-top:1px solid #eeeeee;border-radius:0 0 8px 8px">
+            This is an automated notification from TaskFlow. Do not reply to this email.
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>
 </body>
 </html>`;
 }
@@ -150,6 +188,89 @@ const templates = {
     return { subject, html, text };
   },
 
+  dailyRequestsReport({ reportDate, stats, requests }) {
+    const fmt = d => { if (!d) return '—'; const p = d.split('-'), m = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']; return `${m[parseInt(p[1])-1]} ${parseInt(p[2])}, ${p[0]}`; };
+    const subject = `Daily Requests Report — ${fmt(reportDate)}`;
+
+    const card = (label, count, color) =>
+      `<td style="text-align:center;padding:16px 8px;background:${color}18;border-radius:8px;width:16.6%">
+        <div style="font-size:26px;font-weight:700;color:${color}">${count}</div>
+        <div style="font-size:11px;color:#666;margin-top:4px;text-transform:uppercase;letter-spacing:.5px">${label}</div>
+      </td>`;
+
+    const statusStyle = s => {
+      const map = { open:'#f97316', picked:'#3b82f6', done:'#10b981', missed:'#ef4444', rescheduled:'#8b5cf6', approved:'#10b981', rejected:'#f43f5e', cancelled:'#4b5563' };
+      return `display:inline-block;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:600;background:${(map[s]||'#888')}20;color:${map[s]||'#888'};text-transform:uppercase;letter-spacing:.4px`;
+    };
+    const statusLabel = s => ({ open:'Open', picked:'In Progress', done:'Done', missed:'Missed', rescheduled:'Rescheduled', approved:'Approved', rejected:'Rejected', cancelled:'Cancelled' }[s] || s);
+    const priorityColor = p => ({ high:'#f97316', urgent:'#ef4444' }[p] || '#888');
+
+    const rows = (requests || []).map((r, i) =>
+      `<tr style="border-bottom:1px solid #f0f0f0">
+        <td style="padding:10px 8px;text-align:center;color:#999;font-size:12px">${i + 1}</td>
+        <td style="padding:10px 8px">
+          <div style="font-weight:600;font-size:13px;color:#1a1a2e">${r.title || '—'}</div>
+          ${r.description ? `<div style="font-size:11px;color:#888;margin-top:2px">${r.description.substring(0, 80)}${r.description.length > 80 ? '…' : ''}</div>` : ''}
+        </td>
+        <td style="padding:10px 8px;font-size:12px;color:#555;white-space:nowrap">${r.created_by_name || '—'}</td>
+        <td style="padding:10px 8px"><span style="${statusStyle(r.status)}">${statusLabel(r.status)}</span></td>
+        <td style="padding:10px 8px;font-size:12px;white-space:nowrap"><span style="color:${priorityColor(r.priority)};font-weight:600">${(r.priority||'normal').charAt(0).toUpperCase()+(r.priority||'normal').slice(1)}</span></td>
+        <td style="padding:10px 8px;font-size:12px;color:#555">${r.picked_by_name || '—'}</td>
+        <td style="padding:10px 8px;font-size:11px;color:#777;max-width:180px">${r.latest_comment ? r.latest_comment.substring(0, 80) + (r.latest_comment.length > 80 ? '…' : '') : '—'}</td>
+      </tr>`
+    ).join('');
+
+    const html = wrapHtmlFull(subject, `
+      <p style="margin:0 0 20px;color:#333">Here is the daily client requests summary for <strong>${fmt(reportDate)}</strong>.</p>
+
+      <table width="100%" cellpadding="0" cellspacing="6" style="border-collapse:separate;table-layout:fixed;margin-bottom:28px">
+        <tr>
+          ${card('Total', stats.total || 0, '#1a1a2e')}
+          ${card('Done', stats.done || 0, '#10b981')}
+          ${card('In Progress', stats.picked || 0, '#3b82f6')}
+          ${card('Open', stats.open || 0, '#f97316')}
+          ${card('Missed', stats.missed || 0, '#ef4444')}
+          ${card('Rescheduled', stats.rescheduled || 0, '#8b5cf6')}
+        </tr>
+      </table>
+
+      ${requests && requests.length > 0 ? `
+      <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;font-size:13px">
+        <thead>
+          <tr style="background:#f5f5f8">
+            <th style="padding:8px;text-align:center;font-size:11px;color:#888;font-weight:600;width:32px">#</th>
+            <th style="padding:8px;text-align:left;font-size:11px;color:#888;font-weight:600">Request</th>
+            <th style="padding:8px;text-align:left;font-size:11px;color:#888;font-weight:600">Created By</th>
+            <th style="padding:8px;text-align:left;font-size:11px;color:#888;font-weight:600">Status</th>
+            <th style="padding:8px;text-align:left;font-size:11px;color:#888;font-weight:600">Priority</th>
+            <th style="padding:8px;text-align:left;font-size:11px;color:#888;font-weight:600">Handled By</th>
+            <th style="padding:8px;text-align:left;font-size:11px;color:#888;font-weight:600">Latest Comment</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>` : '<p style="color:#999;text-align:center;padding:20px 0">No requests were recorded for this date.</p>'}
+    `);
+
+    const text = `Daily Requests Report — ${fmt(reportDate)}\n\nTotal: ${stats.total||0} | Done: ${stats.done||0} | In Progress: ${stats.picked||0} | Open: ${stats.open||0} | Missed: ${stats.missed||0}${(stats.rescheduled||0)>0?' | Rescheduled: '+stats.rescheduled:''}\n\n`
+      + (requests||[]).map((r,i) => `${i+1}. [${(r.status||'').toUpperCase()}] ${r.title} — ${r.org_name||''} (${r.picked_by_name||'unassigned'})`).join('\n');
+
+    return { subject, html, text };
+  },
+
+  requestRescheduled({ creatorName, requestTitle, newDate, rescheduledBy, reason }) {
+    const subject = `Your request has been rescheduled: ${requestTitle}`;
+    const html = wrapHtml(subject, `
+      <p>Hi ${creatorName},</p>
+      <p>Your request has been rescheduled to a new date by our team.</p>
+      <p><span class="label">Request</span>&nbsp; ${requestTitle}</p>
+      <p><span class="label">New Date</span>&nbsp; ${newDate}</p>
+      ${rescheduledBy ? `<p><span class="label">Rescheduled by</span>&nbsp; ${rescheduledBy}</p>` : ''}
+      ${reason ? `<hr class="divider"><p><span class="label">Reason</span></p><p>${reason}</p>` : ''}
+    `);
+    const text = `Hi ${creatorName},\n\nYour request "${requestTitle}" has been rescheduled to ${newDate}.${rescheduledBy ? `\nRescheduled by: ${rescheduledBy}` : ''}${reason ? `\nReason: ${reason}` : ''}`;
+    return { subject, html, text };
+  },
+
 };
 
 // ---------------------------------------------------------------------------
@@ -159,6 +280,10 @@ const templates = {
 class EmailService {
 
   static async send({ to, templateName, templateData }) {
+    if (process.env.MAIL_ENABLED !== 'true') {
+      logger.info(`EmailService: MAIL_ENABLED is not true — skipped "${templateName}" to ${to}`);
+      return;
+    }
     if (!process.env.MAIL_USER || !process.env.MAIL_PASS) {
       logger.warn('EmailService: MAIL_USER / MAIL_PASS not configured — skipping email');
       return;

@@ -2,6 +2,8 @@ const ClientRequest = require('../models/ClientRequest');
 const { ApiResponse } = require('../utils/response');
 const { getIO } = require('../config/socket');
 const GoogleDriveService = require('../services/googleDriveService');
+const EmailService = require('../services/emailService');
+const { getOnlineClientIds } = require('../portal/socket/portalSocket');
 
 class ClientQueueController {
 
@@ -74,15 +76,54 @@ class ClientQueueController {
     try {
       const instanceId = parseInt(req.params.id);
       const { remark } = req.body;
-      if (!remark || !remark.trim()) return ApiResponse.error(res, 'A completion remark is required', 400);
+      const trimmedRemark = (remark || '').trim();
+      if (!trimmedRemark) {
+        const existingComments = await ClientRequest.getComments(instanceId);
+        if (!existingComments.length) return ApiResponse.error(res, 'A completion remark is required', 400);
+      }
       await ClientRequest.complete(instanceId, req.user.id);
-      await ClientRequest.addComment(instanceId, req.user.id, remark.trim());
+      if (trimmedRemark) await ClientRequest.addComment(instanceId, req.user.id, trimmedRemark);
       const instance = await ClientRequest.getInstanceById(instanceId);
       try { const io = getIO(); io.emit('queue:updated', { instance }); io.of('/portal').emit('queue:updated', { instance }); } catch (_) {}
       return ApiResponse.success(res, { instance });
     } catch (err) {
       console.error('ClientQueue complete error:', err);
       return ApiResponse.error(res, err.message || 'Failed to complete task', 400);
+    }
+  }
+
+  static async reschedule(req, res) {
+    try {
+      const instanceId = parseInt(req.params.id);
+      const { new_date, reason, assigned_to } = req.body;
+      if (!new_date) return ApiResponse.error(res, 'New date is required', 400);
+      if (!reason || !reason.trim()) return ApiResponse.error(res, 'A reason for rescheduling is required', 400);
+      const today = new Date().toISOString().split('T')[0];
+      if (new_date <= today) return ApiResponse.error(res, 'Reschedule date must be in the future', 400);
+      const assignedTo = assigned_to ? parseInt(assigned_to) || null : null;
+      await ClientRequest.rescheduleInstance(instanceId, req.user.id, new_date, reason.trim(), assignedTo);
+      const instance = await ClientRequest.getInstanceById(instanceId);
+      try { const io = getIO(); io.emit('queue:updated', { instance }); io.of('/portal').emit('queue:updated', { instance }); } catch (_) {}
+
+      // Email the creator if they have a 123cfc.com workspace address
+      if (instance && instance.creator_email && instance.creator_email.endsWith('@123cfc.com')) {
+        EmailService.send({
+          to: instance.creator_email,
+          templateName: 'requestRescheduled',
+          templateData: {
+            creatorName: instance.created_by_name || 'there',
+            requestTitle: instance.title,
+            newDate: new_date,
+            rescheduledBy: req.user.name,
+            reason: reason.trim()
+          }
+        });
+      }
+
+      return ApiResponse.success(res, { instance }, 'Request rescheduled');
+    } catch (err) {
+      console.error('ClientQueue reschedule error:', err);
+      return ApiResponse.error(res, err.message || 'Failed to reschedule', 400);
     }
   }
 
@@ -107,6 +148,10 @@ class ClientQueueController {
     } catch (err) {
       return ApiResponse.error(res, 'Failed');
     }
+  }
+
+  static getOnlineClients(req, res) {
+    return ApiResponse.success(res, { online: getOnlineClientIds() });
   }
 
   static async getDetail(req, res) {

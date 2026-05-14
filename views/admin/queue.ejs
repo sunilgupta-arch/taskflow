@@ -26,7 +26,10 @@
   padding: 5px 12px; border-radius: 8px;
   border: 1px solid var(--adm-border); background: var(--adm-surface);
   font-size: 0.75rem; font-weight: 500; color: var(--adm-text-2);
+  cursor: pointer; user-select: none; transition: opacity 0.15s, box-shadow 0.15s;
 }
+.admq-stat.active { box-shadow: 0 0 0 2px currentColor; }
+.admq-stats.has-filter .admq-stat:not(.active) { opacity: 0.4; }
 .admq-stat-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 .admq-stat-count { font-family: var(--adm-mono); font-weight: 700; font-size: 0.92rem; }
 .admq-stat.s-open   { border-color: rgba(249,115,22,0.3); background: rgba(249,115,22,0.06); color: #f97316; }
@@ -54,9 +57,13 @@
 /* Table */
 .admq-table-wrap {
   background: var(--adm-surface); border: 1px solid var(--adm-border);
-  border-radius: 14px; overflow: hidden;
+  border-radius: 14px; overflow-x: auto; overflow-y: hidden;
 }
-.admq-table { width: 100%; border-collapse: collapse; }
+.admq-table-wrap::-webkit-scrollbar { height: 6px; }
+.admq-table-wrap::-webkit-scrollbar-track { background: transparent; }
+.admq-table-wrap::-webkit-scrollbar-thumb { background: var(--adm-border); border-radius: 3px; }
+.admq-table-wrap::-webkit-scrollbar-thumb:hover { background: var(--adm-muted); }
+.admq-table { width: 100%; border-collapse: collapse; min-width: 860px; }
 .admq-table thead th {
   font-family: var(--adm-mono); font-size: 0.68rem; font-weight: 700;
   text-transform: uppercase; letter-spacing: 0.6px;
@@ -78,10 +85,14 @@
 .admq-table tbody tr.row-open   td:first-child { border-left-color: #f97316; }
 .admq-table tbody tr.row-picked td:first-child { border-left-color: #3b82f6; }
 .admq-table tbody tr.row-done   td:first-child { border-left-color: #10b981; }
-.admq-table tbody tr.row-missed td:first-child { border-left-color: #ef4444; }
-.admq-table tbody tr.row-overdue   td:first-child { border-left-color: #ef4444; }
+.admq-table tbody tr.row-missed   td:first-child { border-left-color: #ef4444; }
+.admq-table tbody tr.row-overdue  td:first-child { border-left-color: #ef4444; }
 .admq-table tbody tr.row-cancelled td:first-child { border-left-color: #4b5563; }
 .admq-table tbody tr.row-cancelled { opacity: 0.45; }
+.admq-table tbody tr.row-approved     td:first-child { border-left-color: #10b981; }
+.admq-table tbody tr.row-rejected     td:first-child { border-left-color: #f43f5e; }
+.admq-table tbody tr.row-rescheduled  td:first-child { border-left-color: #8b5cf6; }
+.admq-table tbody tr.row-rescheduled  { opacity: 0.6; }
 .admq-cancelled-toggle { padding: 10px 16px; font-size: 0.78rem; color: var(--adm-muted); cursor: pointer; border-top: 1px solid var(--adm-border); display: flex; align-items: center; gap: 6px; transition: color 0.15s; user-select: none; }
 .admq-cancelled-toggle:hover { color: var(--adm-text-2); }
 
@@ -131,6 +142,16 @@
 .admq-status.s-missed   { background: rgba(239,68,68,0.12);   color: #ef4444; }
 .admq-status.s-cancelled  { background: rgba(100,116,139,0.12); color: #94a3b8; }
 .admq-status.s-done-late  { background: rgba(168,85,247,0.12);  color: #a855f7; }
+.admq-status.s-approved     { background: rgba(16,185,129,0.12);  color: #10b981; }
+.admq-status.s-rejected     { background: rgba(244,63,94,0.12);   color: #f43f5e; }
+.admq-status.s-rescheduled  { background: rgba(139,92,246,0.12);  color: #8b5cf6; }
+
+/* Client online dot */
+.admq-online-dot {
+  width: 7px; height: 7px; border-radius: 50%; background: #22c55e; flex-shrink: 0;
+  box-shadow: 0 0 0 2px rgba(34,197,94,0.25);
+  display: inline-block;
+}
 
 /* Priority */
 .admq-priority { display: inline-flex; align-items: center; gap: 5px; font-size: 0.75rem; font-weight: 500; }
@@ -389,16 +410,37 @@
   </div>
 </div>
 
+<div id="admqRescheduleModal" class="admq-modal-backdrop" style="display:none">
+  <div class="admq-modal">
+    <div class="admq-modal-title"><i class="bi bi-calendar-plus"></i> Reschedule Request</div>
+    <div class="admq-modal-sub">Move this request to a future date. A reason is required so the client knows why.</div>
+    <label style="font-size:0.78rem;color:var(--adm-text-2);margin-bottom:4px;display:block">New Date</label>
+    <input type="date" class="admq-modal-textarea" id="admqRescheduleDate" style="padding:8px 12px;margin-bottom:10px">
+    <label style="font-size:0.78rem;color:var(--adm-text-2);margin-bottom:4px;display:block">Assign To</label>
+    <select class="admq-modal-textarea" id="admqRescheduleAssignee" style="padding:8px 12px;margin-bottom:10px;cursor:pointer">
+      <option value="">— Unassigned —</option>
+    </select>
+    <label style="font-size:0.78rem;color:var(--adm-text-2);margin-bottom:4px;display:block">Reason <span style="color:#ef4444">*</span></label>
+    <textarea class="admq-modal-textarea" id="admqRescheduleReason" placeholder="Why is this being rescheduled?" rows="3"></textarea>
+    <div class="admq-modal-footer">
+      <button class="admq-modal-cancel" onclick="admqCloseReschedule()">Cancel</button>
+      <button class="admq-modal-confirm" id="admqRescheduleConfirmBtn" onclick="admqConfirmReschedule()"><i class="bi bi-calendar-check"></i> Reschedule</button>
+    </div>
+  </div>
+</div>
+
 <script>
 (function () {
   // ── Teleport fixed elements to <body> to escape overflow containers ──
-  ['admqOverlay','admqDrawer','admqReleaseModal','admqCommentModal'].forEach(function(id) {
+  ['admqOverlay','admqDrawer','admqReleaseModal','admqCommentModal','admqRescheduleModal'].forEach(function(id) {
     var el = document.getElementById(id);
     if (el) document.body.appendChild(el);
   });
 
   // ── Bootstrap data (closing-tag sequences in JSON escaped to avoid early parse end) ──
   var _raw = <%- JSON.stringify({ instances: instances, stats: stats, selectedDate: selectedDate, today: today }).replace(/<\//g, '<\\/') %>;
+  var _localUsers = <%- JSON.stringify(localUsers || []).replace(/<\//g, '<\\/') %>;
+  var _onlineClients = new Set();
   var _date      = _raw.selectedDate;
   var _today     = _raw.today;
   var _userId    = <%= user.id %>;
@@ -406,6 +448,7 @@
   var _detailId  = null;
   var _releaseId = null;
   var _admqCommentInstanceId = null;
+  var _activeFilter = null;
 
   // ── Helpers ──────────────────────────────────────────────────────────
   function isPast(d)  { return d < _today; }
@@ -447,7 +490,7 @@
   }
   function statusHtml(s, late) {
     if (s === 'done' && late) return '<span class="admq-status s-done-late">Delayed Done</span>';
-    var lbl = {open:'Open',picked:'In Progress',done:'Done',missed:'Missed',cancelled:'Cancelled'};
+    var lbl = {open:'Open',picked:'In Progress',done:'Done',missed:'Missed',cancelled:'Cancelled',approved:'Approved ✓',rejected:'Rejected ✗',rescheduled:'Rescheduled'};
     return '<span class="admq-status s-'+(s||'open')+'">'+(lbl[s]||s||'—')+'</span>';
   }
   function fileIcon(fname) {
@@ -459,18 +502,48 @@
   // ── Stats ────────────────────────────────────────────────────────────
   function renderStats(stats, date) {
     document.getElementById('admqStats').innerHTML =
-      '<div class="admq-stat"><span class="admq-stat-count">'+(stats.total||0)+'</span>&nbsp;Total</div>'
-      +'<div class="admq-stat s-open"><span class="admq-stat-dot" style="background:#f97316"></span><span class="admq-stat-count">'+(stats.open||0)+'</span>&nbsp;Open</div>'
-      +'<div class="admq-stat s-picked"><span class="admq-stat-dot" style="background:#3b82f6"></span><span class="admq-stat-count">'+(stats.picked||0)+'</span>&nbsp;In Progress</div>'
-      +'<div class="admq-stat s-done"><span class="admq-stat-dot" style="background:#10b981"></span><span class="admq-stat-count">'+(stats.done||0)+'</span>&nbsp;Done</div>'
-      +'<div class="admq-stat s-missed"><span class="admq-stat-dot" style="background:#ef4444"></span><span class="admq-stat-count">'+(stats.missed||0)+'</span>&nbsp;Missed</div>'
-      +((stats.cancelled||0)>0?'<div class="admq-stat s-cancelled"><span class="admq-stat-dot" style="background:#4b5563"></span><span class="admq-stat-count">'+(stats.cancelled||0)+'</span>&nbsp;Cancelled</div>':'')
+      '<div class="admq-stat" data-filter="total" onclick="admqSetFilter(\'total\')"><span class="admq-stat-count">'+(stats.total||0)+'</span>&nbsp;Total</div>'
+      +'<div class="admq-stat s-open" data-filter="open" onclick="admqSetFilter(\'open\')"><span class="admq-stat-dot" style="background:#f97316"></span><span class="admq-stat-count">'+(stats.open||0)+'</span>&nbsp;Open</div>'
+      +'<div class="admq-stat s-picked" data-filter="picked" onclick="admqSetFilter(\'picked\')"><span class="admq-stat-dot" style="background:#3b82f6"></span><span class="admq-stat-count">'+(stats.picked||0)+'</span>&nbsp;In Progress</div>'
+      +'<div class="admq-stat s-done" data-filter="done" onclick="admqSetFilter(\'done\')"><span class="admq-stat-dot" style="background:#10b981"></span><span class="admq-stat-count">'+(stats.done||0)+'</span>&nbsp;Done</div>'
+      +'<div class="admq-stat s-missed" data-filter="missed" onclick="admqSetFilter(\'missed\')"><span class="admq-stat-dot" style="background:#ef4444"></span><span class="admq-stat-count">'+(stats.missed||0)+'</span>&nbsp;Missed</div>'
+      +((stats.rescheduled||0)>0?'<div class="admq-stat s-rescheduled" data-filter="rescheduled" onclick="admqSetFilter(\'rescheduled\')"><span class="admq-stat-dot" style="background:#8b5cf6"></span><span class="admq-stat-count">'+(stats.rescheduled||0)+'</span>&nbsp;Rescheduled</div>':'')
+      +((stats.cancelled||0)>0?'<div class="admq-stat s-cancelled" data-filter="cancelled" onclick="admqSetFilter(\'cancelled\')"><span class="admq-stat-dot" style="background:#4b5563"></span><span class="admq-stat-count">'+(stats.cancelled||0)+'</span>&nbsp;Cancelled</div>':'')
       +(isPast(date)?'<div class="admq-past-notice"><i class="bi bi-lock"></i> Past date — read only</div>':'');
+    admqSyncStatActiveState();
+  }
+
+  window.admqSetFilter = function(key) {
+    _activeFilter = (_activeFilter === key || key === 'total') ? null : key;
+    admqSyncStatActiveState();
+    admqApplyFilter();
+  };
+
+  function admqSyncStatActiveState() {
+    var statsEl = document.getElementById('admqStats');
+    statsEl.classList.toggle('has-filter', !!_activeFilter);
+    statsEl.querySelectorAll('.admq-stat').forEach(function(el) {
+      el.classList.toggle('active', !!_activeFilter && el.dataset.filter === _activeFilter);
+    });
+  }
+
+  function admqApplyFilter() {
+    document.querySelectorAll('.admq-table tbody tr').forEach(function(row) {
+      if (row.id === 'admqCancelledToggle') return;
+      if (!_activeFilter) {
+        if (!row.classList.contains('row-cancelled')) row.style.display = '';
+      } else if (_activeFilter === 'open') {
+        row.style.display = (row.classList.contains('row-open') || row.classList.contains('row-overdue')) ? '' : 'none';
+      } else {
+        row.style.display = row.classList.contains('row-' + _activeFilter) ? '' : 'none';
+      }
+    });
   }
 
   // ── Table ────────────────────────────────────────────────────────────
   function renderTable(instances, date) {
     var area = document.getElementById('admqTableArea');
+    _loadedInstances = instances || [];
     var active    = (instances || []).filter(function(i) { return i.status !== 'cancelled'; });
     var cancelled = (instances || []).filter(function(i) { return i.status === 'cancelled'; });
     if (!active.length && !cancelled.length) {
@@ -508,6 +581,12 @@
                   + '<button class="admq-btn release" title="Release" onclick="event.stopPropagation();admqOpenRelease('+inst.id+')"><i class="bi bi-arrow-counterclockwise"></i></button>';
         }
       }
+      if (inst.status === 'rejected') {
+        actions = '<button class="admq-btn pick" title="Re-pick rejected task" onclick="event.stopPropagation();admqPick('+inst.id+')"><i class="bi bi-arrow-repeat"></i> Re-pick</button>';
+      }
+      if (inst.status === 'open') {
+        actions += '<button class="admq-btn act" title="Reschedule to another date" onclick="event.stopPropagation();admqOpenReschedule('+inst.id+')"><i class="bi bi-calendar-plus"></i></button>';
+      }
       if (inst.status === 'cancelled' && isAdmin()) {
         actions = '<button class="admq-btn act" title="Restore to open" onclick="event.stopPropagation();admqUncancel('+inst.id+')"><i class="bi bi-arrow-counterclockwise"></i> Restore</button>';
       }
@@ -526,7 +605,12 @@
         +'<td style="font-family:var(--adm-mono);font-size:0.82rem">'+(inst.due_time||'—')+'</td>'
         +'<td style="white-space:nowrap">'+freqLabel+'</td>'
         +'<td'+(inst.created_by_name?' data-tooltip="'+esc(inst.created_by_name)+'"':'')+'>'+
-          (inst.created_by_name?esc(inst.created_by_name.split(' ')[0]):'<span style="color:var(--adm-muted)">—</span>')+'</td>'
+          (inst.created_by_name
+            ? '<span style="display:inline-flex;align-items:center;gap:4px">'
+              + '<span data-online-uid="'+inst.created_by+'" class="'+(inst.created_by && _onlineClients.has(inst.created_by) ? 'admq-online-dot' : '')+'" style="width:7px;height:7px;border-radius:50%;flex-shrink:0;display:inline-block"></span>'
+              + esc(inst.created_by_name.split(' ')[0])
+              + '</span>'
+            : '<span style="color:var(--adm-muted)">—</span>')+'</td>'
         +'<td>'+statusHtml(inst.status, inst.completed_late)+'</td>'
         +'<td'+(inst.picked_by_name?' data-tooltip="'+esc(inst.picked_by_name)+'"':'')+'>'+
           (inst.picked_by_name?esc(inst.picked_by_name.split(' ')[0]):'<span style="color:var(--adm-muted)">—</span>')+'</td>'
@@ -547,6 +631,7 @@
     area.innerHTML = '<div class="admq-table-wrap"><table class="admq-table"><thead><tr>'
       +'<th style="text-align:center;width:36px">SN</th><th>Request</th><th>Type</th><th>Priority</th><th>Due</th><th>Frequency</th><th>Creator</th><th>Status</th><th>Picked By</th><th>Latest Comment</th><th></th>'
       +'</tr></thead><tbody>'+activeRows+cancelledFooter+cancelledRows+'</tbody></table></div>';
+    admqApplyFilter();
   }
 
   window.admqToggleCancelled = function() {
@@ -579,6 +664,7 @@
     document.getElementById('admqTableArea').innerHTML = '<div class="admq-loading"><div class="admq-spinner"></div></div>';
     fetch('/queue/data?date='+date).then(function(r){return r.json();}).then(function(res){
       if (!res.success) return;
+      _activeFilter = null;
       renderStats(res.data.stats, date);
       renderTable(res.data.instances, date);
     }).catch(function(){
@@ -604,8 +690,23 @@
     });
   };
   var _doneInstanceId = null;
+  var _loadedInstances = [];
   window.admqDone = function(id) {
     _doneInstanceId = id;
+    var inst = _loadedInstances.find(function(i) { return i.id === id; });
+    if (inst && (inst.latest_comment || '').trim()) {
+      // Already has a comment — submit directly without modal
+      var btn = document.getElementById('admqDoneConfirmBtn');
+      btn.disabled = true;
+      fetch('/queue/'+id+'/complete', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({remark:''})})
+        .then(function(r){ return r.json(); })
+        .then(function(res){
+          _doneInstanceId = null;
+          if (res.success) { loadDate(_date); if (_detailId===id) admqCloseDetail(); }
+          else alert(res.message||'Failed to complete');
+        }).finally(function(){ btn.disabled = false; });
+      return;
+    }
     document.getElementById('admqDoneRemark').value = '';
     document.getElementById('admqDoneModal').style.display = 'flex';
     setTimeout(function(){ document.getElementById('admqDoneRemark').focus(); }, 50);
@@ -629,6 +730,56 @@
         else alert(res.message||'Failed to complete');
       }).finally(function(){ btn.disabled = false; });
   };
+  var _rescheduleInstanceId = null;
+  window.admqOpenReschedule = function(id) {
+    _rescheduleInstanceId = id;
+    var tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
+    var minDate = tomorrow.toISOString().split('T')[0];
+    var dateEl = document.getElementById('admqRescheduleDate');
+    dateEl.min = minDate;
+    dateEl.value = minDate;
+    // Populate assignee dropdown
+    var sel = document.getElementById('admqRescheduleAssignee');
+    sel.innerHTML = '<option value="">— Unassigned —</option>';
+    _localUsers.forEach(function(u) {
+      var opt = document.createElement('option');
+      opt.value = u.id;
+      opt.textContent = u.name + ' (' + u.role_name + ')';
+      sel.appendChild(opt);
+    });
+    // Pre-select the instance's current effective assignee
+    var inst = _loadedInstances.find(function(i) { return i.id === id; });
+    if (inst && inst.effective_assigned_to) sel.value = inst.effective_assigned_to;
+    document.getElementById('admqRescheduleReason').value = '';
+    document.getElementById('admqRescheduleConfirmBtn').disabled = false;
+    document.getElementById('admqRescheduleModal').style.display = 'flex';
+    setTimeout(function(){ document.getElementById('admqRescheduleReason').focus(); }, 50);
+  };
+  window.admqCloseReschedule = function() {
+    document.getElementById('admqRescheduleModal').style.display = 'none';
+    _rescheduleInstanceId = null;
+  };
+  window.admqConfirmReschedule = function() {
+    if (!_rescheduleInstanceId) return;
+    var newDate    = document.getElementById('admqRescheduleDate').value;
+    var reason     = document.getElementById('admqRescheduleReason').value.trim();
+    var assignedTo = document.getElementById('admqRescheduleAssignee').value;
+    if (!newDate) { alert('Please select a date.'); return; }
+    if (!reason)  { document.getElementById('admqRescheduleReason').focus(); return; }
+    var btn = document.getElementById('admqRescheduleConfirmBtn');
+    btn.disabled = true;
+    fetch('/queue/'+_rescheduleInstanceId+'/reschedule', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ new_date: newDate, reason: reason, assigned_to: assignedTo || null })
+    }).then(function(r){ return r.json(); })
+      .then(function(res){
+        admqCloseReschedule();
+        if (res.success) loadDate(_date);
+        else alert(res.message || 'Failed to reschedule');
+      }).finally(function(){ btn.disabled = false; });
+  };
+
   window.admqOpenRelease = function(id) {
     _releaseId = id;
     document.getElementById('admqReleaseReason').value = '';
@@ -800,6 +951,25 @@
 
   // ── Socket live reload (called by layout.ejs socket block) ───────────
   window.admqSocketCallback = function() { loadDate(_date); };
+
+  // ── Portal client online presence (called by layout.ejs) ────────────
+  window.admqOnPresence = function(data) {
+    if (data.status === 'online') _onlineClients.add(data.user_id);
+    else _onlineClients.delete(data.user_id);
+    document.querySelectorAll('[data-online-uid="'+data.user_id+'"]').forEach(function(el) {
+      el.className = data.status === 'online' ? 'admq-online-dot' : '';
+    });
+  };
+
+  // Fetch initial online clients
+  fetch('/queue/client-online').then(function(r){ return r.json(); }).then(function(res) {
+    if (!res.success) return;
+    _onlineClients = new Set(res.data.online);
+    document.querySelectorAll('[data-online-uid]').forEach(function(el) {
+      var uid = parseInt(el.getAttribute('data-online-uid'));
+      el.className = _onlineClients.has(uid) ? 'admq-online-dot' : '';
+    });
+  }).catch(function(){});
 
   // ── Live comment from client (called by layout.ejs) ─────────────────
   window.admqOnComment = function(data) {

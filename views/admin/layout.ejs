@@ -2068,6 +2068,9 @@
     admBdrSock.on('channel:presence', function() {
       if (admGcIsOpen) _gcLoadOnlineUsers();
     });
+    admBdrSock.on('portal:presence', function(data) {
+      if (typeof window.admqOnPresence === 'function') window.admqOnPresence(data);
+    });
   }
 
   var _typeAccent = { success: '#22c55e', error: '#ef4444', warning: '#f59e0b', info: 'var(--adm-accent)' };

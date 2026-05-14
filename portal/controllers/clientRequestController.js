@@ -4,7 +4,7 @@ const { getIO } = require('../../config/socket');
 const GoogleDriveService = require('../../services/googleDriveService');
 
 function statsFromInstances(instances) {
-  const s = { total: 0, open: 0, picked: 0, done: 0, missed: 0, cancelled: 0 };
+  const s = { total: 0, open: 0, picked: 0, done: 0, missed: 0, cancelled: 0, approved: 0, rejected: 0 };
   for (const inst of instances) {
     if (inst.status in s) s[inst.status]++;
     if (inst.status !== 'cancelled') s.total++;
@@ -174,6 +174,47 @@ class ClientRequestController {
     } catch (err) {
       console.error('ClientRequest uncancelInstance error:', err);
       return ApiResponse.error(res, err.message || 'Failed to restore', 400);
+    }
+  }
+
+  static async approveInstance(req, res) {
+    try {
+      const instanceId = parseInt(req.params.id);
+      const instance = await ClientRequest.getInstanceById(instanceId);
+      if (!instance || instance.org_id !== req.user.organization_id)
+        return ApiResponse.error(res, 'Not found', 404);
+      if (instance.created_by !== req.user.id)
+        return ApiResponse.error(res, 'Only the request creator can approve it', 403);
+      await ClientRequest.approveInstance(instanceId, req.user.id);
+      const updated = await ClientRequest.getInstanceById(instanceId);
+      try { const io = getIO(); io.emit('queue:updated', { instance: updated }); io.of('/portal').emit('queue:updated', { instance: updated }); } catch (_) {}
+      return ApiResponse.success(res, { instance: updated }, 'Request approved');
+    } catch (err) {
+      console.error('ClientRequest approveInstance error:', err);
+      return ApiResponse.error(res, err.message || 'Failed to approve', 400);
+    }
+  }
+
+  static async rejectInstance(req, res) {
+    try {
+      const instanceId = parseInt(req.params.id);
+      const instance = await ClientRequest.getInstanceById(instanceId);
+      if (!instance || instance.org_id !== req.user.organization_id)
+        return ApiResponse.error(res, 'Not found', 404);
+      if (instance.created_by !== req.user.id)
+        return ApiResponse.error(res, 'Only the request creator can reject it', 403);
+      await ClientRequest.rejectInstance(instanceId, req.user.id);
+      const reason = (req.body.reason || '').trim();
+      const commentBody = reason
+        ? `Rejected: ${reason}`
+        : 'Rejected — please redo this request.';
+      await ClientRequest.addComment(instanceId, req.user.id, commentBody);
+      const updated = await ClientRequest.getInstanceById(instanceId);
+      try { const io = getIO(); io.emit('queue:updated', { instance: updated }); io.of('/portal').emit('queue:updated', { instance: updated }); } catch (_) {}
+      return ApiResponse.success(res, { instance: updated }, 'Request rejected');
+    } catch (err) {
+      console.error('ClientRequest rejectInstance error:', err);
+      return ApiResponse.error(res, err.message || 'Failed to reject', 400);
     }
   }
 

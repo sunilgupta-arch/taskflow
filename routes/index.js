@@ -226,8 +226,10 @@ const queueAttachUpload = multer({ storage: multer.memoryStorage(), limits: { fi
 router.get('/queue', authenticate, ClientQueueController.index);
 router.get('/queue/data', authenticate, ClientQueueController.getQueue);
 router.get('/queue/badge', authenticate, ClientQueueController.getBadgeCount);
+router.get('/queue/client-online', authenticate, ClientQueueController.getOnlineClients);
 router.post('/queue/:id/pick', authenticate, ClientQueueController.pick);
 router.post('/queue/:id/release', authenticate, ClientQueueController.release);
+router.post('/queue/:id/reschedule', authenticate, ClientQueueController.reschedule);
 router.post('/queue/:id/complete', authenticate, ClientQueueController.complete);
 router.post('/queue/:id/uncancel', authenticate, requireRoles('LOCAL_ADMIN', 'LOCAL_MANAGER'), ClientQueueController.uncancel);
 router.get('/queue/:id/detail', authenticate, ClientQueueController.getDetail);

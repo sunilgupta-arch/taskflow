@@ -48,11 +48,9 @@ function initPortalSocket(io) {
     }
     onlineUsers.get(user.id).add(socket.id);
 
-    // Broadcast online status to all portal users
-    portalNs.emit('portal:presence', {
-      user_id: user.id,
-      status: 'online'
-    });
+    // Broadcast online status to portal users and main namespace (admin queue)
+    portalNs.emit('portal:presence', { user_id: user.id, status: 'online' });
+    io.emit('portal:presence', { user_id: user.id, status: 'online' });
 
     // Join personal room for direct notifications
     socket.on('portal:join', () => {
@@ -107,10 +105,8 @@ function initPortalSocket(io) {
         sockets.delete(socket.id);
         if (sockets.size === 0) {
           onlineUsers.delete(user.id);
-          portalNs.emit('portal:presence', {
-            user_id: user.id,
-            status: 'offline'
-          });
+          portalNs.emit('portal:presence', { user_id: user.id, status: 'offline' });
+          io.emit('portal:presence', { user_id: user.id, status: 'offline' });
         }
       }
     });
@@ -119,4 +115,8 @@ function initPortalSocket(io) {
   return portalNs;
 }
 
-module.exports = { initPortalSocket };
+function getOnlineClientIds() {
+  return Array.from(onlineUsers.keys());
+}
+
+module.exports = { initPortalSocket, getOnlineClientIds };
