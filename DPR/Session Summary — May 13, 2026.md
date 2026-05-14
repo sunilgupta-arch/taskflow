@@ -171,3 +171,65 @@ CSS `transform` on any ancestor element creates a new containing block, which **
 - `position:absolute; bottom:100%` on the popup (which is already inside `position:relative` `.adm-gc-input-area`) places it naturally above the input with no coordinate math
 
 **Result:** @mention popup now works correctly in the GC drawer. ✓
+
+---
+
+## Fix: GC Drawer — Date Separator Lines Invisible
+
+### Problem
+The "May 11" / "May 9" date separator labels were visible as text but the horizontal lines on both sides were not visible.
+
+### Root Cause
+The lines use `background: var(--adm-border)` = `#383838` against the messages container background `var(--adm-bg)` = `#1a1a1a`. The contrast (30 RGB units on a 1px line) was too low to be perceptible.
+
+### Fix
+`views/admin/layout.ejs` — `.adm-gc-date-div::before, ::after`
+- Changed `background: var(--adm-border)` → `background: var(--adm-border-2)` (`#484848`)
+- Stays on-theme but is noticeably more visible against the dark background
+
+---
+
+## Fix: GC Drawer — Reply Quote Block Not Rendering
+
+### Problem
+Clicking Reply on a message showed the reply bar correctly, but when the reply was sent, the quoted message block (the preview of the message being replied to) did not appear above the reply content.
+
+### Root Cause
+The DB query returns the reply sender name as `reply_to_sender_name`. In `_gcBuildBubble`, the condition and render used `m.reply_to_sender` (missing `_name`). The field was `undefined`, so `if (m.reply_to_id && m.reply_to_sender)` was always `false` and the quote block was never built.
+
+The classic channel page (`admin/channel.ejs`) correctly uses `m.reply_to_sender_name` — the field name mismatch was introduced when implementing the drawer.
+
+### Fix
+`views/admin/layout.ejs` — `_gcBuildBubble()`
+- `m.reply_to_sender` → `m.reply_to_sender_name` (condition check and render)
+
+---
+
+## Info Board — Bugs Fixed in Existing Implementation
+
+### Finding
+User requested Info Board be built. On inspection it was already fully implemented: route at `/admin/infoboard`, view `views/admin/infoboard.ejs`, `announcements` DB table (migration 020), and `AnnouncementController` API endpoints for create/pin/delete.
+
+Two bugs were found in `controllers/adminHubController.js` `infoboard()`:
+
+### Bug 1 — Wrong section value
+`section: 'comms'` was passed instead of `section: 'infoboard'`. The sidebar nav checks `section === 'infoboard'` to highlight the active link, so the Info Board nav item was never highlighted when on the Info Board page.
+
+**Fix:** Changed to `section: 'infoboard'`.
+
+### Bug 2 — canPost / canManage hardcoded true for all roles
+`canPost: true` and `canManage: true` were hardcoded. The routes only allow `LOCAL_ADMIN` to create, pin, and delete announcements. LOCAL_MANAGER and LOCAL_USER would see the "New Post" button and pin/delete icons but receive 403 errors when using them.
+
+**Fix:** Changed to `canPost: role === 'LOCAL_ADMIN'` and `canManage: role === 'LOCAL_ADMIN'`.
+
+---
+
+## My Attendance — Confirmed Complete
+
+`/admin/my-attendance` is fully built and working:
+- Stats: Days Present, Days Absent, On Leave, Attendance Rate with colour-coded rate %
+- Month navigation with prev/next links
+- Today's sessions card: login/logout times, duration, gap rows, late login reason
+- Calendar grid: colour-coded per-day status (present/absent/leave/pending/holiday/off/future)
+- Comp-Off section: balance + history table loaded via `/comp-off/my-balance`, Apply Comp-Off modal
+- `section: 'my-attendance'` correctly matches the sidebar nav — no fixes needed

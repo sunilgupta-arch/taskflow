@@ -3,18 +3,27 @@ const logger = require('../utils/logger');
 
 // ---------------------------------------------------------------------------
 // Transporter — created once, reused across all sends
+// Prefers OAuth2 (GMAIL_REFRESH_TOKEN) over App Password (MAIL_PASS)
 // ---------------------------------------------------------------------------
 let _transporter = null;
 
 function getTransporter() {
   if (_transporter) return _transporter;
-  _transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-      user: process.env.MAIL_USER,
-      pass: process.env.MAIL_PASS,
-    },
-  });
+
+  const auth = process.env.GMAIL_REFRESH_TOKEN
+    ? {
+        type: 'OAuth2',
+        user: process.env.MAIL_USER,
+        clientId: process.env.GDRIVE_CLIENT_ID,
+        clientSecret: process.env.GDRIVE_CLIENT_SECRET,
+        refreshToken: process.env.GMAIL_REFRESH_TOKEN,
+      }
+    : {
+        user: process.env.MAIL_USER,
+        pass: process.env.MAIL_PASS,
+      };
+
+  _transporter = nodemailer.createTransport({ service: 'gmail', auth });
   return _transporter;
 }
 

@@ -42,6 +42,37 @@ However, this fix required several rounds of investigation and correction, which
 
 ---
 
+### 4. Group Channel Drawer — Date Separator Lines Now Visible
+
+The date labels (e.g. "May 11") that divide messages by day were showing the text but the horizontal lines on either side were invisible against the dark background. The line colour has been made slightly brighter so the separators are now clearly visible.
+
+---
+
+### 5. Group Channel Drawer — Reply Quote Block Fixed
+
+When replying to a message in the drawer, the reply bar at the bottom correctly showed which message was being replied to. However, once the reply was sent, the quoted preview of the original message did not appear inside the sent reply. This was caused by a mismatched field name in the code (a typo introduced when the drawer was built). It is now corrected — replied messages show the quoted original content above the reply text, matching the behaviour of the classic channel page.
+
+---
+
+### 6. Info Board — Access Controls Corrected
+
+The Info Board (at `/admin/infoboard`) was already live but had two issues corrected:
+
+- The sidebar navigation was not highlighting "Info Board" as the active page when you were on it — the wrong section identifier was being passed. This is now fixed.
+- The "New Post", pin, and delete buttons were visible to all staff members, even though only admins can actually use those actions. Staff members would see the buttons but get an error if they tried to use them. These buttons are now correctly hidden for non-admin users.
+
+---
+
+### 7. My Attendance — Confirmed Complete
+
+The My Attendance page (`/admin/my-attendance`) is confirmed fully working for all local users:
+- Monthly attendance calendar with colour-coded day statuses
+- Today's session breakdown (login/logout times, duration)
+- Stats summary (days present, absent, leave, attendance rate)
+- Comp-Off balance and application built in
+
+---
+
 ## In Progress / Coming Next
 - Wiring email notifications into specific features (task assignments, leave updates, etc.) — will be done feature by feature as confirmed
 

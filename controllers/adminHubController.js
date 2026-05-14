@@ -727,14 +727,15 @@ class AdminHubController {
          JOIN organizations o ON u.organization_id = o.id
          ORDER BY a.is_pinned DESC, a.created_at DESC`
       );
+      const role = req.user.role_name || '';
       res.render('admin/infoboard', {
         title: 'Info Board',
         layout: 'admin/layout',
-        section: 'comms',
+        section: 'infoboard',
         posts,
         userOrgId: req.user.organization_id,
-        canPost: true,
-        canManage: true,
+        canPost: role === 'LOCAL_ADMIN',
+        canManage: role === 'LOCAL_ADMIN',
       });
     } catch (err) {
       console.error('AdminHub infoboard error:', err);
