@@ -68,6 +68,13 @@
             <div class="home-tile-label">Links</div>
             <div class="home-tile-desc">Saved links & reports</div>
           </a>
+          <% if (['CLIENT_ADMIN', 'CLIENT_MANAGER', 'CLIENT_TOP_MGMT'].includes(user.role_name)) { %>
+          <a href="/portal/workspace" class="home-tile">
+            <div class="home-tile-icon" style="--tile-color: #6366f1"><i class="bi bi-code-slash"></i></div>
+            <div class="home-tile-label">Dev Workspace</div>
+            <div class="home-tile-desc">Project progress & updates</div>
+          </a>
+          <% } %>
           <% if (['CLIENT_ADMIN', 'CLIENT_TOP_MGMT'].includes(user.role_name)) { %>
           <a href="/portal/team-status" class="home-tile">
             <div class="home-tile-icon" style="--tile-color: #22c55e"><i class="bi bi-flag-fill"></i></div>

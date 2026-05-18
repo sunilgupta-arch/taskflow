@@ -8,6 +8,7 @@ const PortalTaskController = require('../controllers/taskController');
 const PortalUserController = require('../controllers/userController');
 const PortalTeamStatusController = require('../controllers/teamStatusController');
 const UrgentController = require('../controllers/urgentController');
+const DevWorkspaceController = require('../../controllers/devWorkspaceController');
 const { requireRoles } = require('../../middleware/authorize');
 
 // Multer: memory storage for portal file uploads, 100MB max
@@ -794,5 +795,13 @@ router.post('/extend-session', (req, res) => {
     return ApiResponse.error(res, 'Error extending session');
   }
 });
+
+// ── Dev Workspace (client-facing, read-only, CLIENT_ADMIN/MANAGER/TOP_MGMT only) ──
+const requireClientAdmin = requireRoles('CLIENT_ADMIN', 'CLIENT_MANAGER', 'CLIENT_TOP_MGMT');
+router.get('/workspace',                         requireClientAdmin, DevWorkspaceController.portalIndex);
+router.get('/workspace/projects',               requireClientAdmin, DevWorkspaceController.portalGetProjects);
+router.get('/workspace/projects/:id',           requireClientAdmin, DevWorkspaceController.portalGetProject);
+router.get('/workspace/projects/:id/updates',   requireClientAdmin, DevWorkspaceController.portalGetUpdates);
+router.get('/workspace/projects/:id/releases',  requireClientAdmin, DevWorkspaceController.portalGetReleases);
 
 module.exports = router;

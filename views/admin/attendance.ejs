@@ -43,22 +43,34 @@
 }
 .ata-action-btn:hover { border-color: #8b5cf6; color: #8b5cf6; }
 
-/* ── Stats ──────────────────────────────────────────────── */
-.ata-stats { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+/* ── Stats cards ─────────────────────────────────────────── */
+.ata-stats { display: flex; gap: 10px; flex-wrap: wrap; }
 .ata-stat {
-  display: flex; align-items: center; gap: 6px;
-  padding: 5px 12px; border-radius: 8px;
+  flex: 1; min-width: 90px;
+  padding: 14px 16px; border-radius: 12px;
   border: 1px solid var(--adm-border); background: var(--adm-surface);
-  font-size: 0.75rem; font-weight: 500; color: var(--adm-text-2);
 }
-.ata-stat-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
-.ata-stat-count { font-family: var(--adm-mono); font-weight: 700; font-size: 0.88rem; }
-.ata-stat.s-present { border-color: rgba(16,185,129,0.3);  background: rgba(16,185,129,0.06);  color: #10b981; }
-.ata-stat.s-absent  { border-color: rgba(239,68,68,0.3);   background: rgba(239,68,68,0.06);   color: #ef4444; }
-.ata-stat.s-late    { border-color: rgba(245,158,11,0.3);  background: rgba(245,158,11,0.06);  color: #f59e0b; }
-.ata-stat.s-leave   { border-color: rgba(59,130,246,0.3);  background: rgba(59,130,246,0.06);  color: #3b82f6; }
-.ata-stat.s-off      { border-color: rgba(100,116,139,0.3); background: rgba(100,116,139,0.06); color: #94a3b8; }
-.ata-stat.s-offshift { border-color: rgba(100,116,139,0.2); background: rgba(100,116,139,0.04); color: #64748b; }
+.ata-stat-count {
+  font-family: var(--adm-mono); font-weight: 700;
+  font-size: 1.6rem; line-height: 1; color: var(--adm-text);
+  display: block; margin-bottom: 5px;
+}
+.ata-stat-label {
+  font-size: 0.68rem; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 0.4px; color: var(--adm-muted);
+}
+.ata-stat.s-present { border-color: rgba(16,185,129,0.3);  background: rgba(16,185,129,0.05); }
+.ata-stat.s-present .ata-stat-count { color: #10b981; }
+.ata-stat.s-absent  { border-color: rgba(239,68,68,0.3);   background: rgba(239,68,68,0.05); }
+.ata-stat.s-absent  .ata-stat-count { color: #ef4444; }
+.ata-stat.s-late    { border-color: rgba(245,158,11,0.3);  background: rgba(245,158,11,0.05); }
+.ata-stat.s-late    .ata-stat-count { color: #f59e0b; }
+.ata-stat.s-leave   { border-color: rgba(59,130,246,0.3);  background: rgba(59,130,246,0.05); }
+.ata-stat.s-leave   .ata-stat-count { color: #3b82f6; }
+.ata-stat.s-off     { border-color: rgba(100,116,139,0.3); background: rgba(100,116,139,0.05); }
+.ata-stat.s-off     .ata-stat-count { color: #94a3b8; }
+.ata-stat.s-offshift{ border-color: rgba(100,116,139,0.2); background: rgba(100,116,139,0.04); }
+.ata-stat.s-offshift .ata-stat-count { color: #64748b; }
 
 /* ── Daily table ────────────────────────────────────────── */
 .ata-table-wrap { background: var(--adm-surface); border: 1px solid var(--adm-border); border-radius: 14px; overflow: hidden; }
@@ -281,17 +293,18 @@
     <div class="ata-modal-title"><i class="bi bi-pencil-square"></i> Override Attendance</div>
     <div class="ata-modal-sub" id="ataOverrideSub"></div>
     <label>Status</label>
-    <select id="ataOverrideStatus">
+    <select id="ataOverrideStatus" onchange="ataOnStatusChange()">
       <option value="present">Present</option>
       <option value="absent">Absent</option>
       <option value="half_day">Half Day</option>
-      <option value="work_from_home">Work From Home</option>
-      <option value="official_duty">Official Duty</option>
+      <option value="short_leave">Short Leave</option>
       <option value="leave">Leave</option>
       <option value="holiday">Holiday</option>
+      <option value="week_off">Week Off</option>
+      <option value="other">Other</option>
     </select>
-    <label>Remark <span style="font-size:0.68rem;opacity:0.6">(optional)</span></label>
-    <input type="text" id="ataOverrideRemark" placeholder="e.g. Client visit, Medical leave…">
+    <label id="ataRemarkLabel">Note <span id="ataRemarkHint" style="font-size:0.68rem;opacity:0.6">(optional)</span></label>
+    <input type="text" id="ataOverrideRemark" placeholder="e.g. Medical leave, Early departure…">
     <div class="ata-modal-footer">
       <div class="ata-modal-left">
         <button class="ata-modal-btn save" onclick="ataSubmitOverride()"><i class="bi bi-check-lg"></i> Save</button>
@@ -327,6 +340,7 @@
       <button class="ata-tab active" id="ataTabDaily"    onclick="ataSetTab('daily')"><i class="bi bi-list-ul"></i> Daily</button>
       <button class="ata-tab"        id="ataTabMonthly"  onclick="ataSetTab('monthly')"><i class="bi bi-calendar3"></i> Monthly</button>
       <button class="ata-tab"        id="ataTabCompOff"  onclick="ataSetTab('compoff')"><i class="bi bi-gift"></i> Comp-Off</button>
+      <button class="ata-tab"        id="ataTabStatus"   onclick="ataSetTab('status')"><i class="bi bi-bar-chart-line"></i> Status</button>
     </div>
   </div>
   <div style="display:flex;align-items:center;gap:8px">
@@ -335,13 +349,11 @@
   </div>
 </div>
 
-<!-- Stats -->
-<div class="ata-stats" id="ataStats"></div>
-
 <!-- Content areas -->
 <div id="ataDailyArea"></div>
 <div id="ataMonthlyArea"  style="display:none"></div>
 <div id="ataCompOffArea"  style="display:none"></div>
+<div id="ataStatusArea"   style="display:none;padding:16px 0"><div class="ata-stats" id="ataStats"></div></div>
 
 <script>
 (function () {
@@ -483,19 +495,19 @@
     return { total: _users.length, present: present, absent: absent, late: late, onLeave: onLeave, off: off, offShift: offShift };
   }
 
-  // ── Render stats bar ─────────────────────────────────────────────────
+  // ── Render stats cards ────────────────────────────────────────────────
   function renderStats(s) {
-    var offShiftPill = s.offShift > 0
-      ? '<div class="ata-stat s-offshift"><span class="ata-stat-dot" style="background:#64748b"></span><span class="ata-stat-count">'+s.offShift+'</span>&nbsp;Off Shift</div>'
-      : '';
+    function card(cls, count, label) {
+      return '<div class="ata-stat'+cls+'"><span class="ata-stat-count">'+count+'</span><span class="ata-stat-label">'+label+'</span></div>';
+    }
     document.getElementById('ataStats').innerHTML =
-      '<div class="ata-stat"><span class="ata-stat-count">'+s.total+'</span>&nbsp;Total</div>'
-     +'<div class="ata-stat s-present"><span class="ata-stat-dot" style="background:#10b981"></span><span class="ata-stat-count">'+s.present+'</span>&nbsp;Present</div>'
-     +'<div class="ata-stat s-absent"><span class="ata-stat-dot" style="background:#ef4444"></span><span class="ata-stat-count">'+s.absent+'</span>&nbsp;Absent</div>'
-     +'<div class="ata-stat s-late"><span class="ata-stat-dot" style="background:#f59e0b"></span><span class="ata-stat-count">'+s.late+'</span>&nbsp;Late</div>'
-     +'<div class="ata-stat s-leave"><span class="ata-stat-dot" style="background:#3b82f6"></span><span class="ata-stat-count">'+s.onLeave+'</span>&nbsp;On Leave</div>'
-     +'<div class="ata-stat s-off"><span class="ata-stat-dot" style="background:#94a3b8"></span><span class="ata-stat-count">'+s.off+'</span>&nbsp;Day Off</div>'
-     + offShiftPill;
+      card('',              s.total,   'Total')
+     +card(' s-present',   s.present, 'Present')
+     +card(' s-absent',    s.absent,  'Absent')
+     +card(' s-late',      s.late,    'Late')
+     +card(' s-leave',     s.onLeave, 'On Leave')
+     +card(' s-off',       s.off,     'Day Off')
+     +(s.offShift > 0 ? card(' s-offshift', s.offShift, 'Off Shift') : '');
   }
 
   // ── Render daily nav ─────────────────────────────────────────────────
@@ -707,12 +719,15 @@
     document.getElementById('ataTabDaily').classList.toggle('active',   tab === 'daily');
     document.getElementById('ataTabMonthly').classList.toggle('active', tab === 'monthly');
     document.getElementById('ataTabCompOff').classList.toggle('active', tab === 'compoff');
+    document.getElementById('ataTabStatus').classList.toggle('active',  tab === 'status');
     document.getElementById('ataDailyArea').style.display    = tab === 'daily'   ? '' : 'none';
     document.getElementById('ataMonthlyArea').style.display  = tab === 'monthly' ? '' : 'none';
     document.getElementById('ataCompOffArea').style.display  = tab === 'compoff' ? '' : 'none';
+    document.getElementById('ataStatusArea').style.display   = tab === 'status'  ? '' : 'none';
     if (tab === 'daily')   renderDailyNav(_date);
     if (tab === 'monthly') renderMonthlyNav();
     if (tab === 'compoff') loadCompOffSummary();
+    if (tab === 'status')  document.getElementById('ataNavArea').innerHTML = '';
   };
 
   function loadCompOffSummary() {
@@ -796,6 +811,12 @@
   };
 
   // ── Override modal ───────────────────────────────────────────────────
+  window.ataOnStatusChange = function() {
+    var isOther = document.getElementById('ataOverrideStatus').value === 'other';
+    document.getElementById('ataRemarkHint').textContent = isOther ? '(required)' : '(optional)';
+    document.getElementById('ataOverrideRemark').placeholder = isOther ? 'Describe the reason…' : 'e.g. Medical leave, Early departure…';
+  };
+
   window.ataOpenOverride = function(userId, date) {
     _ovUserId = userId;
     _ovDate   = date;
@@ -805,6 +826,7 @@
     document.getElementById('ataOverrideStatus').value  = existing ? existing.status  : 'present';
     document.getElementById('ataOverrideRemark').value  = existing ? (existing.remark||'') : '';
     document.getElementById('ataRemoveBtn').style.display = existing ? '' : 'none';
+    ataOnStatusChange();
     document.getElementById('ataOverrideModal').style.display = 'flex';
   };
 
@@ -817,6 +839,10 @@
     if (!_ovUserId || !_ovDate) return;
     var status = document.getElementById('ataOverrideStatus').value;
     var remark = document.getElementById('ataOverrideRemark').value.trim();
+    if (status === 'other' && !remark) {
+      document.getElementById('ataOverrideRemark').focus();
+      return;
+    }
     fetch('/attendance/override', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({user_id:_ovUserId,date:_ovDate,status:status,remark:remark})})
       .then(function(r){return r.json();}).then(function(res){
         ataCloseOverride();

@@ -268,31 +268,55 @@ class ClientRequest {
     );
     const stats = { open: 0, picked: 0, done: 0, missed: 0, cancelled: 0, approved: 0, rejected: 0, rescheduled: 0, total: 0 };
     statsRows.forEach(r => {
-      if (stats.hasOwnProperty(r.status)) stats[r.status] = r.cnt;
-      if (!['cancelled', 'rescheduled'].includes(r.status)) stats.total += r.cnt;
+      if (stats.hasOwnProperty(r.status)) stats[r.status] = parseInt(r.cnt);
+      if (!['cancelled', 'rescheduled'].includes(r.status)) stats.total += parseInt(r.cnt);
     });
+    const resolved = stats.done + stats.approved;
+    stats.completionRate = stats.total > 0 ? Math.round((resolved / stats.total) * 100) : 0;
+    stats.notPicked = stats.open + stats.missed;
 
     const [requests] = await db.query(
       `SELECT cri.id, cri.status, cri.instance_date, cri.picked_by,
-              cr.title, cr.description, cr.priority,
+              cri.picked_at, cri.completed_at, cri.completed_late, cri.rescheduled_to,
+              cr.title, cr.task_type, cr.description, cr.priority, cr.recurrence, cr.due_time,
               creator.name as created_by_name,
               picker.name as picked_by_name,
-              lc.body as latest_comment
+              completer.name as completed_by_name,
+              approver.name as approved_by_name,
+              lc.body as latest_comment,
+              lc_user.name as latest_comment_by
        FROM client_request_instances cri
        JOIN client_requests cr ON cri.request_id = cr.id
        JOIN users creator ON cr.created_by = creator.id
-       LEFT JOIN users picker ON cri.picked_by = picker.id
+       LEFT JOIN users picker    ON cri.picked_by    = picker.id
+       LEFT JOIN users completer ON cri.completed_by = completer.id
+       LEFT JOIN users approver  ON cri.approved_by  = approver.id
        LEFT JOIN client_request_comments lc ON lc.id = (
          SELECT MAX(id) FROM client_request_comments WHERE instance_id = cri.id
        )
+       LEFT JOIN users lc_user ON lc.user_id = lc_user.id
        WHERE DATE_FORMAT(cri.instance_date, '%Y-%m') = ?
-       ORDER BY cri.instance_date ASC,
-                FIELD(cri.status,'open','picked','missed','rescheduled','done','approved','rejected','cancelled'),
-                cri.id ASC`,
+       ORDER BY FIELD(cri.status,'missed','open','picked','rejected','rescheduled','done','approved','cancelled'),
+                cri.instance_date ASC, cri.id ASC`,
       [yearMonth]
     );
 
-    return { stats, requests };
+    const [employeeRows] = await db.query(
+      `SELECT u.id, u.name,
+              COUNT(*) as total_handled,
+              SUM(CASE WHEN cri.status IN ('done','approved') THEN 1 ELSE 0 END) as completed,
+              SUM(CASE WHEN cri.status = 'picked' THEN 1 ELSE 0 END) as in_progress,
+              SUM(CASE WHEN cri.status = 'rejected' THEN 1 ELSE 0 END) as rejected,
+              SUM(CASE WHEN cri.status IN ('done','approved') AND cri.completed_late = 1 THEN 1 ELSE 0 END) as completed_late
+       FROM client_request_instances cri
+       JOIN users u ON cri.picked_by = u.id
+       WHERE DATE_FORMAT(cri.instance_date, '%Y-%m') = ?
+       GROUP BY u.id, u.name
+       ORDER BY completed DESC, total_handled DESC`,
+      [yearMonth]
+    );
+
+    return { stats, requests, employees: employeeRows };
   }
 
   // Used by portal: get instances for a specific org + date

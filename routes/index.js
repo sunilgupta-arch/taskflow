@@ -214,6 +214,45 @@ router.get('/admin/attendance/data',    authenticate, requireLocalAdmin, AdminHu
 router.get('/admin/attendance/monthly', authenticate, requireLocalAdmin, AdminHubController.attendanceMonthlyData);
 router.get('/admin/reports',            authenticate, requireLocalAdmin, AdminHubController.reports);
 router.get('/admin/task-completion',    authenticate, requireLocalAdmin, AdminHubController.taskCompletion);
+router.get('/admin/queue-report',       authenticate, requireLocalAdmin, AdminHubController.queueReport);
+router.get('/admin/queue-report-data',  authenticate, requireLocalAdmin, AdminHubController.queueReportData);
+
+// ── Dev Workspace ─────────────────────────────────────────────────────
+const DevWorkspaceController = require('../controllers/devWorkspaceController');
+const requireDevOrAdmin = (req, res, next) => {
+  const role = req.user && req.user.role_name;
+  const isDev = req.user && req.user.is_developer == 1;
+  if (['LOCAL_ADMIN','LOCAL_MANAGER'].includes(role) || isDev) return next();
+  return res.status(403).json({ success: false, message: 'Access denied' });
+};
+router.get('/admin/workspace',              authenticate, requireDevOrAdmin, DevWorkspaceController.index);
+router.get('/workspace/projects',           authenticate, requireDevOrAdmin, DevWorkspaceController.getProjects);
+router.get('/workspace/projects/:id',       authenticate, requireDevOrAdmin, DevWorkspaceController.getProject);
+router.post('/workspace/projects',          authenticate, requireDevOrAdmin, DevWorkspaceController.createProject);
+router.put('/workspace/projects/:id',       authenticate, requireDevOrAdmin, DevWorkspaceController.updateProject);
+router.delete('/workspace/projects/:id',    authenticate, requireDevOrAdmin, DevWorkspaceController.deleteProject);
+router.post('/workspace/projects/:id/tasks',        authenticate, requireDevOrAdmin, DevWorkspaceController.addTask);
+router.put('/workspace/projects/:id/tasks/:taskId', authenticate, requireDevOrAdmin, DevWorkspaceController.updateTask);
+router.delete('/workspace/projects/:id/tasks/:taskId', authenticate, requireDevOrAdmin, DevWorkspaceController.deleteTask);
+router.post('/workspace/projects/:id/milestones',            authenticate, requireDevOrAdmin, DevWorkspaceController.addMilestone);
+router.put('/workspace/milestones/:milestoneId',             authenticate, requireDevOrAdmin, DevWorkspaceController.updateMilestone);
+router.delete('/workspace/milestones/:milestoneId',          authenticate, requireDevOrAdmin, DevWorkspaceController.deleteMilestone);
+router.post('/workspace/projects/:id/links',                 authenticate, requireDevOrAdmin, DevWorkspaceController.addLink);
+router.delete('/workspace/links/:linkId',                    authenticate, requireDevOrAdmin, DevWorkspaceController.deleteLink);
+router.get('/workspace/projects/:id/updates',                authenticate, requireDevOrAdmin, DevWorkspaceController.getUpdates);
+router.post('/workspace/projects/:id/updates',               authenticate, requireDevOrAdmin, DevWorkspaceController.addUpdate);
+router.get('/workspace/projects/:id/comments',               authenticate, requireDevOrAdmin, DevWorkspaceController.getComments);
+router.post('/workspace/projects/:id/comments',              authenticate, requireDevOrAdmin, DevWorkspaceController.addComment);
+router.delete('/workspace/comments/:commentId',              authenticate, requireDevOrAdmin, DevWorkspaceController.deleteComment);
+router.get('/workspace/projects/:id/releases',               authenticate, requireDevOrAdmin, DevWorkspaceController.getReleases);
+router.post('/workspace/projects/:id/releases',              authenticate, requireDevOrAdmin, DevWorkspaceController.addRelease);
+router.delete('/workspace/releases/:releaseId',              authenticate, requireDevOrAdmin, DevWorkspaceController.deleteRelease);
+router.get('/workspace/notes',                authenticate, requireDevOrAdmin, DevWorkspaceController.getNotes);
+router.get('/workspace/notes/:noteId',        authenticate, requireDevOrAdmin, DevWorkspaceController.getNote);
+router.post('/workspace/notes',               authenticate, requireDevOrAdmin, DevWorkspaceController.createNote);
+router.put('/workspace/notes/:noteId',        authenticate, requireDevOrAdmin, DevWorkspaceController.updateNote);
+router.delete('/workspace/notes/:noteId',     authenticate, requireDevOrAdmin, DevWorkspaceController.deleteNote);
+router.post('/workspace/notes/:noteId/share', authenticate, requireDevOrAdmin, DevWorkspaceController.shareNote);
 router.get('/admin/tools',              authenticate, requireLocalAdmin, AdminHubController.tools);
 router.get('/admin/drive',              authenticate, requireLocalAdmin, AdminHubController.drive);
 router.get('/admin/backup',             authenticate, requireLocalAdmin, AdminHubController.backup);

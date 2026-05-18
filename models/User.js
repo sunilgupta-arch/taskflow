@@ -53,7 +53,7 @@ class UserModel {
     const fields = [];
     const values = [];
 
-    const allowedFields = ['name', 'email', 'organization_id', 'role_id', 'weekly_off_day', 'shift_start', 'shift_hours', 'leave_status', 'is_active', 'avatar', 'visible_to_client'];
+    const allowedFields = ['name', 'email', 'organization_id', 'role_id', 'weekly_off_day', 'shift_start', 'shift_hours', 'leave_status', 'is_active', 'avatar', 'visible_to_client', 'is_developer'];
     allowedFields.forEach(f => {
       if (data[f] !== undefined) {
         fields.push(`${f} = ?`);

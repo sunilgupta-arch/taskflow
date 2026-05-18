@@ -172,14 +172,14 @@ class ClientQueueController {
       if (!req.user.email) {
         return ApiResponse.error(res, 'Your account has no email address configured', 400);
       }
-      const { stats, requests } = await ClientRequest.getMonthlyReport(year_month);
+      const { stats, requests, employees } = await ClientRequest.getMonthlyReport(year_month);
       if (!stats.total && !stats.cancelled && !stats.rescheduled && !requests.length) {
         return ApiResponse.error(res, 'No data found for the selected month', 404);
       }
       await EmailService.send({
         to: req.user.email,
         templateName: 'monthlyRequestsReport',
-        templateData: { yearMonth: year_month, stats, requests }
+        templateData: { yearMonth: year_month, stats, requests, employees }
       });
       return ApiResponse.success(res, null, `Monthly report sent to ${req.user.email}`);
     } catch (err) {

@@ -1,0 +1,21 @@
+-- 057: Dev Workspace Notes (2026-05-18)
+
+CREATE TABLE IF NOT EXISTS dev_notes (
+  id         INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  title      VARCHAR(300) NOT NULL,
+  body       TEXT,
+  created_by INT UNSIGNED NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE,
+  INDEX idx_creator (created_by)
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS dev_note_shares (
+  note_id      INT UNSIGNED NOT NULL,
+  developer_id INT UNSIGNED NOT NULL,
+  shared_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (note_id, developer_id),
+  FOREIGN KEY (note_id)      REFERENCES dev_notes(id)  ON DELETE CASCADE,
+  FOREIGN KEY (developer_id) REFERENCES users(id)       ON DELETE CASCADE
+) ENGINE=InnoDB;

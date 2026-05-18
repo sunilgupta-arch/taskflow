@@ -157,6 +157,12 @@
         </div>
       </div>
     </div>
+    <div id="usrDevWrap" style="display:none;margin-top:4px">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.8rem;color:var(--adm-text-2)">
+        <input type="checkbox" id="usrIsDeveloper" style="width:15px;height:15px;accent-color:#6366f1">
+        <span><i class="bi bi-code-slash" style="color:#6366f1;margin-right:3px"></i> Developer — can access Dev Workspace</span>
+      </label>
+    </div>
     <div class="usr-modal-footer">
       <button class="usr-mbt cancel" onclick="usrCloseModal()">Cancel</button>
       <button class="usr-mbt save"   onclick="usrSubmit()"><i class="bi bi-check-lg"></i><span id="usrSaveLbl">Create</span></button>
@@ -500,7 +506,9 @@
   window.usrToggleShift = function() {
     var roleId   = document.getElementById('usrRoleId').value;
     var roleName = roleMap[roleId] || '';
+    var isLocal  = roleName.startsWith('LOCAL_');
     document.getElementById('usrShiftWrap').style.display = ['LOCAL_USER','LOCAL_MANAGER'].includes(roleName) ? '' : 'none';
+    document.getElementById('usrDevWrap').style.display   = isLocal ? '' : 'none';
   };
 
   // ── Open create ───────────────────────────────────────────────────────
@@ -536,6 +544,7 @@
     document.getElementById('usrShiftStart').value  = u.shift_start ? String(u.shift_start).slice(0,5) : '10:00';
     document.getElementById('usrShiftHours').value  = u.shift_hours || 8.5;
     document.getElementById('usrWeeklyOff').value   = u.weekly_off_day || 'Sunday';
+    document.getElementById('usrIsDeveloper').checked = !!u.is_developer;
     usrToggleShift();
     document.getElementById('usrModal').style.display = 'flex';
   };
@@ -553,7 +562,8 @@
       role_id:         document.getElementById('usrRoleId').value,
       weekly_off_day:  document.getElementById('usrWeeklyOff').value,
       shift_start:     document.getElementById('usrShiftStart').value,
-      shift_hours:     document.getElementById('usrShiftHours').value
+      shift_hours:     document.getElementById('usrShiftHours').value,
+      is_developer:    document.getElementById('usrIsDeveloper').checked ? 1 : 0
     };
     if (!id) data.password = pwd;
     if (!data.name)  { alert('Name is required.'); return; }

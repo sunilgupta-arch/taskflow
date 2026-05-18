@@ -1,0 +1,275 @@
+<style>
+@keyframes qrpFadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:none; } }
+.qrp-wrap { animation: qrpFadeIn 0.25s ease; }
+
+/* ── Top bar ──────────────────────────────────────────────── */
+.qrp-topbar {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 12px; flex-wrap: wrap; margin-bottom: 24px;
+}
+.qrp-topbar-left { flex: 1; min-width: 0; }
+.qrp-section-pill {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: rgba(99,102,241,0.1); border: 1px solid rgba(99,102,241,0.2);
+  color: #6366f1; border-radius: 20px; padding: 3px 10px;
+  font-family: var(--adm-mono); font-size: 0.68rem; font-weight: 700;
+  letter-spacing: 0.3px; margin-bottom: 6px;
+}
+.qrp-page-title { font-family: var(--adm-mono); font-size: 1rem; font-weight: 700; color: var(--adm-text); }
+.qrp-page-sub { font-size: 0.78rem; color: var(--adm-muted); margin-top: 2px; }
+
+/* ── Month nav ────────────────────────────────────────────── */
+.qrp-topbar-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+.qrp-month-nav { display: flex; align-items: center; gap: 6px; }
+.qrp-nav-btn {
+  height: 32px; width: 32px; border-radius: 8px;
+  border: 1px solid var(--adm-border); background: var(--adm-surface);
+  color: var(--adm-text-2); cursor: pointer; font-size: 0.8rem;
+  display: inline-flex; align-items: center; justify-content: center;
+  transition: all 0.15s;
+}
+.qrp-nav-btn:hover { border-color: #6366f1; color: #6366f1; }
+.qrp-month-label {
+  font-family: var(--adm-mono); font-size: 0.82rem; font-weight: 700;
+  color: var(--adm-text); min-width: 130px; text-align: center;
+}
+.qrp-email-btn {
+  height: 32px; padding: 0 14px; border-radius: 8px;
+  border: 1px solid rgba(99,102,241,0.35); background: rgba(99,102,241,0.08);
+  color: #6366f1; cursor: pointer; font-size: 0.78rem; font-weight: 600;
+  display: inline-flex; align-items: center; gap: 5px; transition: all 0.15s;
+}
+.qrp-email-btn:hover { background: rgba(99,102,241,0.15); border-color: #6366f1; }
+
+/* ── Stats row ────────────────────────────────────────────── */
+.qrp-stats { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
+.qrp-stat {
+  flex: 1; min-width: 100px;
+  background: var(--adm-surface); border: 1px solid var(--adm-border);
+  border-radius: 12px; padding: 14px 16px;
+}
+.qrp-stat-label { font-size: 0.68rem; color: var(--adm-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 6px; }
+.qrp-stat-value { font-family: var(--adm-mono); font-size: 1.5rem; font-weight: 700; color: var(--adm-text); line-height: 1; }
+.qrp-stat-sub { font-size: 0.68rem; color: var(--adm-muted); margin-top: 4px; }
+.qrp-stat.s-done   { border-color: rgba(16,185,129,0.3);  background: rgba(16,185,129,0.05); }
+.qrp-stat.s-done .qrp-stat-value   { color: #10b981; }
+.qrp-stat.s-missed { border-color: rgba(239,68,68,0.3);   background: rgba(239,68,68,0.05); }
+.qrp-stat.s-missed .qrp-stat-value { color: #ef4444; }
+.qrp-stat.s-reject { border-color: rgba(245,158,11,0.3);  background: rgba(245,158,11,0.05); }
+.qrp-stat.s-reject .qrp-stat-value { color: #f59e0b; }
+.qrp-stat.s-open   { border-color: rgba(99,102,241,0.3);  background: rgba(99,102,241,0.05); }
+.qrp-stat.s-open .qrp-stat-value   { color: #6366f1; }
+
+/* ── Table card ───────────────────────────────────────────── */
+.qrp-card {
+  background: var(--adm-surface); border: 1px solid var(--adm-border);
+  border-radius: 14px; overflow: hidden; margin-bottom: 20px;
+}
+.qrp-card-head {
+  padding: 12px 18px; border-bottom: 1px solid var(--adm-border);
+  font-family: var(--adm-mono); font-size: 0.72rem; font-weight: 700;
+  color: var(--adm-text-2); text-transform: uppercase; letter-spacing: 0.4px;
+  display: flex; align-items: center; gap: 6px;
+}
+.qrp-table { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
+.qrp-table thead th {
+  padding: 9px 14px; text-align: left; border-bottom: 1px solid var(--adm-border);
+  font-family: var(--adm-mono); font-size: 0.65rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.4px; color: var(--adm-muted);
+  white-space: nowrap;
+}
+.qrp-table thead th.num { text-align: center; }
+.qrp-table tbody td { padding: 10px 14px; border-bottom: 1px solid var(--adm-border); color: var(--adm-text-2); }
+.qrp-table tbody tr:last-child td { border-bottom: none; }
+.qrp-table tbody tr:hover td { background: var(--adm-surface-2); }
+.qrp-table td.num { text-align: center; font-family: var(--adm-mono); font-weight: 700; }
+.qrp-badge {
+  display: inline-block; font-family: var(--adm-mono); font-size: 0.72rem;
+  font-weight: 700; padding: 1px 7px; border-radius: 5px; min-width: 24px; text-align: center;
+}
+.qrp-late-badge { background: rgba(239,68,68,0.1); color: #ef4444; }
+
+/* ── Loading / empty ──────────────────────────────────────── */
+.qrp-loading { display: flex; justify-content: center; padding: 60px 0; }
+.qrp-spinner {
+  width: 28px; height: 28px; border-radius: 50%;
+  border: 3px solid var(--adm-border); border-top-color: #6366f1;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.qrp-empty { padding: 60px; text-align: center; color: var(--adm-muted); font-size: 0.85rem; }
+</style>
+
+<div class="qrp-wrap">
+
+  <div class="qrp-topbar">
+    <div class="qrp-topbar-left">
+      <div class="qrp-section-pill"><i class="bi bi-inbox-fill"></i> Client Queue</div>
+      <div class="qrp-page-title">Client Queue Report</div>
+      <div class="qrp-page-sub">Monthly breakdown of client requests — completion rate, missed, rejected, and team performance</div>
+    </div>
+    <div class="qrp-topbar-right">
+      <div class="qrp-month-nav">
+        <button class="qrp-nav-btn" id="qrpPrevBtn" title="Previous month"><i class="bi bi-chevron-left"></i></button>
+        <span class="qrp-month-label" id="qrpMonthLabel">—</span>
+        <button class="qrp-nav-btn" id="qrpNextBtn" title="Next month"><i class="bi bi-chevron-right"></i></button>
+      </div>
+      <button class="qrp-email-btn" id="qrpEmailBtn" title="Email this report to yourself"><i class="bi bi-envelope"></i> Email Report</button>
+      <a href="/admin/reports" class="adm-back-btn"><i class="bi bi-arrow-left"></i> Reports</a>
+    </div>
+  </div>
+
+  <div id="qrpContent">
+    <div class="qrp-loading"><div class="qrp-spinner"></div></div>
+  </div>
+
+</div>
+
+<script>
+(function () {
+  var _month = (function() {
+    var d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+  })();
+
+  var MONTH_NAMES = ['January','February','March','April','May','June',
+                     'July','August','September','October','November','December'];
+
+  function fmtMonth(ym) {
+    var parts = ym.split('-');
+    return MONTH_NAMES[parseInt(parts[1]) - 1] + ' ' + parts[0];
+  }
+
+  function shiftMonth(ym, delta) {
+    var parts = ym.split('-');
+    var d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1 + delta, 1);
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+  }
+
+  function thisMonth() {
+    var d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+  }
+
+  function esc(s) {
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function updateNav() {
+    document.getElementById('qrpMonthLabel').textContent = fmtMonth(_month);
+    var tm = thisMonth();
+    document.getElementById('qrpNextBtn').style.opacity = _month >= tm ? '0.3' : '1';
+    document.getElementById('qrpNextBtn').disabled = _month >= tm;
+  }
+
+  function load(month) {
+    _month = month;
+    updateNav();
+    document.getElementById('qrpContent').innerHTML = '<div class="qrp-loading"><div class="qrp-spinner"></div></div>';
+
+    fetch('/admin/queue-report-data?month=' + month)
+      .then(function(r) { return r.json(); })
+      .then(function(res) {
+        if (!res.success) {
+          document.getElementById('qrpContent').innerHTML =
+            '<div class="qrp-empty"><i class="bi bi-inbox" style="font-size:2rem;opacity:0.2;display:block;margin-bottom:8px"></i>' + esc(res.message || 'No data for this month') + '</div>';
+          return;
+        }
+        render(res.data);
+      })
+      .catch(function() {
+        document.getElementById('qrpContent').innerHTML = '<div class="qrp-empty">Failed to load report</div>';
+      });
+  }
+
+  function render(data) {
+    var s = data.stats;
+    var completed = s.done + s.approved;
+    var rateColor = s.completionRate >= 80 ? '#10b981' : s.completionRate >= 50 ? '#f59e0b' : '#ef4444';
+
+    var statsHtml =
+      '<div class="qrp-stats">'
+      + '<div class="qrp-stat"><div class="qrp-stat-label">Total</div><div class="qrp-stat-value">'+s.total+'</div><div class="qrp-stat-sub">requests this month</div></div>'
+      + '<div class="qrp-stat s-done"><div class="qrp-stat-label">Completed</div><div class="qrp-stat-value">'+completed+'</div>'
+        + '<div class="qrp-stat-sub" style="color:'+rateColor+';font-weight:700">'+s.completionRate+'% completion rate</div></div>'
+      + '<div class="qrp-stat s-missed"><div class="qrp-stat-label">Missed / Not Picked</div><div class="qrp-stat-value">'+s.notPicked+'</div><div class="qrp-stat-sub">missed + not picked up</div></div>'
+      + '<div class="qrp-stat s-reject"><div class="qrp-stat-label">Rejected</div><div class="qrp-stat-value">'+s.rejected+'</div><div class="qrp-stat-sub">by local team</div></div>'
+      + '<div class="qrp-stat s-open"><div class="qrp-stat-label">In Progress</div><div class="qrp-stat-value">'+s.picked+'</div><div class="qrp-stat-sub">currently picked</div></div>'
+      + '</div>';
+
+    var empRows = '';
+    if (data.employees && data.employees.length) {
+      empRows = data.employees.map(function(e) {
+        var onTime = parseInt(e.completed) - parseInt(e.completed_late);
+        return '<tr>'
+          + '<td style="font-weight:500;color:var(--adm-text)">' + esc(e.name) + '</td>'
+          + '<td class="num">' + e.total_handled + '</td>'
+          + '<td class="num" style="color:#10b981">' + e.completed + '</td>'
+          + '<td class="num" style="color:var(--adm-text-2)">' + onTime + '</td>'
+          + '<td class="num">' + (e.completed_late > 0 ? '<span class="qrp-badge qrp-late-badge">'+e.completed_late+'</span>' : '<span style="color:var(--adm-muted)">—</span>') + '</td>'
+          + '<td class="num" style="color:#f59e0b">' + (e.rejected > 0 ? e.rejected : '<span style="color:var(--adm-muted)">—</span>') + '</td>'
+          + '<td class="num" style="color:#6366f1">' + (e.in_progress > 0 ? e.in_progress : '<span style="color:var(--adm-muted)">—</span>') + '</td>'
+          + '</tr>';
+      }).join('');
+    }
+
+    var empHtml = data.employees && data.employees.length
+      ? '<div class="qrp-card">'
+        + '<div class="qrp-card-head"><i class="bi bi-people-fill"></i> Team Performance</div>'
+        + '<div style="overflow-x:auto"><table class="qrp-table">'
+        + '<thead><tr>'
+        + '<th>Member</th>'
+        + '<th class="num">Handled</th>'
+        + '<th class="num">Completed</th>'
+        + '<th class="num">On Time</th>'
+        + '<th class="num">Late</th>'
+        + '<th class="num">Rejected</th>'
+        + '<th class="num">In Progress</th>'
+        + '</tr></thead>'
+        + '<tbody>' + empRows + '</tbody>'
+        + '</table></div></div>'
+      : '';
+
+    var extraHtml = '';
+    if (s.cancelled > 0 || s.rescheduled > 0) {
+      extraHtml = '<div style="font-size:0.72rem;color:var(--adm-muted);margin-bottom:16px">'
+        + (s.cancelled > 0 ? '<span style="margin-right:14px"><i class="bi bi-x-circle" style="margin-right:3px"></i>'+s.cancelled+' cancelled</span>' : '')
+        + (s.rescheduled > 0 ? '<span><i class="bi bi-arrow-repeat" style="margin-right:3px"></i>'+s.rescheduled+' rescheduled</span>' : '')
+        + '</div>';
+    }
+
+    document.getElementById('qrpContent').innerHTML = statsHtml + extraHtml + empHtml;
+  }
+
+  document.getElementById('qrpPrevBtn').addEventListener('click', function() {
+    load(shiftMonth(_month, -1));
+  });
+  document.getElementById('qrpNextBtn').addEventListener('click', function() {
+    if (_month < thisMonth()) load(shiftMonth(_month, 1));
+  });
+
+  document.getElementById('qrpEmailBtn').addEventListener('click', function() {
+    var btn = this;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Sending…';
+    fetch('/queue/monthly-report', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ year_month: _month })
+    })
+      .then(function(r) { return r.json(); })
+      .then(function(res) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-envelope"></i> Email Report';
+        alert(res.message || (res.success ? 'Report sent!' : 'Failed to send'));
+      })
+      .catch(function() {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-envelope"></i> Email Report';
+        alert('Failed to send report');
+      });
+  });
+
+  load(_month);
+})();
+</script>

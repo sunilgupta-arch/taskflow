@@ -1,0 +1,839 @@
+<style>
+@keyframes wsFadeIn { from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none} }
+
+/* ── Layout ───────────────────────────────────────────────── */
+.ws-wrap  { display:flex; height:calc(100vh - 120px); min-height:500px; animation:wsFadeIn .2s ease; }
+.ws-left  { width:340px; flex-shrink:0; display:flex; flex-direction:column; border-right:1px solid var(--adm-border); }
+.ws-right { flex:1; min-width:0; display:flex; flex-direction:column; overflow:hidden; }
+
+/* ── Left panel ───────────────────────────────────────────── */
+.ws-left-head { padding:12px; border-bottom:1px solid var(--adm-border); display:flex; flex-direction:column; gap:8px; flex-shrink:0; }
+.ws-panel-tabs { display:flex; gap:4px; }
+.ws-panel-tab  { flex:1; padding:5px 0; border-radius:7px; font-size:0.72rem; font-weight:600; border:1px solid transparent; background:none; color:var(--adm-muted); cursor:pointer; text-align:center; transition:all .15s; }
+.ws-panel-tab.active { background:rgba(99,102,241,.1); border-color:rgba(99,102,241,.3); color:#6366f1; }
+.ws-panel-tab.notes-tab.active { background:rgba(245,158,11,.1); border-color:rgba(245,158,11,.3); color:#f59e0b; }
+.ws-left-subhead { display:flex; align-items:center; justify-content:space-between; }
+.ws-new-btn { display:inline-flex; align-items:center; gap:4px; background:#6366f1; color:#fff; border:none; border-radius:7px; padding:5px 11px; font-size:0.72rem; font-weight:600; cursor:pointer; transition:background .15s; }
+.ws-new-btn:hover { background:#4f46e5; }
+.ws-new-btn.amber { background:#f59e0b; }
+.ws-new-btn.amber:hover { background:#d97706; }
+.ws-dev-filter { width:100%; padding:6px 10px; border-radius:8px; font-size:0.78rem; border:1px solid var(--adm-border); background:var(--adm-surface-2); color:var(--adm-text); }
+.ws-proj-list  { flex:1; overflow-y:auto; padding:8px; display:flex; flex-direction:column; gap:5px; }
+
+/* ── Project cards ────────────────────────────────────────── */
+.ws-proj-card { padding:11px 13px; border-radius:10px; border:1px solid var(--adm-border); background:var(--adm-surface); cursor:pointer; transition:all .15s; }
+.ws-proj-card:hover  { border-color:rgba(99,102,241,.4); background:var(--adm-surface-2); }
+.ws-proj-card.active { border-color:#6366f1; background:rgba(99,102,241,.06); }
+.ws-proj-card-top    { display:flex; align-items:flex-start; justify-content:space-between; gap:8px; margin-bottom:4px; }
+.ws-proj-name        { font-weight:600; font-size:0.82rem; color:var(--adm-text); line-height:1.3; }
+.ws-status-badge     { font-size:0.6rem; font-weight:700; padding:2px 7px; border-radius:5px; text-transform:uppercase; letter-spacing:.3px; white-space:nowrap; flex-shrink:0; }
+.ws-s-planning  { background:rgba(100,116,139,.15); color:#94a3b8; }
+.ws-s-active    { background:rgba(16,185,129,.12);  color:#10b981; }
+.ws-s-on_hold   { background:rgba(245,158,11,.12);  color:#f59e0b; }
+.ws-s-completed { background:rgba(99,102,241,.12);  color:#6366f1; }
+.ws-proj-dev  { font-size:0.68rem; color:var(--adm-muted); margin-bottom:5px; }
+.ws-prog-row  { display:flex; align-items:center; gap:7px; }
+.ws-prog-bar  { flex:1; height:4px; border-radius:3px; background:var(--adm-border); overflow:hidden; }
+.ws-prog-fill { height:100%; border-radius:3px; background:#6366f1; transition:width .3s; }
+.ws-prog-pct  { font-family:var(--adm-mono); font-size:0.65rem; color:var(--adm-muted); min-width:28px; text-align:right; }
+.ws-proj-meta { display:flex; align-items:center; gap:6px; margin-top:5px; flex-wrap:wrap; }
+.ws-tech-chip { font-size:0.6rem; padding:1px 6px; border-radius:4px; background:var(--adm-surface-2); border:1px solid var(--adm-border); color:var(--adm-muted); }
+.ws-vis-badge { font-size:0.6rem; color:#10b981; display:flex; align-items:center; gap:3px; }
+.ws-due-card  { font-size:0.6rem; color:#ef4444; }
+
+/* ── Note cards ───────────────────────────────────────────── */
+.ws-note-card        { padding:11px 13px; border-radius:10px; border:1px solid var(--adm-border); background:var(--adm-surface); cursor:pointer; transition:all .15s; }
+.ws-note-card:hover  { border-color:rgba(245,158,11,.4); }
+.ws-note-card.active { border-color:#f59e0b; background:rgba(245,158,11,.06); }
+.ws-note-title  { font-weight:600; font-size:0.82rem; color:var(--adm-text); margin-bottom:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.ws-note-meta   { font-size:0.66rem; color:var(--adm-muted); display:flex; gap:6px; }
+.ws-note-shared { color:#10b981; }
+
+/* ── Right panel: empty ───────────────────────────────────── */
+.ws-right-empty { flex:1; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:10px; color:var(--adm-muted); }
+.ws-right-empty i { font-size:2.5rem; opacity:.2; }
+
+/* ── Right panel: detail ──────────────────────────────────── */
+.ws-detail       { display:flex; flex-direction:column; height:100%; overflow:hidden; }
+.ws-detail-head  { padding:14px 18px; border-bottom:1px solid var(--adm-border); flex-shrink:0; display:flex; align-items:flex-start; gap:10px; }
+.ws-detail-head-main { flex:1; min-width:0; }
+.ws-det-meta  { font-size:0.68rem; color:var(--adm-muted); margin-bottom:2px; }
+.ws-det-title { font-weight:700; font-size:0.95rem; color:var(--adm-text); }
+.ws-det-actions { display:flex; align-items:center; gap:6px; flex-shrink:0; }
+.ws-det-btn { height:30px; padding:0 10px; border-radius:7px; font-size:0.72rem; font-weight:600; border:1px solid var(--adm-border); background:var(--adm-surface); color:var(--adm-text-2); cursor:pointer; display:inline-flex; align-items:center; gap:4px; transition:all .15s; }
+.ws-det-btn:hover  { border-color:var(--adm-accent); color:var(--adm-accent); }
+.ws-det-btn.save   { background:#6366f1; border-color:#6366f1; color:#fff; }
+.ws-det-btn.save:hover { background:#4f46e5; }
+.ws-det-btn.del    { border-color:rgba(239,68,68,.3); color:#ef4444; }
+.ws-det-btn.del:hover  { background:rgba(239,68,68,.08); border-color:#ef4444; }
+.ws-det-btn.post   { background:#10b981; border-color:#10b981; color:#fff; }
+.ws-det-btn.post:hover { background:#059669; }
+
+/* ── Detail tabs ──────────────────────────────────────────── */
+.ws-detail-tabs    { display:flex; gap:0; border-bottom:1px solid var(--adm-border); flex-shrink:0; padding:0 18px; overflow-x:auto; }
+.ws-detail-tab     { padding:9px 13px; font-size:0.72rem; font-weight:600; color:var(--adm-muted); cursor:pointer; border-bottom:2px solid transparent; white-space:nowrap; transition:all .15s; background:none; border-top:none; border-left:none; border-right:none; }
+.ws-detail-tab:hover { color:var(--adm-text-2); }
+.ws-detail-tab.active { color:#6366f1; border-bottom-color:#6366f1; }
+.ws-detail-body    { flex:1; overflow-y:auto; padding:16px 18px; display:flex; flex-direction:column; gap:14px; }
+
+/* ── Fields ───────────────────────────────────────────────── */
+.ws-field label { display:block; font-size:0.67rem; font-weight:700; text-transform:uppercase; letter-spacing:.4px; color:var(--adm-muted); margin-bottom:4px; }
+.ws-field input, .ws-field textarea, .ws-field select { width:100%; padding:7px 10px; border-radius:8px; font-size:0.8rem; border:1px solid var(--adm-border); background:var(--adm-surface-2); color:var(--adm-text); font-family:inherit; transition:border-color .15s; box-sizing:border-box; }
+.ws-field textarea { resize:vertical; min-height:60px; }
+.ws-field input:focus, .ws-field textarea:focus, .ws-field select:focus { outline:none; border-color:#6366f1; }
+.ws-2col { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.ws-3col { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; }
+.ws-toggle-row { display:flex; align-items:center; gap:8px; font-size:0.8rem; color:var(--adm-text-2); }
+.ws-toggle-row input[type=checkbox] { width:15px; height:15px; accent-color:#6366f1; cursor:pointer; }
+
+/* ── Progress summary ─────────────────────────────────────── */
+.ws-prog-summary { display:flex; gap:10px; }
+.ws-prog-tile    { flex:1; padding:12px 14px; border-radius:10px; background:var(--adm-surface-2); border:1px solid var(--adm-border); }
+.ws-prog-tile-val { font-family:var(--adm-mono); font-size:1.4rem; font-weight:700; color:#6366f1; line-height:1; }
+.ws-prog-tile-lbl { font-size:0.65rem; color:var(--adm-muted); text-transform:uppercase; letter-spacing:.3px; margin-top:3px; }
+.ws-prog-big-bar  { height:5px; border-radius:3px; background:var(--adm-border); overflow:hidden; margin-top:7px; }
+.ws-prog-big-fill { height:100%; border-radius:3px; background:#6366f1; transition:width .4s; }
+
+/* ── Section heads ────────────────────────────────────────── */
+.ws-sec-head { display:flex; align-items:center; justify-content:space-between; font-size:0.67rem; font-weight:700; text-transform:uppercase; letter-spacing:.4px; color:var(--adm-muted); margin-bottom:8px; }
+.ws-mini-btn { height:26px; padding:0 9px; border-radius:6px; font-size:0.7rem; font-weight:600; border:1px solid var(--adm-border); background:var(--adm-surface); color:var(--adm-text-2); cursor:pointer; display:inline-flex; align-items:center; gap:4px; transition:all .15s; }
+.ws-mini-btn:hover { border-color:#6366f1; color:#6366f1; }
+
+/* ── Links ────────────────────────────────────────────────── */
+.ws-link-item { display:flex; align-items:center; gap:8px; padding:7px 10px; border-radius:8px; border:1px solid var(--adm-border); background:var(--adm-surface); }
+.ws-link-icon { color:#6366f1; font-size:0.85rem; flex-shrink:0; }
+.ws-link-label { font-size:0.78rem; font-weight:600; color:var(--adm-text-2); flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.ws-link-url   { font-size:0.68rem; color:var(--adm-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:120px; }
+.ws-add-row    { display:flex; gap:6px; }
+.ws-add-row input, .ws-add-row select { flex:1; padding:6px 9px; border-radius:7px; font-size:0.78rem; border:1px solid var(--adm-border); background:var(--adm-surface-2); color:var(--adm-text); }
+.ws-add-row button { padding:6px 11px; border-radius:7px; background:#6366f1; color:#fff; border:none; font-size:0.75rem; font-weight:600; cursor:pointer; white-space:nowrap; }
+
+/* ── Milestones & Tasks ───────────────────────────────────── */
+.ws-milestone-block { border:1px solid var(--adm-border); border-radius:10px; overflow:hidden; }
+.ws-milestone-head  { padding:9px 12px; background:var(--adm-surface-2); display:flex; align-items:center; gap:8px; }
+.ws-milestone-title { font-weight:700; font-size:0.78rem; color:var(--adm-text); flex:1; }
+.ws-ms-done   { font-size:0.65rem; color:#6366f1; font-family:var(--adm-mono); }
+.ws-ms-bar    { height:3px; background:rgba(99,102,241,.15); }
+.ws-ms-fill   { height:100%; background:#6366f1; transition:width .3s; }
+.ws-milestone-tasks { padding:6px 8px; display:flex; flex-direction:column; gap:4px; }
+.ws-ungrouped-head  { font-size:0.67rem; font-weight:700; text-transform:uppercase; letter-spacing:.4px; color:var(--adm-muted); padding:4px 2px; }
+
+.ws-task-item { display:flex; align-items:center; gap:7px; padding:6px 9px; border-radius:8px; border:1px solid var(--adm-border); background:var(--adm-surface); transition:background .1s; }
+.ws-task-item:hover { background:var(--adm-surface-2); }
+.ws-task-check { width:17px; height:17px; border-radius:5px; border:2px solid var(--adm-border); display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0; transition:all .15s; font-size:0.62rem; color:#fff; }
+.ws-task-check.todo        { border-color:var(--adm-border); background:transparent; color:transparent; }
+.ws-task-check.in_progress { border-color:#f59e0b; background:#f59e0b; }
+.ws-task-check.done        { border-color:#10b981; background:#10b981; }
+.ws-prio-dot  { width:8px; height:8px; border-radius:50%; flex-shrink:0; cursor:pointer; transition:transform .1s; }
+.ws-prio-dot:hover { transform:scale(1.4); }
+.ws-prio-high   { background:#ef4444; }
+.ws-prio-medium { background:#f59e0b; }
+.ws-prio-low    { background:#94a3b8; }
+.ws-task-title  { flex:1; font-size:0.78rem; color:var(--adm-text-2); }
+.ws-task-title.done { text-decoration:line-through; color:var(--adm-muted); }
+.ws-due-chip  { font-size:0.62rem; padding:1px 6px; border-radius:4px; white-space:nowrap; flex-shrink:0; }
+.ws-due-chip.ok       { background:var(--adm-surface-2); color:var(--adm-muted); }
+.ws-due-chip.soon     { background:rgba(245,158,11,.12); color:#f59e0b; }
+.ws-due-chip.overdue  { background:rgba(239,68,68,.12);  color:#ef4444; }
+.ws-task-del  { background:none; border:none; color:var(--adm-muted); cursor:pointer; font-size:0.72rem; padding:2px 3px; border-radius:4px; transition:color .1s; }
+.ws-task-del:hover { color:#ef4444; }
+.ws-add-task  { display:flex; gap:5px; flex-wrap:wrap; align-items:center; margin-top:4px; }
+.ws-add-task input, .ws-add-task select { padding:6px 9px; border-radius:7px; font-size:0.76rem; border:1px solid var(--adm-border); background:var(--adm-surface-2); color:var(--adm-text); }
+.ws-add-task input { flex:1; min-width:120px; }
+.ws-add-task button { padding:6px 10px; border-radius:7px; background:#6366f1; color:#fff; border:none; font-size:0.75rem; font-weight:600; cursor:pointer; }
+
+/* ── Updates & Comments ───────────────────────────────────── */
+.ws-post-area  { display:flex; flex-direction:column; gap:6px; }
+.ws-post-area textarea { width:100%; padding:8px 10px; border-radius:8px; font-size:0.8rem; border:1px solid var(--adm-border); background:var(--adm-surface-2); color:var(--adm-text); font-family:inherit; resize:vertical; min-height:70px; box-sizing:border-box; }
+.ws-post-area textarea:focus { outline:none; border-color:#6366f1; }
+.ws-timeline   { display:flex; flex-direction:column; gap:10px; }
+.ws-tl-item    { display:flex; gap:10px; }
+.ws-tl-avatar  { width:30px; height:30px; border-radius:50%; background:rgba(99,102,241,.15); color:#6366f1; display:flex; align-items:center; justify-content:center; font-size:0.72rem; font-weight:700; flex-shrink:0; }
+.ws-tl-body    { flex:1; min-width:0; }
+.ws-tl-meta    { font-size:0.67rem; color:var(--adm-muted); margin-bottom:3px; display:flex; align-items:center; gap:6px; }
+.ws-tl-author  { font-weight:700; color:var(--adm-text-2); }
+.ws-tl-text    { font-size:0.8rem; color:var(--adm-text-2); line-height:1.55; white-space:pre-wrap; word-break:break-word; }
+.ws-tl-del     { background:none; border:none; color:var(--adm-muted); cursor:pointer; font-size:0.7rem; padding:1px 3px; border-radius:4px; }
+.ws-tl-del:hover { color:#ef4444; }
+
+/* ── Releases ─────────────────────────────────────────────── */
+.ws-release-form { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.ws-release-form input, .ws-release-form select, .ws-release-form textarea { padding:7px 10px; border-radius:8px; font-size:0.78rem; border:1px solid var(--adm-border); background:var(--adm-surface-2); color:var(--adm-text); font-family:inherit; }
+.ws-release-form textarea { resize:vertical; min-height:50px; }
+.ws-rel-item   { padding:11px 13px; border-radius:10px; border:1px solid var(--adm-border); background:var(--adm-surface); }
+.ws-rel-head   { display:flex; align-items:center; gap:8px; margin-bottom:5px; }
+.ws-rel-ver    { font-family:var(--adm-mono); font-weight:700; font-size:0.88rem; color:var(--adm-text); }
+.ws-env-badge  { font-size:0.62rem; font-weight:700; padding:2px 7px; border-radius:5px; text-transform:uppercase; }
+.ws-env-dev    { background:rgba(100,116,139,.15); color:#94a3b8; }
+.ws-env-stag   { background:rgba(245,158,11,.12);  color:#f59e0b; }
+.ws-env-prod   { background:rgba(16,185,129,.12);  color:#10b981; }
+.ws-rel-meta   { font-size:0.68rem; color:var(--adm-muted); }
+.ws-rel-notes  { font-size:0.78rem; color:var(--adm-text-2); margin-top:5px; line-height:1.5; }
+
+/* ── Share devs (notes) ───────────────────────────────────── */
+.ws-share-dev-list { display:flex; flex-direction:column; gap:5px; max-height:160px; overflow-y:auto; }
+.ws-share-dev-row  { display:flex; align-items:center; gap:8px; padding:6px 10px; border-radius:8px; border:1px solid var(--adm-border); background:var(--adm-surface); }
+.ws-share-dev-row input[type=checkbox] { width:14px; height:14px; accent-color:#6366f1; cursor:pointer; }
+.ws-share-dev-row label { font-size:0.8rem; color:var(--adm-text-2); cursor:pointer; flex:1; }
+.ws-share-btn  { width:100%; padding:7px; border-radius:8px; font-size:0.78rem; font-weight:600; background:rgba(16,185,129,.1); border:1px solid rgba(16,185,129,.3); color:#10b981; cursor:pointer; transition:all .15s; display:flex; align-items:center; justify-content:center; gap:5px; }
+.ws-share-btn:hover { background:rgba(16,185,129,.18); }
+
+/* ── Spinner / empty ──────────────────────────────────────── */
+.ws-spinner-wrap { display:flex; justify-content:center; padding:40px 0; }
+.ws-spinner { width:22px; height:22px; border-radius:50%; border:3px solid var(--adm-border); border-top-color:#6366f1; animation:wsSpin .7s linear infinite; }
+@keyframes wsSpin { to{transform:rotate(360deg)} }
+.ws-empty-list { padding:32px 16px; text-align:center; color:var(--adm-muted); font-size:0.78rem; }
+.ws-empty-list i { font-size:1.8rem; opacity:.2; display:block; margin-bottom:7px; }
+</style>
+
+<!-- Page title strip -->
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+  <div>
+    <div style="display:inline-flex;align-items:center;gap:5px;background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.25);color:#6366f1;border-radius:20px;padding:3px 10px;font-size:.65rem;font-weight:700;letter-spacing:.3px;margin-bottom:5px"><i class="bi bi-code-slash"></i> Dev Workspace</div>
+    <div style="font-family:var(--adm-mono);font-size:.95rem;font-weight:700;color:var(--adm-text)">Development Projects</div>
+    <div style="font-size:.72rem;color:var(--adm-muted);margin-top:2px">Track projects, milestones, updates, discussions, and releases</div>
+  </div>
+  <a href="/admin" class="adm-back-btn"><i class="bi bi-arrow-left"></i> Hub</a>
+</div>
+
+<div class="ws-wrap">
+
+  <!-- ── Left panel ─────────────────────────────────────────── -->
+  <div class="ws-left">
+    <div class="ws-left-head">
+      <div class="ws-panel-tabs">
+        <button class="ws-panel-tab active" id="wsTabProjects" onclick="wsSwitchPanel('projects')"><i class="bi bi-folder2-open"></i> Projects</button>
+        <% if (isAdmin || isDev) { %>
+        <button class="ws-panel-tab notes-tab" id="wsTabNotes" onclick="wsSwitchPanel('notes')"><i class="bi bi-lightbulb"></i> Notes</button>
+        <% } %>
+      </div>
+
+      <div id="wsProjHeader">
+        <div class="ws-left-subhead">
+          <span style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--adm-muted)">Projects</span>
+          <% if (isDev) { %><button class="ws-new-btn" onclick="wsOpenNew()"><i class="bi bi-plus-lg"></i> New</button><% } %>
+        </div>
+        <% if (isAdmin && developers.length) { %>
+        <select class="ws-dev-filter" id="wsDevFilter" onchange="wsLoadProjects()">
+          <option value="">All Developers</option>
+          <% developers.forEach(d => { %><option value="<%= d.id %>"><%= d.name %></option><% }) %>
+        </select>
+        <% } %>
+      </div>
+
+      <% if (isAdmin || isDev) { %>
+      <div id="wsNoteHeader" style="display:none">
+        <div class="ws-left-subhead">
+          <span style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--adm-muted)"><%= isAdmin ? 'Ideas & Notes' : 'Shared With Me' %></span>
+          <% if (isAdmin) { %><button class="ws-new-btn amber" onclick="wsNewNote()"><i class="bi bi-plus-lg"></i> New</button><% } %>
+        </div>
+      </div>
+      <% } %>
+    </div>
+
+    <div class="ws-proj-list" id="wsProjList"><div class="ws-spinner-wrap"><div class="ws-spinner"></div></div></div>
+    <% if (isAdmin || isDev) { %>
+    <div class="ws-proj-list" id="wsNoteList" style="display:none"></div>
+    <% } %>
+  </div>
+
+  <!-- ── Right panel ────────────────────────────────────────── -->
+  <div class="ws-right" id="wsRight">
+    <div class="ws-right-empty"><i class="bi bi-code-square"></i><div style="font-size:.85rem">Select a project to view details</div></div>
+  </div>
+
+</div>
+
+<!-- New Project Modal -->
+<div id="wsNewModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center">
+  <div style="background:var(--adm-surface);border:1px solid var(--adm-border);border-radius:14px;padding:22px;width:420px;max-width:90vw">
+    <div style="font-family:var(--adm-mono);font-size:.88rem;font-weight:700;color:var(--adm-text);margin-bottom:14px"><i class="bi bi-plus-circle" style="color:#6366f1;margin-right:5px"></i>New Project</div>
+    <div class="ws-field" style="margin-bottom:9px"><label>Title *</label><input type="text" id="wsNewTitle" placeholder="e.g. Client Portal Redesign"></div>
+    <div class="ws-field" style="margin-bottom:9px"><label>Tech Stack <span style="opacity:.5;font-size:.62rem">(comma separated)</span></label><input type="text" id="wsNewTech" placeholder="e.g. React, Node.js, MySQL"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:9px">
+      <div class="ws-field"><label>Status</label><select id="wsNewStatus"><option value="planning">Planning</option><option value="active">Active</option><option value="on_hold">On Hold</option><option value="completed">Completed</option></select></div>
+      <div class="ws-field"><label>Due Date</label><input type="date" id="wsNewDue"></div>
+    </div>
+    <% if (isAdmin && developers.length) { %>
+    <div class="ws-field" style="margin-bottom:9px"><label>Assign To</label><select id="wsNewDev"><% developers.forEach(d => { %><option value="<%= d.id %>"><%= d.name %></option><% }) %></select></div>
+    <% } %>
+    <div style="display:flex;justify-content:flex-end;gap:7px;margin-top:14px">
+      <button class="ws-det-btn" onclick="document.getElementById('wsNewModal').style.display='none'">Cancel</button>
+      <button class="ws-det-btn save" onclick="wsCreateProject()"><i class="bi bi-check-lg"></i> Create</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var _isAdmin  = <%- JSON.stringify(isAdmin) %>;
+  var _isDev    = <%- JSON.stringify(isDev) %>;
+  var _userId   = <%- JSON.stringify(userId) %>;
+  var _userName = <%- JSON.stringify(userName) %>;
+  var _wsDevs   = <%- JSON.stringify(developers) %>;
+
+  var _activeId   = null;
+  var _activeNote = null;
+  var _projects   = [];
+  var _notes      = [];
+  var _panel      = 'projects'; // 'projects' | 'notes'
+  var _detTab     = 'overview'; // detail tab
+  var _openProj   = null;       // full project data currently open
+
+  var STATUS_LABELS = { planning:'Planning', active:'Active', on_hold:'On Hold', completed:'Completed' };
+  var PRIO_NEXT     = { high:'medium', medium:'low', low:'high' };
+  var TASK_NEXT     = { todo:'in_progress', in_progress:'done', done:'todo' };
+  var TASK_ICONS    = { todo:'', in_progress:'<i class="bi bi-arrow-right-short"></i>', done:'<i class="bi bi-check-lg"></i>' };
+  var ENV_CLASS     = { development:'ws-env-dev', staging:'ws-env-stag', production:'ws-env-prod' };
+  var ENV_LABEL     = { development:'Dev', staging:'Staging', production:'Production' };
+
+  function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function initials(n){ return (n||'?').split(' ').slice(0,2).map(function(w){return w[0];}).join('').toUpperCase(); }
+
+  function fmtDate(d){
+    if(!d) return '';
+    var dt = new Date(d.slice(0,10)+'T12:00:00');
+    return dt.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+  }
+  function fmtTime(d){
+    var dt = new Date(d);
+    return dt.toLocaleDateString('en-GB',{day:'2-digit',month:'short'})+' '+dt.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+  }
+  function dueChip(dateStr){
+    if(!dateStr) return '';
+    var due   = new Date(dateStr.slice(0,10)+'T00:00:00');
+    var today = new Date(); today.setHours(0,0,0,0);
+    var diff  = Math.floor((due-today)/86400000);
+    var label = due.toLocaleDateString('en-GB',{day:'2-digit',month:'short'});
+    if(diff<0)  return '<span class="ws-due-chip overdue"><i class="bi bi-exclamation-circle"></i> '+label+'</span>';
+    if(diff<=3) return '<span class="ws-due-chip soon">'+label+'</span>';
+    return '<span class="ws-due-chip ok">'+label+'</span>';
+  }
+
+  // ── Panel switching ───────────────────────────────────────────────────
+  window.wsSwitchPanel = function(panel) {
+    _panel = panel;
+    document.getElementById('wsTabProjects').classList.toggle('active', panel==='projects');
+    var nt = document.getElementById('wsTabNotes'); if(nt) nt.classList.toggle('active', panel==='notes');
+    document.getElementById('wsProjHeader').style.display = panel==='projects' ? '' : 'none';
+    document.getElementById('wsProjList').style.display   = panel==='projects' ? '' : 'none';
+    var nh = document.getElementById('wsNoteHeader'), nl = document.getElementById('wsNoteList');
+    if(nh) nh.style.display = panel==='notes' ? '' : 'none';
+    if(nl) nl.style.display = panel==='notes' ? '' : 'none';
+    document.getElementById('wsRight').innerHTML = '<div class="ws-right-empty"><i class="bi bi-'+(panel==='notes'?'lightbulb':'code-square')+'"></i><div style="font-size:.85rem">'+(panel==='notes'?'Select a note':'Select a project')+'</div></div>';
+    if(panel==='notes') wsLoadNotes();
+  };
+
+  // ── Projects list ─────────────────────────────────────────────────────
+  window.wsLoadProjects = function(){
+    var df = document.getElementById('wsDevFilter');
+    var qs = df && df.value ? '?developer_id='+df.value : '';
+    var listEl = document.getElementById('wsProjList');
+    if(listEl) listEl.innerHTML = '<div class="ws-spinner-wrap"><div class="ws-spinner"></div></div>';
+    fetch('/workspace/projects'+qs)
+      .then(function(r){
+        if(!r.ok) throw new Error('HTTP '+r.status);
+        return r.json();
+      })
+      .then(function(res){
+        _projects = (res && res.success && Array.isArray(res.data)) ? res.data : [];
+        renderProjList();
+      })
+      .catch(function(err){
+        console.error('Workspace load error:', err);
+        var el = document.getElementById('wsProjList');
+        if(el) el.innerHTML = '<div class="ws-empty-list"><i class="bi bi-exclamation-circle"></i>Could not load projects</div>';
+      });
+  };
+
+  function renderProjList(){
+    var el = document.getElementById('wsProjList');
+    if(!el) return;
+    if(!_projects || !_projects.length){
+      el.innerHTML='<div class="ws-empty-list"><i class="bi bi-folder-plus"></i>No projects yet'
+        +(_isDev?'<div style="margin-top:6px;font-size:.72rem">Use <strong>+ New</strong> to create your first project</div>':'')
+        +'</div>';
+      return;
+    }
+    el.innerHTML = _projects.map(function(p){
+      var techs = (p.tech_stack||'').split(',').filter(Boolean).slice(0,2).map(function(t){ return '<span class="ws-tech-chip">'+esc(t.trim())+'</span>'; }).join('');
+      var vis   = p.client_visible ? '<span class="ws-vis-badge"><i class="bi bi-eye-fill"></i> Client</span>' : '';
+      var due   = p.due_date ? '<span class="ws-due-card"><i class="bi bi-calendar3"></i> '+fmtDate(p.due_date)+'</span>' : '';
+      return '<div class="ws-proj-card'+(p.id===_activeId?' active':'')+'" onclick="wsOpenProject('+p.id+')">'
+        +'<div class="ws-proj-card-top"><div class="ws-proj-name">'+esc(p.title)+'</div><span class="ws-status-badge ws-s-'+p.status+'">'+STATUS_LABELS[p.status]+'</span></div>'
+        +(_isAdmin?'<div class="ws-proj-dev"><i class="bi bi-person-fill" style="margin-right:3px"></i>'+esc(p.developer_name)+'</div>':'')
+        +'<div class="ws-prog-row"><div class="ws-prog-bar"><div class="ws-prog-fill" style="width:'+p.progress+'%"></div></div><span class="ws-prog-pct">'+p.progress+'%</span></div>'
+        +((techs||vis||due)?'<div class="ws-proj-meta">'+techs+vis+due+'</div>':'')
+        +'</div>';
+    }).join('');
+  }
+
+  // ── Open project ──────────────────────────────────────────────────────
+  window.wsOpenProject = function(id){
+    _activeId = id; _detTab = 'overview';
+    renderProjList();
+    document.getElementById('wsRight').innerHTML = '<div class="ws-spinner-wrap" style="padding:60px 0"><div class="ws-spinner"></div></div>';
+    fetch('/workspace/projects/'+id).then(function(r){return r.json();}).then(function(res){
+      if(!res.success){ document.getElementById('wsRight').innerHTML='<div class="ws-right-empty"><i class="bi bi-exclamation-circle"></i><div>Failed to load</div></div>'; return; }
+      _openProj = res.data;
+      renderProjectDetail(_openProj);
+    });
+  };
+
+  function canEdit(p){ return _isAdmin || p.developer_id===_userId; }
+
+  function renderProjectDetail(p){
+    var tabs = ['overview','tasks','updates','discussion','releases'];
+    var tabLabels = { overview:'<i class="bi bi-grid-1x2"></i> Overview', tasks:'<i class="bi bi-list-check"></i> Tasks', updates:'<i class="bi bi-megaphone"></i> Updates', discussion:'<i class="bi bi-chat-left-text"></i> Discussion', releases:'<i class="bi bi-rocket-takeoff"></i> Releases' };
+    var tabsHtml = tabs.map(function(t){ return '<button class="ws-detail-tab'+(t===_detTab?' active':'')+'" onclick="wsDetailTab(\''+t+'\')">'+tabLabels[t]+'</button>'; }).join('');
+
+    document.getElementById('wsRight').innerHTML =
+      '<div class="ws-detail">'
+      +'<div class="ws-detail-head">'
+      +'<div class="ws-detail-head-main">'
+      +'<div class="ws-det-meta"><i class="bi bi-person-fill" style="margin-right:3px"></i>'+esc(p.developer_name)+(p.due_date?' &nbsp;·&nbsp; <i class="bi bi-calendar3" style="margin-right:3px"></i>Due '+fmtDate(p.due_date):'')+'</div>'
+      +'<div class="ws-det-title">'+esc(p.title)+'</div>'
+      +'</div>'
+      +'<div class="ws-det-actions">'
+      +(canEdit(p)?'<button class="ws-det-btn del" onclick="wsDeleteProject('+p.id+')" title="Delete"><i class="bi bi-trash"></i></button>':'')
+      +'</div>'
+      +'</div>'
+      +'<div class="ws-detail-tabs" id="wsDetailTabs">'+tabsHtml+'</div>'
+      +'<div class="ws-detail-body" id="wsDetailBody"></div>'
+      +'</div>';
+
+    renderTab(_detTab);
+  }
+
+  window.wsDetailTab = function(tab){
+    _detTab = tab;
+    document.querySelectorAll('.ws-detail-tab').forEach(function(b){ b.classList.toggle('active', b.textContent.trim().toLowerCase().indexOf(tab.slice(0,4))>-1 || b.getAttribute('onclick').indexOf("'"+tab+"'")>-1); });
+    // re-set active properly
+    document.querySelectorAll('.ws-detail-tab').forEach(function(b){ b.classList.remove('active'); });
+    document.querySelectorAll('.ws-detail-tab').forEach(function(b){ if(b.getAttribute('onclick').includes("'"+tab+"'")) b.classList.add('active'); });
+    renderTab(tab);
+  };
+
+  function renderTab(tab){
+    var p = _openProj;
+    var body = document.getElementById('wsDetailBody');
+    if(!body||!p) return;
+    if(tab==='overview')    body.innerHTML = renderOverviewTab(p);
+    else if(tab==='tasks')  body.innerHTML = renderTasksTab(p);
+    else if(tab==='updates'){ body.innerHTML='<div class="ws-spinner-wrap"><div class="ws-spinner"></div></div>'; loadUpdates(p.id); }
+    else if(tab==='discussion'){ body.innerHTML='<div class="ws-spinner-wrap"><div class="ws-spinner"></div></div>'; loadComments(p.id); }
+    else if(tab==='releases'){ body.innerHTML='<div class="ws-spinner-wrap"><div class="ws-spinner"></div></div>'; loadReleases(p.id); }
+  }
+
+  // ── Overview tab ──────────────────────────────────────────────────────
+  function renderOverviewTab(p){
+    var editable = canEdit(p);
+    var doneCount = (p.tasks||[]).filter(function(t){return t.status==='done';}).length;
+    var totalCount = (p.tasks||[]).length;
+    var linksHtml = (p.links||[]).map(function(l){
+      return '<div class="ws-link-item"><i class="bi bi-link-45deg ws-link-icon"></i>'
+        +'<span class="ws-link-label">'+esc(l.label)+'</span>'
+        +'<a href="'+esc(l.url)+'" target="_blank" style="font-size:.7rem;color:#6366f1;text-decoration:none;white-space:nowrap"><i class="bi bi-box-arrow-up-right"></i></a>'
+        +(editable?'<button class="ws-task-del" onclick="wsDeleteLink('+p.id+','+l.id+')"><i class="bi bi-x"></i></button>':'')
+        +'</div>';
+    }).join('');
+
+    return '<div class="ws-prog-summary">'
+      +'<div class="ws-prog-tile"><div class="ws-prog-tile-val">'+p.progress+'%</div><div class="ws-prog-tile-lbl">Complete</div><div class="ws-prog-big-bar"><div class="ws-prog-big-fill" style="width:'+p.progress+'%"></div></div></div>'
+      +'<div class="ws-prog-tile"><div class="ws-prog-tile-val" style="color:#10b981">'+doneCount+'/'+totalCount+'</div><div class="ws-prog-tile-lbl">Tasks Done</div></div>'
+      +'</div>'
+      +'<div class="ws-field"><label>Title</label><input type="text" id="wsDTitle" value="'+esc(p.title)+'"'+(editable?'':' disabled')+'></div>'
+      +'<div class="ws-field"><label>Description</label><textarea id="wsDDesc"'+(editable?'':' disabled')+'>'+esc(p.description||'')+'</textarea></div>'
+      +'<div class="ws-2col">'
+      +'<div class="ws-field"><label>Tech Stack</label><input type="text" id="wsDTech" value="'+esc((p.tech_stack||'').split(',').filter(Boolean).map(function(t){return t.trim();}).join(', '))+'"'+(editable?'':' disabled')+'></div>'
+      +'<div class="ws-field"><label>Due Date</label><input type="date" id="wsDDue" value="'+(p.due_date?p.due_date.slice(0,10):'')+'"'+(editable?'':' disabled')+'></div>'
+      +'</div>'
+      +'<div class="ws-2col">'
+      +'<div class="ws-field"><label>Status</label><select id="wsDStatus"'+(editable?'':' disabled')+'>'+['planning','active','on_hold','completed'].map(function(s){return '<option value="'+s+'"'+(p.status===s?' selected':'')+'>'+STATUS_LABELS[s]+'</option>';}).join('')+'</select></div>'
+      +'<div style="display:flex;align-items:flex-end;padding-bottom:2px">'
+      +'<div class="ws-toggle-row"><input type="checkbox" id="wsDVisible"'+(p.client_visible?' checked':'')+(editable?'':' disabled')+'><label for="wsDVisible" style="cursor:pointer;font-size:.78rem;color:var(--adm-text-2)"><i class="bi bi-eye-fill" style="color:#10b981;margin-right:4px"></i>Visible to client</label></div>'
+      +'</div>'
+      +'</div>'
+      +(editable?'<div style="display:flex;justify-content:flex-end"><button class="ws-det-btn save" onclick="wsSaveProject('+p.id+')"><i class="bi bi-check-lg"></i> Save Overview</button></div>':'')
+      +'<div>'
+      +'<div class="ws-sec-head"><span>Links & References</span>'+(editable?'<button class="ws-mini-btn" onclick="wsShowAddLink('+p.id+')"><i class="bi bi-plus-lg"></i> Add Link</button>':'')+'</div>'
+      +(p.links&&p.links.length?'<div style="display:flex;flex-direction:column;gap:5px">'+linksHtml+'</div>':'<div style="font-size:.75rem;color:var(--adm-muted);padding:6px 0">No links yet</div>')
+      +(editable?'<div id="wsAddLinkForm" style="display:none;margin-top:8px"><div class="ws-add-row"><input type="text" id="wsLinkLabel" placeholder="Label (e.g. GitHub Repo)"><input type="url" id="wsLinkUrl" placeholder="https://…"><button onclick="wsAddLink('+p.id+')"><i class="bi bi-check-lg"></i></button></div></div>':'')
+      +'</div>';
+  }
+
+  window.wsShowAddLink = function(){ document.getElementById('wsAddLinkForm').style.display=''; document.getElementById('wsLinkLabel').focus(); };
+
+  window.wsSaveProject = function(id){
+    var data = {
+      title:          document.getElementById('wsDTitle').value.trim(),
+      description:    document.getElementById('wsDDesc').value.trim(),
+      tech_stack:     document.getElementById('wsDTech').value.trim(),
+      due_date:       document.getElementById('wsDDue').value || null,
+      status:         document.getElementById('wsDStatus').value,
+      client_visible: document.getElementById('wsDVisible') && document.getElementById('wsDVisible').checked ? 1 : 0
+    };
+    fetch('/workspace/projects/'+id,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)})
+      .then(function(r){return r.json();}).then(function(res){
+        if(res.success){ wsLoadProjects(); wsOpenProject(id); }
+        else alert(res.message||'Failed');
+      });
+  };
+
+  window.wsAddLink = function(id){
+    var label = document.getElementById('wsLinkLabel').value.trim();
+    var url   = document.getElementById('wsLinkUrl').value.trim();
+    if(!label||!url) return;
+    fetch('/workspace/projects/'+id+'/links',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({label,url})})
+      .then(function(r){return r.json();}).then(function(res){ if(res.success) wsOpenProject(id); });
+  };
+
+  window.wsDeleteLink = function(projectId, linkId){
+    fetch('/workspace/links/'+linkId,{method:'DELETE'}).then(function(r){return r.json();}).then(function(res){ if(res.success) wsOpenProject(projectId); });
+  };
+
+  // ── Tasks tab ─────────────────────────────────────────────────────────
+  function renderTasksTab(p){
+    var editable = canEdit(p);
+    var milestones = p.milestones||[];
+    var tasks      = p.tasks||[];
+
+    function taskRow(t){
+      return '<div class="ws-task-item" id="wstask-'+t.id+'">'
+        +(editable?'<div class="ws-task-check '+t.status+'" onclick="wsToggleTask('+p.id+','+t.id+',\''+t.status+'\')" title="Cycle status">'+TASK_ICONS[t.status]+'</div>':'<div class="ws-task-check '+t.status+'" style="cursor:default">'+TASK_ICONS[t.status]+'</div>')
+        +(editable?'<div class="ws-prio-dot ws-prio-'+t.priority+'" onclick="wsCyclePrio('+p.id+','+t.id+',\''+t.priority+'\')" title="'+t.priority+' priority"></div>':'<div class="ws-prio-dot ws-prio-'+t.priority+'" style="cursor:default"></div>')
+        +'<span class="ws-task-title'+(t.status==='done'?' done':'')+'">'+esc(t.title)+'</span>'
+        +dueChip(t.due_date)
+        +(editable?'<button class="ws-task-del" onclick="wsDeleteTask('+p.id+','+t.id+')" title="Remove"><i class="bi bi-x"></i></button>':'')
+        +'</div>';
+    }
+
+    var msBlocks = '';
+    milestones.forEach(function(ms){
+      var msTasks = tasks.filter(function(t){return t.milestone_id===ms.id;});
+      var msDone  = msTasks.filter(function(t){return t.status==='done';}).length;
+      var msPct   = msTasks.length ? Math.round(msDone/msTasks.length*100) : 0;
+      msBlocks += '<div class="ws-milestone-block">'
+        +'<div class="ws-milestone-head">'
+        +'<i class="bi bi-flag'+(ms.status==='completed'?'-fill':'')+'" style="color:#6366f1;font-size:.8rem"></i>'
+        +'<span class="ws-milestone-title">'+esc(ms.title)+'</span>'
+        +(ms.due_date?'<span style="font-size:.65rem;color:var(--adm-muted)">'+fmtDate(ms.due_date)+'</span>':'')
+        +'<span class="ws-ms-done">'+msDone+'/'+msTasks.length+'</span>'
+        +(editable?'<button class="ws-mini-btn" onclick="wsToggleMilestone('+p.id+','+ms.id+',\''+ms.status+'\')" title="'+(ms.status==='completed'?'Reopen':'Complete')+'"><i class="bi bi-'+(ms.status==='completed'?'arrow-counterclockwise':'check-lg')+'"></i></button>':'')
+        +(editable?'<button class="ws-task-del" onclick="wsDeleteMilestone('+p.id+','+ms.id+')" title="Delete milestone"><i class="bi bi-x"></i></button>':'')
+        +'</div>'
+        +'<div class="ws-ms-bar"><div class="ws-ms-fill" style="width:'+msPct+'%"></div></div>'
+        +'<div class="ws-milestone-tasks">'
+        +(msTasks.length ? msTasks.map(taskRow).join('') : '<div style="font-size:.72rem;color:var(--adm-muted);padding:4px 2px">No tasks in this milestone</div>')
+        +'</div>'
+        +'</div>';
+    });
+
+    var ungrouped = tasks.filter(function(t){return !t.milestone_id;});
+    var ungroupedHtml = ungrouped.length
+      ? '<div>'+(milestones.length?'<div class="ws-ungrouped-head">General</div>':'')+ungrouped.map(taskRow).join('')+'</div>'
+      : '';
+
+    var msSelect = '<option value="">No Milestone</option>'+milestones.map(function(ms){return '<option value="'+ms.id+'">'+esc(ms.title)+'</option>';}).join('');
+
+    return (editable?'<div>'
+      +'<div class="ws-sec-head"><span>Milestones</span><button class="ws-mini-btn" onclick="wsShowAddMS()"><i class="bi bi-plus-lg"></i> Add Milestone</button></div>'
+      +'<div id="wsAddMSForm" style="display:none;margin-bottom:8px"><div class="ws-add-row"><input type="text" id="wsMSTitle" placeholder="Milestone name e.g. v1.0"><input type="date" id="wsMSDue"><button onclick="wsAddMilestone('+p.id+')"><i class="bi bi-check-lg"></i></button></div></div>'
+      +'</div>':'')
+      +msBlocks
+      +ungroupedHtml
+      +(editable?'<div>'
+      +'<div class="ws-sec-head" style="margin-top:4px"><span>Add Task</span></div>'
+      +'<div class="ws-add-task">'
+      +'<input type="text" id="wsAddTaskTitle" placeholder="Task title…" onkeydown="if(event.key===\'Enter\')wsAddTask('+p.id+')" style="flex:2">'
+      +'<select id="wsAddTaskMS" style="flex:1">'+msSelect+'</select>'
+      +'<select id="wsAddTaskPrio" style="flex:1"><option value="high">High</option><option value="medium" selected>Medium</option><option value="low">Low</option></select>'
+      +'<input type="date" id="wsAddTaskDue">'
+      +'<button onclick="wsAddTask('+p.id+')"><i class="bi bi-plus-lg"></i></button>'
+      +'</div>'
+      +'</div>':'');
+  }
+
+  window.wsShowAddMS = function(){ var f=document.getElementById('wsAddMSForm'); f.style.display=f.style.display?'':'none'; if(!f.style.display) document.getElementById('wsMSTitle').focus(); };
+
+  window.wsAddMilestone = function(id){
+    var title = document.getElementById('wsMSTitle').value.trim();
+    var due   = document.getElementById('wsMSDue').value;
+    if(!title) return;
+    fetch('/workspace/projects/'+id+'/milestones',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title,due_date:due||null})})
+      .then(function(r){return r.json();}).then(function(res){ if(res.success) wsOpenProject(id); });
+  };
+
+  window.wsToggleMilestone = function(projectId,msId,currentStatus){
+    var next = currentStatus==='completed' ? 'open' : 'completed';
+    fetch('/workspace/milestones/'+msId,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:next})})
+      .then(function(r){return r.json();}).then(function(res){ if(res.success) wsOpenProject(projectId); });
+  };
+
+  window.wsDeleteMilestone = function(projectId,msId){
+    if(!confirm('Delete milestone? Tasks in it will become ungrouped.')) return;
+    fetch('/workspace/milestones/'+msId,{method:'DELETE'}).then(function(r){return r.json();}).then(function(res){ if(res.success) wsOpenProject(projectId); });
+  };
+
+  window.wsAddTask = function(id){
+    var title = document.getElementById('wsAddTaskTitle').value.trim();
+    if(!title) return;
+    var data = {
+      title:        title,
+      priority:     document.getElementById('wsAddTaskPrio').value,
+      due_date:     document.getElementById('wsAddTaskDue').value || null,
+      milestone_id: document.getElementById('wsAddTaskMS').value || null
+    };
+    document.getElementById('wsAddTaskTitle').value='';
+    fetch('/workspace/projects/'+id+'/tasks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)})
+      .then(function(r){return r.json();}).then(function(res){ if(res.success) wsOpenProject(id); });
+  };
+
+  window.wsToggleTask = function(projectId,taskId,currentStatus){
+    var next = TASK_NEXT[currentStatus]||'todo';
+    fetch('/workspace/projects/'+projectId+'/tasks/'+taskId,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:next})})
+      .then(function(r){return r.json();}).then(function(res){ if(res.success) wsOpenProject(projectId); });
+  };
+
+  window.wsCyclePrio = function(projectId,taskId,current){
+    var next = PRIO_NEXT[current]||'medium';
+    fetch('/workspace/projects/'+projectId+'/tasks/'+taskId,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({priority:next})})
+      .then(function(r){return r.json();}).then(function(res){ if(res.success) wsOpenProject(projectId); });
+  };
+
+  window.wsDeleteTask = function(projectId,taskId){
+    fetch('/workspace/projects/'+projectId+'/tasks/'+taskId,{method:'DELETE'})
+      .then(function(r){return r.json();}).then(function(res){ if(res.success) wsOpenProject(projectId); });
+  };
+
+  // ── Updates tab ───────────────────────────────────────────────────────
+  function loadUpdates(id){
+    fetch('/workspace/projects/'+id+'/updates').then(function(r){return r.json();}).then(function(res){
+      document.getElementById('wsDetailBody').innerHTML = renderUpdatesTab(id, res.success?res.data:[]);
+    });
+  }
+
+  function renderUpdatesTab(id, rows){
+    var postForm = '<div class="ws-post-area">'
+      +'<textarea id="wsUpdateText" placeholder="What did you work on? Any blockers?"></textarea>'
+      +'<div style="display:flex;justify-content:flex-end"><button class="ws-det-btn post" onclick="wsPostUpdate('+id+')"><i class="bi bi-megaphone"></i> Post Update</button></div>'
+      +'</div>';
+    var timeline = rows.length
+      ? '<div class="ws-timeline">'+rows.map(function(u){
+          return '<div class="ws-tl-item">'
+            +'<div class="ws-tl-avatar">'+initials(u.author_name)+'</div>'
+            +'<div class="ws-tl-body">'
+            +'<div class="ws-tl-meta"><span class="ws-tl-author">'+esc(u.author_name)+'</span><span>'+fmtTime(u.created_at)+'</span></div>'
+            +'<div class="ws-tl-text">'+esc(u.body)+'</div>'
+            +'</div></div>';
+        }).join('')+'</div>'
+      : '<div class="ws-empty-list"><i class="bi bi-megaphone"></i>No updates yet — post the first one</div>';
+    return postForm + timeline;
+  }
+
+  window.wsPostUpdate = function(id){
+    var body = document.getElementById('wsUpdateText').value.trim();
+    if(!body) return;
+    fetch('/workspace/projects/'+id+'/updates',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({body})})
+      .then(function(r){return r.json();}).then(function(res){
+        if(res.success){ document.getElementById('wsDetailBody').innerHTML = renderUpdatesTab(id,res.data); }
+      });
+  };
+
+  // ── Discussion tab ────────────────────────────────────────────────────
+  function loadComments(id){
+    fetch('/workspace/projects/'+id+'/comments').then(function(r){return r.json();}).then(function(res){
+      document.getElementById('wsDetailBody').innerHTML = renderDiscussionTab(id, res.success?res.data:[]);
+    });
+  }
+
+  function renderDiscussionTab(id, rows){
+    var postForm = '<div class="ws-post-area">'
+      +'<textarea id="wsCommentText" placeholder="Share an idea, question, or feedback…"></textarea>'
+      +'<div style="display:flex;justify-content:flex-end"><button class="ws-det-btn post" onclick="wsPostComment('+id+')"><i class="bi bi-chat-left-text"></i> Post</button></div>'
+      +'</div>';
+    var list = rows.length
+      ? '<div class="ws-timeline">'+rows.map(function(c){
+          var canDel = _isAdmin || c.user_id===_userId;
+          return '<div class="ws-tl-item">'
+            +'<div class="ws-tl-avatar" style="background:rgba(16,185,129,.12);color:#10b981">'+initials(c.author_name)+'</div>'
+            +'<div class="ws-tl-body">'
+            +'<div class="ws-tl-meta"><span class="ws-tl-author">'+esc(c.author_name)+'</span><span>'+fmtTime(c.created_at)+'</span>'+(canDel?'<button class="ws-tl-del" onclick="wsDeleteComment('+id+','+c.id+')" title="Delete"><i class="bi bi-trash"></i></button>':'')+'</div>'
+            +'<div class="ws-tl-text">'+esc(c.body)+'</div>'
+            +'</div></div>';
+        }).join('')+'</div>'
+      : '<div class="ws-empty-list"><i class="bi bi-chat-left-text"></i>No discussion yet</div>';
+    return postForm + list;
+  }
+
+  window.wsPostComment = function(id){
+    var body = document.getElementById('wsCommentText').value.trim();
+    if(!body) return;
+    fetch('/workspace/projects/'+id+'/comments',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({body})})
+      .then(function(r){return r.json();}).then(function(res){
+        if(res.success){ document.getElementById('wsDetailBody').innerHTML = renderDiscussionTab(id,res.data); }
+      });
+  };
+
+  window.wsDeleteComment = function(projectId,commentId){
+    fetch('/workspace/comments/'+commentId,{method:'DELETE'}).then(function(r){return r.json();}).then(function(res){ if(res.success) loadComments(projectId); });
+  };
+
+  // ── Releases tab ──────────────────────────────────────────────────────
+  function loadReleases(id){
+    fetch('/workspace/projects/'+id+'/releases').then(function(r){return r.json();}).then(function(res){
+      document.getElementById('wsDetailBody').innerHTML = renderReleasesTab(id, res.success?res.data:[]);
+    });
+  }
+
+  function renderReleasesTab(id, rows){
+    var p = _openProj;
+    var editable = canEdit(p);
+    var form = editable
+      ? '<div style="border:1px solid var(--adm-border);border-radius:10px;padding:13px;background:var(--adm-surface-2);margin-bottom:4px">'
+        +'<div class="ws-sec-head" style="margin-bottom:10px"><span>Log New Release</span></div>'
+        +'<div class="ws-3col" style="margin-bottom:8px">'
+        +'<div class="ws-field"><label>Version *</label><input type="text" id="wsRelVer" placeholder="e.g. v1.2.0"></div>'
+        +'<div class="ws-field"><label>Environment</label><select id="wsRelEnv"><option value="development">Development</option><option value="staging" selected>Staging</option><option value="production">Production</option></select></div>'
+        +'<div style="display:flex;align-items:flex-end"><button class="ws-det-btn post" style="width:100%;justify-content:center" onclick="wsLogRelease('+id+')"><i class="bi bi-rocket-takeoff"></i> Log Release</button></div>'
+        +'</div>'
+        +'<div class="ws-field"><label>Release Notes</label><textarea id="wsRelNotes" rows="2" placeholder="What changed in this release?"></textarea></div>'
+        +'</div>'
+      : '';
+
+    var list = rows.length
+      ? '<div style="display:flex;flex-direction:column;gap:8px">'+rows.map(function(r){
+          return '<div class="ws-rel-item">'
+            +'<div class="ws-rel-head"><span class="ws-rel-ver">'+esc(r.version)+'</span><span class="ws-env-badge '+ENV_CLASS[r.environment]+'">'+ENV_LABEL[r.environment]+'</span>'
+            +'<span style="flex:1"></span>'
+            +((_isAdmin || r.released_by===_userId)?'<button class="ws-task-del" onclick="wsDeleteRelease('+id+','+r.id+')" title="Delete"><i class="bi bi-trash"></i></button>':'')
+            +'</div>'
+            +'<div class="ws-rel-meta"><i class="bi bi-person-fill" style="margin-right:3px"></i>'+esc(r.released_by_name)+' &nbsp;·&nbsp; '+fmtTime(r.released_at)+'</div>'
+            +(r.notes?'<div class="ws-rel-notes">'+esc(r.notes)+'</div>':'')
+            +'</div>';
+        }).join('')+'</div>'
+      : '<div class="ws-empty-list"><i class="bi bi-rocket-takeoff"></i>No releases logged yet</div>';
+    return form + list;
+  }
+
+  window.wsLogRelease = function(id){
+    var version = document.getElementById('wsRelVer').value.trim();
+    if(!version) return;
+    var data = { version, environment:document.getElementById('wsRelEnv').value, notes:document.getElementById('wsRelNotes').value.trim() };
+    fetch('/workspace/projects/'+id+'/releases',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)})
+      .then(function(r){return r.json();}).then(function(res){ if(res.success) document.getElementById('wsDetailBody').innerHTML=renderReleasesTab(id,res.data); });
+  };
+
+  window.wsDeleteRelease = function(projectId,releaseId){
+    if(!confirm('Delete this release log?')) return;
+    fetch('/workspace/releases/'+releaseId,{method:'DELETE'}).then(function(r){return r.json();}).then(function(res){ if(res.success) loadReleases(projectId); });
+  };
+
+  // ── Delete project ────────────────────────────────────────────────────
+  window.wsDeleteProject = function(id){
+    if(!confirm('Delete this project and all its data? This cannot be undone.')) return;
+    fetch('/workspace/projects/'+id,{method:'DELETE'}).then(function(r){return r.json();}).then(function(res){
+      if(res.success){ _activeId=null; _openProj=null; wsLoadProjects(); document.getElementById('wsRight').innerHTML='<div class="ws-right-empty"><i class="bi bi-code-square"></i><div style="font-size:.85rem">Select a project</div></div>'; }
+    });
+  };
+
+  // ── Create project ────────────────────────────────────────────────────
+  window.wsOpenNew = function(){
+    document.getElementById('wsNewTitle').value=''; document.getElementById('wsNewTech').value='';
+    document.getElementById('wsNewStatus').value='planning'; document.getElementById('wsNewDue').value='';
+    document.getElementById('wsNewModal').style.display='flex';
+    document.getElementById('wsNewTitle').focus();
+  };
+
+  window.wsCreateProject = function(){
+    var title = document.getElementById('wsNewTitle').value.trim();
+    if(!title){ document.getElementById('wsNewTitle').focus(); return; }
+    var data = { title, tech_stack:document.getElementById('wsNewTech').value.trim(), status:document.getElementById('wsNewStatus').value, due_date:document.getElementById('wsNewDue').value||null };
+    var devSel = document.getElementById('wsNewDev'); if(devSel) data.developer_id=devSel.value;
+    fetch('/workspace/projects',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)})
+      .then(function(r){return r.json();}).then(function(res){
+        if(res.success){ document.getElementById('wsNewModal').style.display='none'; wsLoadProjects(); wsOpenProject(res.data.id); }
+        else alert(res.message||'Failed');
+      });
+  };
+
+  // ── Notes ─────────────────────────────────────────────────────────────
+  window.wsLoadNotes = function(){
+    var nl = document.getElementById('wsNoteList'); if(!nl) return;
+    nl.innerHTML='<div class="ws-spinner-wrap"><div class="ws-spinner"></div></div>';
+    fetch('/workspace/notes').then(function(r){return r.json();}).then(function(res){
+      _notes=res.success?res.data:[]; renderNoteList();
+    }).catch(function(){ nl.innerHTML='<div class="ws-empty-list">Failed</div>'; });
+  };
+
+  function renderNoteList(){
+    var nl=document.getElementById('wsNoteList'); if(!nl) return;
+    if(!_notes.length){ nl.innerHTML='<div class="ws-empty-list"><i class="bi bi-lightbulb"></i>No notes yet</div>'; return; }
+    nl.innerHTML=_notes.map(function(n){
+      var date=new Date(n.updated_at).toLocaleDateString('en-GB',{day:'2-digit',month:'short'});
+      var shared=parseInt(n.share_count)>0?'<span class="ws-note-shared"><i class="bi bi-share-fill"></i> '+n.share_count+'</span>':'';
+      return '<div class="ws-note-card'+(n.id===_activeNote?' active':'')+'" onclick="wsOpenNote('+n.id+')">'
+        +'<div class="ws-note-title">'+esc(n.title)+'</div>'
+        +'<div class="ws-note-meta"><span>'+date+'</span>'+shared+'</div>'
+        +'</div>';
+    }).join('');
+  }
+
+  window.wsNewNote = function(){
+    _activeNote=null; renderNoteList();
+    document.getElementById('wsRight').innerHTML=renderNoteForm({id:null,title:'',body:'',shares:[]});
+    document.getElementById('wsNoteTitle').focus();
+  };
+
+  window.wsOpenNote = function(id){
+    _activeNote=id; renderNoteList();
+    document.getElementById('wsRight').innerHTML='<div class="ws-spinner-wrap" style="padding:60px 0"><div class="ws-spinner"></div></div>';
+    fetch('/workspace/notes/'+id).then(function(r){return r.json();}).then(function(res){ if(res.success) document.getElementById('wsRight').innerHTML=renderNoteForm(res.data); });
+  };
+
+  function renderNoteForm(n){
+    if(!_isAdmin){
+      return '<div class="ws-detail"><div class="ws-detail-head"><div class="ws-detail-head-main"><div class="ws-det-meta"><i class="bi bi-person-fill" style="margin-right:3px"></i>'+esc(n.author_name)+'</div><div class="ws-det-title"><i class="bi bi-lightbulb" style="color:#f59e0b;margin-right:5px"></i>'+esc(n.title)+'</div></div></div>'
+        +'<div class="ws-detail-body">'+(n.body?'<div style="font-size:.82rem;color:var(--adm-text-2);line-height:1.6;white-space:pre-wrap">'+esc(n.body)+'</div>':'<div style="font-size:.78rem;color:var(--adm-muted)">No details added.</div>')+'</div></div>';
+    }
+    var sharedIds=(n.shares||[]).map(function(s){return s.developer_id;});
+    var devRows=_wsDevs.map(function(d){ var chk=sharedIds.indexOf(d.id)>-1?' checked':''; return '<div class="ws-share-dev-row"><input type="checkbox" id="wsShareDev'+d.id+'" value="'+d.id+'"'+chk+'><label for="wsShareDev'+d.id+'">'+esc(d.name)+'</label></div>'; }).join('')||'<div style="font-size:.75rem;color:var(--adm-muted)">No developers marked yet</div>';
+    return '<div class="ws-detail">'
+      +'<div class="ws-detail-head"><div class="ws-detail-head-main"><div class="ws-det-meta"><i class="bi bi-lightbulb" style="color:#f59e0b;margin-right:3px"></i>Note / Idea</div><div class="ws-det-title">'+(n.id?esc(n.title):'New Note')+'</div></div>'
+      +'<div class="ws-det-actions"><button class="ws-det-btn save" onclick="wsSaveNote('+(n.id||'null')+')"><i class="bi bi-check-lg"></i> Save</button>'+(n.id?'<button class="ws-det-btn del" onclick="wsDeleteNote('+n.id+')"><i class="bi bi-trash"></i></button>':'')+'</div></div>'
+      +'<div class="ws-detail-body">'
+      +'<div class="ws-field"><label>Title</label><input type="text" id="wsNoteTitle" value="'+esc(n.title||'')+'" placeholder="What\'s the idea?"></div>'
+      +'<div class="ws-field"><label>Details</label><textarea id="wsNoteBody" rows="6" placeholder="Describe the idea, requirements, context…">'+esc(n.body||'')+'</textarea></div>'
+      +(_wsDevs.length?'<div><div class="ws-sec-head"><span>Share with Developers</span></div><div class="ws-share-dev-list">'+devRows+'</div><button class="ws-share-btn" style="margin-top:7px" onclick="wsShareNote('+(n.id||'null')+')"><i class="bi bi-share-fill"></i> Update Sharing</button></div>':'')
+      +'</div></div>';
+  }
+
+  window.wsSaveNote = function(id){
+    var title=document.getElementById('wsNoteTitle').value.trim();
+    var body=document.getElementById('wsNoteBody').value.trim();
+    if(!title){ document.getElementById('wsNoteTitle').focus(); return; }
+    fetch(id?'/workspace/notes/'+id:'/workspace/notes',{method:id?'PUT':'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title,body})})
+      .then(function(r){return r.json();}).then(function(res){
+        if(res.success){ _activeNote=id||(res.data&&res.data.id); wsLoadNotes(); if(!id&&res.data) wsOpenNote(res.data.id); }
+        else alert(res.message||'Failed');
+      });
+  };
+
+  window.wsDeleteNote = function(id){
+    if(!confirm('Delete this note?')) return;
+    fetch('/workspace/notes/'+id,{method:'DELETE'}).then(function(r){return r.json();}).then(function(res){
+      if(res.success){ _activeNote=null; wsLoadNotes(); document.getElementById('wsRight').innerHTML='<div class="ws-right-empty"><i class="bi bi-lightbulb"></i><div style="font-size:.85rem">Select a note or create a new idea</div></div>'; }
+    });
+  };
+
+  window.wsShareNote = function(id){
+    if(!id){ alert('Save the note first before sharing.'); return; }
+    var devIds=Array.from(document.querySelectorAll('.ws-share-dev-list input[type=checkbox]')).filter(function(b){return b.checked;}).map(function(b){return parseInt(b.value);});
+    fetch('/workspace/notes/'+id+'/share',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({developer_ids:devIds})})
+      .then(function(r){return r.json();}).then(function(res){ if(res.success) wsLoadNotes(); });
+  };
+
+  // Start
+  wsLoadProjects();
+})();
+</script>

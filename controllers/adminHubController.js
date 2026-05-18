@@ -581,6 +581,24 @@ class AdminHubController {
     res.render('admin/reports', { title: 'Reports', layout: 'admin/layout', section: 'reports' });
   }
 
+  static async queueReport(req, res) {
+    res.render('admin/queue-report', { title: 'Client Queue Report', layout: 'admin/layout', section: 'reports' });
+  }
+
+  static async queueReportData(req, res) {
+    try {
+      const { month } = req.query;
+      if (!month || !/^\d{4}-\d{2}$/.test(month)) {
+        return res.json({ success: false, message: 'Invalid month' });
+      }
+      const data = await ClientRequest.getMonthlyReport(month);
+      return res.json({ success: true, data });
+    } catch (err) {
+      console.error('AdminHub queueReportData error:', err);
+      return res.json({ success: false, message: 'Failed to load report' });
+    }
+  }
+
   static async taskCompletion(req, res) {
     try {
       const [[localOrg]] = await db.query("SELECT timezone FROM organizations WHERE org_type = 'LOCAL' LIMIT 1");
