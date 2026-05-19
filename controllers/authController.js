@@ -5,10 +5,18 @@ const { getToday, getEffectiveWorkDate } = require('../utils/timezone');
 const ShiftHistory = require('../models/ShiftHistory');
 const crypto = require('crypto');
 const logger = require('../utils/logger');
+const jwt = require('jsonwebtoken');
 
 class AuthController {
   static showLogin(req, res) {
-    if (req.cookies?.token) return res.redirect('/admin');
+    if (req.cookies?.token) {
+      try {
+        jwt.verify(req.cookies.token, process.env.JWT_SECRET);
+        return res.redirect('/admin');
+      } catch {
+        res.clearCookie('token');
+      }
+    }
     const ts = Math.floor(Date.now() / 1000);
     const rand = crypto.randomBytes(12).toString('hex');
     const sig = crypto.createHmac('sha256', process.env.JWT_SECRET)

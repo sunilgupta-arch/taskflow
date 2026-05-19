@@ -31,6 +31,7 @@ router.get('/users/:id/progress', authenticate, requireRoles('LOCAL_ADMIN', 'LOC
 router.get('/users/:id/monthly-report', authenticate, requireRoles('LOCAL_ADMIN', 'LOCAL_MANAGER', 'CLIENT_ADMIN', 'CLIENT_MANAGER'), UserController.monthlyReport);
 router.post('/users/:id/reset-password', authenticate, requireRoles('LOCAL_ADMIN'), UserController.resetPassword);
 router.patch('/users/:id/toggle', authenticate, requireRoles('LOCAL_ADMIN'), UserController.toggleActive);
+router.post('/users/:id/force-logout', authenticate, requireRoles('LOCAL_ADMIN', 'LOCAL_MANAGER'), UserController.forceLogoutUser);
 
 // Change Password (all authenticated users)
 router.post('/change-password', authenticate, UserController.changePassword);
@@ -72,6 +73,7 @@ router.post('/comp-off/off-day-action', authenticate, requireRoles('LOCAL_ADMIN'
 router.post('/comp-off/apply',       authenticate, requireRoles('LOCAL_ADMIN','LOCAL_MANAGER','LOCAL_USER'), CompOffController.applyCompOff);
 router.get('/comp-off/my-balance',   authenticate, requireRoles('LOCAL_ADMIN','LOCAL_MANAGER','LOCAL_USER'), CompOffController.getMyBalance);
 router.get('/comp-off/admin-summary',authenticate, requireRoles('LOCAL_ADMIN','LOCAL_MANAGER'), CompOffController.getAdminSummary);
+router.get('/comp-off/:userId/history', authenticate, requireRoles('LOCAL_ADMIN','LOCAL_MANAGER'), CompOffController.getUserHistory);
 
 // ── Urgent Chat (Local team responds to client urgent) ──────
 const UrgentController = require('../portal/controllers/urgentController');
@@ -206,6 +208,7 @@ router.get('/admin/taskboard',          authenticate, requireLocalAdmin, AdminHu
 router.get('/admin/taskboard/data',     authenticate, requireLocalAdmin, AdminHubController.taskboardData);
 router.get('/admin/work',               authenticate, requireLocalAdmin, AdminHubController.work);
 router.get('/admin/team',               authenticate, requireLocalAdmin, AdminHubController.team);
+router.get('/admin/comp-off',           authenticate, requireLocalAdmin, AdminHubController.compOff);
 router.get('/admin/live-status',        authenticate, requireLocalAdmin, AdminHubController.liveStatus);
 router.get('/admin/live-status/data',   authenticate, requireLocalAdmin, AdminHubController.liveStatusData);
 router.get('/admin/users',              authenticate, requireLocalAdmin, AdminHubController.users);
@@ -253,6 +256,25 @@ router.post('/workspace/notes',               authenticate, requireDevOrAdmin, D
 router.put('/workspace/notes/:noteId',        authenticate, requireDevOrAdmin, DevWorkspaceController.updateNote);
 router.delete('/workspace/notes/:noteId',     authenticate, requireDevOrAdmin, DevWorkspaceController.deleteNote);
 router.post('/workspace/notes/:noteId/share', authenticate, requireDevOrAdmin, DevWorkspaceController.shareNote);
+
+// ── Workspace Thoughts (LOCAL_ADMIN + LOCAL_MANAGER + is_dev) ──────────
+const thoughtUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 25 * 1024 * 1024, files: 5 } });
+const handleThoughtUploadError = (err, req, res, next) => {
+  if (err && err.code === 'LIMIT_FILE_SIZE')  return res.status(413).json({ success: false, message: 'File too large. Max 25 MB per file.' });
+  if (err && err.code === 'LIMIT_FILE_COUNT') return res.status(413).json({ success: false, message: 'Max 5 files per comment.' });
+  if (err) return res.status(400).json({ success: false, message: err.message || 'Upload failed' });
+  next();
+};
+// specific paths first to avoid :id capturing them
+router.get('/workspace/thoughts',                        authenticate, requireDevOrAdmin, DevWorkspaceController.getThoughts);
+router.get('/workspace/thoughts/files/:fileId',          authenticate, requireDevOrAdmin, DevWorkspaceController.serveThoughtFile);
+router.get('/workspace/thoughts/comment-files/:fileId',  authenticate, requireDevOrAdmin, DevWorkspaceController.serveThoughtCommentFile);
+router.delete('/workspace/thoughts/comments/:commentId', authenticate, requireDevOrAdmin, DevWorkspaceController.deleteThoughtComment);
+router.get('/workspace/thoughts/:id',                    authenticate, requireDevOrAdmin, DevWorkspaceController.getThought);
+router.delete('/workspace/thoughts/:id',                 authenticate, requireDevOrAdmin, DevWorkspaceController.deleteThought);
+router.post('/workspace/thoughts/:id/comments', authenticate, requireDevOrAdmin,
+  (req, res, next) => thoughtUpload.array('files', 5)(req, res, err => handleThoughtUploadError(err, req, res, next)),
+  DevWorkspaceController.addThoughtComment);
 router.get('/admin/tools',              authenticate, requireLocalAdmin, AdminHubController.tools);
 router.get('/admin/drive',              authenticate, requireLocalAdmin, AdminHubController.drive);
 router.get('/admin/backup',             authenticate, requireLocalAdmin, AdminHubController.backup);

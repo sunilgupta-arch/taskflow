@@ -376,6 +376,10 @@ class AdminHubController {
     res.render('admin/team', { title: 'Team', layout: 'admin/layout', section: 'team' });
   }
 
+  static async compOff(req, res) {
+    res.render('admin/comp-off', { title: 'Comp-Off', layout: 'admin/layout', section: 'comp-off' });
+  }
+
   static async liveStatus(req, res) {
     try {
       const [[org]] = await db.query("SELECT timezone FROM organizations WHERE org_type = 'LOCAL' LIMIT 1");
@@ -1341,16 +1345,36 @@ class AdminHubController {
           leaveSet.add(d.toISOString().split('T')[0] + '-' + l.status);
       });
 
-      const [myHolidays] = await db.query(
-        `SELECT date, name FROM holidays
-         WHERE date >= ? AND date <= ? AND organization_id = (SELECT organization_id FROM users WHERE id = ?)
-         ORDER BY date`,
-        [startDate, endDate, userId]
-      );
+      const [[myHolidays], [compOffRows]] = await Promise.all([
+        db.query(
+          `SELECT date, name FROM holidays
+           WHERE date >= ? AND date <= ? AND organization_id = (SELECT organization_id FROM users WHERE id = ?)
+           ORDER BY date`,
+          [startDate, endDate, userId]
+        ),
+        db.query(
+          `SELECT earned_date, applied_to_date FROM comp_off_credits
+           WHERE user_id = ? AND (
+             (earned_date >= ? AND earned_date <= ?) OR
+             (applied_to_date IS NOT NULL AND applied_to_date >= ? AND applied_to_date <= ?)
+           )`,
+          [userId, startDate, endDate, startDate, endDate]
+        )
+      ]);
       const holidayMap = new Map();
       myHolidays.forEach(h => {
         const d = h.date instanceof Date ? h.date.toISOString().split('T')[0] : String(h.date).split('T')[0];
         holidayMap.set(d, h.name);
+      });
+      const compOffEarnedSet = new Set();
+      const compOffAppliedSet = new Set();
+      compOffRows.forEach(r => {
+        const ed = r.earned_date instanceof Date ? r.earned_date.toISOString().split('T')[0] : String(r.earned_date).split('T')[0];
+        if (ed >= startDate && ed <= endDate) compOffEarnedSet.add(ed);
+        if (r.applied_to_date) {
+          const ad = r.applied_to_date instanceof Date ? r.applied_to_date.toISOString().split('T')[0] : String(r.applied_to_date).split('T')[0];
+          if (ad >= startDate && ad <= endDate) compOffAppliedSet.add(ad);
+        }
       });
 
       const dayNames   = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
@@ -1367,14 +1391,20 @@ class AdminHubController {
         const log       = sessions[0] || null;
         const manualEntry = sessions.find(s => s.is_manual && s.manual_status);
         let status = 'absent';
-        if (dateStr > today) {
+        if (dateStr > today && !compOffAppliedSet.has(dateStr)) {
           status = 'future';
         } else if (manualEntry) {
-          // Admin override always wins
-          status = manualEntry.manual_status === 'leave' ? 'leave' : manualEntry.manual_status;
-          if (status === 'present' || (log && !manualEntry)) uniqueDates.add(dateStr);
+          const ms = manualEntry.manual_status;
+          if      (ms === 'leave')    status = 'leave';
+          else if (ms === 'comp_off') status = isOff ? 'comp_earned' : 'comp_off';
+          else if (ms === 'half_day') status = 'half_day';
+          else if (ms === 'check_in') status = 'present';
+          else                        status = ms;
+          if (status === 'present' || status === 'comp_earned') uniqueDates.add(dateStr);
+        } else if (compOffAppliedSet.has(dateStr)) {
+          status = 'comp_off';
         } else if (isOff) {
-          status = 'off';
+          status = compOffEarnedSet.has(dateStr) ? 'comp_earned' : 'off';
         } else if (isHoliday) {
           status = 'holiday';
         } else if (log) {

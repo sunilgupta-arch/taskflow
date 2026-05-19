@@ -1,11 +1,15 @@
 const DevProject = require('../models/DevProject');
+const DevThought = require('../models/DevThought');
+const fs         = require('fs');
+const pathMod    = require('path');
 
 const ADMIN_ROLES  = ['LOCAL_ADMIN', 'LOCAL_MANAGER'];
 const CLIENT_ROLES = ['CLIENT_ADMIN', 'CLIENT_MANAGER', 'CLIENT_TOP_MGMT'];
 
-function isAdmin(user)  { return ADMIN_ROLES.includes(user.role_name); }
-function isDev(user)    { return user.is_developer == 1; }
-function isClient(user) { return CLIENT_ROLES.includes(user.role_name); }
+function isAdmin(user)       { return ADMIN_ROLES.includes(user.role_name); }
+function isLocalAdmin(user)  { return user.role_name === 'LOCAL_ADMIN'; }
+function isDev(user)         { return user.is_developer == 1; }
+function isClient(user)      { return CLIENT_ROLES.includes(user.role_name); }
 
 class DevWorkspaceController {
 
@@ -13,16 +17,17 @@ class DevWorkspaceController {
 
   static async index(req, res) {
     try {
-      const developers = isAdmin(req.user) ? await DevProject.getDevelopers() : [];
+      const developers = isLocalAdmin(req.user) ? await DevProject.getDevelopers() : [];
       res.render('admin/workspace', {
         title: 'Dev Workspace',
         layout: 'admin/layout',
         section: 'workspace',
         developers,
-        isAdmin:  isAdmin(req.user),
-        isDev:    isDev(req.user),
-        userId:   req.user.id,
-        userName: req.user.name
+        isAdmin:       isAdmin(req.user),
+        isLocalAdmin:  isLocalAdmin(req.user),
+        isDev:         isDev(req.user),
+        userId:        req.user.id,
+        userName:      req.user.name
       });
     } catch (err) {
       console.error('DevWorkspace index error:', err);
@@ -36,7 +41,7 @@ class DevWorkspaceController {
     try {
       const user = req.user;
       let projects;
-      if (isAdmin(user)) {
+      if (isLocalAdmin(user)) {
         const devId = req.query.developer_id ? parseInt(req.query.developer_id) : null;
         projects = await DevProject.getAll({ developerId: devId });
       } else {
@@ -71,7 +76,7 @@ class DevWorkspaceController {
       const user = req.user;
       const { title, description, tech_stack, status, client_visible } = req.body;
       if (!title || !title.trim()) return res.json({ success: false, message: 'Title is required' });
-      const developerId = isAdmin(user) && req.body.developer_id ? parseInt(req.body.developer_id) : user.id;
+      const developerId = isLocalAdmin(user) && req.body.developer_id ? parseInt(req.body.developer_id) : user.id;
       const id = await DevProject.create({ title: title.trim(), description, tech_stack, status, client_visible, developer_id: developerId });
       const project = await DevProject.getById(id);
       return res.json({ success: true, data: project, message: 'Project created' });
@@ -351,6 +356,105 @@ class DevWorkspaceController {
     }
   }
 
+  // ── Thoughts helpers ─────────────────────────────────────────────────
+
+  static _saveThoughtFiles(files, authorId, uploadDir) {
+    const saved = [];
+    for (const f of files) {
+      const safeName = f.originalname.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const fname    = Date.now() + '-' + Math.random().toString(36).slice(2) + '-' + safeName;
+      fs.writeFileSync(pathMod.join(uploadDir, fname), f.buffer);
+      saved.push({ file_name: f.originalname, file_path: 'thoughts/' + fname, file_mime: f.mimetype, file_size: f.size, uploaded_by: authorId });
+    }
+    return saved;
+  }
+
+  static _thoughtsUploadDir() {
+    const dir = pathMod.join(__dirname, '..', 'uploads', 'thoughts');
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    return dir;
+  }
+
+  // ── Thoughts — local side (LOCAL_ADMIN + is_dev) ──────────────────────
+
+  static async getThoughts(req, res) {
+    try {
+      const rows = await DevThought.list();
+      return res.json({ success: true, data: rows });
+    } catch (err) {
+      return res.json({ success: false, message: 'Failed to load thoughts' });
+    }
+  }
+
+  static async getThought(req, res) {
+    try {
+      const thought = await DevThought.getById(parseInt(req.params.id));
+      if (!thought) return res.json({ success: false, message: 'Not found' });
+      return res.json({ success: true, data: thought });
+    } catch (err) {
+      return res.json({ success: false, message: 'Failed to load thought' });
+    }
+  }
+
+  static async deleteThought(req, res) {
+    return res.status(403).json({ success: false, message: 'Only the client can delete thoughts' });
+  }
+
+  static async addThoughtComment(req, res) {
+    try {
+      const thoughtId = parseInt(req.params.id);
+      const { body } = req.body;
+      if (!body || !body.trim()) return res.json({ success: false, message: 'Comment text required' });
+      const commentId = await DevThought.addComment({ thought_id: thoughtId, author_id: req.user.id, body: body.trim() });
+      if (req.files && req.files.length) {
+        const dir = DevWorkspaceController._thoughtsUploadDir();
+        for (const finfo of DevWorkspaceController._saveThoughtFiles(req.files, req.user.id, dir)) {
+          await DevThought.addCommentFile(commentId, finfo);
+        }
+      }
+      const thought = await DevThought.getById(thoughtId);
+      return res.json({ success: true, data: thought });
+    } catch (err) {
+      console.error('addThoughtComment error:', err);
+      return res.json({ success: false, message: 'Failed to add comment' });
+    }
+  }
+
+  static async deleteThoughtComment(req, res) {
+    try {
+      const id      = parseInt(req.params.commentId);
+      const comment = await DevThought.getCommentById(id);
+      if (!comment) return res.json({ success: false, message: 'Not found' });
+      if (!isAdmin(req.user) && comment.author_id !== req.user.id) {
+        return res.json({ success: false, message: 'Access denied' });
+      }
+      await DevThought.deleteComment(id);
+      return res.json({ success: true });
+    } catch (err) {
+      return res.json({ success: false, message: 'Failed to delete comment' });
+    }
+  }
+
+  static async serveThoughtFile(req, res) {
+    try {
+      const f = await DevThought.getFile(parseInt(req.params.fileId));
+      if (!f) return res.status(404).send('Not found');
+      const abs = pathMod.join(__dirname, '..', 'uploads', f.file_path);
+      res.setHeader('Content-Disposition', 'attachment; filename="' + f.file_name + '"');
+      res.sendFile(abs);
+    } catch (err) { res.status(500).send('Error'); }
+  }
+
+  static async serveThoughtCommentFile(req, res) {
+    try {
+      const f = await DevThought.getCommentFile(parseInt(req.params.fileId));
+      if (!f) return res.status(404).send('Not found');
+      const abs = pathMod.join(__dirname, '..', 'uploads', f.file_path);
+      res.setHeader('Content-Disposition', 'attachment; filename="' + f.file_name + '"');
+      res.sendFile(abs);
+    } catch (err) { res.status(500).send('Error'); }
+  }
+
   // ── Portal (client-facing, read-only) ────────────────────────────────
 
   static async portalIndex(req, res) {
@@ -408,6 +512,112 @@ class DevWorkspaceController {
     } catch (err) {
       return res.json({ success: false, message: 'Failed' });
     }
+  }
+
+  // ── Portal Thoughts (CLIENT_ADMIN posts; CLIENT_ADMIN comments) ───────
+
+  static async portalGetThoughts(req, res) {
+    try {
+      const rows = await DevThought.list();
+      return res.json({ success: true, data: rows });
+    } catch (err) {
+      return res.json({ success: false, message: 'Failed to load thoughts' });
+    }
+  }
+
+  static async portalGetThought(req, res) {
+    try {
+      const thought = await DevThought.getById(parseInt(req.params.id));
+      if (!thought) return res.json({ success: false, message: 'Not found' });
+      return res.json({ success: true, data: thought });
+    } catch (err) {
+      return res.json({ success: false, message: 'Failed' });
+    }
+  }
+
+  static async portalPostThought(req, res) {
+    try {
+      const { title, body } = req.body;
+      if (!title || !title.trim()) return res.json({ success: false, message: 'Title is required' });
+      if (!body || !body.trim())   return res.json({ success: false, message: 'Body is required' });
+      const dir      = DevWorkspaceController._thoughtsUploadDir();
+      const thoughtId = await DevThought.create({ author_id: req.user.id, title: title.trim(), body: body.trim() });
+      if (req.files && req.files.length) {
+        for (const finfo of DevWorkspaceController._saveThoughtFiles(req.files, req.user.id, dir)) {
+          await DevThought.addFile(thoughtId, finfo);
+        }
+      }
+      const rows = await DevThought.list();
+      return res.json({ success: true, data: rows, message: 'Thought posted' });
+    } catch (err) {
+      console.error('portalPostThought error:', err);
+      return res.json({ success: false, message: 'Failed to post thought' });
+    }
+  }
+
+  static async portalDeleteThought(req, res) {
+    try {
+      const id      = parseInt(req.params.thoughtId);
+      const thought = await DevThought.getById(id);
+      if (!thought) return res.json({ success: false, message: 'Not found' });
+      if (thought.author_id !== req.user.id) return res.json({ success: false, message: 'Access denied' });
+      await DevThought.delete(id);
+      return res.json({ success: true });
+    } catch (err) {
+      return res.json({ success: false, message: 'Failed to delete thought' });
+    }
+  }
+
+  static async portalAddThoughtComment(req, res) {
+    try {
+      const thoughtId = parseInt(req.params.id);
+      const { body } = req.body;
+      if (!body || !body.trim()) return res.json({ success: false, message: 'Comment text required' });
+      const commentId = await DevThought.addComment({ thought_id: thoughtId, author_id: req.user.id, body: body.trim() });
+      if (req.files && req.files.length) {
+        const dir = DevWorkspaceController._thoughtsUploadDir();
+        for (const finfo of DevWorkspaceController._saveThoughtFiles(req.files, req.user.id, dir)) {
+          await DevThought.addCommentFile(commentId, finfo);
+        }
+      }
+      const thought = await DevThought.getById(thoughtId);
+      return res.json({ success: true, data: thought });
+    } catch (err) {
+      return res.json({ success: false, message: 'Failed to add comment' });
+    }
+  }
+
+  static async portalDeleteThoughtComment(req, res) {
+    try {
+      const id      = parseInt(req.params.commentId);
+      const comment = await DevThought.getCommentById(id);
+      if (!comment) return res.json({ success: false, message: 'Not found' });
+      if (comment.author_id !== req.user.id) return res.json({ success: false, message: 'Access denied' });
+      await DevThought.deleteComment(id);
+      return res.json({ success: true });
+    } catch (err) {
+      return res.json({ success: false, message: 'Failed to delete comment' });
+    }
+  }
+
+  static async portalServeThoughtFile(req, res) {
+    try {
+      const f = await DevThought.getFile(parseInt(req.params.fileId));
+      if (!f) return res.status(404).send('Not found');
+      const abs = pathMod.join(__dirname, '..', 'uploads', f.file_path);
+      res.setHeader('Content-Disposition', 'attachment; filename="' + f.file_name + '"');
+      res.sendFile(abs);
+    } catch (err) { res.status(500).send('Error'); }
+  }
+
+  static async portalServeThoughtCommentFile(req, res) {
+    try {
+      const f = await DevThought.getCommentFile(parseInt(req.params.fileId));
+      if (!f) return res.status(404).send('Not found');
+      const abs = pathMod.join(__dirname, '..', 'uploads', f.file_path);
+      res.setHeader('Content-Disposition', 'attachment; filename="' + f.file_name + '"');
+      res.sendFile(abs);
+    } catch (err) { res.status(500).send('Error'); }
   }
 }
 

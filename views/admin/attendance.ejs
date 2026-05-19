@@ -112,6 +112,8 @@
 .ata-badge.approved_leave { background: rgba(59,130,246,0.12);  color: #3b82f6; }
 .ata-badge.pending_leave  { background: rgba(245,158,11,0.12);  color: #f59e0b; }
 .ata-badge.half_day     { background: rgba(249,115,22,0.12);  color: #f97316; }
+.ata-badge.comp_off     { background: rgba(167,139,250,0.12); color: #a78bfa; }
+.ata-badge.comp_earned  { background: rgba(16,185,129,0.12);  color: #10b981; }
 .ata-badge.official_duty{ background: rgba(20,184,166,0.12);  color: #14b8a6; }
 .ata-badge.work_from_home{ background: rgba(6,182,212,0.12);  color: #06b6d4; }
 .ata-badge.off_shift    { background: rgba(100,116,139,0.10); color: #64748b; }
@@ -192,6 +194,8 @@
 .ata-day-dot.approved_leave{ background: rgba(59,130,246,0.2);  color: #3b82f6; }
 .ata-day-dot.pending_leave { background: rgba(245,158,11,0.2);  color: #f59e0b; }
 .ata-day-dot.half_day      { background: rgba(249,115,22,0.2);  color: #f97316; }
+.ata-day-dot.comp_off      { background: rgba(167,139,250,0.2); color: #a78bfa; }
+.ata-day-dot.comp_earned   { background: rgba(16,185,129,0.2);  color: #10b981; }
 .ata-day-dot.official_duty { background: rgba(20,184,166,0.2);  color: #14b8a6; }
 .ata-day-dot.work_from_home{ background: rgba(6,182,212,0.2);   color: #06b6d4; }
 .ata-day-dot.future        { background: transparent; color: var(--adm-muted); opacity: 0.3; }
@@ -424,7 +428,8 @@
   function statusLabel(s) {
     var m = {present:'Present',absent:'Absent',weekoff:'Week Off',holiday:'Holiday',
              approved_leave:'On Leave',pending_leave:'Leave (Pending)',
-             half_day:'Half Day',official_duty:'Official Duty',work_from_home:'WFH',
+             half_day:'Half Day',comp_off:'Swap Off',comp_earned:'Worked (WO Swap)',
+             check_in:'Present',official_duty:'Official Duty',work_from_home:'WFH',
              off_shift:'Off Shift',future:'—'};
     return m[s] || s || '—';
   }
@@ -459,7 +464,12 @@
   function getUserDailyStatus(u, sessions, dateStr, calMap) {
     if (sessions.length) {
       var ov = _overrides[u.id + '-' + dateStr];
-      if (ov) return ov.status === 'leave' ? 'approved_leave' : ov.status;
+      if (ov) {
+        var os = ov.status;
+        if (os === 'leave') return 'approved_leave';
+        if (os === 'check_in') return 'present';
+        return os;
+      }
       return 'present';
     }
     // No sessions — use calendar data if available
@@ -475,7 +485,7 @@
       var entry = userMap[u.id];
       var sessions = entry ? entry.sessions : [];
       var status = getUserDailyStatus(u, sessions, dateStr, _calData);
-      if (status === 'present' || status === 'half_day' || status === 'work_from_home' || status === 'official_duty') present++;
+      if (status === 'present' || status === 'half_day' || status === 'work_from_home' || status === 'official_duty' || status === 'comp_earned') present++;
       else if (status === 'absent') absent++;
       else if (status === 'approved_leave' || status === 'pending_leave') onLeave++;
       else if (status === 'weekoff' || status === 'holiday') off++;
@@ -684,6 +694,7 @@
         else if (status === 'approved_leave') dotLabel = 'L';
         else if (status === 'pending_leave') dotLabel = 'L?';
         else if (status === 'half_day') dotLabel = '½';
+        else if (status === 'comp_earned') dotLabel = '✓';
         else if (status === 'work_from_home') dotLabel = 'W';
         else if (status === 'official_duty') dotLabel = 'O';
         var dateStr = year+'-'+String(mon).padStart(2,'0')+'-'+String(d).padStart(2,'0');

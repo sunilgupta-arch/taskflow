@@ -65,6 +65,9 @@
 .usr-btn.act   { color:#10b981; border-color:rgba(16,185,129,0.3); }
 .usr-btn.act:hover   { background:rgba(16,185,129,0.08); }
 
+.usr-btn.kick  { color:#f97316; border-color:rgba(249,115,22,0.3); }
+.usr-btn.kick:hover  { background:rgba(249,115,22,0.1); }
+
 /* ── Visibility toggle ────────────────────────────────────── */
 .usr-actions { display:flex; align-items:center; justify-content:space-between; gap:6px; margin-top:12px; }
 .usr-actions-left { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
@@ -248,7 +251,8 @@
     roles:     roles,
     orgs:      orgs,
     isAdmin:   user.role_name === 'LOCAL_ADMIN',
-    isMgr:     user.role_name === 'LOCAL_MANAGER'
+    isMgr:     user.role_name === 'LOCAL_MANAGER',
+    myId:      user.id
   }).replace(/<\//g, '<\\/') %>;
 
   var _users   = _d.users;
@@ -256,6 +260,7 @@
   var _orgs    = _d.orgs;
   var _isAdmin = _d.isAdmin;
   var _isMgr   = _d.isMgr;
+  var _myId    = _d.myId;
   var _tab     = 'local';
 
   var roleMap = {}, orgMap = {};
@@ -319,6 +324,7 @@
 
     // Actions
     var actHtml = '';
+    var canKick = isLocal && u.is_active && roleName === 'LOCAL_USER' && u.id !== _myId;
     if (_isAdmin) {
       var toggleBtn = u.is_active
         ? '<button class="usr-btn deact" onclick="usrToggle('+u.id+')" title="Deactivate"><i class="bi bi-person-slash"></i></button>'
@@ -334,13 +340,21 @@
             +'</span>'
           +'</label>'
         : '';
+      var kickBtn = canKick ? '<button class="usr-btn kick" onclick="usrForceLogout('+u.id+',\''+esc(u.name)+'\')" title="Force logout"><i class="bi bi-box-arrow-right"></i></button>' : '';
       actHtml = '<div class="usr-actions">'
         +'<div class="usr-actions-left">'
           +'<button class="usr-btn edit" onclick="usrOpenEdit('+u.id+')"><i class="bi bi-pencil"></i> Edit</button>'
           +'<button class="usr-btn pwd"  onclick="usrOpenPwd('+u.id+',\''+esc(u.name)+'\')"><i class="bi bi-key"></i> Pwd</button>'
           +toggleBtn
+          +kickBtn
         +'</div>'
         +visToggle
+        +'</div>';
+    } else if (_isMgr && canKick) {
+      actHtml = '<div class="usr-actions">'
+        +'<div class="usr-actions-left">'
+          +'<button class="usr-btn kick" onclick="usrForceLogout('+u.id+',\''+esc(u.name)+'\')" title="Force logout"><i class="bi bi-box-arrow-right"></i> Logout</button>'
+        +'</div>'
         +'</div>';
     }
 
@@ -598,6 +612,25 @@
         }
       })
       .catch(function() { alert('Network error — could not update user status'); });
+  };
+
+  // ── Force logout ──────────────────────────────────────────────────────
+  window.usrForceLogout = function(userId, name) {
+    if (!confirm('Force logout ' + name + '? They will be immediately redirected to the login page.')) return;
+    fetch('/users/' + userId + '/force-logout', {
+      method: 'POST',
+      headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+      .then(function(r) { return r.json(); })
+      .then(function(res) {
+        if (res.success) {
+          if (typeof showToast === 'function') showToast(res.message || (name + ' has been logged out'), 'success');
+          else alert(res.message || (name + ' has been logged out'));
+        } else {
+          alert(res.message || 'Failed to force logout');
+        }
+      })
+      .catch(function() { alert('Network error — could not force logout'); });
   };
 
   // ── Reset password ────────────────────────────────────────────────────

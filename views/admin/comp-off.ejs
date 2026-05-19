@@ -1,0 +1,296 @@
+<style>
+@keyframes coFadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:none; } }
+
+/* ── Page ────────────────────────────────────────────────────────── */
+.co-wrap { animation:coFadeIn 0.25s ease; }
+
+/* ── Stat cards ──────────────────────────────────────────────────── */
+.co-stats { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:24px; }
+.co-stat  { flex:1; min-width:140px; background:var(--adm-surface); border:1px solid var(--adm-border);
+            border-radius:12px; padding:16px 18px; }
+.co-stat-val  { font-size:1.8rem; font-weight:700; font-family:var(--adm-mono); line-height:1; margin-bottom:4px; }
+.co-stat-lbl  { font-size:0.72rem; color:var(--adm-muted); font-weight:600; text-transform:uppercase; letter-spacing:.4px; }
+
+/* ── Toolbar ─────────────────────────────────────────────────────── */
+.co-toolbar { display:flex; align-items:center; gap:10px; margin-bottom:16px; }
+.co-search  { flex:1; background:var(--adm-surface); border:1px solid var(--adm-border); border-radius:8px;
+              color:var(--adm-text); font-size:0.82rem; padding:7px 12px; outline:none;
+              font-family:var(--adm-font); transition:border-color .2s; }
+.co-search:focus { border-color:var(--adm-accent); }
+
+/* ── Table ───────────────────────────────────────────────────────── */
+.co-table-wrap { background:var(--adm-surface); border:1px solid var(--adm-border); border-radius:12px; overflow:hidden; }
+.co-table { width:100%; border-collapse:collapse; }
+.co-table thead th { padding:10px 14px; font-size:0.68rem; font-weight:700; text-transform:uppercase;
+                     letter-spacing:.5px; color:var(--adm-muted); background:rgba(255,255,255,0.03);
+                     border-bottom:1px solid var(--adm-border); text-align:left; white-space:nowrap; }
+.co-table tbody tr { border-bottom:1px solid rgba(255,255,255,0.04); transition:background .15s; }
+.co-table tbody tr:last-child { border-bottom:none; }
+.co-table tbody tr:hover { background:rgba(255,255,255,0.03); }
+.co-table td { padding:12px 14px; font-size:0.82rem; vertical-align:middle; }
+
+/* ── User cell ───────────────────────────────────────────────────── */
+.co-user { display:flex; align-items:center; gap:10px; }
+.co-avatar { width:32px; height:32px; border-radius:50%; display:flex; align-items:center;
+             justify-content:center; font-size:0.68rem; font-weight:700; flex-shrink:0; }
+.co-uname { font-weight:600; font-size:0.83rem; color:var(--adm-text); }
+.co-role  { font-size:0.65rem; color:var(--adm-muted); margin-top:1px; }
+
+/* ── Balance chips ───────────────────────────────────────────────── */
+.co-bal { display:inline-flex; align-items:center; gap:5px; padding:3px 10px; border-radius:20px;
+          font-size:0.75rem; font-weight:700; font-family:var(--adm-mono); }
+.co-bal.avail { background:rgba(16,185,129,0.12); color:#10b981; border:1px solid rgba(16,185,129,0.25); }
+.co-bal.zero  { background:rgba(100,116,139,0.1);  color:var(--adm-muted); border:1px solid var(--adm-border); }
+.co-bal.used  { background:rgba(99,102,241,0.1);   color:#818cf8; border:1px solid rgba(99,102,241,0.25); }
+.co-bal.total { background:rgba(245,158,11,0.1);   color:#f59e0b; border:1px solid rgba(245,158,11,0.25); }
+
+/* ── View button ─────────────────────────────────────────────────── */
+.co-view-btn { background:none; border:1px solid var(--adm-border); border-radius:6px;
+               color:var(--adm-muted); font-size:0.75rem; padding:4px 10px; cursor:pointer;
+               transition:all .15s; font-family:var(--adm-font); display:inline-flex; align-items:center; gap:5px; }
+.co-view-btn:hover { border-color:var(--adm-accent); color:var(--adm-accent); }
+
+/* ── Empty / spinner ─────────────────────────────────────────────── */
+.co-empty   { text-align:center; padding:48px 20px; color:var(--adm-muted); font-size:0.82rem; }
+.co-spinner { display:flex; justify-content:center; padding:48px; }
+.co-spin    { width:28px; height:28px; border:2px solid var(--adm-border);
+              border-top-color:var(--adm-accent); border-radius:50%; animation:spin .7s linear infinite; }
+@keyframes spin { to { transform:rotate(360deg); } }
+
+/* ── Drawer ──────────────────────────────────────────────────────── */
+.co-drawer-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:900; }
+.co-drawer-overlay.open { display:block; }
+.co-drawer { position:fixed; top:0; right:0; bottom:0; width:420px; max-width:94vw;
+             background:var(--adm-surface); border-left:1px solid var(--adm-border);
+             z-index:901; display:flex; flex-direction:column;
+             transform:translateX(100%); transition:transform .25s ease; }
+.co-drawer.open { transform:translateX(0); }
+.co-drawer-head { display:flex; align-items:center; justify-content:space-between;
+                  padding:16px 18px; border-bottom:1px solid var(--adm-border); flex-shrink:0; }
+.co-drawer-title { font-family:var(--adm-mono); font-size:.85rem; font-weight:700; color:var(--adm-text); }
+.co-drawer-close { background:none; border:none; color:var(--adm-muted); font-size:1.1rem;
+                   cursor:pointer; padding:2px 6px; border-radius:4px; transition:color .15s; }
+.co-drawer-close:hover { color:var(--adm-text); }
+.co-drawer-body { flex:1; overflow-y:auto; padding:16px 18px; }
+
+/* ── History list ────────────────────────────────────────────────── */
+.co-hist-stats { display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap; }
+.co-hist-stat  { flex:1; min-width:80px; background:var(--adm-bg); border:1px solid var(--adm-border);
+                 border-radius:8px; padding:10px 12px; text-align:center; }
+.co-hist-stat-val { font-size:1.3rem; font-weight:700; font-family:var(--adm-mono); }
+.co-hist-stat-lbl { font-size:0.62rem; color:var(--adm-muted); font-weight:600; text-transform:uppercase; letter-spacing:.4px; margin-top:2px; }
+
+.co-hist-item { display:flex; align-items:center; gap:10px; padding:10px 0;
+                border-bottom:1px solid rgba(255,255,255,0.05); }
+.co-hist-item:last-child { border-bottom:none; }
+.co-hist-dot  { width:8px; height:8px; border-radius:50%; flex-shrink:0; margin-top:1px; }
+.co-hist-dot.avail { background:#10b981; }
+.co-hist-dot.used  { background:#818cf8; }
+.co-hist-date { font-family:var(--adm-mono); font-size:0.78rem; color:var(--adm-text); font-weight:600; }
+.co-hist-sub  { font-size:0.7rem; color:var(--adm-muted); margin-top:2px; }
+.co-hist-badge { margin-left:auto; flex-shrink:0; padding:2px 8px; border-radius:10px;
+                 font-size:0.65rem; font-weight:700; text-transform:uppercase; letter-spacing:.3px; }
+.co-hist-badge.avail { background:rgba(16,185,129,0.12); color:#10b981; }
+.co-hist-badge.used  { background:rgba(129,140,248,0.12); color:#818cf8; }
+</style>
+
+<div class="co-wrap">
+  <div class="adm-hub-header">
+    <div class="adm-section-pill" style="background:rgba(139,92,246,0.1);color:#8b5cf6;border:1px solid rgba(139,92,246,0.2)">
+      <i class="bi bi-calendar2-check"></i> Team
+    </div>
+    <h1 class="adm-hub-title">Comp-Off Management</h1>
+    <p class="adm-hub-sub">Track compensatory off credits earned and applied by each team member</p>
+  </div>
+
+  <!-- Stats -->
+  <div class="co-stats" id="coStats">
+    <div class="co-stat"><div class="co-stat-val" style="color:#8b5cf6" id="coStatUsers">—</div><div class="co-stat-lbl">Team Members</div></div>
+    <div class="co-stat"><div class="co-stat-val" style="color:#10b981" id="coStatAvail">—</div><div class="co-stat-lbl">Available Credits</div></div>
+    <div class="co-stat"><div class="co-stat-val" style="color:#818cf8" id="coStatUsed">—</div><div class="co-stat-lbl">Used Credits</div></div>
+    <div class="co-stat"><div class="co-stat-val" style="color:#f59e0b" id="coStatTotal">—</div><div class="co-stat-lbl">Total Earned</div></div>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="co-toolbar">
+    <input class="co-search" type="text" id="coSearch" placeholder="Search by name…" oninput="coRender()">
+  </div>
+
+  <!-- Table -->
+  <div class="co-table-wrap">
+    <div class="co-spinner" id="coSpinner"><div class="co-spin"></div></div>
+    <table class="co-table" id="coTable" style="display:none">
+      <thead>
+        <tr>
+          <th>Member</th>
+          <th>Available</th>
+          <th>Used</th>
+          <th>Total Earned</th>
+          <th>Last Earned</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="coTbody"></tbody>
+    </table>
+    <div class="co-empty" id="coEmpty" style="display:none">No team members found</div>
+  </div>
+</div>
+
+<!-- Drawer overlay -->
+<div class="co-drawer-overlay" id="coOverlay" onclick="coCloseDrawer()"></div>
+
+<!-- History drawer -->
+<div class="co-drawer" id="coDrawer">
+  <div class="co-drawer-head">
+    <div class="co-drawer-title" id="coDrawerTitle">Credit History</div>
+    <button class="co-drawer-close" onclick="coCloseDrawer()"><i class="bi bi-x-lg"></i></button>
+  </div>
+  <div class="co-drawer-body" id="coDrawerBody">
+    <div class="co-spinner"><div class="co-spin"></div></div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var _data = [];
+
+  var COLORS = ['#6366f1','#8b5cf6','#ec4899','#f97316','#10b981','#06b6d4','#3b82f6','#a855f7'];
+  function avatarColor(name) {
+    var n = 0; for (var i = 0; i < name.length; i++) n += name.charCodeAt(i);
+    return COLORS[n % COLORS.length];
+  }
+  function initials(name) {
+    return (name || '?').split(' ').slice(0,2).map(function(p){ return p[0]; }).join('').toUpperCase();
+  }
+  function esc(s) {
+    var d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML;
+  }
+  function fmtDate(d) {
+    if (!d) return '—';
+    return new Date(d + 'T12:00:00').toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' });
+  }
+
+  // ── Load summary ────────────────────────────────────────────────
+  function coLoad() {
+    fetch('/comp-off/admin-summary', { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+      .then(function(r){ return r.json(); })
+      .then(function(res) {
+        if (!res.success) return;
+        _data = res.data.summary || [];
+        document.getElementById('coSpinner').style.display = 'none';
+        document.getElementById('coTable').style.display   = '';
+
+        var totalAvail = 0, totalUsed = 0, totalEarned = 0;
+        _data.forEach(function(u) {
+          totalAvail  += parseInt(u.available  || 0);
+          totalUsed   += parseInt(u.used       || 0);
+          totalEarned += parseInt(u.total_earned || 0);
+        });
+        document.getElementById('coStatUsers').textContent = _data.length;
+        document.getElementById('coStatAvail').textContent = totalAvail;
+        document.getElementById('coStatUsed').textContent  = totalUsed;
+        document.getElementById('coStatTotal').textContent = totalEarned;
+
+        coRender();
+      })
+      .catch(function(){ document.getElementById('coSpinner').style.display = 'none'; });
+  }
+
+  // ── Render table rows ───────────────────────────────────────────
+  window.coRender = function() {
+    var q = (document.getElementById('coSearch').value || '').toLowerCase();
+    var filtered = _data.filter(function(u) {
+      return !q || (u.name || '').toLowerCase().includes(q);
+    });
+
+    var tbody = document.getElementById('coTbody');
+    document.getElementById('coEmpty').style.display = filtered.length ? 'none' : '';
+    document.getElementById('coTable').style.display = filtered.length ? '' : 'none';
+
+    if (!filtered.length) { tbody.innerHTML = ''; return; }
+
+    tbody.innerHTML = filtered.map(function(u) {
+      var avail = parseInt(u.available   || 0);
+      var used  = parseInt(u.used        || 0);
+      var total = parseInt(u.total_earned || 0);
+      var color = avatarColor(u.name);
+      var inits = initials(u.name);
+      var roleLabel = (u.role_name || '').replace('LOCAL_', '');
+
+      var availChip = avail > 0
+        ? '<span class="co-bal avail"><i class="bi bi-check-circle-fill" style="font-size:.65rem"></i>'+avail+' available</span>'
+        : '<span class="co-bal zero">none</span>';
+
+      return '<tr>'
+        + '<td><div class="co-user">'
+            + '<div class="co-avatar" style="background:'+color+'">'+inits+'</div>'
+            + '<div><div class="co-uname">'+esc(u.name)+'</div><div class="co-role">'+esc(roleLabel)+'</div></div>'
+          + '</div></td>'
+        + '<td>'+availChip+'</td>'
+        + '<td><span class="co-bal used">'+used+'</span></td>'
+        + '<td><span class="co-bal total">'+total+'</span></td>'
+        + '<td style="color:var(--adm-muted);font-size:.78rem;font-family:var(--adm-mono)">'+fmtDate(u.last_earned)+'</td>'
+        + '<td><button class="co-view-btn" onclick="coOpenDrawer('+u.id+',\''+esc(u.name)+'\')" title="View credit history">'
+            + '<i class="bi bi-clock-history"></i> History'
+          + '</button></td>'
+        + '</tr>';
+    }).join('');
+  };
+
+  // ── Drawer ──────────────────────────────────────────────────────
+  window.coOpenDrawer = function(userId, name) {
+    document.getElementById('coDrawerTitle').textContent = name + ' — Credits';
+    document.getElementById('coDrawerBody').innerHTML = '<div class="co-spinner"><div class="co-spin"></div></div>';
+    document.getElementById('coOverlay').classList.add('open');
+    document.getElementById('coDrawer').classList.add('open');
+
+    fetch('/comp-off/'+userId+'/history', { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+      .then(function(r){ return r.json(); })
+      .then(function(res) {
+        if (!res.success) { document.getElementById('coDrawerBody').innerHTML = '<div class="co-empty">Failed to load history</div>'; return; }
+        renderHistory(res.data.history || []);
+      })
+      .catch(function() { document.getElementById('coDrawerBody').innerHTML = '<div class="co-empty">Network error</div>'; });
+  };
+
+  function renderHistory(history) {
+    var avail = history.filter(function(h){ return h.status === 'available'; }).length;
+    var used  = history.filter(function(h){ return h.status === 'used'; }).length;
+
+    var statsHtml = '<div class="co-hist-stats">'
+      + '<div class="co-hist-stat"><div class="co-hist-stat-val" style="color:#10b981">'+avail+'</div><div class="co-hist-stat-lbl">Available</div></div>'
+      + '<div class="co-hist-stat"><div class="co-hist-stat-val" style="color:#818cf8">'+used+'</div><div class="co-hist-stat-lbl">Used</div></div>'
+      + '<div class="co-hist-stat"><div class="co-hist-stat-val" style="color:#f59e0b">'+history.length+'</div><div class="co-hist-stat-lbl">Total Earned</div></div>'
+      + '</div>';
+
+    if (!history.length) {
+      document.getElementById('coDrawerBody').innerHTML = statsHtml + '<div class="co-empty">No comp-off credits on record</div>';
+      return;
+    }
+
+    var itemsHtml = history.map(function(h) {
+      var isUsed = h.status === 'used';
+      var sub = isUsed && h.applied_to_date
+        ? 'Applied to ' + fmtDate(h.applied_to_date)
+        : 'Earned · not yet applied';
+      return '<div class="co-hist-item">'
+        + '<div class="co-hist-dot '+h.status+'"></div>'
+        + '<div style="flex:1">'
+          + '<div class="co-hist-date">Worked ' + fmtDate(h.earned_date) + '</div>'
+          + '<div class="co-hist-sub">'+sub+'</div>'
+        + '</div>'
+        + '<span class="co-hist-badge '+h.status+'">'+(isUsed ? 'Used' : 'Available')+'</span>'
+        + '</div>';
+    }).join('');
+
+    document.getElementById('coDrawerBody').innerHTML = statsHtml + itemsHtml;
+  }
+
+  window.coCloseDrawer = function() {
+    document.getElementById('coOverlay').classList.remove('open');
+    document.getElementById('coDrawer').classList.remove('open');
+  };
+
+  coLoad();
+})();
+</script>

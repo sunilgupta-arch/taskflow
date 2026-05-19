@@ -184,6 +184,16 @@
 @keyframes wsSpin { to{transform:rotate(360deg)} }
 .ws-empty-list { padding:32px 16px; text-align:center; color:var(--adm-muted); font-size:0.78rem; }
 .ws-empty-list i { font-size:1.8rem; opacity:.2; display:block; margin-bottom:7px; }
+
+/* ── Thoughts tab & cards ─────────────────────────────────── */
+.ws-panel-tab.thoughts-tab.active { background:rgba(6,182,212,.1); border-color:rgba(6,182,212,.3); color:#06b6d4; }
+.ws-thought-card        { padding:11px 13px; border-radius:10px; border:1px solid var(--adm-border); background:var(--adm-surface); cursor:pointer; transition:all .15s; }
+.ws-thought-card:hover  { border-color:rgba(6,182,212,.35); background:var(--adm-surface-2); }
+.ws-thought-card.active { border-color:#06b6d4; background:rgba(6,182,212,.05); }
+.ws-thought-title { font-weight:600; font-size:0.82rem; color:var(--adm-text); margin-bottom:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.ws-thought-meta  { font-size:0.66rem; color:var(--adm-muted); display:flex; gap:8px; flex-wrap:wrap; }
+.ws-att-chip { display:inline-flex; align-items:center; gap:4px; font-size:.7rem; color:var(--adm-text-2); border:1px solid var(--adm-border); border-radius:6px; padding:2px 8px; text-decoration:none; transition:all .15s; }
+.ws-att-chip:hover { border-color:#6366f1; color:#6366f1; }
 </style>
 
 <!-- Page title strip -->
@@ -206,6 +216,7 @@
         <% if (isAdmin || isDev) { %>
         <button class="ws-panel-tab notes-tab" id="wsTabNotes" onclick="wsSwitchPanel('notes')"><i class="bi bi-lightbulb"></i> Notes</button>
         <% } %>
+        <button class="ws-panel-tab thoughts-tab" id="wsTabThoughts" onclick="wsSwitchPanel('thoughts')"><i class="bi bi-lightbulb-fill"></i> Thoughts</button>
       </div>
 
       <div id="wsProjHeader">
@@ -213,7 +224,7 @@
           <span style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--adm-muted)">Projects</span>
           <% if (isDev) { %><button class="ws-new-btn" onclick="wsOpenNew()"><i class="bi bi-plus-lg"></i> New</button><% } %>
         </div>
-        <% if (isAdmin && developers.length) { %>
+        <% if (isLocalAdmin && developers.length) { %>
         <select class="ws-dev-filter" id="wsDevFilter" onchange="wsLoadProjects()">
           <option value="">All Developers</option>
           <% developers.forEach(d => { %><option value="<%= d.id %>"><%= d.name %></option><% }) %>
@@ -229,12 +240,18 @@
         </div>
       </div>
       <% } %>
+      <div id="wsThoughtHeader" style="display:none">
+        <div class="ws-left-subhead">
+          <span style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:#06b6d4">Client Thoughts</span>
+        </div>
+      </div>
     </div>
 
     <div class="ws-proj-list" id="wsProjList"><div class="ws-spinner-wrap"><div class="ws-spinner"></div></div></div>
     <% if (isAdmin || isDev) { %>
     <div class="ws-proj-list" id="wsNoteList" style="display:none"></div>
     <% } %>
+    <div class="ws-proj-list" id="wsThoughtList" style="display:none"></div>
   </div>
 
   <!-- ── Right panel ────────────────────────────────────────── -->
@@ -254,7 +271,7 @@
       <div class="ws-field"><label>Status</label><select id="wsNewStatus"><option value="planning">Planning</option><option value="active">Active</option><option value="on_hold">On Hold</option><option value="completed">Completed</option></select></div>
       <div class="ws-field"><label>Due Date</label><input type="date" id="wsNewDue"></div>
     </div>
-    <% if (isAdmin && developers.length) { %>
+    <% if (isLocalAdmin && developers.length) { %>
     <div class="ws-field" style="margin-bottom:9px"><label>Assign To</label><select id="wsNewDev"><% developers.forEach(d => { %><option value="<%= d.id %>"><%= d.name %></option><% }) %></select></div>
     <% } %>
     <div style="display:flex;justify-content:flex-end;gap:7px;margin-top:14px">
@@ -266,11 +283,12 @@
 
 <script>
 (function () {
-  var _isAdmin  = <%- JSON.stringify(isAdmin) %>;
-  var _isDev    = <%- JSON.stringify(isDev) %>;
-  var _userId   = <%- JSON.stringify(userId) %>;
-  var _userName = <%- JSON.stringify(userName) %>;
-  var _wsDevs   = <%- JSON.stringify(developers) %>;
+  var _isAdmin      = <%- JSON.stringify(isAdmin) %>;
+  var _isLocalAdmin = <%- JSON.stringify(isLocalAdmin) %>;
+  var _isDev        = <%- JSON.stringify(isDev) %>;
+  var _userId       = <%- JSON.stringify(userId) %>;
+  var _userName     = <%- JSON.stringify(userName) %>;
+  var _wsDevs       = <%- JSON.stringify(developers) %>;
 
   var _activeId   = null;
   var _activeNote = null;
@@ -314,14 +332,21 @@
   window.wsSwitchPanel = function(panel) {
     _panel = panel;
     document.getElementById('wsTabProjects').classList.toggle('active', panel==='projects');
-    var nt = document.getElementById('wsTabNotes'); if(nt) nt.classList.toggle('active', panel==='notes');
-    document.getElementById('wsProjHeader').style.display = panel==='projects' ? '' : 'none';
-    document.getElementById('wsProjList').style.display   = panel==='projects' ? '' : 'none';
+    var nt = document.getElementById('wsTabNotes');    if(nt) nt.classList.toggle('active', panel==='notes');
+    var tt = document.getElementById('wsTabThoughts'); if(tt) tt.classList.toggle('active', panel==='thoughts');
+    document.getElementById('wsProjHeader').style.display    = panel==='projects' ? '' : 'none';
+    document.getElementById('wsProjList').style.display      = panel==='projects' ? '' : 'none';
     var nh = document.getElementById('wsNoteHeader'), nl = document.getElementById('wsNoteList');
     if(nh) nh.style.display = panel==='notes' ? '' : 'none';
     if(nl) nl.style.display = panel==='notes' ? '' : 'none';
-    document.getElementById('wsRight').innerHTML = '<div class="ws-right-empty"><i class="bi bi-'+(panel==='notes'?'lightbulb':'code-square')+'"></i><div style="font-size:.85rem">'+(panel==='notes'?'Select a note':'Select a project')+'</div></div>';
-    if(panel==='notes') wsLoadNotes();
+    var thh = document.getElementById('wsThoughtHeader'), thl = document.getElementById('wsThoughtList');
+    if(thh) thh.style.display = panel==='thoughts' ? '' : 'none';
+    if(thl) thl.style.display = panel==='thoughts' ? '' : 'none';
+    var icon = panel==='notes' ? 'lightbulb' : panel==='thoughts' ? 'lightbulb-fill' : 'code-square';
+    var msg  = panel==='notes' ? 'Select a note' : panel==='thoughts' ? 'Select a thought to view' : 'Select a project to view details';
+    document.getElementById('wsRight').innerHTML = '<div class="ws-right-empty"><i class="bi bi-'+icon+'"></i><div style="font-size:.85rem">'+msg+'</div></div>';
+    if(panel==='notes')    wsLoadNotes();
+    if(panel==='thoughts') wsLoadThoughts();
   };
 
   // ── Projects list ─────────────────────────────────────────────────────
@@ -380,7 +405,7 @@
     });
   };
 
-  function canEdit(p){ return _isAdmin || p.developer_id===_userId; }
+  function canEdit(p){ return _isLocalAdmin || p.developer_id===_userId; }
 
   function renderProjectDetail(p){
     var tabs = ['overview','tasks','updates','discussion','releases'];
@@ -831,6 +856,163 @@
     var devIds=Array.from(document.querySelectorAll('.ws-share-dev-list input[type=checkbox]')).filter(function(b){return b.checked;}).map(function(b){return parseInt(b.value);});
     fetch('/workspace/notes/'+id+'/share',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({developer_ids:devIds})})
       .then(function(r){return r.json();}).then(function(res){ if(res.success) wsLoadNotes(); });
+  };
+
+  // ── Thoughts ─────────────────────────────────────────────────────────
+  var _thoughts      = [];
+  var _activeThought = null;
+
+  window.wsLoadThoughts = function() {
+    var el = document.getElementById('wsThoughtList'); if(!el) return;
+    el.innerHTML = '<div class="ws-spinner-wrap"><div class="ws-spinner"></div></div>';
+    fetch('/workspace/thoughts')
+      .then(function(r){return r.json();})
+      .then(function(res){
+        _thoughts = (res.success && res.data) ? res.data : [];
+        renderThoughtList();
+      })
+      .catch(function(){ el.innerHTML = '<div class="ws-empty-list"><i class="bi bi-exclamation-circle"></i>Failed to load</div>'; });
+  };
+
+  function renderThoughtList() {
+    var el = document.getElementById('wsThoughtList'); if(!el) return;
+    if(!_thoughts.length){
+      el.innerHTML='<div class="ws-empty-list"><i class="bi bi-lightbulb-fill"></i>No thoughts shared by the client yet</div>';
+      return;
+    }
+    el.innerHTML = _thoughts.map(function(t){
+      var fc = parseInt(t.file_count)||0, cc = parseInt(t.comment_count)||0;
+      return '<div class="ws-thought-card'+(t.id===_activeThought?' active':'')+'" onclick="wsOpenThought('+t.id+')">'
+        +'<div style="display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:3px">'
+        +'<div class="ws-thought-title">'+esc(t.title)+'</div>'
+        +'<span style="font-size:.58rem;font-weight:700;letter-spacing:.4px;text-transform:uppercase;background:rgba(6,182,212,.12);color:#06b6d4;border:1px solid rgba(6,182,212,.25);border-radius:4px;padding:1px 6px;white-space:nowrap;flex-shrink:0">Client Thought</span>'
+        +'</div>'
+        +'<div class="ws-thought-meta">'
+        +'<span>'+esc(t.author_name)+'</span>'
+        +'<span>'+fmtTime(t.created_at)+'</span>'
+        +(fc?'<span><i class="bi bi-paperclip"></i> '+fc+'</span>':'')
+        +(cc?'<span><i class="bi bi-chat-left-text"></i> '+cc+'</span>':'')
+        +'</div></div>';
+    }).join('');
+  }
+
+  window.wsOpenThought = function(id) {
+    _activeThought = id;
+    renderThoughtList();
+    document.getElementById('wsRight').innerHTML = '<div class="ws-spinner-wrap" style="padding:60px 0"><div class="ws-spinner"></div></div>';
+    fetch('/workspace/thoughts/'+id)
+      .then(function(r){return r.json();})
+      .then(function(res){
+        if(!res.success){ document.getElementById('wsRight').innerHTML='<div class="ws-right-empty"><i class="bi bi-exclamation-circle"></i><div>Failed to load</div></div>'; return; }
+        renderThoughtDetail(res.data);
+      });
+  };
+
+  function renderThoughtDetail(t) {
+    var filesHtml = '';
+    if(t.files && t.files.length){
+      filesHtml = '<div class="ws-sec-head" style="margin-bottom:6px"><span>Attachments</span></div>'
+        +'<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:12px">'
+        +t.files.map(function(f){
+          return '<a class="ws-att-chip" href="/workspace/thoughts/files/'+f.id+'" target="_blank"><i class="bi bi-file-earmark"></i>'+esc(f.file_name)+'</a>';
+        }).join('')+'</div>';
+    }
+
+    var commentsHtml = '';
+    if(t.comments && t.comments.length){
+      commentsHtml = '<div class="ws-timeline">'
+        +t.comments.map(function(c){
+          var cFiles = '';
+          if(c.files && c.files.length){
+            cFiles = '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:5px">'
+              +c.files.map(function(f){ return '<a class="ws-att-chip" href="/workspace/thoughts/comment-files/'+f.id+'" target="_blank"><i class="bi bi-file-earmark"></i>'+esc(f.file_name)+'</a>'; }).join('')
+              +'</div>';
+          }
+          var canDel = _isAdmin || c.author_id===_userId;
+          return '<div class="ws-tl-item">'
+            +'<div class="ws-tl-avatar" style="background:rgba(6,182,212,.12);color:#06b6d4">'+initials(c.author_name)+'</div>'
+            +'<div class="ws-tl-body">'
+            +'<div class="ws-tl-meta"><span class="ws-tl-author">'+esc(c.author_name)+'</span><span>'+fmtTime(c.created_at)+'</span>'
+            +(canDel?'<button class="ws-tl-del" onclick="wsDeleteThoughtComment('+t.id+','+c.id+')" title="Delete"><i class="bi bi-trash"></i></button>':'')
+            +'</div>'
+            +'<div class="ws-tl-text">'+esc(c.body)+'</div>'
+            +cFiles
+            +'</div></div>';
+        }).join('')+'</div>';
+    } else {
+      commentsHtml = '<div class="ws-empty-list" style="padding:16px 0"><i class="bi bi-chat-left-text"></i>No comments yet</div>';
+    }
+
+    var detHtml = '<div class="ws-detail">'
+      +'<div class="ws-detail-head">'
+      +'<div class="ws-detail-head-main">'
+      +'<div class="ws-det-meta"><span style="font-size:.6rem;font-weight:700;letter-spacing:.4px;text-transform:uppercase;background:rgba(6,182,212,.12);color:#06b6d4;border:1px solid rgba(6,182,212,.25);border-radius:4px;padding:1px 7px;margin-right:7px">Client Thought</span><i class="bi bi-person-fill" style="margin-right:3px"></i>'+esc(t.author_name)+' &nbsp;·&nbsp; '+fmtTime(t.created_at)+'</div>'
+      +'<div class="ws-det-title">'+esc(t.title)+'</div>'
+      +'</div>'
+      +''
+      +'</div>'
+      +'<div class="ws-detail-body">'
+      +'<div style="font-size:.82rem;color:var(--adm-text-2);line-height:1.6;white-space:pre-wrap;word-break:break-word">'+esc(t.body)+'</div>'
+      +filesHtml
+      +'<div><div class="ws-sec-head"><span>Comments</span></div>'
+      +commentsHtml+'</div>'
+      +'<div class="ws-post-area" style="margin-top:4px">'
+      +'<textarea id="wsTcBody" placeholder="Add a comment…"></textarea>'
+      +'<div style="display:flex;align-items:center;gap:8px;margin-top:5px;flex-wrap:wrap">'
+      +'<label for="wsTcFiles" class="ws-mini-btn" style="cursor:pointer"><i class="bi bi-paperclip"></i> Attach (up to 5)</label>'
+      +'<input type="file" id="wsTcFiles" multiple style="display:none" onchange="wsThoughtFileLabel(this)">'
+      +'<span id="wsTcFileLabel" style="font-size:.7rem;color:#06b6d4;flex:1"></span>'
+      +'<button class="ws-det-btn post" onclick="wsPostThoughtComment('+t.id+')"><i class="bi bi-chat-left-text"></i> Post</button>'
+      +'</div></div>'
+      +'</div></div>';
+
+    document.getElementById('wsRight').innerHTML = detHtml;
+  }
+
+  window.wsThoughtFileLabel = function(input) {
+    var el = document.getElementById('wsTcFileLabel');
+    if(el) el.textContent = input.files.length ? input.files.length+' file'+(input.files.length>1?'s':'')+' selected' : '';
+  };
+
+  window.wsPostThoughtComment = function(thoughtId) {
+    var body = document.getElementById('wsTcBody') && document.getElementById('wsTcBody').value.trim();
+    if(!body){ if(document.getElementById('wsTcBody')) document.getElementById('wsTcBody').focus(); return; }
+    var files = document.getElementById('wsTcFiles') ? document.getElementById('wsTcFiles').files : [];
+    var fd = new FormData();
+    fd.append('body', body);
+    for(var i=0; i<files.length; i++) fd.append('files', files[i]);
+    fetch('/workspace/thoughts/'+thoughtId+'/comments', { method:'POST', body:fd })
+      .then(function(r){return r.json();})
+      .then(function(res){
+        if(!res.success){ alert(res.message||'Failed'); return; }
+        renderThoughtDetail(res.data);
+        wsLoadThoughts();
+      });
+  };
+
+  window.wsDeleteThoughtComment = function(thoughtId, commentId) {
+    if(!confirm('Delete this comment?')) return;
+    fetch('/workspace/thoughts/comments/'+commentId, { method:'DELETE' })
+      .then(function(r){return r.json();})
+      .then(function(res){
+        if(!res.success) return;
+        fetch('/workspace/thoughts/'+thoughtId).then(function(r2){return r2.json();}).then(function(res2){
+          if(res2.success) renderThoughtDetail(res2.data);
+          wsLoadThoughts();
+        });
+      });
+  };
+
+  window.wsDeleteThought = function(id) {
+    if(!confirm('Delete this thought and all its comments?')) return;
+    fetch('/workspace/thoughts/'+id, { method:'DELETE' })
+      .then(function(r){return r.json();})
+      .then(function(res){
+        if(!res.success){ alert(res.message||'Failed'); return; }
+        _activeThought = null;
+        document.getElementById('wsRight').innerHTML = '<div class="ws-right-empty"><i class="bi bi-lightbulb-fill"></i><div style="font-size:.85rem">Select a thought to view</div></div>';
+        wsLoadThoughts();
+      });
   };
 
   // Start

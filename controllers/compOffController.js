@@ -57,6 +57,15 @@ class CompOffController {
         await CompOffController._notifyManagers(userId, req.user.name, null, 'half_day');
       } else {
         await CompOff.earn(userId, today);
+        // Mark attendance so calendar shows comp_off instead of week-off
+        await db.query(
+          `INSERT INTO attendance_logs (user_id, date, is_manual, manual_status, manual_remark, updated_by)
+           VALUES (?, ?, 1, 'comp_off', 'Worked on off day — earned comp-off', ?)
+           ON DUPLICATE KEY UPDATE
+             is_manual = 1, manual_status = 'comp_off',
+             manual_remark = 'Worked on off day — earned comp-off', updated_by = ?`,
+          [userId, today, userId, userId]
+        );
 
         if (comp_off_date && comp_off_date > today) {
           await CompOff.applyCredits(userId, [comp_off_date]);
@@ -117,6 +126,18 @@ class CompOffController {
       return ApiResponse.success(res, { summary });
     } catch (err) {
       return ApiResponse.error(res, 'Failed to load summary');
+    }
+  }
+
+  static async getUserHistory(req, res) {
+    try {
+      const userId = parseInt(req.params.userId);
+      const [[user]] = await db.query('SELECT id, name FROM users WHERE id = ? AND is_active = 1', [userId]);
+      if (!user) return ApiResponse.error(res, 'User not found', 404);
+      const history = await CompOff.getHistory(userId);
+      return ApiResponse.success(res, { history, user });
+    } catch (err) {
+      return ApiResponse.error(res, 'Failed to load history');
     }
   }
 

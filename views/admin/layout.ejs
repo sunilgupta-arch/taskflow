@@ -2655,6 +2655,10 @@ function handleLogout() {
         showToast('You have a task reminder — check your Messages!', 'info', 9000);
       }
     });
+
+    admBdrSock.on('user:force-logout', function() {
+      window.location.href = '/logout';
+    });
   }
   attachChatSystemListener();
 })();

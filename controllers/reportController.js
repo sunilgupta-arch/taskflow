@@ -95,7 +95,7 @@ class ReportController {
 
       const selectedDate = req.query.date || today;
 
-      const [dailyLogs, weeklyStats, activeUsers, attendanceDays, leaveData, holidayData] = await Promise.all([
+      const [dailyLogs, weeklyStats, activeUsers, attendanceDays, leaveData, holidayData, compOffData] = await Promise.all([
         db.query(
           `SELECT al.*, u.name as user_name, u.email,
                   COALESCE(sh.shift_start, u.shift_start) as shift_start,
@@ -152,8 +152,25 @@ class ReportController {
            WHERE date >= ? AND date <= ? AND organization_id = (SELECT id FROM organizations WHERE org_type = 'LOCAL' LIMIT 1)
            ORDER BY date`,
           [startDate, endDate]
+        ),
+        db.query(
+          `SELECT user_id, earned_date, applied_to_date FROM comp_off_credits
+           WHERE (earned_date >= ? AND earned_date <= ?)
+              OR (applied_to_date IS NOT NULL AND applied_to_date >= ? AND applied_to_date <= ?)`,
+          [startDate, endDate, startDate, endDate]
         )
       ]);
+
+      const compOffEarnedSet = new Set();
+      const compOffAppliedSet = new Set();
+      (compOffData[0] || []).forEach(r => {
+        const ed = r.earned_date instanceof Date ? r.earned_date.toISOString().split('T')[0] : String(r.earned_date).split('T')[0];
+        if (ed >= startDate && ed <= endDate) compOffEarnedSet.add(`${r.user_id}-${ed}`);
+        if (r.applied_to_date) {
+          const ad = r.applied_to_date instanceof Date ? r.applied_to_date.toISOString().split('T')[0] : String(r.applied_to_date).split('T')[0];
+          if (ad >= startDate && ad <= endDate) compOffAppliedSet.add(`${r.user_id}-${ad}`);
+        }
+      });
 
       // Build calendar data
       const attendanceSet = new Set();
@@ -189,7 +206,7 @@ class ReportController {
           const dateStr = `${year}-${String(mon).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
           const dayName = dayNames[dateObj.getDay()];
 
-          if (dateStr > today) {
+          if (dateStr > today && !compOffAppliedSet.has(`${u.id}-${dateStr}`)) {
             // Check if there's a pending/approved leave for future
             let futureStatus = 'future';
             for (const lv of leaveData[0]) {
@@ -205,8 +222,17 @@ class ReportController {
             // Override always takes precedence over weekly off, holiday, and absence
             const overrideKey = `${u.id}-${dateStr}`;
             const override = overrideMap.get(overrideKey);
+            const isUserOff = dayName === u.weekly_off_day;
             if (override) {
-              calendarData[u.id][d] = override.status === 'leave' ? 'approved_leave' : override.status;
+              const os = override.status;
+              if      (os === 'leave')    calendarData[u.id][d] = 'approved_leave';
+              else if (os === 'check_in') calendarData[u.id][d] = 'present';
+              else if (os === 'comp_off') calendarData[u.id][d] = isUserOff ? 'comp_earned' : 'comp_off';
+              else                        calendarData[u.id][d] = os;
+            } else if (compOffAppliedSet.has(`${u.id}-${dateStr}`)) {
+              calendarData[u.id][d] = 'comp_off';
+            } else if (isUserOff && compOffEarnedSet.has(`${u.id}-${dateStr}`)) {
+              calendarData[u.id][d] = 'comp_earned';
             } else if (dayName === u.weekly_off_day) {
               calendarData[u.id][d] = 'weekoff';
             } else if (holidayMap.has(dateStr)) {
@@ -339,6 +365,25 @@ class ReportController {
         logMap[d].push(row);
       });
 
+      const [compOffRows] = await db.query(
+        `SELECT earned_date, applied_to_date FROM comp_off_credits
+         WHERE user_id = ? AND (
+           (earned_date >= ? AND earned_date <= ?) OR
+           (applied_to_date IS NOT NULL AND applied_to_date >= ? AND applied_to_date <= ?)
+         )`,
+        [userId, startDate, endDate, startDate, endDate]
+      );
+      const compOffEarnedSet = new Set();
+      const compOffAppliedSet = new Set();
+      compOffRows.forEach(r => {
+        const ed = r.earned_date instanceof Date ? r.earned_date.toISOString().split('T')[0] : String(r.earned_date).split('T')[0];
+        if (ed >= startDate && ed <= endDate) compOffEarnedSet.add(ed);
+        if (r.applied_to_date) {
+          const ad = r.applied_to_date instanceof Date ? r.applied_to_date.toISOString().split('T')[0] : String(r.applied_to_date).split('T')[0];
+          if (ad >= startDate && ad <= endDate) compOffAppliedSet.add(ad);
+        }
+      });
+
       // Fetch leave data
       const [leaveData] = await db.query(
         `SELECT from_date, to_date, status FROM leave_requests
@@ -378,11 +423,21 @@ class ReportController {
         const log = sessions[0] || null;
         const manualEntry = sessions.find(s => s.is_manual && s.manual_status);
         let status = 'absent';
-        if (dateStr > today)       status = 'future';
-        else if (manualEntry)      status = manualEntry.manual_status === 'leave' ? 'leave' : manualEntry.manual_status;
-        else if (isOff)            status = 'off';
-        else if (isHoliday)        status = 'holiday';
-        else if (log)              status = 'present';
+        if (dateStr > today && !compOffAppliedSet.has(dateStr)) {
+          status = 'future';
+        } else if (manualEntry) {
+          const ms = manualEntry.manual_status;
+          if      (ms === 'leave')    status = 'leave';
+          else if (ms === 'comp_off') status = isOff ? 'comp_earned' : 'comp_off';
+          else if (ms === 'half_day') status = 'half_day';
+          else                        status = 'present';
+        } else if (compOffAppliedSet.has(dateStr)) {
+          status = 'comp_off';
+        } else if (isOff) {
+          status = compOffEarnedSet.has(dateStr) ? 'comp_earned' : 'off';
+        }
+        else if (isHoliday)          status = 'holiday';
+        else if (log)                status = 'present';
         else if (leaveSet.has(dateStr + '-approved')) status = 'leave';
         else if (leaveSet.has(dateStr + '-pending'))  status = 'pending_leave';
 

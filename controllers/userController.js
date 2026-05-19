@@ -366,6 +366,34 @@ class UserController {
       return ApiResponse.error(res, err.message, 400);
     }
   }
+
+  static async forceLogoutUser(req, res) {
+    try {
+      const targetId = parseInt(req.params.id);
+      if (isNaN(targetId) || targetId === req.user.id) {
+        return ApiResponse.error(res, 'Invalid target user', 400);
+      }
+
+      const [[target]] = await db.query(
+        'SELECT id, name, role_name FROM users WHERE id = ? AND is_active = 1',
+        [targetId]
+      );
+      if (!target) return ApiResponse.error(res, 'User not found', 404);
+
+      // Managers can only force-logout LOCAL_USER, not other managers or admins
+      if (req.user.role_name === 'LOCAL_MANAGER' && target.role_name !== 'LOCAL_USER') {
+        return ApiResponse.error(res, 'Managers can only logout local users', 403);
+      }
+
+      const io = req.app.get('io');
+      io.to(`user:${targetId}`).emit('user:force-logout');
+
+      return ApiResponse.success(res, {}, `${target.name} has been logged out`);
+    } catch (err) {
+      console.error('forceLogoutUser error:', err);
+      return ApiResponse.error(res, 'Failed to force logout');
+    }
+  }
 }
 
 module.exports = UserController;
