@@ -140,9 +140,80 @@
 .pws-empty { text-align:center; padding:60px 20px; color:rgba(255,255,255,0.3); }
 .pws-empty i { font-size:2.5rem; opacity:0.3; display:block; margin-bottom:10px; }
 .pws-tab-empty { text-align:center; padding:30px 10px; color:rgba(255,255,255,0.3); font-size:0.8rem; }
+
+/* ── Main section tabs (Projects / Thoughts) ──────────────────── */
+.pws-main-tab-bar { display:flex; gap:6px; margin-bottom:16px; }
+.pws-main-tab {
+  padding:6px 16px; border-radius:20px; font-size:0.75rem; font-weight:600; cursor:pointer;
+  border:1px solid rgba(255,255,255,0.1); background:rgba(255,255,255,0.05); color:rgba(255,255,255,0.45);
+  transition:all 0.15s;
+}
+.pws-main-tab:hover { color:rgba(255,255,255,0.75); }
+.pws-main-tab.active { background:rgba(99,102,241,0.15); border-color:rgba(99,102,241,0.4); color:#6366f1; }
+
+/* ── Thoughts section ─────────────────────────────────────────── */
+.pws-thought-wrap { max-width:900px; margin:0 auto; padding-bottom:40px; }
+.pws-thought-form {
+  background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08);
+  border-radius:14px; padding:16px 18px; margin-bottom:20px;
+}
+.pws-thought-form-label { font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:0.4px; color:rgba(255,255,255,0.35); margin-bottom:10px; }
+.pws-thought-input {
+  width:100%; padding:8px 11px; border-radius:9px; border:1px solid rgba(255,255,255,0.1);
+  background:rgba(255,255,255,0.05); color:#e2e8f0; font-size:0.85rem; margin-bottom:8px;
+  box-sizing:border-box; font-family:inherit;
+}
+.pws-thought-input:focus { outline:none; border-color:rgba(99,102,241,0.5); }
+.pws-thought-textarea {
+  width:100%; padding:8px 11px; border-radius:9px; border:1px solid rgba(255,255,255,0.1);
+  background:rgba(255,255,255,0.05); color:#e2e8f0; font-size:0.82rem; resize:vertical;
+  font-family:inherit; margin-bottom:8px; box-sizing:border-box; min-height:80px;
+}
+.pws-thought-textarea:focus { outline:none; border-color:rgba(99,102,241,0.5); }
+.pws-thought-form-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.pws-attach-btn {
+  display:inline-flex; align-items:center; gap:4px; font-size:0.72rem; font-weight:600;
+  color:rgba(255,255,255,0.45); border:1px solid rgba(255,255,255,0.1); border-radius:7px;
+  padding:4px 10px; cursor:pointer; transition:all 0.15s;
+}
+.pws-attach-btn:hover { color:rgba(255,255,255,0.75); border-color:rgba(255,255,255,0.2); }
+.pws-attach-label { font-size:0.7rem; color:rgba(99,102,241,0.8); flex:1; min-width:0; }
+.pws-thought-post-btn {
+  padding:6px 15px; border-radius:8px; font-size:0.75rem; font-weight:600; cursor:pointer;
+  background:#6366f1; border:none; color:#fff; transition:background 0.15s; margin-left:auto;
+}
+.pws-thought-post-btn:hover { background:#4f46e5; }
+
+.pws-thought-card {
+  background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.07);
+  border-radius:12px; padding:14px 16px; margin-bottom:10px; cursor:pointer; transition:all 0.2s;
+}
+.pws-thought-card:hover { border-color:rgba(99,102,241,0.3); background:rgba(99,102,241,0.04); transform:translateY(-1px); }
+.pws-thought-card.open  { border-color:#6366f1; background:rgba(99,102,241,0.07); }
+.pws-thought-card-top   { display:flex; align-items:flex-start; justify-content:space-between; gap:8px; margin-bottom:4px; }
+.pws-thought-title       { font-weight:700; font-size:0.88rem; color:#e2e8f0; line-height:1.3; }
+.pws-thought-meta        { font-size:0.67rem; color:rgba(255,255,255,0.3); display:flex; gap:10px; margin-top:3px; }
+.pws-att-chip {
+  display:inline-flex; align-items:center; gap:4px; font-size:0.7rem; font-weight:500;
+  color:rgba(255,255,255,0.55); border:1px solid rgba(255,255,255,0.1); border-radius:6px;
+  padding:2px 8px; text-decoration:none; transition:all 0.15s;
+}
+.pws-att-chip:hover { color:#fff; border-color:rgba(255,255,255,0.3); }
+.pws-comment-area textarea {
+  width:100%; padding:7px 10px; border-radius:8px; border:1px solid rgba(255,255,255,0.1);
+  background:rgba(255,255,255,0.05); color:#e2e8f0; font-size:0.8rem; font-family:inherit;
+  resize:vertical; min-height:58px; box-sizing:border-box;
+}
+.pws-comment-area textarea:focus { outline:none; border-color:rgba(99,102,241,0.4); }
 </style>
 
-<div class="pws-wrap">
+<!-- Main section tab bar -->
+<div class="pws-main-tab-bar">
+  <button class="pws-main-tab active" id="pwsTabProjects" onclick="pwsSwitchMain('projects')"><i class="bi bi-folder2-open" style="margin-right:4px"></i>Projects</button>
+  <button class="pws-main-tab" id="pwsTabThoughts" onclick="pwsSwitchMain('thoughts')"><i class="bi bi-lightbulb-fill" style="margin-right:4px"></i>Thoughts</button>
+</div>
+
+<div class="pws-wrap" id="pwsSectProjects">
 
   <div class="pws-header">
     <div class="pws-pill"><i class="bi bi-code-slash"></i> Dev Workspace</div>
@@ -162,6 +233,53 @@
     <div class="pws-spinner-wrap"><div class="pws-spinner"></div></div>
   </div>
 
+</div>
+
+<!-- Thoughts section -->
+<div id="pwsSectThoughts" style="display:none">
+  <div class="pws-thought-wrap">
+
+    <div class="pws-header">
+      <div class="pws-pill"><i class="bi bi-lightbulb-fill"></i> Thoughts</div>
+      <div class="pws-title">Share a Thought</div>
+      <div class="pws-sub">Post ideas, concerns, or feedback for the development team to read and discuss</div>
+    </div>
+
+    <!-- Post form -->
+    <div class="pws-thought-form">
+      <div class="pws-thought-form-label"><i class="bi bi-pencil-square" style="margin-right:4px"></i>New Thought</div>
+      <input  type="text"    class="pws-thought-input"    id="pwsThoughtTitle" placeholder="Title / subject...">
+      <textarea              class="pws-thought-textarea" id="pwsThoughtBody"  placeholder="Share your thoughts, ideas, or concerns with the dev team..."></textarea>
+      <div class="pws-thought-form-row">
+        <label for="pwsThoughtFiles" class="pws-attach-btn"><i class="bi bi-paperclip"></i> Attach files (up to 5)</label>
+        <input type="file" id="pwsThoughtFiles" multiple style="display:none" onchange="pwsUpdateFileLabel(this,'pwsThoughtFileLabel')">
+        <span class="pws-attach-label" id="pwsThoughtFileLabel"></span>
+        <button class="pws-thought-post-btn" onclick="pwsPostThought()"><i class="bi bi-send"></i> Post</button>
+      </div>
+    </div>
+
+    <!-- Thought list -->
+    <div id="pwsThoughtListEl">
+      <div class="pws-spinner-wrap"><div class="pws-spinner"></div></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Thoughts detail drawer (separate from project drawer) -->
+<div class="pws-drawer" id="pwsThoughtDrawer">
+  <div class="pws-drawer-head">
+    <div class="pws-drawer-head-row">
+      <div style="flex:1;min-width:0">
+        <div class="pws-drawer-title" id="pwsTDrawerTitle">—</div>
+        <div class="pws-drawer-dev"   id="pwsTDrawerMeta"></div>
+      </div>
+      <button class="pws-drawer-close" onclick="pwsCloseThoughtDrawer()"><i class="bi bi-x-lg"></i></button>
+    </div>
+  </div>
+  <div class="pws-drawer-body" id="pwsTDrawerBody">
+    <div class="pws-spinner-wrap"><div class="pws-spinner"></div></div>
+  </div>
 </div>
 
 <!-- Drawer -->
@@ -403,6 +521,217 @@
     _activeTab     = 'overview';
     document.getElementById('pwsDrawer').classList.remove('visible');
     renderGrid();
+  };
+
+  // ── Thoughts ──────────────────────────────────────────────────────────
+  var _mainSection   = 'projects';
+  var _thoughts      = [];
+  var _activeThought = null;
+  var _portalUserId  = <%- JSON.stringify(user.id) %>;
+
+  window.pwsSwitchMain = function(section) {
+    _mainSection = section;
+    document.getElementById('pwsSectProjects').style.display  = section === 'projects' ? '' : 'none';
+    document.getElementById('pwsSectThoughts').style.display  = section === 'thoughts' ? '' : 'none';
+    document.getElementById('pwsTabProjects').classList.toggle('active', section === 'projects');
+    document.getElementById('pwsTabThoughts').classList.toggle('active', section === 'thoughts');
+    // close open drawers when switching
+    document.getElementById('pwsDrawer').classList.remove('visible');
+    document.getElementById('pwsThoughtDrawer').classList.remove('visible');
+    _activeCard    = null;
+    _activeThought = null;
+    renderGrid();
+    if (section === 'thoughts') pwsLoadThoughts();
+  };
+
+  window.pwsUpdateFileLabel = function(input, labelId) {
+    var el = document.getElementById(labelId);
+    if (!el) return;
+    el.textContent = input.files.length ? input.files.length + ' file' + (input.files.length > 1 ? 's' : '') + ' selected' : '';
+  };
+
+  window.pwsLoadThoughts = function() {
+    var el = document.getElementById('pwsThoughtListEl');
+    if (!el) return;
+    el.innerHTML = '<div class="pws-spinner-wrap"><div class="pws-spinner"></div></div>';
+    fetch('/portal/workspace/thoughts')
+      .then(function(r) { return r.json(); })
+      .then(function(res) {
+        _thoughts = res.success ? res.data : [];
+        renderThoughtList();
+      })
+      .catch(function() {
+        el.innerHTML = '<div class="pws-empty"><i class="bi bi-exclamation-circle"></i>Failed to load thoughts</div>';
+      });
+  };
+
+  function renderThoughtList() {
+    var el = document.getElementById('pwsThoughtListEl');
+    if (!el) return;
+    if (!_thoughts.length) {
+      el.innerHTML = '<div class="pws-empty"><i class="bi bi-lightbulb"></i>No thoughts shared yet — be the first to post</div>';
+      return;
+    }
+    el.innerHTML = _thoughts.map(function(t) {
+      var fc = parseInt(t.file_count)    || 0;
+      var cc = parseInt(t.comment_count) || 0;
+      return '<div class="pws-thought-card' + (t.id === _activeThought ? ' open' : '') + '" onclick="pwsOpenThought(' + t.id + ')">'
+        + '<div class="pws-thought-card-top">'
+        + '<div class="pws-thought-title">' + esc(t.title) + '</div>'
+        + '</div>'
+        + '<div class="pws-thought-meta">'
+        + '<span><i class="bi bi-calendar3" style="margin-right:2px"></i>' + fmtDate(t.created_at) + '</span>'
+        + (fc ? '<span><i class="bi bi-paperclip" style="margin-right:2px"></i>' + fc + ' file' + (fc > 1 ? 's' : '') + '</span>' : '')
+        + (cc ? '<span><i class="bi bi-chat-left-text" style="margin-right:2px"></i>' + cc + ' comment' + (cc > 1 ? 's' : '') + '</span>' : '')
+        + '</div>'
+        + '</div>';
+    }).join('');
+  }
+
+  window.pwsOpenThought = function(id) {
+    _activeThought = id;
+    renderThoughtList();
+    var drawer = document.getElementById('pwsThoughtDrawer');
+    drawer.classList.add('visible');
+    document.getElementById('pwsTDrawerTitle').textContent = '—';
+    document.getElementById('pwsTDrawerMeta').textContent  = '';
+    document.getElementById('pwsTDrawerBody').innerHTML    = '<div class="pws-spinner-wrap"><div class="pws-spinner"></div></div>';
+
+    fetch('/portal/workspace/thoughts/' + id)
+      .then(function(r) { return r.json(); })
+      .then(function(res) {
+        if (!res.success) { document.getElementById('pwsTDrawerBody').innerHTML = '<div class="pws-empty">Failed to load</div>'; return; }
+        var t = res.data;
+        document.getElementById('pwsTDrawerTitle').textContent = t.title;
+        document.getElementById('pwsTDrawerMeta').innerHTML = '<i class="bi bi-lightbulb-fill" style="color:#6366f1;margin-right:4px"></i>' + fmtDate(t.created_at);
+        document.getElementById('pwsTDrawerBody').innerHTML = buildThoughtBodyHtml(t);
+      })
+      .catch(function() { document.getElementById('pwsTDrawerBody').innerHTML = '<div class="pws-empty">Failed to load</div>'; });
+  };
+
+  window.pwsCloseThoughtDrawer = function() {
+    _activeThought = null;
+    document.getElementById('pwsThoughtDrawer').classList.remove('visible');
+    renderThoughtList();
+  };
+
+  function buildThoughtBodyHtml(t) {
+    var filesHtml = '';
+    if (t.files && t.files.length) {
+      filesHtml = '<div class="pws-section-label" style="margin:10px 0 6px">Attachments</div>'
+        + '<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:14px">'
+        + t.files.map(function(f) {
+            return '<a class="pws-att-chip" href="/portal/workspace/thoughts/files/' + f.id + '" target="_blank"><i class="bi bi-file-earmark"></i>' + esc(f.file_name) + '</a>';
+          }).join('')
+        + '</div>';
+    }
+    var commentsHtml = '';
+    if (t.comments && t.comments.length) {
+      commentsHtml = t.comments.map(function(c) {
+        var cFiles = '';
+        if (c.files && c.files.length) {
+          cFiles = '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:5px">'
+            + c.files.map(function(f) { return '<a class="pws-att-chip" href="/portal/workspace/thoughts/comment-files/' + f.id + '" target="_blank"><i class="bi bi-file-earmark"></i>' + esc(f.file_name) + '</a>'; }).join('')
+            + '</div>';
+        }
+        var canDel = (c.author_id === _portalUserId);
+        return '<div class="pws-update-item">'
+          + '<div class="pws-update-avatar">' + initials(c.author_name) + '</div>'
+          + '<div style="flex:1;min-width:0">'
+          + '<div class="pws-update-meta">' + esc(c.author_name) + ' &middot; ' + fmtDate(c.created_at)
+          + (canDel ? ' <button onclick="pwsDeleteThoughtComment(' + t.id + ',' + c.id + ')" style="background:none;border:none;color:rgba(239,68,68,.6);cursor:pointer;font-size:.68rem;padding:0 0 0 6px" title="Delete"><i class="bi bi-trash"></i></button>' : '')
+          + '</div>'
+          + '<div class="pws-update-body">' + esc(c.body) + '</div>'
+          + cFiles
+          + '</div></div>';
+      }).join('');
+    } else {
+      commentsHtml = '<div class="pws-tab-empty" style="padding:12px 0">No comments yet</div>';
+    }
+
+    var isOwner = (t.author_id === _portalUserId);
+    return '<div class="pws-update-body" style="font-size:.82rem;color:rgba(255,255,255,.65);line-height:1.6;white-space:pre-wrap;word-break:break-word;margin-bottom:10px">' + esc(t.body) + '</div>'
+      + filesHtml
+      + '<div class="pws-section-label" style="margin-bottom:8px">Comments</div>'
+      + '<div class="ws-timeline">' + commentsHtml + '</div>'
+      + '<div class="pws-comment-area" style="margin-top:10px;border-top:1px solid rgba(255,255,255,.06);padding-top:12px">'
+      + '<textarea id="pwsTcBody" placeholder="Add a comment..."></textarea>'
+      + '<div class="pws-thought-form-row" style="margin-top:5px">'
+      + '<label for="pwsTcFiles" class="pws-attach-btn"><i class="bi bi-paperclip"></i> Attach</label>'
+      + '<input type="file" id="pwsTcFiles" multiple style="display:none" onchange="pwsUpdateFileLabel(this,\'pwsTcFileLabel\')">'
+      + '<span class="pws-attach-label" id="pwsTcFileLabel"></span>'
+      + '<button class="pws-thought-post-btn" style="padding:5px 12px;font-size:.72rem" onclick="pwsPostThoughtComment(' + t.id + ')"><i class="bi bi-chat-left-text"></i> Post</button>'
+      + '</div></div>'
+      + (isOwner ? '<div style="margin-top:14px;text-align:right"><button onclick="pwsDeleteThought(' + t.id + ')" style="background:none;border:1px solid rgba(239,68,68,.3);border-radius:6px;color:#ef4444;padding:4px 11px;font-size:.7rem;cursor:pointer;transition:all .15s"><i class="bi bi-trash"></i> Delete thought</button></div>' : '');
+  }
+
+  window.pwsPostThought = function() {
+    var title = document.getElementById('pwsThoughtTitle').value.trim();
+    var body  = document.getElementById('pwsThoughtBody').value.trim();
+    if (!title) { document.getElementById('pwsThoughtTitle').focus(); return; }
+    if (!body)  { document.getElementById('pwsThoughtBody').focus(); return; }
+    var files = document.getElementById('pwsThoughtFiles').files;
+    var fd = new FormData();
+    fd.append('title', title);
+    fd.append('body', body);
+    for (var i = 0; i < files.length; i++) fd.append('files', files[i]);
+
+    fetch('/portal/workspace/thoughts', { method: 'POST', body: fd })
+      .then(function(r) { return r.json(); })
+      .then(function(res) {
+        if (!res.success) { alert(res.message || 'Failed to post'); return; }
+        document.getElementById('pwsThoughtTitle').value = '';
+        document.getElementById('pwsThoughtBody').value  = '';
+        document.getElementById('pwsThoughtFiles').value = '';
+        document.getElementById('pwsThoughtFileLabel').textContent = '';
+        _thoughts = res.data;
+        renderThoughtList();
+      })
+      .catch(function() { alert('Failed to post thought'); });
+  };
+
+  window.pwsPostThoughtComment = function(thoughtId) {
+    var body  = document.getElementById('pwsTcBody').value.trim();
+    if (!body) { document.getElementById('pwsTcBody').focus(); return; }
+    var files = document.getElementById('pwsTcFiles').files;
+    var fd = new FormData();
+    fd.append('body', body);
+    for (var i = 0; i < files.length; i++) fd.append('files', files[i]);
+
+    fetch('/portal/workspace/thoughts/' + thoughtId + '/comments', { method: 'POST', body: fd })
+      .then(function(r) { return r.json(); })
+      .then(function(res) {
+        if (!res.success) { alert(res.message || 'Failed'); return; }
+        document.getElementById('pwsTDrawerBody').innerHTML = buildThoughtBodyHtml(res.data);
+        pwsLoadThoughts();
+      });
+  };
+
+  window.pwsDeleteThought = function(id) {
+    if (!confirm('Delete this thought and all its comments?')) return;
+    fetch('/portal/workspace/thoughts/' + id, { method: 'DELETE' })
+      .then(function(r) { return r.json(); })
+      .then(function(res) {
+        if (!res.success) { alert(res.message || 'Failed'); return; }
+        pwsCloseThoughtDrawer();
+        pwsLoadThoughts();
+      });
+  };
+
+  window.pwsDeleteThoughtComment = function(thoughtId, commentId) {
+    if (!confirm('Delete this comment?')) return;
+    fetch('/portal/workspace/thoughts/comments/' + commentId, { method: 'DELETE' })
+      .then(function(r) { return r.json(); })
+      .then(function(res) {
+        if (!res.success) return;
+        // refresh drawer
+        fetch('/portal/workspace/thoughts/' + thoughtId)
+          .then(function(r2) { return r2.json(); })
+          .then(function(res2) {
+            if (res2.success) document.getElementById('pwsTDrawerBody').innerHTML = buildThoughtBodyHtml(res2.data);
+            pwsLoadThoughts();
+          });
+      });
   };
 
   load();

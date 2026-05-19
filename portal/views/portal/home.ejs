@@ -68,7 +68,7 @@
             <div class="home-tile-label">Links</div>
             <div class="home-tile-desc">Saved links & reports</div>
           </a>
-          <% if (['CLIENT_ADMIN', 'CLIENT_MANAGER', 'CLIENT_TOP_MGMT'].includes(user.role_name)) { %>
+          <% if (user.role_name === 'CLIENT_ADMIN') { %>
           <a href="/portal/workspace" class="home-tile">
             <div class="home-tile-icon" style="--tile-color: #6366f1"><i class="bi bi-code-slash"></i></div>
             <div class="home-tile-label">Dev Workspace</div>

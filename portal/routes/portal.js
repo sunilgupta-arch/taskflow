@@ -804,4 +804,29 @@ router.get('/workspace/projects/:id',           requireClientAdmin, DevWorkspace
 router.get('/workspace/projects/:id/updates',   requireClientAdmin, DevWorkspaceController.portalGetUpdates);
 router.get('/workspace/projects/:id/releases',  requireClientAdmin, DevWorkspaceController.portalGetReleases);
 
+// ── Workspace Thoughts (CLIENT_ADMIN only) ─────────────────────────────
+const requireClientAdminOnly = requireRoles('CLIENT_ADMIN');
+const thoughtUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 25 * 1024 * 1024, files: 5 } });
+const handleThoughtErr = (err, req, res, next) => {
+  if (err && err.code === 'LIMIT_FILE_SIZE')  return res.status(413).json({ success: false, message: 'File too large. Max 25 MB per file.' });
+  if (err && err.code === 'LIMIT_FILE_COUNT') return res.status(413).json({ success: false, message: 'Max 5 files allowed.' });
+  if (err) return res.status(400).json({ success: false, message: err.message || 'Upload failed' });
+  next();
+};
+// specific paths first to avoid :id capturing them
+router.get('/workspace/thoughts',                          requireClientAdminOnly, DevWorkspaceController.portalGetThoughts);
+router.get('/workspace/thoughts/files/:fileId',            requireClientAdminOnly, DevWorkspaceController.portalServeThoughtFile);
+router.get('/workspace/thoughts/comment-files/:fileId',    requireClientAdminOnly, DevWorkspaceController.portalServeThoughtCommentFile);
+router.delete('/workspace/thoughts/comments/:commentId',   requireClientAdminOnly, DevWorkspaceController.portalDeleteThoughtComment);
+router.get('/workspace/thoughts/:id',                      requireClientAdminOnly, DevWorkspaceController.portalGetThought);
+router.delete('/workspace/thoughts/:thoughtId',            requireClientAdminOnly, DevWorkspaceController.portalDeleteThought);
+router.post('/workspace/thoughts',
+  requireClientAdminOnly,
+  (req, res, next) => thoughtUpload.array('files', 5)(req, res, err => handleThoughtErr(err, req, res, next)),
+  DevWorkspaceController.portalPostThought);
+router.post('/workspace/thoughts/:id/comments',
+  requireClientAdminOnly,
+  (req, res, next) => thoughtUpload.array('files', 5)(req, res, err => handleThoughtErr(err, req, res, next)),
+  DevWorkspaceController.portalAddThoughtComment);
+
 module.exports = router;
