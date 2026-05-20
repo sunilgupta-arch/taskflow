@@ -77,6 +77,7 @@ class ClientRequest {
               cr.title, cr.task_type, cr.description, cr.priority,
               cr.recurrence, cr.due_time, cr.assigned_to as default_assigned_to,
               cr.org_id, o.name as org_name,
+              cr.created_at as request_created_at,
               cr.created_by, creator.name as created_by_name,
               picker.name as picked_by_name,
               completer.name as completed_by_name,

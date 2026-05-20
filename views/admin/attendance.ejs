@@ -120,11 +120,13 @@
 
 /* Late chip */
 .ata-late-chip {
-  display: inline-flex; align-items: center; gap: 3px;
-  padding: 2px 7px; border-radius: 6px;
-  background: rgba(245,158,11,0.12); color: #f59e0b;
-  font-size: 0.62rem; font-weight: 700; font-family: var(--adm-mono);
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 9px; border-radius: 6px;
+  background: rgba(245,158,11,0.18); color: #fbbf24;
+  border: 1px solid rgba(245,158,11,0.35);
+  font-size: 0.72rem; font-weight: 700; font-family: var(--adm-mono);
   text-transform: uppercase; white-space: nowrap; cursor: default;
+  letter-spacing: 0.02em;
 }
 .ata-open-dot {
   width: 7px; height: 7px; border-radius: 50%; background: #10b981;
@@ -490,14 +492,15 @@
       else if (status === 'approved_leave' || status === 'pending_leave') onLeave++;
       else if (status === 'weekoff' || status === 'holiday') off++;
       else if (status === 'off_shift') offShift++;
-      // Late detection: first session login vs shift_start
+      // Late detection: first session login vs shift_start (parse Eastern time string directly)
       if (sessions.length && u.shift_start) {
         var first = sessions[0];
         if (first.login_time) {
-          var lt = new Date(first.login_time);
+          var ltStr = String(first.login_time).split(' ')[1] || '';
+          var ltP = ltStr.split(':');
           var parts = (u.shift_start||'10:00:00').split(':');
           var shiftMins = parseInt(parts[0]) * 60 + parseInt(parts[1]);
-          var loginMins = lt.getUTCHours() * 60 + lt.getUTCMinutes();
+          var loginMins = parseInt(ltP[0]||0) * 60 + parseInt(ltP[1]||0);
           if (loginMins > shiftMins + 5) late++;
         }
       }
@@ -590,20 +593,28 @@
         }
       }
 
-      // Late detection
+      // Late detection (parse Eastern time string directly to avoid browser timezone ambiguity)
       var lateHtml = '';
       if (sessions.length && u.shift_start) {
         var first = sessions[0];
         if (first.login_time) {
-          var lt = new Date(first.login_time);
+          var ltStr = String(first.login_time).split(' ')[1] || '';
+          var ltP = ltStr.split(':');
           var parts = (u.shift_start||'10:00:00').split(':');
-          var shiftMins = parseInt(parts[0])*60 + parseInt(parts[1]);
-          var loginMins = lt.getUTCHours()*60 + lt.getUTCMinutes();
-          if (loginMins > shiftMins + 5) {
-            var lateBy = loginMins - shiftMins;
+          var shiftSecs = parseInt(parts[0])*3600 + parseInt(parts[1])*60 + parseInt(parts[2]||0);
+          var loginSecs = parseInt(ltP[0]||0)*3600 + parseInt(ltP[1]||0)*60 + parseInt(ltP[2]||0);
+          if (loginSecs > shiftSecs + 300) {
+            var lateBySecs = loginSecs - shiftSecs;
+            var lh = Math.floor(lateBySecs/3600);
+            var lm = Math.floor((lateBySecs%3600)/60);
+            var ls = lateBySecs%60;
+            var lateParts = [];
+            if (lh > 0) lateParts.push(lh+'h');
+            lateParts.push(lm+'m');
+            lateParts.push(ls+'s');
             var lateTitle = first.late_login_reason ? esc(first.late_login_reason) : 'No reason given';
             lateHtml = '<span class="ata-late-chip" title="'+lateTitle+'">'
-              +'<i class="bi bi-clock-history"></i> +'+Math.floor(lateBy/60)+'h'+String(lateBy%60).padStart(2,'0')+'m</span>';
+              +'<i class="bi bi-clock-history"></i> +'+lateParts.join(', ')+'</span>';
           }
         }
       }
