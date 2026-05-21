@@ -3,9 +3,30 @@ const router = express.Router();
 const AuthController = require('../controllers/authController');
 const authenticate = require('../middleware/authenticate');
 const botDetect = require('../middleware/botDetect');
+const rateLimit = require('express-rate-limit');
+
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10,
+  keyGenerator: (req) => req.ip,
+  handler: (req, res) => {
+    const logger = require('../utils/logger');
+    logger.warn('[SECURITY] Login rate limit exceeded', {
+      ip: req.ip,
+      email: req.body?.email || '(unknown)',
+      ua: req.headers['user-agent'] || '(none)',
+    });
+    res.status(429).json({
+      success: false,
+      message: 'Too many login attempts. Please try again in 15 minutes.'
+    });
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 router.get('/login', AuthController.showLogin);
-router.post('/login', botDetect, AuthController.login);
+router.post('/login', loginLimiter, botDetect, AuthController.login);
 router.get('/google', AuthController.googleAuth);
 router.get('/google/callback', AuthController.googleCallback);
 router.get('/logout', authenticate, AuthController.logout);

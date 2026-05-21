@@ -222,7 +222,7 @@
       <div id="wsProjHeader">
         <div class="ws-left-subhead">
           <span style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--adm-muted)">Projects</span>
-          <% if (isDev) { %><button class="ws-new-btn" onclick="wsOpenNew()"><i class="bi bi-plus-lg"></i> New</button><% } %>
+          <% if (isAdmin || isDev) { %><button class="ws-new-btn" onclick="wsOpenNew()"><i class="bi bi-plus-lg"></i> New</button><% } %>
         </div>
         <% if (isLocalAdmin && developers.length) { %>
         <select class="ws-dev-filter" id="wsDevFilter" onchange="wsLoadProjects()">

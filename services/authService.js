@@ -18,8 +18,36 @@ class AuthService {
     if (!user) throw new Error('Invalid credentials');
     if (!user.is_active) throw new Error('Account is deactivated');
 
+    // Check lockout
+    if (user.locked_until) {
+      const lockedUntil = new Date(user.locked_until);
+      if (lockedUntil > new Date()) {
+        const minutesLeft = Math.ceil((lockedUntil - new Date()) / 60000);
+        throw new Error(`Account locked. Try again in ${minutesLeft} minute${minutesLeft === 1 ? '' : 's'}.`);
+      }
+      // Lock expired — clear it
+      await db.query('UPDATE users SET failed_login_attempts = 0, locked_until = NULL WHERE id = ?', [user.id]);
+    }
+
     const valid = await UserModel.verifyPassword(password, user.password);
-    if (!valid) throw new Error('Invalid credentials');
+    if (!valid) {
+      const attempts = (user.failed_login_attempts || 0) + 1;
+      if (attempts >= 10) {
+        // Lock for 30 minutes
+        await db.query(
+          'UPDATE users SET failed_login_attempts = ?, locked_until = DATE_ADD(NOW(), INTERVAL 30 MINUTE) WHERE id = ?',
+          [attempts, user.id]
+        );
+        throw new Error('Account locked after 10 failed attempts. Try again in 30 minutes.');
+      }
+      await db.query('UPDATE users SET failed_login_attempts = ? WHERE id = ?', [attempts, user.id]);
+      throw new Error('Invalid credentials');
+    }
+
+    // Successful login — reset counter
+    if (user.failed_login_attempts > 0 || user.locked_until) {
+      await db.query('UPDATE users SET failed_login_attempts = 0, locked_until = NULL WHERE id = ?', [user.id]);
+    }
 
     // Record attendance (skip for CLIENT roles — no attendance tracking)
     if (!user.role_name.startsWith('CLIENT_')) {
