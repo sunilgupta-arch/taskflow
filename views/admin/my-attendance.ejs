@@ -256,6 +256,36 @@
   var monthLabel   = new Date(year, mon - 1).toLocaleString('default', { month:'long', year:'numeric' });
 %>
 
+<% if (['LOCAL_USER', 'LOCAL_MANAGER'].includes(user.role_name)) { %>
+<!-- Apply Leave Modal -->
+<div id="admaApplyModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:1200;align-items:center;justify-content:center;">
+  <div style="background:var(--adm-surface);border:1px solid var(--adm-border);border-radius:16px;width:100%;max-width:400px;padding:24px;display:flex;flex-direction:column;gap:16px;margin:16px;">
+    <div style="font-size:0.9rem;font-weight:700;color:var(--adm-text);display:flex;align-items:center;gap:8px;">
+      <i class="bi bi-calendar-plus" style="color:#60a5fa"></i> Apply for Leave
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div style="display:flex;flex-direction:column;gap:5px;">
+        <label style="font-size:0.7rem;font-family:var(--adm-mono);font-weight:700;color:var(--adm-muted);text-transform:uppercase;letter-spacing:0.4px;">From Date *</label>
+        <input type="date" id="admaApplyFrom" onchange="admaApplyDaysChanged()" style="height:38px;padding:0 12px;border-radius:9px;border:1px solid var(--adm-border);background:var(--adm-surface-2);color:var(--adm-text);font-size:0.85rem;font-family:var(--adm-font);width:100%;">
+      </div>
+      <div style="display:flex;flex-direction:column;gap:5px;">
+        <label style="font-size:0.7rem;font-family:var(--adm-mono);font-weight:700;color:var(--adm-muted);text-transform:uppercase;letter-spacing:0.4px;">To Date *</label>
+        <input type="date" id="admaApplyTo" onchange="admaApplyDaysChanged()" style="height:38px;padding:0 12px;border-radius:9px;border:1px solid var(--adm-border);background:var(--adm-surface-2);color:var(--adm-text);font-size:0.85rem;font-family:var(--adm-font);width:100%;">
+      </div>
+    </div>
+    <div id="admaApplyHint" style="display:none;font-size:0.78rem;font-family:var(--adm-mono);color:#60a5fa;padding:6px 10px;background:rgba(59,130,246,0.08);border-radius:7px;border:1px solid rgba(59,130,246,0.2);"></div>
+    <div style="display:flex;flex-direction:column;gap:5px;">
+      <label style="font-size:0.7rem;font-family:var(--adm-mono);font-weight:700;color:var(--adm-muted);text-transform:uppercase;letter-spacing:0.4px;">Reason *</label>
+      <textarea id="admaApplyReason" placeholder="Reason for leave…" rows="3" style="resize:none;padding:10px 12px;border-radius:9px;border:1px solid var(--adm-border);background:var(--adm-surface-2);color:var(--adm-text);font-size:0.85rem;font-family:var(--adm-font);width:100%;"></textarea>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button onclick="document.getElementById('admaApplyModal').style.display='none'" style="flex:1;height:36px;border-radius:9px;border:1px solid var(--adm-border);background:transparent;color:var(--adm-muted);font-size:0.8rem;cursor:pointer;font-family:var(--adm-font);">Cancel</button>
+      <button id="admaApplySubmitBtn" onclick="admaSubmitApply()" style="flex:2;height:36px;border-radius:9px;border:none;background:#3b82f6;color:#fff;font-size:0.8rem;font-weight:700;cursor:pointer;font-family:var(--adm-font);display:flex;align-items:center;justify-content:center;gap:6px;"><i class="bi bi-send"></i> Submit</button>
+    </div>
+  </div>
+</div>
+<% } %>
+
 <!-- Header -->
 <div class="adma-header">
   <div>
@@ -266,7 +296,14 @@
     </div>
     <h1 class="adma-page-title"><i class="bi bi-clock-history"></i> My Attendance</h1>
   </div>
-  <a href="/admin" class="adm-back-btn"><i class="bi bi-arrow-left"></i> Dashboard</a>
+  <div style="display:flex;align-items:center;gap:8px">
+    <a href="/admin" class="adm-back-btn"><i class="bi bi-arrow-left"></i> Dashboard</a>
+    <% if (['LOCAL_USER', 'LOCAL_MANAGER'].includes(user.role_name)) { %>
+    <button onclick="admaOpenApply()" style="height:34px;padding:0 14px;border-radius:9px;border:1px solid rgba(59,130,246,0.4);background:rgba(59,130,246,0.08);color:#60a5fa;font-size:0.82rem;font-weight:600;font-family:var(--adm-font);cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:all 0.15s;">
+      <i class="bi bi-calendar-plus"></i> Apply Leave
+    </button>
+    <% } %>
+  </div>
 </div>
 
 <!-- Stats -->
@@ -604,4 +641,61 @@
   // Auto-select today when viewing current month
   if (_isCurrent) admShowDay(parseInt(_today.split('-')[2]));
 })();
+
+// ── Apply Leave (for LOCAL_USER / LOCAL_MANAGER) ──────────────────────
+<% if (['LOCAL_USER', 'LOCAL_MANAGER'].includes(user.role_name)) { %>
+(function() {
+  function daysBetween(a, b) {
+    return Math.round((new Date(b) - new Date(a)) / 86400000) + 1;
+  }
+
+  window.admaOpenApply = function() {
+    var today = new Date().toISOString().split('T')[0];
+    document.getElementById('admaApplyFrom').value   = today;
+    document.getElementById('admaApplyTo').value     = today;
+    document.getElementById('admaApplyReason').value = '';
+    document.getElementById('admaApplyHint').style.display = 'none';
+    document.getElementById('admaApplyModal').style.display = 'flex';
+  };
+
+  window.admaApplyDaysChanged = function() {
+    var from = document.getElementById('admaApplyFrom').value;
+    var to   = document.getElementById('admaApplyTo').value;
+    var hint = document.getElementById('admaApplyHint');
+    if (from && to && to >= from) {
+      var d = daysBetween(from, to);
+      hint.textContent = d + ' day' + (d !== 1 ? 's' : '') + ' of leave';
+      hint.style.display = 'block';
+      document.getElementById('admaApplyTo').min = from;
+    } else {
+      hint.style.display = 'none';
+    }
+  };
+
+  window.admaSubmitApply = function() {
+    var from_date = document.getElementById('admaApplyFrom').value;
+    var to_date   = document.getElementById('admaApplyTo').value;
+    var reason    = document.getElementById('admaApplyReason').value.trim();
+    if (!from_date || !to_date) { alert('Please select both dates.'); return; }
+    if (to_date < from_date)    { alert('To date must be after from date.'); return; }
+    if (!reason)                { alert('Please enter a reason.'); return; }
+    var btn = document.getElementById('admaApplySubmitBtn');
+    btn.disabled = true;
+    fetch('/leaves', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ from_date, to_date, reason })
+    }).then(function(r) { return r.json(); }).then(function(res) {
+      if (res.success) {
+        document.getElementById('admaApplyModal').style.display = 'none';
+        if (typeof admToast === 'function') admToast('Leave request submitted', 'Your request is pending approval.', 'bi-calendar-check');
+        else alert('Leave request submitted successfully.');
+      } else {
+        alert(res.message || 'Failed to submit leave request');
+      }
+      btn.disabled = false;
+    }).catch(function() { alert('Network error'); btn.disabled = false; });
+  };
+})();
+<% } %>
 </script>

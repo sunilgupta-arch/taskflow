@@ -191,6 +191,9 @@
     <button class="lvm-tab"        data-filter="pending"  onclick="lvmSetFilter('pending')">Pending  <span class="lvm-tab-cnt" id="lvmCntPending">0</span></button>
     <button class="lvm-tab"        data-filter="approved" onclick="lvmSetFilter('approved')">Approved <span class="lvm-tab-cnt" id="lvmCntApproved">0</span></button>
     <button class="lvm-tab"        data-filter="rejected" onclick="lvmSetFilter('rejected')">Rejected <span class="lvm-tab-cnt" id="lvmCntRejected">0</span></button>
+    <% if (user.role_name !== 'LOCAL_USER') { %>
+    <button class="lvm-tab"        data-filter="mine"     onclick="lvmSetFilter('mine')">My Leaves <span class="lvm-tab-cnt" id="lvmCntMine">0</span></button>
+    <% } %>
   </div>
   <div style="display:flex;align-items:center;gap:8px">
     <% if (user.role_name === 'LOCAL_USER') { %>
@@ -256,6 +259,8 @@
 
   var _leaves = _raw;
   var _filter = 'all';
+  var _canReview = <%= ['LOCAL_ADMIN', 'LOCAL_MANAGER'].includes(user.role_name) %>;
+  var _myId     = <%= user.id %>;
 
   // ── Helpers ───────────────────────────────────────────────────────────
   function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
@@ -289,11 +294,12 @@
 
   // ── Compute stats ─────────────────────────────────────────────────────
   function computeStats() {
-    var total = _leaves.length, pending = 0, approved = 0, rejected = 0;
+    var total = _leaves.length, pending = 0, approved = 0, rejected = 0, mine = 0;
     _leaves.forEach(function(l) {
       if (l.status === 'pending')  pending++;
       if (l.status === 'approved') approved++;
       if (l.status === 'rejected') rejected++;
+      if (l.user_id === _myId)     mine++;
     });
     document.getElementById('lvmStatTotal').textContent    = total;
     document.getElementById('lvmStatPending').textContent  = pending;
@@ -303,6 +309,8 @@
     document.getElementById('lvmCntPending').textContent  = pending;
     document.getElementById('lvmCntApproved').textContent = approved;
     document.getElementById('lvmCntRejected').textContent = rejected;
+    var mineEl = document.getElementById('lvmCntMine');
+    if (mineEl) mineEl.textContent = mine;
     // Highlight pending tab count if there are items
     var pCnt = document.getElementById('lvmCntPending');
     pCnt.classList.toggle('has-items', pending > 0);
@@ -311,12 +319,14 @@
   // ── Render table ──────────────────────────────────────────────────────
   function render() {
     computeStats();
-    var filtered = _filter === 'all' ? _leaves : _leaves.filter(function(l){ return l.status === _filter; });
+    var filtered = _filter === 'all'  ? _leaves
+                 : _filter === 'mine' ? _leaves.filter(function(l){ return l.user_id === _myId; })
+                 : _leaves.filter(function(l){ return l.status === _filter; });
 
     var area = document.getElementById('lvmTableArea');
 
     if (!filtered.length) {
-      var msgs = { all:'No leave requests found', pending:'No pending requests', approved:'No approved leaves', rejected:'No rejected requests' };
+      var msgs = { all:'No leave requests found', pending:'No pending requests', approved:'No approved leaves', rejected:'No rejected requests', mine:'You have no leave requests' };
       area.innerHTML = '<div class="lvm-wrap"><div class="lvm-empty"><i class="bi bi-calendar-x"></i><p>'+msgs[_filter]+'</p></div></div>';
       return;
     }
@@ -337,7 +347,7 @@
       }
 
       var actionsCell = '<span style="color:var(--adm-muted);font-size:0.75rem">—</span>';
-      if (lv.status === 'pending') {
+      if (lv.status === 'pending' && _canReview) {
         actionsCell = '<div class="lvm-actions">'
           +'<button class="lvm-btn approve" onclick="lvmOpenReview('+lv.id+',\'approve\',\''+esc(lv.user_name)+'\',\''+lv.from_date+'\',\''+lv.to_date+'\')"><i class="bi bi-check-lg"></i> Approve</button>'
           +'<button class="lvm-btn reject"  onclick="lvmOpenReview('+lv.id+',\'reject\',\''+esc(lv.user_name)+'\',\''+lv.from_date+'\',\''+lv.to_date+'\')"><i class="bi bi-x-lg"></i> Reject</button>'
