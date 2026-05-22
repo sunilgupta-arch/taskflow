@@ -3,12 +3,12 @@ const router = express.Router();
 const AuthController = require('../controllers/authController');
 const authenticate = require('../middleware/authenticate');
 const botDetect = require('../middleware/botDetect');
-const rateLimit = require('express-rate-limit');
+const { rateLimit, ipKeyGenerator } = require('express-rate-limit');
 
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 10,
-  keyGenerator: (req) => req.ip,
+  keyGenerator: (req) => ipKeyGenerator(req),
   handler: (req, res) => {
     const logger = require('../utils/logger');
     logger.warn('[SECURITY] Login rate limit exceeded', {
