@@ -1,0 +1,314 @@
+<style>
+@keyframes pdlFade { from { opacity:0; transform:translateY(5px); } to { opacity:1; transform:none; } }
+.pdl-wrap { animation:pdlFade 0.22s ease; max-width:1000px; }
+
+/* ── Header ──────────────────────────────────────────────────── */
+.pdl-header { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:22px; flex-wrap:wrap; }
+.pdl-pill {
+  display:inline-flex; align-items:center; gap:5px;
+  background:rgba(99,102,241,0.1); border:1px solid rgba(99,102,241,0.2);
+  color:#a5b4fc; border-radius:20px; padding:3px 10px;
+  font-size:0.67rem; font-weight:700; letter-spacing:0.3px; margin-bottom:6px;
+}
+.pdl-title { font-size:1.15rem; font-weight:700; color:var(--portal-text,#e2e8f0); }
+.pdl-sub   { font-size:0.79rem; color:var(--portal-muted,#64748b); margin-top:2px; }
+.pdl-upload-btn {
+  display:inline-flex; align-items:center; gap:7px;
+  background:#6366f1; color:#fff; border:none; border-radius:10px;
+  padding:0 16px; height:38px; font-size:0.83rem; font-weight:600;
+  cursor:pointer; text-decoration:none; transition:background 0.15s; flex-shrink:0;
+}
+.pdl-upload-btn:hover { background:#4f46e5; color:#fff; }
+
+/* ── Toolbar ─────────────────────────────────────────────────── */
+.pdl-toolbar { display:flex; gap:10px; align-items:center; margin-bottom:18px; flex-wrap:wrap; }
+.pdl-search-wrap { position:relative; flex:1; min-width:200px; max-width:360px; }
+.pdl-search-icon { position:absolute; left:11px; top:50%; transform:translateY(-50%); color:var(--portal-muted,#64748b); font-size:0.82rem; pointer-events:none; }
+.pdl-search {
+  width:100%; background:var(--portal-surface,rgba(255,255,255,0.05));
+  border:1px solid var(--portal-border,rgba(255,255,255,0.08));
+  color:var(--portal-text,#e2e8f0); border-radius:10px; padding:9px 12px 9px 34px;
+  font-size:0.84rem; outline:none; box-sizing:border-box; transition:border-color 0.15s;
+}
+.pdl-search:focus { border-color:rgba(99,102,241,0.5); }
+.pdl-search::placeholder { color:var(--portal-muted,#64748b); }
+.pdl-count {
+  background:rgba(99,102,241,0.1); border:1px solid rgba(99,102,241,0.2);
+  color:#a5b4fc; border-radius:7px; padding:5px 12px;
+  font-size:0.75rem; font-weight:700; flex-shrink:0;
+}
+
+/* ── Cards grid ──────────────────────────────────────────────── */
+.pdl-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:12px; }
+.pdl-card {
+  background:var(--portal-surface,rgba(255,255,255,0.04));
+  border:1px solid var(--portal-border,rgba(255,255,255,0.08));
+  border-radius:14px; padding:18px; transition:all 0.18s; position:relative;
+}
+.pdl-card:hover { border-color:rgba(99,102,241,0.35); background:rgba(99,102,241,0.04); }
+.pdl-card.pdl-disabled { opacity:0.45; }
+.pdl-card-top { display:flex; align-items:flex-start; gap:14px; margin-bottom:10px; }
+.pdl-file-icon {
+  width:42px; height:42px; border-radius:10px; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center; font-size:1.15rem;
+}
+.pdl-icon-exe  { background:rgba(239,68,68,0.12);   color:#f87171; }
+.pdl-icon-zip  { background:rgba(245,158,11,0.12);  color:#fbbf24; }
+.pdl-icon-pdf  { background:rgba(239,68,68,0.12);   color:#f87171; }
+.pdl-icon-doc  { background:rgba(59,130,246,0.12);  color:#60a5fa; }
+.pdl-icon-img  { background:rgba(16,185,129,0.12);  color:#34d399; }
+.pdl-icon-code { background:rgba(139,92,246,0.12);  color:#c084fc; }
+.pdl-icon-file { background:rgba(100,116,139,0.12); color:#94a3b8; }
+
+.pdl-card-info { flex:1; min-width:0; }
+.pdl-card-name { font-weight:700; font-size:0.92rem; color:var(--portal-text,#e2e8f0); line-height:1.3; }
+.pdl-version-badge {
+  background:rgba(99,102,241,0.12); border:1px solid rgba(99,102,241,0.25);
+  color:#a5b4fc; border-radius:5px; padding:1px 7px;
+  font-size:0.65rem; font-weight:700; margin-left:6px; vertical-align:middle;
+}
+.pdl-disabled-chip {
+  background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.2);
+  color:#f87171; border-radius:5px; padding:1px 7px;
+  font-size:0.65rem; font-weight:700; margin-left:6px; vertical-align:middle;
+}
+.pdl-card-desc { font-size:0.78rem; color:var(--portal-muted,#64748b); margin-top:4px; line-height:1.45; }
+.pdl-card-meta { font-size:0.74rem; color:var(--portal-muted,#64748b); margin-top:8px; display:flex; flex-wrap:wrap; gap:10px; }
+.pdl-card-meta span { display:inline-flex; align-items:center; gap:4px; }
+
+/* ── Card footer ─────────────────────────────────────────────── */
+.pdl-card-footer { display:flex; align-items:center; justify-content:space-between; margin-top:14px; padding-top:12px; border-top:1px solid var(--portal-border,rgba(255,255,255,0.06)); }
+.pdl-dl-count { font-size:0.76rem; color:#a5b4fc; font-weight:700; display:inline-flex; align-items:center; gap:5px; }
+.pdl-dl-btn {
+  display:inline-flex; align-items:center; gap:7px;
+  background:rgba(52,211,153,0.1); border:1px solid rgba(52,211,153,0.25);
+  color:#34d399; border-radius:8px; padding:0 14px; height:32px;
+  font-size:0.78rem; font-weight:600; cursor:pointer; text-decoration:none; transition:all 0.15s;
+}
+.pdl-dl-btn:hover { background:rgba(52,211,153,0.18); color:#34d399; }
+.pdl-dl-btn.disabled { opacity:0.4; pointer-events:none; cursor:default; }
+.pdl-actions { display:flex; gap:6px; }
+.pdl-act-btn {
+  width:28px; height:28px; border-radius:6px; border:1px solid var(--portal-border,rgba(255,255,255,0.08));
+  background:transparent; color:var(--portal-muted,#64748b); cursor:pointer; font-size:0.78rem;
+  display:inline-flex; align-items:center; justify-content:center; transition:all 0.15s;
+}
+.pdl-act-btn:hover { color:var(--portal-text,#e2e8f0); border-color:rgba(255,255,255,0.2); }
+.pdl-act-btn.del:hover { color:#f87171; border-color:rgba(248,113,113,0.3); background:rgba(248,113,113,0.07); }
+
+/* ── Empty ───────────────────────────────────────────────────── */
+.pdl-empty { text-align:center; padding:60px 20px; color:var(--portal-muted,#64748b); }
+.pdl-empty i { font-size:2.5rem; display:block; margin-bottom:12px; opacity:0.3; }
+
+/* ── Edit modal ──────────────────────────────────────────────── */
+.pdl-overlay {
+  display:none; position:fixed; inset:0; background:rgba(0,0,0,0.65);
+  z-index:500; align-items:center; justify-content:center;
+}
+.pdl-overlay.open { display:flex; }
+.pdl-modal {
+  background:var(--portal-card,#1e293b); border:1px solid var(--portal-border,rgba(255,255,255,0.08));
+  border-radius:16px; padding:28px; width:100%; max-width:440px;
+  box-shadow:0 20px 60px rgba(0,0,0,0.5);
+}
+.pdl-modal h6 { font-size:0.95rem; font-weight:700; color:var(--portal-text,#e2e8f0); margin-bottom:20px; }
+.pdl-modal label { font-size:0.78rem; color:var(--portal-muted,#64748b); display:block; margin-bottom:5px; }
+.pdl-modal input, .pdl-modal textarea {
+  width:100%; background:rgba(255,255,255,0.05); border:1px solid var(--portal-border,rgba(255,255,255,0.08));
+  color:var(--portal-text,#e2e8f0); border-radius:9px; padding:9px 12px;
+  font-size:0.84rem; outline:none; transition:border-color 0.15s; box-sizing:border-box;
+}
+.pdl-modal input:focus, .pdl-modal textarea:focus { border-color:rgba(99,102,241,0.5); }
+.pdl-modal textarea { resize:vertical; min-height:68px; }
+.pdl-modal-row { margin-bottom:14px; }
+.pdl-modal-footer { display:flex; justify-content:flex-end; gap:10px; margin-top:20px; }
+.pdl-modal-cancel {
+  background:transparent; border:1px solid var(--portal-border,rgba(255,255,255,0.08));
+  color:var(--portal-muted,#64748b); border-radius:9px; padding:0 16px; height:36px;
+  font-size:0.82rem; cursor:pointer; transition:all 0.15s;
+}
+.pdl-modal-cancel:hover { color:var(--portal-text,#e2e8f0); }
+.pdl-modal-save {
+  background:#6366f1; color:#fff; border:none; border-radius:9px;
+  padding:0 18px; height:36px; font-size:0.82rem; font-weight:600; cursor:pointer; transition:background 0.15s;
+}
+.pdl-modal-save:hover { background:#4f46e5; }
+</style>
+
+<div class="pdl-wrap">
+
+  <!-- Header -->
+  <div class="pdl-header">
+    <div>
+      <div class="pdl-pill"><i class="bi bi-download me-1"></i>Downloads</div>
+      <div class="pdl-title">Download Portal</div>
+      <div class="pdl-sub">Software, utilities, and shared files</div>
+    </div>
+    <% if (canUpload) { %>
+      <a href="/portal/downloads/upload" class="pdl-upload-btn">
+        <i class="bi bi-cloud-upload-fill"></i> Upload File
+      </a>
+    <% } %>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="pdl-toolbar">
+    <div class="pdl-search-wrap">
+      <i class="bi bi-search pdl-search-icon"></i>
+      <input type="text" class="pdl-search" id="pdlSearch" placeholder="Search files…"
+             value="<%= search %>" oninput="pdlFilter(this.value)">
+    </div>
+    <span class="pdl-count" id="pdlCount"><%= files.length %> file<%= files.length !== 1 ? 's' : '' %></span>
+  </div>
+
+  <!-- Grid -->
+  <% if (files.length === 0) { %>
+    <div class="pdl-empty">
+      <i class="bi bi-cloud-arrow-down"></i>
+      <p><% if (search) { %>No files match "<%= search %>"<% } else { %>No files available yet<% } %></p>
+    </div>
+  <% } else { %>
+  <div class="pdl-grid" id="pdlGrid">
+    <% files.forEach(function(f) { %>
+    <%
+      const ext2 = (f.original_name||'').split('.').pop().toLowerCase();
+      const mime2 = f.mime_type || '';
+      let iconCls = 'pdl-icon-file', iconBi = 'bi-file-earmark-fill';
+      if (['exe','msi','deb','dmg','apk','app'].includes(ext2)) { iconCls='pdl-icon-exe'; iconBi='bi-boxes'; }
+      else if (['bat','sh','cmd'].includes(ext2)) { iconCls='pdl-icon-exe'; iconBi='bi-terminal-fill'; }
+      else if (['zip','rar','7z','tar','gz','bz2','xz'].includes(ext2)) { iconCls='pdl-icon-zip'; iconBi='bi-file-zip-fill'; }
+      else if (mime2.includes('pdf')||ext2==='pdf') { iconCls='pdl-icon-pdf'; iconBi='bi-file-pdf-fill'; }
+      else if (mime2.includes('image')) { iconCls='pdl-icon-img'; iconBi='bi-file-image-fill'; }
+      else if (['doc','docx'].includes(ext2)) { iconCls='pdl-icon-doc'; iconBi='bi-file-word-fill'; }
+      else if (['xls','xlsx'].includes(ext2)) { iconCls='pdl-icon-doc'; iconBi='bi-file-spreadsheet-fill'; }
+      else if (['js','ts','py','java','cpp','c','cs','go','rb','php','json','xml','yaml','yml','sql'].includes(ext2)) { iconCls='pdl-icon-code'; iconBi='bi-file-code-fill'; }
+      function fmtSize(b) { if(!b) return '—'; if(b<1024) return b+'B'; if(b<1048576) return (b/1024).toFixed(1)+'KB'; return (b/1048576).toFixed(1)+'MB'; }
+      const dateStr = new Date(f.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+    %>
+    <div class="pdl-card <%= f.is_disabled ? 'pdl-disabled' : '' %>"
+         data-name="<%= (f.name||'').toLowerCase() %>"
+         data-desc="<%= (f.description||'').toLowerCase() %>"
+         data-uploader="<%= (f.uploader_name||'').toLowerCase() %>">
+      <div class="pdl-card-top">
+        <div class="pdl-file-icon <%= iconCls %>"><i class="bi <%= iconBi %>"></i></div>
+        <div class="pdl-card-info">
+          <div class="pdl-card-name">
+            <%= f.name %>
+            <% if (f.version) { %><span class="pdl-version-badge">v<%= f.version %></span><% } %>
+            <% if (f.is_disabled) { %><span class="pdl-disabled-chip"><i class="bi bi-slash-circle"></i> Disabled</span><% } %>
+          </div>
+          <% if (f.description) { %><div class="pdl-card-desc"><%= f.description %></div><% } %>
+          <div class="pdl-card-meta">
+            <span><i class="bi bi-person"></i> <%= f.uploader_name %></span>
+            <span><i class="bi bi-calendar3"></i> <%= dateStr %></span>
+            <span><i class="bi bi-hdd"></i> <%= fmtSize(f.file_size) %></span>
+          </div>
+        </div>
+      </div>
+      <div class="pdl-card-footer">
+        <span class="pdl-dl-count"><i class="bi bi-download"></i> <%= f.download_count %> download<%= f.download_count !== 1 ? 's' : '' %></span>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <% if (canUpload && f.uploaded_by === userId) { %>
+          <div class="pdl-actions">
+            <button class="pdl-act-btn" title="Edit"
+                    onclick="pdlOpenEdit(<%= f.id %>, '<%= (f.name||'').replace(/'/g,`\\'`) %>', '<%= (f.description||'').replace(/'/g,`\\'`).replace(/\n/g,'\\n') %>', '<%= (f.version||'').replace(/'/g,`\\'`) %>')">
+              <i class="bi bi-pencil"></i>
+            </button>
+            <button class="pdl-act-btn del" title="Delete" onclick="pdlDelete(<%= f.id %>, this)">
+              <i class="bi bi-trash"></i>
+            </button>
+          </div>
+          <% } %>
+          <% if (!f.is_disabled) { %>
+          <a href="/portal/downloads/<%= f.id %>/download" class="pdl-dl-btn">
+            <i class="bi bi-download"></i> Download
+          </a>
+          <% } else { %>
+          <span class="pdl-dl-btn disabled"><i class="bi bi-slash-circle"></i> Disabled</span>
+          <% } %>
+        </div>
+      </div>
+    </div>
+    <% }); %>
+  </div>
+  <% } %>
+
+</div>
+
+<!-- Edit Modal -->
+<div class="pdl-overlay" id="pdlEditModal">
+  <div class="pdl-modal">
+    <h6><i class="bi bi-pencil me-2"></i>Edit File Info</h6>
+    <input type="hidden" id="pdlEditId">
+    <div class="pdl-modal-row">
+      <label>Name <span style="color:#f87171">*</span></label>
+      <input type="text" id="pdlEditName" maxlength="255" placeholder="Display name">
+    </div>
+    <div class="pdl-modal-row">
+      <label>Description</label>
+      <textarea id="pdlEditDesc" placeholder="Optional description"></textarea>
+    </div>
+    <div class="pdl-modal-row">
+      <label>Version</label>
+      <input type="text" id="pdlEditVersion" maxlength="50" placeholder="e.g. 2.1.0">
+    </div>
+    <div class="pdl-modal-footer">
+      <button class="pdl-modal-cancel" onclick="pdlCloseEdit()">Cancel</button>
+      <button class="pdl-modal-save" onclick="pdlSaveEdit()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<script>
+function pdlFilter(term) {
+  term = term.toLowerCase();
+  const cards = document.querySelectorAll('#pdlGrid .pdl-card');
+  let vis = 0;
+  cards.forEach(c => {
+    const show = !term || c.dataset.name.includes(term) || c.dataset.desc.includes(term) || c.dataset.uploader.includes(term);
+    c.style.display = show ? '' : 'none';
+    if (show) vis++;
+  });
+  document.getElementById('pdlCount').textContent = vis + ' file' + (vis !== 1 ? 's' : '');
+}
+
+function pdlOpenEdit(id, name, desc, version) {
+  document.getElementById('pdlEditId').value      = id;
+  document.getElementById('pdlEditName').value    = name;
+  document.getElementById('pdlEditDesc').value    = desc.replace(/\\n/g, '\n');
+  document.getElementById('pdlEditVersion').value = version;
+  document.getElementById('pdlEditModal').classList.add('open');
+  document.getElementById('pdlEditName').focus();
+}
+function pdlCloseEdit() { document.getElementById('pdlEditModal').classList.remove('open'); }
+async function pdlSaveEdit() {
+  const id   = document.getElementById('pdlEditId').value;
+  const name = document.getElementById('pdlEditName').value.trim();
+  if (!name) { alert('Name is required'); return; }
+  const btn = document.querySelector('.pdl-modal-save');
+  btn.textContent = 'Saving…'; btn.disabled = true;
+  try {
+    const r = await fetch('/portal/downloads/' + id, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, description: document.getElementById('pdlEditDesc').value.trim(), version: document.getElementById('pdlEditVersion').value.trim() })
+    });
+    const d = await r.json();
+    if (d.success) location.reload();
+    else alert(d.message || 'Save failed');
+  } catch(e) { alert('Network error'); }
+  finally { btn.textContent = 'Save Changes'; btn.disabled = false; }
+}
+async function pdlDelete(id, btn) {
+  if (!confirm('Delete this file permanently?')) return;
+  btn.disabled = true;
+  try {
+    const r = await fetch('/portal/downloads/' + id, { method: 'DELETE' });
+    const d = await r.json();
+    if (d.success) { const card = btn.closest('.pdl-card'); card.style.opacity='0'; card.style.transition='opacity 0.25s'; setTimeout(()=>card.remove(),260); }
+    else alert(d.message || 'Delete failed');
+  } catch(e) { alert('Network error'); }
+  finally { btn.disabled = false; }
+}
+document.getElementById('pdlEditModal').addEventListener('click', e => { if (e.target === document.getElementById('pdlEditModal')) pdlCloseEdit(); });
+</script>

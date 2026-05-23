@@ -14,6 +14,7 @@ const BackupController = require('../controllers/backupController');
 const LiveStatusController = require('../controllers/liveStatusController');
 const AnnouncementController = require('../controllers/announcementController');
 const NotificationController = require('../controllers/notificationController');
+const DownloadController = require('../controllers/downloadController');
 
 // Dashboard — old dashboard at /dashboard/overview; /dashboard redirects to task board
 router.get('/dashboard/overview', authenticate, DashboardController.show);
@@ -200,6 +201,22 @@ router.get('/admin/infoboard',          authenticate, requireLocalAll,   AdminHu
 router.get('/admin/notes',              authenticate, requireLocalAll,   AdminHubController.notes);
 router.get('/admin/leaves',             authenticate, requireLocalAll,   AdminHubController.leaves);
 router.get('/admin/helpcenter',         authenticate, requireLocalAll,   AdminHubController.helpcenter);
+router.get('/admin/help',               authenticate, requireLocalAll,   AdminHubController.helpFull);
+
+// ── Downloads ──────────────────────────────────────────────────────────
+const requireDownloadUpload = requireRoles('LOCAL_ADMIN', 'LOCAL_MANAGER', 'CLIENT_ADMIN');
+router.get('/admin/downloads',                   authenticate, requireLocalAll,       DownloadController.index);
+router.get('/admin/downloads/upload',            authenticate, requireDownloadUpload, DownloadController.uploadPage);
+router.post('/admin/downloads/upload',           authenticate, requireDownloadUpload, (req, res, next) => {
+  DownloadController.uploadMiddleware(req, res, err => {
+    if (err) return res.status(400).json({ success: false, message: err.message || 'Upload failed' });
+    next();
+  });
+}, DownloadController.handleUpload);
+router.get('/admin/downloads/:id/download',      authenticate, requireLocalAll,       DownloadController.serveFile);
+router.put('/admin/downloads/:id',               authenticate, requireDownloadUpload, DownloadController.update);
+router.delete('/admin/downloads/:id',            authenticate, requireDownloadUpload, DownloadController.remove);
+router.patch('/admin/downloads/:id/toggle',      authenticate, requireRoles('LOCAL_ADMIN'), DownloadController.toggle);
 router.get('/admin/my-attendance',      authenticate, requireLocalAll,   AdminHubController.myAttendance);
 router.get('/admin/my-progress',        authenticate, requireLocalAll,   AdminHubController.myProgress);
 // Pages admin/manager only

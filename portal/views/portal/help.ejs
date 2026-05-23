@@ -20,6 +20,14 @@
       <% } %>
       <a class="help-nav-item" href="#" onclick="showHelpSection('calendar', this)">Calendar</a>
       <a class="help-nav-item" href="#" onclick="showHelpSection('files', this)">Files & Attachments</a>
+      <a class="help-nav-item" href="#" onclick="showHelpSection('requests', this)">Allocate Task TI</a>
+      <a class="help-nav-item" href="#" onclick="showHelpSection('links', this)">Links</a>
+      <a class="help-nav-item" href="#" onclick="showHelpSection('group-channel', this)">Group Channel</a>
+      <a class="help-nav-item" href="#" onclick="showHelpSection('reminders', this)">Reminders</a>
+      <a class="help-nav-item" href="#" onclick="showHelpSection('downloads', this)">Downloads</a>
+      <% if (user.role_name === 'CLIENT_ADMIN') { %>
+        <a class="help-nav-item" href="#" onclick="showHelpSection('workspace', this)">Dev Workspace</a>
+      <% } %>
 
       <% if (user.role_name === 'CLIENT_ADMIN') { %>
         <div class="help-nav-section">Administration</div>
@@ -71,6 +79,16 @@
           <div class="help-card-icon"><i class="bi bi-calendar3"></i></div>
           <h6>Calendar</h6>
           <p>Full-year planner with events, reminders, and task deadlines. Click any date to add entries and track them in the side rail.</p>
+        </div>
+        <div class="help-card">
+          <div class="help-card-icon"><i class="bi bi-inbox-fill"></i></div>
+          <h6>Allocate Task TI</h6>
+          <p>Submit one-time or recurring work requests directly to the India team and track their status in real-time.</p>
+        </div>
+        <div class="help-card">
+          <div class="help-card-icon"><i class="bi bi-link-45deg"></i></div>
+          <h6>Links</h6>
+          <p>A personal link manager — store quick-access links to reports, dashboards, and external tools.</p>
         </div>
         <div class="help-card">
           <div class="help-card-icon"><i class="bi bi-headset"></i></div>
@@ -126,7 +144,9 @@
         <table class="help-table">
           <tr><td><i class="bi bi-chat-dots me-2"></i><strong>Chat</strong></td><td>Start a conversation with a team member</td></tr>
           <tr><td><i class="bi bi-kanban me-2"></i><strong>Tasks</strong></td><td>View tasks assigned to you, or create a new one</td></tr>
+          <tr><td><i class="bi bi-inbox-fill me-2"></i><strong>Allocate Task TI</strong></td><td>Submit a work request to the India team</td></tr>
           <tr><td><i class="bi bi-journal-text me-2"></i><strong>Notes</strong></td><td>Create a personal note — it auto-saves as you type</td></tr>
+          <tr><td><i class="bi bi-link-45deg me-2"></i><strong>Links</strong></td><td>Save quick-access links to your reports and dashboards</td></tr>
           <tr><td><i class="bi bi-headset me-2"></i><strong>Support</strong></td><td>Click the headset icon in the sidebar to chat with local admin</td></tr>
         </table>
       </div>
@@ -165,7 +185,11 @@
         <table class="help-table">
           <tr><td><i class="bi bi-chat-dots-fill me-2"></i><strong>Chat</strong></td><td>All your conversations — 1-to-1 and group chats</td></tr>
           <tr><td><i class="bi bi-kanban-fill me-2"></i><strong>Tasks</strong></td><td>Task board — create, assign, track, and comment on tasks</td></tr>
+          <tr><td><i class="bi bi-inbox-fill me-2"></i><strong>Allocate Task TI</strong></td><td>Submit recurring or one-time work requests to the India team</td></tr>
           <tr><td><i class="bi bi-journal-text me-2"></i><strong>Notes</strong></td><td>Your personal notes with auto-save and dictation</td></tr>
+          <tr><td><i class="bi bi-calendar3 me-2"></i><strong>Calendar</strong></td><td>Full-year planner for events, reminders, and task deadlines</td></tr>
+          <tr><td><i class="bi bi-link-45deg me-2"></i><strong>Links</strong></td><td>Quick-access links to external reports, dashboards, and tools</td></tr>
+          <tr><td><i class="bi bi-broadcast me-2"></i><strong>Group Channel</strong></td><td>Shared team channel — visible in the right-side panel on every page (not available to Sales)</td></tr>
           <tr><td><i class="bi bi-flag-fill me-2"></i><strong>Team India</strong></td><td>Live employee status and bridge chat (Admin & Top Mgmt only)</td></tr>
           <tr><td><i class="bi bi-people-fill me-2"></i><strong>Users</strong></td><td>Manage portal users — add, edit, deactivate (Admin only)</td></tr>
           <tr><td><i class="bi bi-question-circle me-2"></i><strong>Help</strong></td><td>This help & training section</td></tr>
@@ -718,6 +742,263 @@
       </div>
     </div>
 
+    <!-- ═══ GROUP CHANNEL ═══ -->
+    <div class="help-section" id="section-group-channel" style="display:none">
+      <h4>Group Channel</h4>
+      <p class="help-lead">A shared team-wide channel for announcements, discussions, and file sharing. Available to all portal users except Sales.</p>
+
+      <div class="help-block">
+        <h6>Accessing the Group Channel</h6>
+        <p>The Group Channel panel is always visible on the right side of the portal layout. Click the <strong>broadcast icon</strong> in the top-right corner of any page to toggle it. To open the full-screen view, click the <strong>expand icon (<i class="bi bi-arrows-fullscreen"></i>)</strong> in the channel header.</p>
+        <div class="help-callout info">
+          <i class="bi bi-info-circle-fill me-2"></i>
+          The Group Channel is a single shared room visible to the entire team — not a private conversation. Use Chat for private 1-to-1 or group conversations.
+        </div>
+      </div>
+
+      <div class="help-block">
+        <h6>Messaging Features</h6>
+        <table class="help-table">
+          <tr><td><i class="bi bi-send me-2"></i><strong>Send</strong></td><td>Type and press Enter to send. Shift+Enter for a new line.</td></tr>
+          <tr><td><i class="bi bi-at me-2"></i><strong>@Mentions</strong></td><td>Type @ followed by a name to send a notification to that person</td></tr>
+          <tr><td><i class="bi bi-reply-fill me-2"></i><strong>Reply</strong></td><td>Hover any message and click the reply icon to quote and respond to it</td></tr>
+          <tr><td><i class="bi bi-emoji-smile me-2"></i><strong>Reactions</strong></td><td>React to any message with an emoji</td></tr>
+          <tr><td><i class="bi bi-pencil me-2"></i><strong>Edit / Delete</strong></td><td>Hover your own message to edit or delete it</td></tr>
+          <tr><td><i class="bi bi-paperclip me-2"></i><strong>File Attach</strong></td><td>Click the paperclip icon to share a document or image</td></tr>
+          <tr><td><i class="bi bi-pin-angle-fill me-2"></i><strong>Pins</strong></td><td>Important messages can be pinned — they appear in the pin bar at the top</td></tr>
+          <tr><td><i class="bi bi-search me-2"></i><strong>Search</strong></td><td>Click the search icon in the channel header to find messages by keyword</td></tr>
+        </table>
+      </div>
+
+      <div class="help-block">
+        <h6>Who Can Use the Group Channel</h6>
+        <p>All portal users <strong>except Sales</strong> can read and post in the Group Channel. Sales-role users do not see the Group Channel panel.</p>
+      </div>
+    </div>
+
+    <!-- ═══ ALLOCATE TASK TI (REQUESTS) ═══ -->
+    <div class="help-section" id="section-requests" style="display:none">
+      <h4>Allocate Task TI</h4>
+      <p class="help-lead">Submit work requests directly to the India team — one-time or recurring. Track their status, leave comments, and get real-time updates as each request is picked up and completed.</p>
+
+      <div class="help-block">
+        <h6>What is "Allocate Task TI"?</h6>
+        <p>This page lets you create structured work requests for the local India team. Unlike portal tasks (which are between portal users), these requests are visible to and handled by the India team on their side. Each request goes through a queue where local team members can pick it up, work on it, and mark it done.</p>
+        <div class="help-callout info">
+          <i class="bi bi-info-circle-fill me-2"></i>
+          The badge number on the inbox icon in the sidebar shows how many open requests you have for today.
+        </div>
+      </div>
+
+      <div class="help-block">
+        <h6>Creating a Request</h6>
+        <ol>
+          <li>Click <strong>New Request</strong> or the quick <strong>Quick Request</strong> button</li>
+          <li>Enter a <strong>title</strong> and optional <strong>description</strong></li>
+          <li>Choose <strong>One-time</strong> (for a single date) or <strong>Recurring</strong> (repeating on a schedule)</li>
+          <li>For recurring: select the recurrence pattern (daily, weekly, monthly) and set the dates</li>
+          <li>Attach files if needed, then click <strong>Submit</strong></li>
+        </ol>
+      </div>
+
+      <div class="help-block">
+        <h6>Request Status Flow</h6>
+        <table class="help-table">
+          <tr><td><strong>Open</strong></td><td>Submitted but not yet picked up by the team</td></tr>
+          <tr><td><strong>In Progress</strong></td><td>A team member has picked it up and is working on it</td></tr>
+          <tr><td><strong>Done</strong></td><td>Completed by the team</td></tr>
+          <tr><td><strong>Missed</strong></td><td>Passed the scheduled date without being completed</td></tr>
+          <tr><td><strong>Cancelled</strong></td><td>Cancelled by you before completion</td></tr>
+          <tr><td><strong>Rescheduled</strong></td><td>Moved to a future date by the team (a reason will be provided)</td></tr>
+        </table>
+      </div>
+
+      <div class="help-block">
+        <h6>Viewing Request Details</h6>
+        <p>Click any request row to open the detail panel on the right. You can see the full description, status history, and any comments left by the team. You can also leave your own comments and attach files.</p>
+      </div>
+
+      <div class="help-block">
+        <h6>Cancelling a Request</h6>
+        <p>If you no longer need a request, click the cancel option on the request row. Requests that are already <strong>In Progress</strong> or <strong>Done</strong> cannot be cancelled.</p>
+      </div>
+
+      <div class="help-block">
+        <h6>Recurring Requests</h6>
+        <p>Recurring requests automatically create a new instance on each scheduled date. You manage the <strong>template</strong> (title, description, recurrence pattern) and each day generates its own instance that goes through the Open → In Progress → Done flow independently.</p>
+        <div class="help-callout info">
+          <i class="bi bi-info-circle-fill me-2"></i>
+          To stop a recurring request permanently, click <strong>Stop</strong> on the request row. This deactivates the template so no new instances are created — existing instances are unaffected.
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ LINKS ═══ -->
+    <div class="help-section" id="section-links" style="display:none">
+      <h4>Links</h4>
+      <p class="help-lead">A personal link manager for storing quick-access links to external reports, dashboards, and tools. Keep everything you need one click away.</p>
+
+      <div class="help-block">
+        <h6>Adding a Link</h6>
+        <ol>
+          <li>Click <strong>Add Link</strong></li>
+          <li>Enter a <strong>name</strong> for the link (e.g. "Sales Dashboard", "P&L Report")</li>
+          <li>Paste the <strong>URL</strong> (must start with http:// or https://)</li>
+          <li>Click <strong>Save</strong></li>
+        </ol>
+        <div class="help-callout info">
+          <i class="bi bi-info-circle-fill me-2"></i>
+          The link icon is chosen automatically based on the name — for example, links containing "report", "dashboard", or "sheet" get a matching icon.
+        </div>
+      </div>
+
+      <div class="help-block">
+        <h6>Using Links</h6>
+        <p>Click any link card to open the URL in a new browser tab. Links are only visible to you — they are personal and private.</p>
+      </div>
+
+      <div class="help-block">
+        <h6>Editing or Deleting a Link</h6>
+        <p>Hover over a link card to reveal the <strong>edit</strong> (pencil) and <strong>delete</strong> (trash) buttons. Click edit to update the name or URL; click delete to permanently remove it.</p>
+      </div>
+    </div>
+
+    <!-- ═══ REMINDERS ═══ -->
+    <div class="help-section" id="section-reminders" style="display:none">
+      <h4>Reminders</h4>
+      <p class="help-lead">Personal time-based reminders that live on your home page. Set them once — get notified right when you need them.</p>
+
+      <div class="help-block">
+        <h6>Where Reminders Live</h6>
+        <p>Reminders appear in the <strong>right-side rail</strong> on the portal home page. They are visible only to you — not to other team members or admins.</p>
+      </div>
+
+      <div class="help-block">
+        <h6>Adding a Reminder</h6>
+        <ol>
+          <li>Go to the <strong>Portal Home</strong> page</li>
+          <li>In the right rail, click the <strong>+ Add</strong> button next to "Reminders"</li>
+          <li>Enter a <strong>Title</strong> (required) — e.g. "Call vendor", "Review report"</li>
+          <li>Optionally add a <strong>Note</strong> with extra details</li>
+          <li>Set the <strong>Remind At</strong> date and time</li>
+          <li>Click <strong>Save</strong></li>
+        </ol>
+      </div>
+
+      <div class="help-block">
+        <h6>Managing Reminders</h6>
+        <table class="help-table">
+          <tr><td><i class="bi bi-pencil me-2"></i><strong>Edit</strong></td><td>Hover over a reminder and click the edit icon to update the title, note, or time</td></tr>
+          <tr><td><i class="bi bi-trash me-2"></i><strong>Delete</strong></td><td>Click the delete icon to permanently remove a reminder</td></tr>
+          <tr><td><i class="bi bi-check2 me-2"></i><strong>Complete</strong></td><td>Mark a reminder as done — it will be removed from the active list</td></tr>
+        </table>
+      </div>
+
+      <div class="help-block">
+        <h6>Good to Know</h6>
+        <ul>
+          <li>Reminders are <strong>personal</strong> — only you can see your own reminders</li>
+          <li>Past-due reminders stay visible until you mark them done or delete them</li>
+          <li>There is no limit on the number of reminders you can set</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- ═══ DEV WORKSPACE (Admin only) ═══ -->
+    <% if (user.role_name === 'CLIENT_ADMIN') { %>
+    <div class="help-section" id="section-workspace" style="display:none">
+      <h4>Dev Workspace</h4>
+      <p class="help-lead">A live view of the development team's active projects — milestones, progress, releases, and technical updates. Available to Admin only.</p>
+
+      <div class="help-block">
+        <h6>Accessing Dev Workspace</h6>
+        <p>Click the <strong>Dev Workspace</strong> tile on the portal home page, or navigate directly to <code>/portal/workspace</code>. It is only visible to your account (CLIENT_ADMIN).</p>
+      </div>
+
+      <div class="help-block">
+        <h6>What You'll See</h6>
+        <table class="help-table">
+          <tr><td><strong>Project cards</strong></td><td>Each project shows its name, current status (Planning / Active / On Hold / Completed), tech stack, and overall progress percentage</td></tr>
+          <tr><td><strong>Progress bar</strong></td><td>Visual completion indicator based on milestones completed vs. total milestones</td></tr>
+          <tr><td><strong>Click a project</strong></td><td>Opens a right-side drawer with full details — milestones, releases, notes, and project logs</td></tr>
+          <tr><td><strong>Status filter</strong></td><td>Filter the project list by status: All, Active, Planning, On Hold, Completed</td></tr>
+        </table>
+      </div>
+
+      <div class="help-block">
+        <h6>Project Statuses</h6>
+        <table class="help-table">
+          <tr><td><span style="background:rgba(16,185,129,0.15);color:#10b981;padding:1px 7px;border-radius:4px;font-size:0.75rem;font-weight:700;">ACTIVE</span></td><td>Work is currently in progress</td></tr>
+          <tr><td><span style="background:rgba(100,116,139,0.2);color:#94a3b8;padding:1px 7px;border-radius:4px;font-size:0.75rem;font-weight:700;">PLANNING</span></td><td>Project is being scoped and planned</td></tr>
+          <tr><td><span style="background:rgba(245,158,11,0.15);color:#f59e0b;padding:1px 7px;border-radius:4px;font-size:0.75rem;font-weight:700;">ON HOLD</span></td><td>Temporarily paused</td></tr>
+          <tr><td><span style="background:rgba(99,102,241,0.15);color:#a5b4fc;padding:1px 7px;border-radius:4px;font-size:0.75rem;font-weight:700;">COMPLETED</span></td><td>Project is finished and delivered</td></tr>
+        </table>
+      </div>
+
+      <div class="help-block">
+        <h6>Good to Know</h6>
+        <ul>
+          <li>The workspace is <strong>read-only</strong> on your side — you can view but not edit projects</li>
+          <li>Projects and milestones are managed by the local admin team</li>
+          <li>The workspace is only accessible to you (CLIENT_ADMIN) — other portal users cannot see it</li>
+        </ul>
+        <div class="help-callout info">
+          <i class="bi bi-info-circle-fill me-2"></i>
+          If you need to discuss a project or request changes, use <strong>Admin Chat</strong> or send an <strong>Allocate Task TI</strong> request.
+        </div>
+      </div>
+    </div>
+    <% } %>
+
+    <!-- ═══ DOWNLOADS ═══ -->
+    <div class="help-section" id="section-downloads" style="display:none">
+      <h4><i class="bi bi-download me-2"></i>Downloads</h4>
+      <p class="help-lead">A shared library of software, utilities, and files shared by your team. Browse, search, and download files instantly.</p>
+
+      <div class="help-block">
+        <h6>Who Can Do What</h6>
+        <ul class="mb-0">
+          <li><strong>CLIENT_ADMIN</strong> — Upload files, edit and delete their own uploads</li>
+          <li><strong>All other portal users</strong> — Browse and download files only</li>
+        </ul>
+      </div>
+
+      <div class="help-block">
+        <h6>Downloading a File</h6>
+        <ol class="mb-0">
+          <li>Go to <strong>Downloads</strong> in the left sidebar</li>
+          <li>Use the search box to filter by name, description, or uploader</li>
+          <li>Click the <strong>Download</strong> button on any file card</li>
+          <li>The file is served immediately — no waiting</li>
+        </ol>
+      </div>
+
+      <% if (user.role_name === 'CLIENT_ADMIN') { %>
+      <div class="help-block">
+        <h6>Uploading a File (Admin only)</h6>
+        <ol class="mb-0">
+          <li>Click <strong>Upload File</strong> in the top-right corner</li>
+          <li>Drag and drop your file or click to browse — maximum <strong>500 MB</strong></li>
+          <li>Enter a <strong>Name</strong> (required), plus optional Description and Version</li>
+          <li>Click <strong>Upload</strong> — the file is available to download instantly once saved</li>
+        </ol>
+      </div>
+
+      <div class="help-block">
+        <h6>Editing or Deleting Your Uploads</h6>
+        <ul class="mb-0">
+          <li><strong>Edit</strong> — Click the pencil icon on your file card to update the name, description, or version</li>
+          <li><strong>Delete</strong> — Click the trash icon to permanently remove the file. This cannot be undone.</li>
+        </ul>
+      </div>
+      <% } %>
+
+      <div class="help-callout">
+        <i class="bi bi-shield-check-fill me-2"></i>
+        Files marked as <strong>Disabled</strong> cannot be downloaded. Contact your administrator if you need access to a disabled file.
+      </div>
+    </div>
+
     <!-- ═══ ROLES & HIERARCHY (Admin only) ═══ -->
     <div class="help-section" id="section-roles" style="display:none">
       <h4>Roles & Hierarchy</h4>
@@ -758,7 +1039,14 @@
             <div class="help-hierarchy-badge user-role">USER</div>
             <div>
               <strong>User</strong>
-              <p>Can view and update assigned tasks, participate in chats. Cannot create tasks or groups.</p>
+              <p>Can view and update assigned tasks, participate in chats and group channel. Cannot create tasks or groups.</p>
+            </div>
+          </div>
+          <div class="help-hierarchy-item level-5">
+            <div class="help-hierarchy-badge user-role" style="background:rgba(148,163,184,0.15);color:#94a3b8;">SALES</div>
+            <div>
+              <strong>Sales</strong>
+              <p>Limited access — can participate in 1-to-1 chat, view and update assigned tasks, and use Notes and Calendar. Cannot create tasks or groups, and cannot use Group Channel or Admin Chat.</p>
             </div>
           </div>
         </div>
@@ -772,11 +1060,12 @@
         </div>
         <table class="help-table">
           <thead><tr><th>Role</th><th>Can Assign To</th></tr></thead>
-          <tr><td>Admin</td><td>Everyone (Admin, Top Mgmt, Mgmt, Manager, User)</td></tr>
-          <tr><td>Top Mgmt</td><td>Top Mgmt, Mgmt, Manager, User</td></tr>
-          <tr><td>Mgmt</td><td>Mgmt, Manager, User</td></tr>
-          <tr><td>Manager</td><td>Manager, User</td></tr>
+          <tr><td>Admin</td><td>Everyone (Admin, Top Mgmt, Mgmt, Manager, User, Sales)</td></tr>
+          <tr><td>Top Mgmt</td><td>Top Mgmt, Mgmt, Manager, User, Sales</td></tr>
+          <tr><td>Mgmt</td><td>Mgmt, Manager, User, Sales</td></tr>
+          <tr><td>Manager</td><td>Manager, User, Sales</td></tr>
           <tr><td>User</td><td>Cannot assign tasks</td></tr>
+          <tr><td>Sales</td><td>Cannot assign tasks</td></tr>
         </table>
       </div>
 
@@ -790,6 +1079,7 @@
             <li>Team India is only visible to you and Top Management</li>
             <li>You cannot create another Admin — there is only one Admin account</li>
             <li>Deactivated users cannot log in but their data (messages, tasks, notes) is preserved</li>
+            <li><strong>Sales</strong> users have restricted access — they cannot use Group Channel or Admin Chat, and cannot create tasks or groups</li>
           </ul>
         </div>
       </div>
@@ -852,22 +1142,25 @@
                 <th>Mgmt</th>
                 <th>Manager</th>
                 <th>User</th>
+                <th>Sales</th>
               </tr>
             </thead>
             <tbody>
-              <tr><td>1-to-1 Chat</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td></tr>
-              <tr><td>Create Group Chat</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="no">No</td></tr>
-              <tr><td>Edit/Delete Own Messages</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td></tr>
-              <tr><td>Create Tasks</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="no">No</td></tr>
-              <tr><td>See All Tasks</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="no">Own only</td><td class="no">Own only</td><td class="no">Own only</td></tr>
-              <tr><td>Edit Own Comments</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td></tr>
-              <tr><td>Team India</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="no">No</td><td class="no">No</td><td class="no">No</td></tr>
-              <tr><td>Bridge Chat</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="no">No</td><td class="no">No</td><td class="no">No</td></tr>
-              <tr><td>Admin Chat</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td></tr>
-              <tr><td>Notes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td></tr>
-              <tr><td>Manage Users</td><td class="yes">Yes</td><td class="no">No</td><td class="no">No</td><td class="no">No</td><td class="no">No</td></tr>
-              <tr><td>Change Own Password</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td></tr>
-              <tr><td>Theme Preference</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td></tr>
+              <tr><td>1-to-1 Chat</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td></tr>
+              <tr><td>Create Group Chat</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="no">No</td><td class="no">No</td></tr>
+              <tr><td>Group Channel</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="no">No</td></tr>
+              <tr><td>Edit/Delete Own Messages</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td></tr>
+              <tr><td>Create Tasks</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="no">No</td><td class="no">No</td></tr>
+              <tr><td>See All Tasks</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="no">Own only</td><td class="no">Own only</td><td class="no">Own only</td><td class="no">Own only</td></tr>
+              <tr><td>Edit Own Comments</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td></tr>
+              <tr><td>Allocate Task TI (Requests)</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td></tr>
+              <tr><td>Team India</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="no">No</td><td class="no">No</td><td class="no">No</td><td class="no">No</td></tr>
+              <tr><td>Bridge Chat</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="no">No</td><td class="no">No</td><td class="no">No</td><td class="no">No</td></tr>
+              <tr><td>Admin Chat</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="no">No</td></tr>
+              <tr><td>Notes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td></tr>
+              <tr><td>Manage Users</td><td class="yes">Yes</td><td class="no">No</td><td class="no">No</td><td class="no">No</td><td class="no">No</td><td class="no">No</td></tr>
+              <tr><td>Change Own Password</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td></tr>
+              <tr><td>Theme Preference</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td></tr>
             </tbody>
           </table>
         </div>
@@ -920,6 +1213,20 @@
         <div class="help-callout info">
           <i class="bi bi-info-circle-fill me-2"></i>
           Always log out when using a shared or public computer. Your session token is stored in the browser.
+        </div>
+      </div>
+
+      <div class="help-block">
+        <h6>Login Rate Limiting</h6>
+        <p>The login page is protected against brute-force attacks. After <strong>10 failed login attempts</strong> from the same IP address, login is blocked for <strong>15 minutes</strong>.</p>
+        <table class="help-table">
+          <tr><td><strong>Attempts allowed</strong></td><td>10 per 15-minute window</td></tr>
+          <tr><td><strong>Block duration</strong></td><td>15 minutes from the first failed attempt</td></tr>
+          <tr><td><strong>Scope</strong></td><td>Per IP address — other users on different networks are not affected</td></tr>
+        </table>
+        <div class="help-callout warning">
+          <i class="bi bi-exclamation-triangle-fill me-2"></i>
+          If you're locked out due to too many attempts, wait 15 minutes and try again, or switch to a different network.
         </div>
       </div>
 
@@ -1071,6 +1378,7 @@
         <table class="help-table">
           <tr><td><strong>Check email & password</strong></td><td>Passwords are case-sensitive. Make sure Caps Lock is off.</td></tr>
           <tr><td><strong>Account deactivated?</strong></td><td>Your admin may have deactivated your account. Contact them to check.</td></tr>
+          <tr><td><strong>Too many failed attempts?</strong></td><td>After 10 failed login attempts the IP address is blocked for <strong>15 minutes</strong>. Wait and try again, or use a different network.</td></tr>
           <tr><td><strong>Forgot password?</strong></td><td>There is no self-service reset. Ask your admin to reset it from the Team page.</td></tr>
           <tr><td><strong>Browser issue</strong></td><td>Try a different browser or clear cookies for this site.</td></tr>
         </table>
@@ -1249,7 +1557,7 @@
             <span>Why can't I create tasks or groups?</span>
             <i class="bi bi-chevron-down"></i>
           </div>
-          <div class="help-faq-a">If you don't see the "New Task" or "New Group" button, your account has the User role. Users can participate in chats and update assigned tasks, but cannot create new tasks or group chats. Contact your admin if you need elevated permissions.</div>
+          <div class="help-faq-a">If you don't see the "New Task" or "New Group" button, your account has the User or Sales role. Users can participate in chats and update assigned tasks, but cannot create new tasks or group chats. Sales users have the same restriction plus cannot use Group Channel or Admin Chat. Contact your admin if you need elevated permissions.</div>
         </div>
 
         <div class="help-faq-item">

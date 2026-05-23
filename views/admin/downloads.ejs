@@ -1,0 +1,409 @@
+<style>
+@keyframes dlFadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:none; } }
+.dl-wrap { animation:dlFadeIn 0.22s ease; }
+
+/* ── Header ──────────────────────────────────────────────────── */
+.dl-header { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:22px; flex-wrap:wrap; }
+.dl-header-left .dl-pill {
+  display:inline-flex; align-items:center; gap:5px;
+  background:rgba(99,102,241,0.1); border:1px solid rgba(99,102,241,0.2);
+  color:#a5b4fc; border-radius:20px; padding:3px 10px;
+  font-size:0.67rem; font-weight:700; font-family:var(--adm-mono); letter-spacing:0.3px; margin-bottom:6px;
+}
+.dl-page-title { font-size:1rem; font-weight:700; font-family:var(--adm-mono); color:var(--adm-text); }
+.dl-page-sub   { font-size:0.78rem; color:var(--adm-muted); margin-top:2px; }
+.dl-upload-btn {
+  display:inline-flex; align-items:center; gap:7px;
+  background:#6366f1; color:#fff; border:none; border-radius:9px;
+  padding:0 16px; height:36px; font-size:0.82rem; font-weight:600;
+  cursor:pointer; text-decoration:none; transition:background 0.15s; flex-shrink:0;
+}
+.dl-upload-btn:hover { background:#4f46e5; color:#fff; }
+
+/* ── Toolbar ─────────────────────────────────────────────────── */
+.dl-toolbar { display:flex; gap:10px; align-items:center; margin-bottom:18px; flex-wrap:wrap; }
+.dl-search-wrap { position:relative; flex:1; min-width:200px; max-width:380px; }
+.dl-search-icon { position:absolute; left:11px; top:50%; transform:translateY(-50%); color:var(--adm-muted); font-size:0.82rem; pointer-events:none; }
+.dl-search {
+  width:100%; background:var(--adm-surface); border:1px solid var(--adm-border);
+  color:var(--adm-text); border-radius:9px; padding:8px 12px 8px 34px;
+  font-family:var(--adm-font); font-size:0.84rem; outline:none; box-sizing:border-box;
+  transition:border-color 0.15s;
+}
+.dl-search:focus { border-color:rgba(99,102,241,0.5); }
+.dl-search::placeholder { color:var(--adm-muted); }
+.dl-count-badge {
+  background:rgba(99,102,241,0.12); border:1px solid rgba(99,102,241,0.2);
+  color:#a5b4fc; border-radius:6px; padding:4px 10px;
+  font-size:0.75rem; font-weight:700; font-family:var(--adm-mono); flex-shrink:0;
+}
+
+/* ── Table ───────────────────────────────────────────────────── */
+.dl-table-wrap { background:var(--adm-surface); border:1px solid var(--adm-border); border-radius:12px; overflow:hidden; }
+.dl-table { width:100%; border-collapse:collapse; }
+.dl-table thead th {
+  padding:11px 14px; font-size:0.7rem; font-weight:700; letter-spacing:0.6px; text-transform:uppercase;
+  color:var(--adm-muted); background:rgba(255,255,255,0.025);
+  border-bottom:1px solid var(--adm-border); white-space:nowrap; text-align:left;
+}
+.dl-table tbody tr { border-bottom:1px solid var(--adm-border); transition:background 0.12s; }
+.dl-table tbody tr:last-child { border-bottom:none; }
+.dl-table tbody tr:hover { background:rgba(255,255,255,0.025); }
+.dl-table tbody tr.dl-row-disabled { opacity:0.45; }
+.dl-table td { padding:13px 14px; vertical-align:middle; }
+
+/* ── File icon cell ──────────────────────────────────────────── */
+.dl-icon-cell { width:42px; }
+.dl-file-icon {
+  width:36px; height:36px; border-radius:8px; display:flex; align-items:center;
+  justify-content:center; font-size:1rem; flex-shrink:0;
+}
+.dl-icon-exe   { background:rgba(239,68,68,0.12);   color:#f87171; }
+.dl-icon-zip   { background:rgba(245,158,11,0.12);  color:#fbbf24; }
+.dl-icon-pdf   { background:rgba(239,68,68,0.12);   color:#f87171; }
+.dl-icon-doc   { background:rgba(59,130,246,0.12);  color:#60a5fa; }
+.dl-icon-img   { background:rgba(16,185,129,0.12);  color:#34d399; }
+.dl-icon-code  { background:rgba(139,92,246,0.12);  color:#c084fc; }
+.dl-icon-file  { background:rgba(100,116,139,0.12); color:#94a3b8; }
+
+/* ── Name cell ───────────────────────────────────────────────── */
+.dl-name { font-weight:600; font-size:0.88rem; color:var(--adm-text); }
+.dl-desc { font-size:0.76rem; color:var(--adm-muted); margin-top:2px; max-width:340px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.dl-version-badge {
+  display:inline-flex; align-items:center;
+  background:rgba(99,102,241,0.12); border:1px solid rgba(99,102,241,0.25);
+  color:#a5b4fc; border-radius:5px; padding:1px 7px;
+  font-size:0.67rem; font-weight:700; font-family:var(--adm-mono);
+  margin-left:7px; vertical-align:middle;
+}
+.dl-disabled-chip {
+  display:inline-flex; align-items:center; gap:3px;
+  background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.2);
+  color:#f87171; border-radius:5px; padding:1px 7px;
+  font-size:0.67rem; font-weight:700; margin-left:7px; vertical-align:middle;
+}
+
+/* ── Meta cells ──────────────────────────────────────────────── */
+.dl-meta { font-size:0.8rem; color:var(--adm-muted); }
+.dl-meta strong { color:var(--adm-text-2); font-weight:500; }
+.dl-size { font-size:0.78rem; color:var(--adm-muted); font-family:var(--adm-mono); }
+.dl-count {
+  font-size:0.8rem; font-weight:700; font-family:var(--adm-mono);
+  color:#a5b4fc; background:rgba(99,102,241,0.1);
+  border-radius:6px; padding:2px 8px; white-space:nowrap;
+}
+
+/* ── Action buttons ──────────────────────────────────────────── */
+.dl-actions { display:flex; gap:6px; align-items:center; white-space:nowrap; }
+.dl-btn {
+  display:inline-flex; align-items:center; justify-content:center;
+  width:30px; height:30px; border-radius:7px; border:1px solid var(--adm-border);
+  background:transparent; color:var(--adm-muted); cursor:pointer;
+  font-size:0.82rem; transition:all 0.15s; text-decoration:none;
+}
+.dl-btn:hover { color:var(--adm-text); border-color:var(--adm-border-2); }
+.dl-btn-download:hover { color:#34d399; border-color:rgba(52,211,153,0.35); background:rgba(52,211,153,0.07); }
+.dl-btn-edit:hover     { color:#60a5fa; border-color:rgba(96,165,250,0.35); background:rgba(96,165,250,0.07); }
+.dl-btn-delete:hover   { color:#f87171; border-color:rgba(248,113,113,0.35); background:rgba(248,113,113,0.07); }
+.dl-btn-disable.active { color:#f59e0b; border-color:rgba(245,158,11,0.35); background:rgba(245,158,11,0.07); }
+.dl-btn-disable:hover  { color:#f59e0b; border-color:rgba(245,158,11,0.35); background:rgba(245,158,11,0.07); }
+.dl-btn[disabled]      { opacity:0.3; pointer-events:none; }
+
+/* ── Empty state ─────────────────────────────────────────────── */
+.dl-empty { text-align:center; padding:60px 20px; color:var(--adm-muted); }
+.dl-empty i { font-size:2.5rem; display:block; margin-bottom:12px; opacity:0.35; }
+.dl-empty p { font-size:0.88rem; }
+
+/* ── Edit modal ──────────────────────────────────────────────── */
+.dl-modal-overlay {
+  display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6);
+  z-index:500; align-items:center; justify-content:center;
+}
+.dl-modal-overlay.open { display:flex; }
+.dl-modal {
+  background:var(--adm-surface); border:1px solid var(--adm-border);
+  border-radius:14px; padding:28px; width:100%; max-width:460px;
+  box-shadow:0 16px 48px rgba(0,0,0,0.4);
+}
+.dl-modal h6 { font-size:0.95rem; font-weight:700; color:var(--adm-text); margin-bottom:20px; }
+.dl-modal label { font-size:0.78rem; color:var(--adm-muted); display:block; margin-bottom:5px; }
+.dl-modal input, .dl-modal textarea {
+  width:100%; background:var(--adm-bg); border:1px solid var(--adm-border);
+  color:var(--adm-text); border-radius:8px; padding:9px 12px;
+  font-family:var(--adm-font); font-size:0.84rem; outline:none;
+  transition:border-color 0.15s; box-sizing:border-box;
+}
+.dl-modal input:focus, .dl-modal textarea:focus { border-color:rgba(99,102,241,0.5); }
+.dl-modal textarea { resize:vertical; min-height:72px; }
+.dl-modal .dl-modal-row { margin-bottom:14px; }
+.dl-modal-footer { display:flex; justify-content:flex-end; gap:10px; margin-top:20px; }
+.dl-modal-cancel {
+  background:transparent; border:1px solid var(--adm-border); color:var(--adm-text-2);
+  border-radius:8px; padding:0 16px; height:36px; font-size:0.82rem; cursor:pointer;
+  transition:all 0.15s;
+}
+.dl-modal-cancel:hover { border-color:var(--adm-border-2); color:var(--adm-text); }
+.dl-modal-save {
+  background:#6366f1; color:#fff; border:none; border-radius:8px;
+  padding:0 18px; height:36px; font-size:0.82rem; font-weight:600; cursor:pointer; transition:background 0.15s;
+}
+.dl-modal-save:hover { background:#4f46e5; }
+</style>
+
+<div class="dl-wrap">
+
+  <!-- Header -->
+  <div class="dl-header">
+    <div class="dl-header-left">
+      <div class="dl-pill"><i class="bi bi-download"></i> Downloads</div>
+      <div class="dl-page-title">Download Portal</div>
+      <div class="dl-page-sub">Software, utilities, and shared files for the team</div>
+    </div>
+    <% if (canUpload) { %>
+      <a href="/admin/downloads/upload" class="dl-upload-btn">
+        <i class="bi bi-cloud-upload-fill"></i> Upload File
+      </a>
+    <% } %>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="dl-toolbar">
+    <div class="dl-search-wrap">
+      <i class="bi bi-search dl-search-icon"></i>
+      <input type="text" class="dl-search" id="dlSearch" placeholder="Search by name, description, uploader…"
+             value="<%= search %>" oninput="dlLiveSearch(this.value)">
+    </div>
+    <span class="dl-count-badge" id="dlCountBadge"><%= files.length %> file<%= files.length !== 1 ? 's' : '' %></span>
+  </div>
+
+  <!-- Table -->
+  <div class="dl-table-wrap">
+    <table class="dl-table" id="dlTable">
+      <thead>
+        <tr>
+          <th style="width:42px"></th>
+          <th>Name / Description</th>
+          <th>Uploaded By</th>
+          <th>Size</th>
+          <th style="text-align:center">Downloads</th>
+          <th style="text-align:right">Actions</th>
+        </tr>
+      </thead>
+      <tbody id="dlTableBody">
+        <% if (files.length === 0) { %>
+        <tr><td colspan="6">
+          <div class="dl-empty">
+            <i class="bi bi-cloud-arrow-down"></i>
+            <p><% if (search) { %>No files match "<%= search %>"<% } else { %>No files uploaded yet<% } %></p>
+          </div>
+        </td></tr>
+        <% } %>
+        <% files.forEach(function(f) { %>
+        <tr class="dl-row <%= f.is_disabled ? 'dl-row-disabled' : '' %>"
+            data-id="<%= f.id %>"
+            data-name="<%= (f.name || '').toLowerCase() %>"
+            data-desc="<%= (f.description || '').toLowerCase() %>"
+            data-uploader="<%= (f.uploader_name || '').toLowerCase() %>">
+          <td class="dl-icon-cell">
+            <div class="dl-file-icon <%= dlIconClass(f.mime_type, f.original_name) %>">
+              <i class="bi <%= dlIconBi(f.mime_type, f.original_name) %>"></i>
+            </div>
+          </td>
+          <td>
+            <div class="dl-name">
+              <%= f.name %>
+              <% if (f.version) { %><span class="dl-version-badge">v<%= f.version %></span><% } %>
+              <% if (f.is_disabled) { %><span class="dl-disabled-chip"><i class="bi bi-slash-circle"></i> Disabled</span><% } %>
+            </div>
+            <% if (f.description) { %><div class="dl-desc"><%= f.description %></div><% } %>
+          </td>
+          <td>
+            <div class="dl-meta"><strong><%= f.uploader_name %></strong></div>
+            <div class="dl-meta"><%= new Date(f.created_at).toLocaleDateString('en-US', {month:'short',day:'numeric',year:'numeric'}) %></div>
+          </td>
+          <td class="dl-size"><%= dlFormatSize(f.file_size) %></td>
+          <td style="text-align:center"><span class="dl-count"><%= f.download_count %></span></td>
+          <td>
+            <div class="dl-actions">
+              <% if (!f.is_disabled || isAdmin) { %>
+              <a href="/admin/downloads/<%= f.id %>/download" class="dl-btn dl-btn-download" title="Download">
+                <i class="bi bi-download"></i>
+              </a>
+              <% } else { %>
+              <button class="dl-btn" disabled title="File is disabled"><i class="bi bi-download"></i></button>
+              <% } %>
+              <% if (isAdmin || f.uploaded_by === userId) { %>
+              <button class="dl-btn dl-btn-edit" title="Edit"
+                      onclick="dlOpenEdit(<%= f.id %>, '<%= (f.name||'').replace(/'/g,`\\'`) %>', '<%= (f.description||'').replace(/'/g,`\\'`).replace(/\n/g,'\\n') %>', '<%= (f.version||'').replace(/'/g,`\\'`) %>')">
+                <i class="bi bi-pencil"></i>
+              </button>
+              <button class="dl-btn dl-btn-delete" title="Delete" onclick="dlDelete(<%= f.id %>, this)">
+                <i class="bi bi-trash"></i>
+              </button>
+              <% } %>
+              <% if (isAdmin) { %>
+              <button class="dl-btn dl-btn-disable <%= f.is_disabled ? 'active' : '' %>"
+                      title="<%= f.is_disabled ? 'Enable' : 'Disable' %>"
+                      onclick="dlToggle(<%= f.id %>, this)">
+                <i class="bi <%= f.is_disabled ? 'bi-eye-fill' : 'bi-slash-circle' %>"></i>
+              </button>
+              <% } %>
+            </div>
+          </td>
+        </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+<!-- Edit Modal -->
+<div class="dl-modal-overlay" id="dlEditModal">
+  <div class="dl-modal">
+    <h6><i class="bi bi-pencil me-2"></i>Edit File Info</h6>
+    <input type="hidden" id="editId">
+    <div class="dl-modal-row">
+      <label>Name <span style="color:#f87171">*</span></label>
+      <input type="text" id="editName" maxlength="255" placeholder="Display name">
+    </div>
+    <div class="dl-modal-row">
+      <label>Description</label>
+      <textarea id="editDesc" placeholder="Optional description"></textarea>
+    </div>
+    <div class="dl-modal-row">
+      <label>Version</label>
+      <input type="text" id="editVersion" maxlength="50" placeholder="e.g. 2.1.0">
+    </div>
+    <div class="dl-modal-footer">
+      <button class="dl-modal-cancel" onclick="dlCloseEdit()">Cancel</button>
+      <button class="dl-modal-save" onclick="dlSaveEdit()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Icon helpers ─────────────────────────────────────────────
+</script>
+<%
+function dlIconClass(mime, fname) {
+  if (!mime) mime = '';
+  if (!fname) fname = '';
+  const ext = fname.split('.').pop().toLowerCase();
+  if (['exe','msi','deb','dmg','apk','app','bat','sh','cmd'].includes(ext)) return 'dl-icon-exe';
+  if (['zip','rar','7z','tar','gz','bz2','xz'].includes(ext)) return 'dl-icon-zip';
+  if (mime.includes('pdf') || ext === 'pdf') return 'dl-icon-pdf';
+  if (mime.includes('image')) return 'dl-icon-img';
+  if (['doc','docx','xls','xlsx','ppt','pptx','odt','ods','odp'].includes(ext)) return 'dl-icon-doc';
+  if (['js','ts','py','java','cpp','c','cs','go','rb','php','json','xml','yaml','yml','sql'].includes(ext)) return 'dl-icon-code';
+  return 'dl-icon-file';
+}
+function dlIconBi(mime, fname) {
+  if (!mime) mime = '';
+  if (!fname) fname = '';
+  const ext = fname.split('.').pop().toLowerCase();
+  if (['exe','msi','deb','dmg','apk'].includes(ext)) return 'bi-boxes';
+  if (['bat','sh','cmd'].includes(ext)) return 'bi-terminal-fill';
+  if (['zip','rar','7z','tar','gz','bz2','xz'].includes(ext)) return 'bi-file-zip-fill';
+  if (mime.includes('pdf') || ext === 'pdf') return 'bi-file-pdf-fill';
+  if (mime.includes('image')) return 'bi-file-image-fill';
+  if (['doc','docx'].includes(ext)) return 'bi-file-word-fill';
+  if (['xls','xlsx'].includes(ext)) return 'bi-file-spreadsheet-fill';
+  if (['js','ts','py','java','cpp','c','cs','go','rb','php','json','xml','yaml','yml','sql'].includes(ext)) return 'bi-file-code-fill';
+  return 'bi-file-earmark-fill';
+}
+function dlFormatSize(bytes) {
+  if (!bytes) return '—';
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024*1024) return (bytes/1024).toFixed(1) + ' KB';
+  if (bytes < 1024*1024*1024) return (bytes/1024/1024).toFixed(1) + ' MB';
+  return (bytes/1024/1024/1024).toFixed(2) + ' GB';
+}
+%>
+
+<script>
+// ── Live search ───────────────────────────────────────────────
+function dlLiveSearch(term) {
+  term = term.toLowerCase();
+  const rows = document.querySelectorAll('#dlTableBody .dl-row');
+  let visible = 0;
+  rows.forEach(r => {
+    const match = !term ||
+      r.dataset.name.includes(term) ||
+      r.dataset.desc.includes(term) ||
+      r.dataset.uploader.includes(term);
+    r.style.display = match ? '' : 'none';
+    if (match) visible++;
+  });
+  document.getElementById('dlCountBadge').textContent = visible + ' file' + (visible !== 1 ? 's' : '');
+}
+
+// ── Edit modal ────────────────────────────────────────────────
+function dlOpenEdit(id, name, desc, version) {
+  document.getElementById('editId').value      = id;
+  document.getElementById('editName').value    = name;
+  document.getElementById('editDesc').value    = desc.replace(/\\n/g, '\n');
+  document.getElementById('editVersion').value = version;
+  document.getElementById('dlEditModal').classList.add('open');
+  document.getElementById('editName').focus();
+}
+function dlCloseEdit() {
+  document.getElementById('dlEditModal').classList.remove('open');
+}
+async function dlSaveEdit() {
+  const id   = document.getElementById('editId').value;
+  const name = document.getElementById('editName').value.trim();
+  if (!name) { alert('Name is required'); return; }
+  const btn = document.querySelector('.dl-modal-save');
+  btn.textContent = 'Saving…'; btn.disabled = true;
+  try {
+    const r = await fetch('/admin/downloads/' + id, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name,
+        description: document.getElementById('editDesc').value.trim(),
+        version: document.getElementById('editVersion').value.trim()
+      })
+    });
+    const data = await r.json();
+    if (data.success) { location.reload(); }
+    else alert(data.message || 'Failed to save');
+  } catch(e) { alert('Network error'); }
+  finally { btn.textContent = 'Save Changes'; btn.disabled = false; }
+}
+
+// ── Delete ────────────────────────────────────────────────────
+async function dlDelete(id, btn) {
+  if (!confirm('Delete this file? This cannot be undone.')) return;
+  btn.disabled = true;
+  try {
+    const r = await fetch('/admin/downloads/' + id, { method: 'DELETE' });
+    const data = await r.json();
+    if (data.success) {
+      const row = btn.closest('tr');
+      row.style.transition = 'opacity 0.25s';
+      row.style.opacity = '0';
+      setTimeout(() => row.remove(), 260);
+    } else alert(data.message || 'Delete failed');
+  } catch(e) { alert('Network error'); }
+  finally { btn.disabled = false; }
+}
+
+// ── Toggle disable ────────────────────────────────────────────
+async function dlToggle(id, btn) {
+  btn.disabled = true;
+  try {
+    const r = await fetch('/admin/downloads/' + id + '/toggle', { method: 'PATCH' });
+    const data = await r.json();
+    if (data.success) { location.reload(); }
+    else alert(data.message || 'Failed');
+  } catch(e) { alert('Network error'); }
+  finally { btn.disabled = false; }
+}
+
+// Close modal on overlay click
+document.getElementById('dlEditModal').addEventListener('click', function(e) {
+  if (e.target === this) dlCloseEdit();
+});
+</script>

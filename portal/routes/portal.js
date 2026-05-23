@@ -9,6 +9,7 @@ const PortalUserController = require('../controllers/userController');
 const PortalTeamStatusController = require('../controllers/teamStatusController');
 const UrgentController = require('../controllers/urgentController');
 const DevWorkspaceController = require('../../controllers/devWorkspaceController');
+const PortalDownloadController = require('../controllers/downloadController');
 const { requireRoles } = require('../../middleware/authorize');
 
 // Multer: memory storage for portal file uploads, 100MB max
@@ -828,5 +829,19 @@ router.post('/workspace/thoughts/:id/comments',
   requireClientAdminOnly,
   (req, res, next) => thoughtUpload.array('files', 5)(req, res, err => handleThoughtErr(err, req, res, next)),
   DevWorkspaceController.portalAddThoughtComment);
+
+// ── Downloads ────────────────────────────────────────────────────────
+const requirePortalUpload = requireRoles('CLIENT_ADMIN');
+router.get('/downloads',                 PortalDownloadController.index);
+router.get('/downloads/upload',          requirePortalUpload, PortalDownloadController.uploadPage);
+router.post('/downloads/upload',         requirePortalUpload, (req, res, next) => {
+  PortalDownloadController.uploadMiddleware(req, res, err => {
+    if (err) return res.status(400).json({ success: false, message: err.message || 'Upload failed' });
+    next();
+  });
+}, PortalDownloadController.handleUpload);
+router.get('/downloads/:id/download',    PortalDownloadController.serveFile);
+router.put('/downloads/:id',             requirePortalUpload, PortalDownloadController.update);
+router.delete('/downloads/:id',          requirePortalUpload, PortalDownloadController.remove);
 
 module.exports = router;

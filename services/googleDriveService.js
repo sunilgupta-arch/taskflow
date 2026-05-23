@@ -303,6 +303,47 @@ class GoogleDriveService {
     }
   }
 
+  // Get or create the downloads folder under root
+  static async getDownloadsFolder() {
+    const folderName = 'downloads';
+    const searchRes = await drive.files.list({
+      q: `'${ROOT_FOLDER_ID}' in parents AND name = '${folderName}' AND mimeType = 'application/vnd.google-apps.folder' AND trashed = false`,
+      fields: 'files(id)',
+      corpora: 'allDrives',
+      ...SHARED_DRIVE_PARAMS
+    });
+    if (searchRes.data.files.length > 0) return searchRes.data.files[0].id;
+    const folderRes = await drive.files.create({
+      requestBody: {
+        name: folderName,
+        mimeType: 'application/vnd.google-apps.folder',
+        parents: [ROOT_FOLDER_ID]
+      },
+      fields: 'id',
+      ...SHARED_DRIVE_PARAMS
+    });
+    return folderRes.data.id;
+  }
+
+  // Upload a download file from disk path to the downloads Drive folder
+  static async uploadDownloadFile(filePath, originalName, mimeType) {
+    const fs = require('fs');
+    const folderId = await this.getDownloadsFolder();
+    const res = await drive.files.create({
+      requestBody: {
+        name: originalName,
+        parents: [folderId]
+      },
+      media: {
+        mimeType: mimeType || 'application/octet-stream',
+        body: fs.createReadStream(filePath)
+      },
+      fields: 'id,name,size',
+      ...SHARED_DRIVE_PARAMS
+    });
+    return res.data;
+  }
+
   // Get or create the db_backup folder under root
   static async getBackupFolder() {
     const folderName = 'db_backup';

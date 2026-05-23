@@ -1,3 +1,19 @@
+<% if (typeof adminHub !== 'undefined' && adminHub) { %>
+<style>
+  :root {
+    --tf-surface:    var(--adm-surface);
+    --tf-surface-2:  var(--adm-surface-2);
+    --tf-text:       var(--adm-text);
+    --tf-text-muted: var(--adm-muted);
+    --tf-border:     var(--adm-border);
+    --tf-accent:     var(--adm-accent);
+    --tf-font:       var(--adm-font);
+    --tf-font-mono:  var(--adm-mono);
+    --tf-nav-link:   var(--adm-text-2);
+  }
+  .help-container { height: calc(100vh - 92px); }
+</style>
+<% } %>
 <style>
   .help-container {
     display: flex;
@@ -340,6 +356,9 @@
       <div class="help-nav-item" data-topic="chat" onclick="showTopic('chat', this)">
         <i class="bi bi-chat-dots"></i> Chat
       </div>
+      <div class="help-nav-item" data-topic="group-channel" onclick="showTopic('group-channel', this)">
+        <i class="bi bi-broadcast"></i> Group Channel
+      </div>
       <div class="help-nav-item" data-topic="system-chat" onclick="showTopic('system-chat', this)">
         <i class="bi bi-robot"></i> System Chat
       </div>
@@ -350,9 +369,17 @@
         <i class="bi bi-telephone"></i> Voice Calls
       </div>
 
+      <div class="help-nav-section">Workspace</div>
+      <div class="help-nav-item" data-topic="workspace" onclick="showTopic('workspace', this)">
+        <i class="bi bi-code-square"></i> Dev Workspace
+      </div>
+
       <div class="help-nav-section">Storage</div>
       <div class="help-nav-item" data-topic="drive" onclick="showTopic('drive', this)">
         <i class="bi bi-cloud"></i> Google Drive
+      </div>
+      <div class="help-nav-item" data-topic="downloads" onclick="showTopic('downloads', this)">
+        <i class="bi bi-download"></i> Downloads
       </div>
 
       <div class="help-nav-section">Attendance & Shifts</div>
@@ -391,6 +418,9 @@
       <div class="help-nav-item" data-topic="users" onclick="showTopic('users', this)">
         <i class="bi bi-person-gear"></i> User Management
       </div>
+      <div class="help-nav-item" data-topic="client-queue" onclick="showTopic('client-queue', this)">
+        <i class="bi bi-inbox"></i> Client Queue
+      </div>
       <div class="help-nav-item" data-topic="reports" onclick="showTopic('reports', this)">
         <i class="bi bi-bar-chart-line"></i> Reports
       </div>
@@ -399,6 +429,9 @@
       <div class="help-nav-section">Account & System</div>
       <div class="help-nav-item" data-topic="account" onclick="showTopic('account', this)">
         <i class="bi bi-person-circle"></i> Account Settings
+      </div>
+      <div class="help-nav-item" data-topic="infoboard" onclick="showTopic('infoboard', this)">
+        <i class="bi bi-megaphone"></i> Info Board
       </div>
       <div class="help-nav-item" data-topic="notes" onclick="showTopic('notes', this)">
         <i class="bi bi-journal-text"></i> Notes
@@ -454,6 +487,16 @@
             <i class="bi bi-clock-history"></i>
             <div class="ql-title">Shifts</div>
             <div class="ql-desc">Shift timing and auto-logout</div>
+          </div>
+          <div class="help-quick-link" onclick="showTopic('workspace')">
+            <i class="bi bi-code-square"></i>
+            <div class="ql-title">Dev Workspace</div>
+            <div class="ql-desc">Projects, milestones, and thoughts</div>
+          </div>
+          <div class="help-quick-link" onclick="showTopic('group-channel')">
+            <i class="bi bi-broadcast"></i>
+            <div class="ql-title">Group Channel</div>
+            <div class="ql-desc">Team-wide channel and announcements</div>
           </div>
         </div>
       </div>
@@ -1061,6 +1104,56 @@
       </div>
     </div>
 
+    <!-- ==================== GROUP CHANNEL ==================== -->
+    <div class="help-topic" id="topic-group-channel">
+      <h2><i class="bi bi-broadcast"></i> Group Channel</h2>
+      <p class="topic-desc">A shared team-wide channel for announcements, discussions, file sharing, and real-time collaboration. Everyone on the team can post and read messages here.</p>
+      <span class="help-role-badge all">ALL USERS</span>
+
+      <h3>Accessing the Group Channel</h3>
+      <p>The Group Channel panel is always visible on the right side of the Admin Hub layout. Click the <strong>broadcast icon (<i class="bi bi-broadcast"></i>)</strong> in the top-right area of any page to toggle it open or closed. You can also open the full-page view by clicking the <strong>expand icon (<i class="bi bi-arrows-fullscreen"></i>)</strong> in the channel header.</p>
+
+      <div class="help-tip">
+        <i class="bi bi-lightbulb"></i>
+        <div>The Group Channel is different from direct chat. It is a single shared channel visible to the entire team — think of it as a team room rather than a private conversation.</div>
+      </div>
+
+      <h3>Sending Messages</h3>
+      <div class="help-step">
+        <div class="help-step-num">1</div>
+        <div class="help-step-content">
+          <strong>Type in the message box at the bottom of the channel</strong>
+          <p>Press <kbd>Enter</kbd> to send or <kbd>Shift+Enter</kbd> for a new line.</p>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">2</div>
+        <div class="help-step-content">
+          <strong>Attach a file</strong>
+          <p>Click the paperclip icon to attach a document or image alongside your message.</p>
+        </div>
+      </div>
+
+      <h3>Channel Features</h3>
+      <ul>
+        <li><strong>@Mentions</strong> — Type @ followed by a name to notify a specific team member</li>
+        <li><strong>Replies</strong> — Hover any message and click the reply icon to respond in a thread — your reply shows a quote of the original</li>
+        <li><strong>Reactions</strong> — React to messages with emoji</li>
+        <li><strong>Edit / Delete</strong> — Hover your own message to edit or delete it</li>
+        <li><strong>Pin</strong> — Admins and managers can pin important messages — pinned messages appear in the pin bar at the top</li>
+        <li><strong>Search</strong> — Click the search icon in the channel header to find messages by keyword</li>
+        <li><strong>Jump to latest</strong> — A chevron button appears at the bottom when you scroll up; click it to jump back to the newest messages</li>
+        <li><strong>Link unfurl</strong> — Pasted URLs show a preview card with the page title and description</li>
+      </ul>
+
+      <h3>Notifications</h3>
+      <ul>
+        <li>A notification badge on the channel icon shows the number of unread messages</li>
+        <li>You receive a toast notification when someone @mentions you in the channel</li>
+        <li>Sound alerts play when new messages arrive while the channel is closed</li>
+      </ul>
+    </div>
+
     <!-- ==================== SYSTEM CHAT ==================== -->
     <div class="help-topic" id="topic-system-chat">
       <h2><i class="bi bi-robot"></i> System Chat</h2>
@@ -1284,6 +1377,131 @@
         <li><span class="help-role-badge user">LOCAL_USER</span> &mdash; 10 MB per file</li>
         <li><span class="help-role-badge admin">ADMIN</span> <span class="help-role-badge manager">MANAGER</span> &mdash; 100 MB per file</li>
       </ul>
+    </div>
+
+    <!-- ==================== DOWNLOADS ==================== -->
+    <div class="help-topic" id="topic-downloads">
+      <h2><i class="bi bi-download"></i> Downloads</h2>
+      <p class="topic-desc">A shared library of software, utilities, and files that the team can upload and share. Files are available instantly after upload and backed up to Google Drive in the background.</p>
+      <span class="help-role-badge admin">ADMIN</span> <span class="help-role-badge manager">MANAGER</span> <span class="help-role-badge user">LOCAL_USER</span>
+
+      <h3>Who Can Do What</h3>
+      <ul>
+        <li><span class="help-role-badge admin">LOCAL_ADMIN</span> &mdash; Upload, edit, delete any file, and disable/enable versions</li>
+        <li><span class="help-role-badge manager">LOCAL_MANAGER</span> &mdash; Upload files, edit and delete their own uploads</li>
+        <li><span class="help-role-badge user">LOCAL_USER</span> &mdash; Download files only</li>
+      </ul>
+
+      <h3>Uploading a File</h3>
+      <div class="help-step">
+        <div class="help-step-num">1</div>
+        <div class="help-step-content">
+          <strong>Open the Downloads page</strong>
+          <p>Go to <strong>Tools → Downloads</strong> from the Admin Hub, or click <strong>Downloads</strong> in the left sidebar (LOCAL_USER).</p>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">2</div>
+        <div class="help-step-content">
+          <strong>Click "Upload File"</strong>
+          <p>This opens the upload page. Only LOCAL_ADMIN and LOCAL_MANAGER see this button.</p>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">3</div>
+        <div class="help-step-content">
+          <strong>Drag and drop or browse for your file</strong>
+          <p>Maximum file size is <strong>500 MB</strong>. Any file type is accepted.</p>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">4</div>
+        <div class="help-step-content">
+          <strong>Fill in the details</strong>
+          <p><strong>Name</strong> is required. Description and Version are optional but recommended so users know what they're downloading.</p>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">5</div>
+        <div class="help-step-content">
+          <strong>Click Upload</strong>
+          <p>The progress bar tracks the browser-to-server transfer. When it hits 100% the label switches to <em>"Saving to Drive…"</em> — the file is already saved on the server and immediately downloadable; Drive backup happens in the background.</p>
+        </div>
+      </div>
+
+      <h3>Downloading a File</h3>
+      <div class="help-step">
+        <div class="help-step-num">1</div>
+        <div class="help-step-content">
+          <strong>Go to Downloads</strong>
+          <p>The page lists all available files with name, version, description, uploader, size, and download count.</p>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">2</div>
+        <div class="help-step-content">
+          <strong>Use the search box to filter</strong>
+          <p>Type any part of the file name, description, or uploader name to narrow the list.</p>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">3</div>
+        <div class="help-step-content">
+          <strong>Click the Download button</strong>
+          <p>Fresh uploads serve the file directly from the server — download starts immediately. Files older than 1 day are served from Google Drive after the local copy is cleaned up.</p>
+        </div>
+      </div>
+
+      <h3>Editing and Deleting</h3>
+      <ul>
+        <li><strong>Edit</strong> &mdash; Click the pencil icon to update the name, description, or version of your own file. LOCAL_ADMIN can edit any file.</li>
+        <li><strong>Delete</strong> &mdash; Click the trash icon to permanently remove the file. This deletes the local copy and the Google Drive copy. LOCAL_ADMIN can delete any file.</li>
+      </ul>
+
+      <h3>Disable / Enable (Admin only)</h3>
+      <p>LOCAL_ADMIN can disable a file version without deleting it. A disabled file shows a <em>Disabled</em> chip on the row and cannot be downloaded by other users until re-enabled. Use this to sunset an old version while keeping the record.</p>
+
+      <h3>How Storage Works</h3>
+      <div class="help-callout info">
+        <i class="bi bi-info-circle-fill me-2"></i>
+        Files are saved to the server immediately on upload — this is why downloads work instantly. Within the next few minutes a background job uploads the same file to Google Drive. After 1 day, the daily cleanup cron removes the local copy (saving server disk space) and all future downloads are served directly from Drive. You never need to think about this — the switch is transparent.
+      </div>
+    </div>
+
+    <!-- ==================== DEV WORKSPACE ==================== -->
+    <div class="help-topic" id="topic-workspace">
+      <h2><i class="bi bi-code-square"></i> Dev Workspace</h2>
+      <p class="topic-desc">A dedicated space to track development projects, milestones, releases, and team thoughts. Gives the team a shared view of ongoing dev work without mixing it into the main task board.</p>
+      <span class="help-role-badge admin">ADMIN</span> <span class="help-role-badge manager">MANAGER</span> <span class="help-role-badge user">LOCAL_USER</span>
+
+      <h3>Projects Panel</h3>
+      <p>The left panel lists all dev projects. Each project card shows the name, status, and due date. Click a project to open its detail view on the right.</p>
+      <ul>
+        <li><strong>Status</strong> — Projects can be: Active, On Hold, Completed, or Cancelled</li>
+        <li><strong>Milestones</strong> — Each project can have milestones that track major deliverables. Mark them done as work progresses</li>
+        <li><strong>Tasks</strong> — Each milestone can contain sub-tasks that can be checked off individually</li>
+        <li><strong>Releases</strong> — Log version releases with notes against any project</li>
+        <li><strong>Updates</strong> — Post progress updates or discussion notes on a project</li>
+      </ul>
+
+      <div class="help-tip">
+        <i class="bi bi-lightbulb"></i>
+        <div>Only <span class="help-role-badge admin">ADMIN</span> and <span class="help-role-badge manager">MANAGER</span> can create or edit projects, milestones, and releases. All users can view and read the workspace.</div>
+      </div>
+
+      <h3>Thoughts Panel</h3>
+      <p>The Thoughts tab is a shared idea board where team members can post brief thoughts, questions, or observations — things that don't fit into a formal task or project update. Think of it as a team scratchpad.</p>
+      <ul>
+        <li>Click <strong>New Thought</strong> to post a thought with optional tags</li>
+        <li>Thoughts are visible to the whole team</li>
+        <li>Clients with access can also view and post thoughts from the portal workspace view</li>
+      </ul>
+
+      <h3>Notes Panel</h3>
+      <p>The Notes tab stores workspace-level reference notes — SOPs, architecture decisions, links, or any persistent documentation that the team needs to keep on hand for active projects.</p>
+
+      <h3>Client View</h3>
+      <p>Clients with CLIENT_ADMIN or CLIENT_MANAGER roles can access a read-only view of the workspace from the portal. They can see project status, milestones, and releases — giving them transparency on dev progress without access to the full admin panel.</p>
     </div>
 
     <!-- ==================== MY ATTENDANCE ==================== -->
@@ -1815,6 +2033,65 @@
     </div>
     <% } %>
 
+    <!-- ==================== CLIENT QUEUE ==================== -->
+    <% if (isAdmin || isManager) { %>
+    <div class="help-topic" id="topic-client-queue">
+      <h2><i class="bi bi-inbox"></i> Client Queue</h2>
+      <p class="topic-desc">The Client Queue shows work requests submitted by portal users (clients). Team members pick up requests, work on them, and mark them done — giving clients real-time visibility into their request status.</p>
+      <span class="help-role-badge admin">ADMIN</span> <span class="help-role-badge manager">MANAGER</span>
+
+      <h3>How the Queue Works</h3>
+      <p>Clients submit requests from the portal's <strong>Allocate Task TI</strong> page. Each request appears in the queue on the current date. Team members can see the full queue in the <strong>Queue</strong> section of the Admin Hub.</p>
+
+      <h3>Request Statuses</h3>
+      <ul>
+        <li><strong>Open</strong> — Submitted by the client, not yet picked up</li>
+        <li><strong>In Progress</strong> — A team member has picked it up and is working on it</li>
+        <li><strong>Done</strong> — Completed and marked done by the team member</li>
+        <li><strong>Missed</strong> — Passed the scheduled date without being completed</li>
+        <li><strong>Cancelled</strong> — Cancelled by the client</li>
+        <li><strong>Rescheduled</strong> — Moved to a future date (requires a reason visible to the client)</li>
+      </ul>
+
+      <h3>Picking Up a Request</h3>
+      <div class="help-step">
+        <div class="help-step-num">1</div>
+        <div class="help-step-content">
+          <strong>Navigate to Queue in the Admin Hub</strong>
+          <p>The queue shows all requests for today by default. Use the date picker to view other days.</p>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">2</div>
+        <div class="help-step-content">
+          <strong>Click "Pick" on an Open request</strong>
+          <p>This assigns the request to you and moves it to In Progress. The client sees the status update in real-time.</p>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">3</div>
+        <div class="help-step-content">
+          <strong>Click "Done" when finished</strong>
+          <p>Mark the request as done. Optionally add a completion comment for the client.</p>
+        </div>
+      </div>
+
+      <h3>Rescheduling a Request</h3>
+      <p>If you cannot complete a request on the scheduled day, you can move it to a future date. Click the reschedule button on the request row, select a new date, and provide a reason. The client is notified of the change and the reason is shown on their side.</p>
+
+      <h3>Adding Comments</h3>
+      <p>Click any request row to open its detail drawer. You can add comments and the client can see them from the portal. This keeps communication about a request in one place.</p>
+
+      <h3>Monthly Report</h3>
+      <p>Click the <strong>Monthly Report</strong> button to generate and email yourself a summary of all requests for the selected month — totals by status, completion rate, and per-client breakdown.</p>
+
+      <div class="help-tip">
+        <i class="bi bi-lightbulb"></i>
+        <div>The queue badge in the Admin Hub topbar shows the number of open requests for today. Keep it cleared to ensure client requests don't go unnoticed.</div>
+      </div>
+    </div>
+    <% } %>
+
     <!-- ==================== REPORTS ==================== -->
     <% if (isAdmin || isManager) { %>
     <div class="help-topic" id="topic-reports">
@@ -1911,6 +2188,14 @@
         </div>
       </div>
 
+      <h3>Login Security</h3>
+      <p>TaskFlow has rate limiting on the login page to protect against brute-force attacks:</p>
+      <ul>
+        <li>After <strong>10 failed login attempts</strong> from the same IP address, the login page is blocked for <strong>15 minutes</strong></li>
+        <li>If you are locked out, wait 15 minutes and try again, or try from a different network</li>
+        <li>Passwords are case-sensitive — ensure Caps Lock is off if login unexpectedly fails</li>
+      </ul>
+
       <h3>Theme Toggle</h3>
       <p>Click the <strong>sun/moon icon</strong> in the top-right corner of the page to switch between <strong>Dark</strong> and <strong>Light</strong> themes. Your preference is saved automatically and persists across sessions.</p>
 
@@ -1935,6 +2220,60 @@
           <strong>Session ends</strong>
           <p>You are logged out and redirected to the login page. Your logout time is recorded in the attendance log.</p>
         </div>
+      </div>
+    </div>
+
+    <!-- ==================== INFO BOARD ==================== -->
+    <div class="help-topic" id="topic-infoboard">
+      <h2><i class="bi bi-megaphone"></i> Info Board</h2>
+      <p class="topic-desc">A shared announcement board for the whole team. Post important updates, policy notices, and pinned references that everyone needs to see.</p>
+      <span class="help-role-badge all">ALL USERS</span>
+
+      <h3>Viewing the Info Board</h3>
+      <p>Navigate to <strong>Info Board</strong> in the sidebar to see all active announcements. Posts are displayed in reverse chronological order (newest first). Pinned posts always appear at the top regardless of date.</p>
+
+      <h3>Creating a Post</h3>
+      <span class="help-role-badge admin">ADMIN</span> <span class="help-role-badge manager">MANAGER</span>
+      <div class="help-step">
+        <div class="help-step-num">1</div>
+        <div class="help-step-content">
+          <strong>Click "New Post"</strong>
+          <p>Opens the post editor.</p>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">2</div>
+        <div class="help-step-content">
+          <strong>Enter a title and body</strong>
+          <p>Write the announcement content. Supports plain text formatting.</p>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">3</div>
+        <div class="help-step-content">
+          <strong>Optionally pin the post</strong>
+          <p>Toggle the pin option to keep the post permanently at the top for easy visibility.</p>
+        </div>
+      </div>
+      <div class="help-step">
+        <div class="help-step-num">4</div>
+        <div class="help-step-content">
+          <strong>Publish</strong>
+          <p>The post is immediately visible to the entire team.</p>
+        </div>
+      </div>
+
+      <h3>Managing Posts</h3>
+      <span class="help-role-badge admin">ADMIN</span> <span class="help-role-badge manager">MANAGER</span>
+      <ul>
+        <li><strong>Edit</strong> — Update the title or content of an existing post at any time</li>
+        <li><strong>Pin / Unpin</strong> — Toggle pinning to surface or de-prioritise a post</li>
+        <li><strong>Delete</strong> — Permanently remove a post (cannot be undone)</li>
+      </ul>
+
+      <div class="help-tip">
+        <i class="bi bi-lightbulb"></i>
+        <div>Use the Info Board for team-wide information (e.g. public holidays, policy updates, shift changes). For targeted messages to specific people, use Chat instead.</div>
       </div>
     </div>
 

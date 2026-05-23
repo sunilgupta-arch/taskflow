@@ -1,0 +1,286 @@
+<style>
+@keyframes upFadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
+.up-wrap { animation:upFadeIn 0.22s ease; max-width:640px; }
+
+/* ── Header ──────────────────────────────────────────────────── */
+.up-header { display:flex; align-items:center; gap:14px; margin-bottom:28px; }
+.up-back {
+  display:inline-flex; align-items:center; justify-content:center;
+  width:34px; height:34px; border-radius:8px; border:1px solid var(--adm-border);
+  background:var(--adm-surface); color:var(--adm-text-2); text-decoration:none; transition:all 0.15s;
+}
+.up-back:hover { border-color:var(--adm-border-2); color:var(--adm-text); }
+.up-header-info .up-pill {
+  display:inline-flex; align-items:center; gap:5px;
+  background:rgba(99,102,241,0.1); border:1px solid rgba(99,102,241,0.2);
+  color:#a5b4fc; border-radius:20px; padding:3px 10px;
+  font-size:0.67rem; font-weight:700; font-family:var(--adm-mono); letter-spacing:0.3px; margin-bottom:5px;
+}
+.up-header-info h5 { font-size:0.98rem; font-weight:700; font-family:var(--adm-mono); color:var(--adm-text); margin:0; }
+
+/* ── Card ────────────────────────────────────────────────────── */
+.up-card {
+  background:var(--adm-surface); border:1px solid var(--adm-border);
+  border-radius:14px; padding:28px;
+}
+
+/* ── Drop zone ───────────────────────────────────────────────── */
+.up-drop {
+  border:2px dashed var(--adm-border); border-radius:12px;
+  padding:40px 20px; text-align:center; cursor:pointer;
+  transition:all 0.18s; background:rgba(255,255,255,0.015); margin-bottom:24px; position:relative;
+}
+.up-drop:hover, .up-drop.drag-over {
+  border-color:rgba(99,102,241,0.55); background:rgba(99,102,241,0.04);
+}
+.up-drop input[type=file] { position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%; }
+.up-drop-icon { font-size:2.2rem; color:#6366f1; margin-bottom:10px; display:block; }
+.up-drop-title { font-size:0.92rem; font-weight:600; color:var(--adm-text); margin-bottom:4px; }
+.up-drop-sub { font-size:0.78rem; color:var(--adm-muted); }
+.up-drop-sub strong { color:var(--adm-text-2); }
+
+/* ── Selected file preview ───────────────────────────────────── */
+.up-file-preview {
+  display:none; align-items:center; gap:12px;
+  background:rgba(99,102,241,0.07); border:1px solid rgba(99,102,241,0.2);
+  border-radius:10px; padding:12px 14px; margin-bottom:24px;
+}
+.up-file-preview.show { display:flex; }
+.up-file-preview-icon { font-size:1.4rem; color:#a5b4fc; flex-shrink:0; }
+.up-file-preview-info { flex:1; min-width:0; }
+.up-file-preview-name { font-size:0.85rem; font-weight:600; color:var(--adm-text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.up-file-preview-size { font-size:0.74rem; color:var(--adm-muted); margin-top:2px; }
+.up-file-remove { background:transparent; border:none; color:var(--adm-muted); cursor:pointer; font-size:1rem; flex-shrink:0; padding:2px; transition:color 0.15s; }
+.up-file-remove:hover { color:#f87171; }
+
+/* ── Form fields ─────────────────────────────────────────────── */
+.up-field { margin-bottom:18px; }
+.up-label { font-size:0.78rem; font-weight:600; color:var(--adm-text-2); display:block; margin-bottom:6px; }
+.up-label .req { color:#f87171; margin-left:2px; }
+.up-input, .up-textarea {
+  width:100%; background:var(--adm-bg); border:1px solid var(--adm-border);
+  color:var(--adm-text); border-radius:9px; padding:10px 13px;
+  font-family:var(--adm-font); font-size:0.85rem; outline:none;
+  transition:border-color 0.15s; box-sizing:border-box;
+}
+.up-input:focus, .up-textarea:focus { border-color:rgba(99,102,241,0.5); }
+.up-input::placeholder, .up-textarea::placeholder { color:var(--adm-muted); }
+.up-textarea { resize:vertical; min-height:80px; }
+.up-row { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+.up-hint { font-size:0.73rem; color:var(--adm-muted); margin-top:5px; }
+
+/* ── Progress ────────────────────────────────────────────────── */
+.up-progress { display:none; margin-bottom:18px; }
+.up-progress.show { display:block; }
+.up-prog-label { font-size:0.78rem; color:var(--adm-muted); margin-bottom:6px; display:flex; justify-content:space-between; }
+.up-prog-bar { height:6px; background:rgba(255,255,255,0.07); border-radius:3px; overflow:hidden; }
+.up-prog-fill { height:100%; background:#6366f1; border-radius:3px; transition:width 0.2s; width:0%; }
+
+/* ── Error / success ─────────────────────────────────────────── */
+.up-msg { display:none; border-radius:9px; padding:11px 14px; font-size:0.82rem; margin-bottom:16px; }
+.up-msg.show { display:block; }
+.up-msg.error   { background:rgba(239,68,68,0.1);  border:1px solid rgba(239,68,68,0.25);  color:#f87171; }
+.up-msg.success { background:rgba(52,211,153,0.1); border:1px solid rgba(52,211,153,0.25); color:#34d399; }
+
+/* ── Submit ──────────────────────────────────────────────────── */
+.up-footer { display:flex; gap:10px; justify-content:flex-end; margin-top:6px; }
+.up-cancel {
+  background:transparent; border:1px solid var(--adm-border); color:var(--adm-text-2);
+  border-radius:9px; padding:0 18px; height:38px; font-size:0.84rem; cursor:pointer;
+  text-decoration:none; display:inline-flex; align-items:center; transition:all 0.15s;
+}
+.up-cancel:hover { border-color:var(--adm-border-2); color:var(--adm-text); }
+.up-submit {
+  background:#6366f1; color:#fff; border:none; border-radius:9px;
+  padding:0 22px; height:38px; font-size:0.84rem; font-weight:600; cursor:pointer;
+  display:inline-flex; align-items:center; gap:8px; transition:background 0.15s;
+}
+.up-submit:hover:not(:disabled) { background:#4f46e5; }
+.up-submit:disabled { opacity:0.5; cursor:default; }
+</style>
+
+<div class="up-wrap">
+
+  <!-- Header -->
+  <div class="up-header">
+    <a href="/admin/downloads" class="up-back"><i class="bi bi-arrow-left"></i></a>
+    <div class="up-header-info">
+      <div class="up-pill"><i class="bi bi-cloud-upload"></i> Upload</div>
+      <h5>Upload a New File</h5>
+    </div>
+  </div>
+
+  <div class="up-card">
+
+    <!-- Drop zone -->
+    <div class="up-drop" id="upDrop">
+      <input type="file" id="upFileInput" onchange="upHandleFile(this.files[0])">
+      <i class="bi bi-cloud-arrow-up-fill up-drop-icon"></i>
+      <div class="up-drop-title">Drop file here or click to browse</div>
+      <div class="up-drop-sub">Any file type &nbsp;·&nbsp; <strong>Max 500 MB</strong></div>
+    </div>
+
+    <!-- File preview -->
+    <div class="up-file-preview" id="upFilePreview">
+      <i class="bi bi-file-earmark-fill up-file-preview-icon" id="upPreviewIcon"></i>
+      <div class="up-file-preview-info">
+        <div class="up-file-preview-name" id="upPreviewName"></div>
+        <div class="up-file-preview-size" id="upPreviewSize"></div>
+      </div>
+      <button class="up-file-remove" onclick="upRemoveFile()" title="Remove file"><i class="bi bi-x-lg"></i></button>
+    </div>
+
+    <!-- Fields -->
+    <div class="up-field">
+      <label class="up-label">Name <span class="req">*</span></label>
+      <input type="text" class="up-input" id="upName" maxlength="255" placeholder="Display name for this file">
+    </div>
+
+    <div class="up-field">
+      <label class="up-label">Description</label>
+      <textarea class="up-textarea" id="upDesc" placeholder="Brief description — what is this file, what does it do?"></textarea>
+    </div>
+
+    <div class="up-row">
+      <div class="up-field">
+        <label class="up-label">Version</label>
+        <input type="text" class="up-input" id="upVersion" maxlength="50" placeholder="e.g. 1.0.0">
+        <div class="up-hint">Leave blank if not applicable</div>
+      </div>
+    </div>
+
+    <!-- Progress -->
+    <div class="up-progress" id="upProgress">
+      <div class="up-prog-label"><span>Uploading…</span><span id="upPct">0%</span></div>
+      <div class="up-prog-bar"><div class="up-prog-fill" id="upProgFill"></div></div>
+    </div>
+
+    <!-- Message -->
+    <div class="up-msg" id="upMsg"></div>
+
+    <!-- Footer -->
+    <div class="up-footer">
+      <a href="/admin/downloads" class="up-cancel">Cancel</a>
+      <button class="up-submit" id="upSubmitBtn" onclick="upSubmit()">
+        <i class="bi bi-cloud-upload-fill"></i> Upload File
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<script>
+let upFile = null;
+
+// ── Drag-and-drop ─────────────────────────────────────────────
+const drop = document.getElementById('upDrop');
+drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('drag-over'); });
+drop.addEventListener('dragleave', ()=> drop.classList.remove('drag-over'));
+drop.addEventListener('drop', e => {
+  e.preventDefault(); drop.classList.remove('drag-over');
+  const f = e.dataTransfer.files[0];
+  if (f) upHandleFile(f);
+});
+
+function upHandleFile(file) {
+  if (!file) return;
+  if (file.size > 500 * 1024 * 1024) {
+    upShowMsg('File is too large. Maximum size is 500 MB.', 'error'); return;
+  }
+  upFile = file;
+  document.getElementById('upPreviewName').textContent = file.name;
+  document.getElementById('upPreviewSize').textContent = upFmtSize(file.size);
+  document.getElementById('upFilePreview').classList.add('show');
+  document.getElementById('upDrop').style.display = 'none';
+  upHideMsg();
+  if (!document.getElementById('upName').value.trim()) {
+    const nameNoExt = file.name.replace(/\.[^.]+$/, '');
+    document.getElementById('upName').value = nameNoExt;
+  }
+}
+
+function upRemoveFile() {
+  upFile = null;
+  document.getElementById('upFileInput').value = '';
+  document.getElementById('upFilePreview').classList.remove('show');
+  document.getElementById('upDrop').style.display = '';
+}
+
+function upFmtSize(b) {
+  if (b < 1024) return b + ' B';
+  if (b < 1048576) return (b/1024).toFixed(1) + ' KB';
+  if (b < 1073741824) return (b/1048576).toFixed(1) + ' MB';
+  return (b/1073741824).toFixed(2) + ' GB';
+}
+
+function upShowMsg(txt, type) {
+  const el = document.getElementById('upMsg');
+  el.textContent = txt; el.className = 'up-msg show ' + type;
+}
+function upHideMsg() {
+  const el = document.getElementById('upMsg');
+  el.className = 'up-msg';
+}
+
+// ── Upload ────────────────────────────────────────────────────
+function upSubmit() {
+  const name = document.getElementById('upName').value.trim();
+  if (!upFile) { upShowMsg('Please select a file first.', 'error'); return; }
+  if (!name)   { upShowMsg('Name is required.', 'error'); document.getElementById('upName').focus(); return; }
+
+  const fd = new FormData();
+  fd.append('file', upFile);
+  fd.append('name', name);
+  fd.append('description', document.getElementById('upDesc').value.trim());
+  fd.append('version', document.getElementById('upVersion').value.trim());
+
+  const btn = document.getElementById('upSubmitBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Uploading…';
+  document.getElementById('upProgress').classList.add('show');
+  upHideMsg();
+
+  const xhr = new XMLHttpRequest();
+  xhr.open('POST', '/admin/downloads/upload');
+
+  xhr.upload.onprogress = e => {
+    if (e.lengthComputable) {
+      const pct = Math.round((e.loaded / e.total) * 100);
+      document.getElementById('upProgFill').style.width = pct + '%';
+      document.getElementById('upPct').textContent = pct + '%';
+      if (pct === 100) {
+        document.querySelector('.up-prog-label span:first-child').textContent = 'Saving to Drive…';
+        btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Saving to Drive…';
+      }
+    }
+  };
+
+  xhr.onload = () => {
+    document.getElementById('upProgress').classList.remove('show');
+    try {
+      const data = JSON.parse(xhr.responseText);
+      if (data.success) {
+        upShowMsg('File uploaded successfully! Redirecting…', 'success');
+        setTimeout(() => window.location.href = '/admin/downloads', 1200);
+      } else {
+        upShowMsg(data.message || 'Upload failed.', 'error');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-cloud-upload-fill"></i> Upload File';
+      }
+    } catch(e) {
+      upShowMsg('Unexpected server response.', 'error');
+      btn.disabled = false;
+      btn.innerHTML = '<i class="bi bi-cloud-upload-fill"></i> Upload File';
+    }
+  };
+
+  xhr.onerror = () => {
+    document.getElementById('upProgress').classList.remove('show');
+    upShowMsg('Network error. Please try again.', 'error');
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-cloud-upload-fill"></i> Upload File';
+  };
+
+  xhr.send(fd);
+}
+</script>

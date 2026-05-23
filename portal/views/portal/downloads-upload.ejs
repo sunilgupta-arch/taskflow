@@ -1,0 +1,244 @@
+<style>
+@keyframes pupFade { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
+.pup-wrap { animation:pupFade 0.22s ease; max-width:600px; }
+
+/* ── Header ──────────────────────────────────────────────────── */
+.pup-header { display:flex; align-items:center; gap:14px; margin-bottom:26px; }
+.pup-back {
+  display:inline-flex; align-items:center; justify-content:center;
+  width:36px; height:36px; border-radius:9px;
+  border:1px solid var(--portal-border,rgba(255,255,255,0.08));
+  background:var(--portal-surface,rgba(255,255,255,0.04));
+  color:var(--portal-muted,#64748b); text-decoration:none; transition:all 0.15s;
+}
+.pup-back:hover { color:var(--portal-text,#e2e8f0); border-color:rgba(255,255,255,0.18); }
+.pup-header-info .pup-pill {
+  display:inline-flex; align-items:center; gap:5px;
+  background:rgba(99,102,241,0.1); border:1px solid rgba(99,102,241,0.2);
+  color:#a5b4fc; border-radius:20px; padding:3px 10px;
+  font-size:0.67rem; font-weight:700; letter-spacing:0.3px; margin-bottom:5px;
+}
+.pup-header-info h5 { font-size:1rem; font-weight:700; color:var(--portal-text,#e2e8f0); margin:0; }
+
+/* ── Card ────────────────────────────────────────────────────── */
+.pup-card {
+  background:var(--portal-surface,rgba(255,255,255,0.04));
+  border:1px solid var(--portal-border,rgba(255,255,255,0.08));
+  border-radius:16px; padding:28px;
+}
+
+/* ── Drop zone ───────────────────────────────────────────────── */
+.pup-drop {
+  border:2px dashed var(--portal-border,rgba(255,255,255,0.1)); border-radius:14px;
+  padding:42px 20px; text-align:center; cursor:pointer;
+  transition:all 0.18s; background:rgba(255,255,255,0.02); margin-bottom:24px; position:relative;
+}
+.pup-drop:hover, .pup-drop.drag-over {
+  border-color:rgba(99,102,241,0.5); background:rgba(99,102,241,0.04);
+}
+.pup-drop input[type=file] { position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%; }
+.pup-drop-icon { font-size:2.4rem; color:#6366f1; display:block; margin-bottom:10px; }
+.pup-drop-title { font-size:0.94rem; font-weight:600; color:var(--portal-text,#e2e8f0); margin-bottom:4px; }
+.pup-drop-sub { font-size:0.78rem; color:var(--portal-muted,#64748b); }
+.pup-drop-sub strong { color:var(--portal-text-2,#94a3b8); }
+
+/* ── File preview ────────────────────────────────────────────── */
+.pup-file-preview {
+  display:none; align-items:center; gap:12px;
+  background:rgba(99,102,241,0.07); border:1px solid rgba(99,102,241,0.2);
+  border-radius:10px; padding:12px 14px; margin-bottom:24px;
+}
+.pup-file-preview.show { display:flex; }
+.pup-file-icon-sm { font-size:1.4rem; color:#a5b4fc; flex-shrink:0; }
+.pup-file-info { flex:1; min-width:0; }
+.pup-file-name { font-size:0.85rem; font-weight:600; color:var(--portal-text,#e2e8f0); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.pup-file-size { font-size:0.74rem; color:var(--portal-muted,#64748b); margin-top:2px; }
+.pup-file-remove { background:transparent; border:none; color:var(--portal-muted,#64748b); cursor:pointer; font-size:1rem; padding:2px; transition:color 0.15s; }
+.pup-file-remove:hover { color:#f87171; }
+
+/* ── Form ────────────────────────────────────────────────────── */
+.pup-field { margin-bottom:18px; }
+.pup-label { font-size:0.78rem; font-weight:600; color:var(--portal-muted,#64748b); display:block; margin-bottom:6px; }
+.pup-label .req { color:#f87171; margin-left:2px; }
+.pup-input, .pup-textarea {
+  width:100%; background:rgba(255,255,255,0.05);
+  border:1px solid var(--portal-border,rgba(255,255,255,0.08));
+  color:var(--portal-text,#e2e8f0); border-radius:10px; padding:10px 13px;
+  font-size:0.85rem; outline:none; transition:border-color 0.15s; box-sizing:border-box;
+}
+.pup-input:focus, .pup-textarea:focus { border-color:rgba(99,102,241,0.5); }
+.pup-input::placeholder, .pup-textarea::placeholder { color:var(--portal-muted,#64748b); }
+.pup-textarea { resize:vertical; min-height:80px; }
+.pup-hint { font-size:0.73rem; color:var(--portal-muted,#64748b); margin-top:5px; }
+
+/* ── Progress ────────────────────────────────────────────────── */
+.pup-progress { display:none; margin-bottom:18px; }
+.pup-progress.show { display:block; }
+.pup-prog-label { font-size:0.78rem; color:var(--portal-muted,#64748b); margin-bottom:6px; display:flex; justify-content:space-between; }
+.pup-prog-bar { height:5px; background:rgba(255,255,255,0.06); border-radius:3px; overflow:hidden; }
+.pup-prog-fill { height:100%; background:#6366f1; border-radius:3px; transition:width 0.2s; width:0%; }
+
+/* ── Messages ────────────────────────────────────────────────── */
+.pup-msg { display:none; border-radius:10px; padding:11px 14px; font-size:0.82rem; margin-bottom:16px; }
+.pup-msg.show { display:block; }
+.pup-msg.error   { background:rgba(239,68,68,0.1);  border:1px solid rgba(239,68,68,0.25);  color:#f87171; }
+.pup-msg.success { background:rgba(52,211,153,0.1); border:1px solid rgba(52,211,153,0.25); color:#34d399; }
+
+/* ── Footer ──────────────────────────────────────────────────── */
+.pup-footer { display:flex; gap:10px; justify-content:flex-end; margin-top:6px; }
+.pup-cancel {
+  background:transparent; border:1px solid var(--portal-border,rgba(255,255,255,0.08));
+  color:var(--portal-muted,#64748b); border-radius:10px; padding:0 18px; height:40px;
+  font-size:0.84rem; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; transition:all 0.15s;
+}
+.pup-cancel:hover { color:var(--portal-text,#e2e8f0); }
+.pup-submit {
+  background:#6366f1; color:#fff; border:none; border-radius:10px;
+  padding:0 22px; height:40px; font-size:0.84rem; font-weight:600; cursor:pointer;
+  display:inline-flex; align-items:center; gap:8px; transition:background 0.15s;
+}
+.pup-submit:hover:not(:disabled) { background:#4f46e5; }
+.pup-submit:disabled { opacity:0.5; cursor:default; }
+</style>
+
+<div class="pup-wrap">
+
+  <div class="pup-header">
+    <a href="/portal/downloads" class="pup-back"><i class="bi bi-arrow-left"></i></a>
+    <div class="pup-header-info">
+      <div class="pup-pill"><i class="bi bi-cloud-upload"></i> Upload</div>
+      <h5>Upload a New File</h5>
+    </div>
+  </div>
+
+  <div class="pup-card">
+
+    <div class="pup-drop" id="pupDrop">
+      <input type="file" id="pupFileInput" onchange="pupHandleFile(this.files[0])">
+      <i class="bi bi-cloud-arrow-up-fill pup-drop-icon"></i>
+      <div class="pup-drop-title">Drop file here or click to browse</div>
+      <div class="pup-drop-sub">Any file type &nbsp;·&nbsp; <strong>Max 500 MB</strong></div>
+    </div>
+
+    <div class="pup-file-preview" id="pupFilePreview">
+      <i class="bi bi-file-earmark-fill pup-file-icon-sm"></i>
+      <div class="pup-file-info">
+        <div class="pup-file-name" id="pupPreviewName"></div>
+        <div class="pup-file-size" id="pupPreviewSize"></div>
+      </div>
+      <button class="pup-file-remove" onclick="pupRemoveFile()"><i class="bi bi-x-lg"></i></button>
+    </div>
+
+    <div class="pup-field">
+      <label class="pup-label">Name <span class="req">*</span></label>
+      <input type="text" class="pup-input" id="pupName" maxlength="255" placeholder="Display name for this file">
+    </div>
+
+    <div class="pup-field">
+      <label class="pup-label">Description</label>
+      <textarea class="pup-textarea" id="pupDesc" placeholder="Brief description of what this file is or does"></textarea>
+    </div>
+
+    <div class="pup-field" style="max-width:220px">
+      <label class="pup-label">Version</label>
+      <input type="text" class="pup-input" id="pupVersion" maxlength="50" placeholder="e.g. 1.0.0">
+      <div class="pup-hint">Leave blank if not applicable</div>
+    </div>
+
+    <div class="pup-progress" id="pupProgress">
+      <div class="pup-prog-label"><span>Uploading…</span><span id="pupPct">0%</span></div>
+      <div class="pup-prog-bar"><div class="pup-prog-fill" id="pupProgFill"></div></div>
+    </div>
+
+    <div class="pup-msg" id="pupMsg"></div>
+
+    <div class="pup-footer">
+      <a href="/portal/downloads" class="pup-cancel">Cancel</a>
+      <button class="pup-submit" id="pupSubmitBtn" onclick="pupSubmit()">
+        <i class="bi bi-cloud-upload-fill"></i> Upload File
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<script>
+let pupFile = null;
+
+const pupDrop = document.getElementById('pupDrop');
+pupDrop.addEventListener('dragover', e => { e.preventDefault(); pupDrop.classList.add('drag-over'); });
+pupDrop.addEventListener('dragleave', () => pupDrop.classList.remove('drag-over'));
+pupDrop.addEventListener('drop', e => {
+  e.preventDefault(); pupDrop.classList.remove('drag-over');
+  const f = e.dataTransfer.files[0];
+  if (f) pupHandleFile(f);
+});
+
+function pupHandleFile(file) {
+  if (!file) return;
+  if (file.size > 500 * 1024 * 1024) { pupShowMsg('File exceeds 500 MB limit.', 'error'); return; }
+  pupFile = file;
+  document.getElementById('pupPreviewName').textContent = file.name;
+  document.getElementById('pupPreviewSize').textContent = pupFmt(file.size);
+  document.getElementById('pupFilePreview').classList.add('show');
+  document.getElementById('pupDrop').style.display = 'none';
+  pupHideMsg();
+  if (!document.getElementById('pupName').value.trim())
+    document.getElementById('pupName').value = file.name.replace(/\.[^.]+$/, '');
+}
+function pupRemoveFile() {
+  pupFile = null;
+  document.getElementById('pupFileInput').value = '';
+  document.getElementById('pupFilePreview').classList.remove('show');
+  document.getElementById('pupDrop').style.display = '';
+}
+function pupFmt(b) {
+  if (b < 1024) return b + ' B';
+  if (b < 1048576) return (b/1024).toFixed(1) + ' KB';
+  if (b < 1073741824) return (b/1048576).toFixed(1) + ' MB';
+  return (b/1073741824).toFixed(2) + ' GB';
+}
+function pupShowMsg(t, type) { const e=document.getElementById('pupMsg'); e.textContent=t; e.className='pup-msg show '+type; }
+function pupHideMsg() { document.getElementById('pupMsg').className='pup-msg'; }
+
+function pupSubmit() {
+  const name = document.getElementById('pupName').value.trim();
+  if (!pupFile) { pupShowMsg('Please select a file first.', 'error'); return; }
+  if (!name)    { pupShowMsg('Name is required.', 'error'); document.getElementById('pupName').focus(); return; }
+
+  const fd = new FormData();
+  fd.append('file', pupFile);
+  fd.append('name', name);
+  fd.append('description', document.getElementById('pupDesc').value.trim());
+  fd.append('version', document.getElementById('pupVersion').value.trim());
+
+  const btn = document.getElementById('pupSubmitBtn');
+  btn.disabled = true; btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Uploading…';
+  document.getElementById('pupProgress').classList.add('show');
+  pupHideMsg();
+
+  const xhr = new XMLHttpRequest();
+  xhr.open('POST', '/portal/downloads/upload');
+  xhr.upload.onprogress = e => {
+    if (e.lengthComputable) {
+      const p = Math.round((e.loaded/e.total)*100);
+      document.getElementById('pupProgFill').style.width = p + '%';
+      document.getElementById('pupPct').textContent = p + '%';
+      if (p === 100) {
+        document.querySelector('.pup-prog-label span:first-child').textContent = 'Saving to Drive…';
+        btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Saving to Drive…';
+      }
+    }
+  };
+  xhr.onload = () => {
+    document.getElementById('pupProgress').classList.remove('show');
+    try {
+      const d = JSON.parse(xhr.responseText);
+      if (d.success) { pupShowMsg('Uploaded successfully! Redirecting…', 'success'); setTimeout(()=>window.location.href='/portal/downloads', 1200); }
+      else { pupShowMsg(d.message || 'Upload failed.', 'error'); btn.disabled=false; btn.innerHTML='<i class="bi bi-cloud-upload-fill"></i> Upload File'; }
+    } catch(e) { pupShowMsg('Unexpected error.', 'error'); btn.disabled=false; btn.innerHTML='<i class="bi bi-cloud-upload-fill"></i> Upload File'; }
+  };
+  xhr.onerror = () => { document.getElementById('pupProgress').classList.remove('show'); pupShowMsg('Network error.', 'error'); btn.disabled=false; btn.innerHTML='<i class="bi bi-cloud-upload-fill"></i> Upload File'; };
+  xhr.send(fd);
+}
+</script>

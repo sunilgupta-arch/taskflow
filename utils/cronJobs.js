@@ -2,6 +2,8 @@ const cron = require('node-cron');
 const db = require('../config/db');
 const { getToday, getNow, getEffectiveWorkDate, isScheduledForDate } = require('./timezone');
 const ChatModel = require('../models/Chat');
+const path = require('path');
+const fs   = require('fs');
 
 /**
  * NOTE: Daily/weekly task regeneration crons have been removed.
@@ -772,7 +774,47 @@ const startCronJobs = async () => {
 
   portalReminderJob.start();
 
-  console.log(`⏰ Cron jobs started (timezone: ${orgTz}) — attendance, auto-logout, backup, reminders, deadline, overdue, summary, weekly, portal-reminders, daily-requests-report`);
+  // ── Downloads: cleanup local files + retry failed Drive uploads ──────
+  cron.schedule('0 3 * * *', async () => {
+    const Download = require('../models/Download');
+    const GoogleDriveService = require('../services/googleDriveService');
+    const UPLOADS_DIR = path.join(__dirname, '../uploads/downloads');
+
+    // 1. Delete local files that are already on Drive and older than 1 day
+    try {
+      const toClean = await Download.getPendingLocalCleanup();
+      for (const row of toClean) {
+        const localPath = path.join(UPLOADS_DIR, row.stored_name);
+        if (fs.existsSync(localPath)) fs.unlink(localPath, () => {});
+        await Download.clearLocalFile(row.id);
+      }
+      if (toClean.length) console.log(`[CRON] Downloads: cleaned ${toClean.length} local file(s)`);
+    } catch (err) {
+      console.error('[CRON] Downloads cleanup error:', err.message);
+    }
+
+    // 2. Retry Drive uploads that failed or are still pending
+    try {
+      const pending = await Download.getPendingDriveUpload();
+      for (const row of pending) {
+        const localPath = path.join(UPLOADS_DIR, row.stored_name);
+        if (!fs.existsSync(localPath)) continue;
+        try {
+          const driveFile = await GoogleDriveService.uploadDownloadFile(
+            localPath, row.original_name, row.mime_type
+          );
+          await Download.updateDriveId(row.id, driveFile.id);
+          console.log(`[CRON] Downloads: Drive retry success for id=${row.id}`);
+        } catch (e) {
+          console.error(`[CRON] Downloads: Drive retry failed for id=${row.id}:`, e.message);
+        }
+      }
+    } catch (err) {
+      console.error('[CRON] Downloads Drive retry error:', err.message);
+    }
+  }, { timezone: orgTz });
+
+  console.log(`⏰ Cron jobs started (timezone: ${orgTz}) — attendance, auto-logout, backup, reminders, deadline, overdue, summary, weekly, portal-reminders, daily-requests-report, downloads-cleanup`);
 };
 
 module.exports = { startCronJobs };

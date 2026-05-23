@@ -950,6 +950,21 @@ class AdminHubController {
     });
   }
 
+  static async helpFull(req, res) {
+    const role = req.user.role_name;
+    res.render('help/index', {
+      title: 'Help & Training',
+      layout: 'admin/layout',
+      section: 'tools',
+      activeTopic: req.query.topic || 'welcome',
+      adminHub: true,
+      role,
+      isAdmin: ['LOCAL_ADMIN', 'CLIENT_ADMIN'].includes(role),
+      isManager: ['LOCAL_MANAGER', 'CLIENT_MANAGER'].includes(role),
+      isUser: role === 'LOCAL_USER',
+    });
+  }
+
   static async backup(req, res) {
     try {
       const page = parseInt(req.query.page) || 1;
