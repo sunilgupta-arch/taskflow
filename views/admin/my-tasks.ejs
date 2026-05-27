@@ -1,4 +1,114 @@
 <style>
+/* ── New Task Button ─────────────────────────────────────────────── */
+.admt-new-task-btn {
+  height: 36px; padding: 0 14px; border-radius: 9px;
+  background: #6366f1; color: #fff; border: none;
+  font-size: 0.82rem; font-weight: 700; font-family: var(--adm-font);
+  cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+  white-space: nowrap; transition: opacity 0.15s;
+}
+.admt-new-task-btn:hover { opacity: 0.88; }
+
+/* ── Create drawer ───────────────────────────────────────────────── */
+.admt-cr-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.55); backdrop-filter: blur(2px); z-index: 1010;
+}
+.admt-cr-overlay.open { display: block; }
+.admt-cr-drawer {
+  position: fixed; top: 0; right: -560px; width: 540px; height: 100%;
+  background: var(--adm-surface); border-left: 1px solid var(--adm-border);
+  z-index: 1011; display: flex; flex-direction: column;
+  transition: right 0.25s cubic-bezier(0.4,0,0.2,1);
+}
+.admt-cr-drawer.open { right: 0; }
+.admt-cr-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 18px 22px; border-bottom: 1px solid var(--adm-border); flex-shrink: 0;
+}
+.admt-cr-head-title {
+  font-size: 0.95rem; font-weight: 700; color: var(--adm-text);
+  display: flex; align-items: center; gap: 8px;
+}
+.admt-cr-head-title i { color: #6366f1; }
+.admt-cr-close {
+  width: 30px; height: 30px; border-radius: 8px;
+  border: 1px solid var(--adm-border); background: transparent;
+  color: var(--adm-muted); cursor: pointer; font-size: 1rem;
+  display: flex; align-items: center; justify-content: center; transition: all 0.13s;
+}
+.admt-cr-close:hover { background: var(--adm-surface-2); color: var(--adm-text); }
+.admt-cr-body {
+  flex: 1; overflow-y: auto; padding: 20px 22px;
+  display: flex; flex-direction: column; gap: 16px;
+}
+.admt-cr-foot {
+  display: flex; gap: 8px; justify-content: flex-end;
+  padding: 14px 22px; border-top: 1px solid var(--adm-border); flex-shrink: 0;
+}
+.admt-cr-foot-btn {
+  height: 36px; padding: 0 20px; border-radius: 9px;
+  font-size: 0.83rem; font-weight: 600; font-family: var(--adm-font);
+  cursor: pointer; border: 1px solid var(--adm-border);
+  background: transparent; color: var(--adm-text-2); transition: all 0.13s;
+}
+.admt-cr-foot-btn:hover { background: var(--adm-surface-2); }
+.admt-cr-foot-btn.primary { background: #6366f1; color: #fff; border-color: #6366f1; }
+.admt-cr-foot-btn.primary:hover { background: #4f46e5; }
+.admt-cr-foot-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.admt-cr-label {
+  font-size: 0.68rem; font-family: var(--adm-mono); font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.5px; color: var(--adm-muted);
+  display: block; margin-bottom: 6px;
+}
+.admt-cr-input, .admt-cr-select, .admt-cr-textarea {
+  width: 100%; padding: 8px 12px; border-radius: 9px;
+  border: 1px solid var(--adm-border); background: var(--adm-surface-2);
+  color: var(--adm-text); font-size: 0.85rem; font-family: var(--adm-font);
+  box-sizing: border-box;
+}
+.admt-cr-textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
+.admt-cr-input:focus, .admt-cr-select:focus, .admt-cr-textarea:focus { outline: none; border-color: #6366f1; }
+.admt-cr-select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 16 16'%3E%3Cpath fill='%2394a3b8' d='M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 10px center; padding-right: 30px;
+}
+.admt-cr-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.admt-cr-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+.admt-cr-section {
+  padding: 14px; border-radius: 10px;
+  border: 1px solid var(--adm-border); background: var(--adm-surface-2);
+  display: flex; flex-direction: column; gap: 12px;
+}
+.admt-cr-section-title {
+  font-size: 0.72rem; font-family: var(--adm-mono); font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.5px; color: var(--adm-accent); margin-bottom: 2px;
+}
+.admt-cr-day-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.admt-cr-day {
+  min-width: 40px; height: 34px; padding: 0 10px; border-radius: 8px;
+  border: 1px solid var(--adm-border); background: transparent;
+  color: var(--adm-text-2); font-size: 0.75rem; font-family: var(--adm-mono);
+  font-weight: 600; cursor: pointer; transition: all 0.13s;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.admt-cr-day.sel { background: rgba(99,102,241,0.15); border-color: #6366f1; color: #6366f1; }
+.admt-cr-date-row { display: flex; flex-wrap: wrap; gap: 5px; }
+.admt-cr-date {
+  width: 34px; height: 34px; border-radius: 7px;
+  border: 1px solid var(--adm-border); background: transparent;
+  color: var(--adm-text-2); font-size: 0.72rem; font-family: var(--adm-mono);
+  cursor: pointer; transition: all 0.13s;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.admt-cr-date.sel { background: rgba(99,102,241,0.15); border-color: #6366f1; color: #6366f1; }
+.admt-cr-error {
+  padding: 10px 14px; border-radius: 9px;
+  border: 1px solid rgba(239,68,68,0.3); background: rgba(239,68,68,0.08);
+  color: #fca5a5; font-size: 0.82rem; display: none;
+}
+
 /* ── DPR Button ─────────────────────────────────────────────────── */
 .admt-dpr-btn {
   height: 36px; padding: 0 14px; border-radius: 9px;
@@ -6,7 +116,7 @@
   color: #10b981; cursor: pointer; font-size: 0.8rem;
   display: inline-flex; align-items: center; gap: 6px;
   font-family: var(--adm-font); font-weight: 600; white-space: nowrap;
-  transition: all 0.15s; margin-left: auto;
+  transition: all 0.15s;
 }
 .admt-dpr-btn:hover { background: rgba(16,185,129,0.15); border-color: rgba(16,185,129,0.5); }
 .admt-dpr-btn:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -343,12 +453,109 @@
 
   <span class="admt-count" id="admtCount"></span>
 
+  <button class="admt-new-task-btn" style="margin-left:auto" onclick="admtOpenCreate()">
+    <i class="bi bi-plus-lg"></i> New Task
+  </button>
+
   <% if (user.role_name !== 'LOCAL_ADMIN') { %>
   <button class="admt-dpr-btn" id="admDprBtn"
           onclick="admGenerateDpr(document.getElementById('admtDate').value)">
     <i class="bi bi-envelope-text"></i> Generate DPR
   </button>
   <% } %>
+</div>
+
+<!-- Create task drawer -->
+<div class="admt-cr-overlay" id="admtCrOverlay" onclick="admtCloseCreate()"></div>
+<div class="admt-cr-drawer" id="admtCrDrawer">
+  <div class="admt-cr-head">
+    <div class="admt-cr-head-title"><i class="bi bi-plus-circle-fill"></i> New Task</div>
+    <button class="admt-cr-close" onclick="admtCloseCreate()"><i class="bi bi-x-lg"></i></button>
+  </div>
+  <div class="admt-cr-body">
+    <div class="admt-cr-error" id="admtCrError"></div>
+
+    <div>
+      <label class="admt-cr-label">Title *</label>
+      <input type="text" class="admt-cr-input" id="admtCrTitle" placeholder="Task title" maxlength="255">
+    </div>
+
+    <div>
+      <label class="admt-cr-label">Description</label>
+      <textarea class="admt-cr-textarea" id="admtCrDesc" placeholder="Optional description…"></textarea>
+    </div>
+
+    <div class="admt-cr-grid">
+      <div>
+        <label class="admt-cr-label">Type *</label>
+        <select class="admt-cr-select" id="admtCrType" onchange="admtCrHandleType()">
+          <option value="once">One-time</option>
+          <option value="recurring">Recurring</option>
+        </select>
+      </div>
+      <div>
+        <label class="admt-cr-label">Priority *</label>
+        <select class="admt-cr-select" id="admtCrPriority">
+          <option value="low">Low</option>
+          <option value="medium" selected>Medium</option>
+          <option value="high">High</option>
+          <option value="urgent">Urgent</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- One-time: due date -->
+    <div id="admtCrOnceMeta">
+      <label class="admt-cr-label">Due Date</label>
+      <input type="date" class="admt-cr-input" id="admtCrDueDate">
+    </div>
+
+    <!-- Recurring section -->
+    <div class="admt-cr-section" id="admtCrRecurSection" style="display:none">
+      <div class="admt-cr-section-title"><i class="bi bi-arrow-repeat"></i> Recurrence</div>
+      <div class="admt-cr-grid-3">
+        <div>
+          <label class="admt-cr-label">Pattern *</label>
+          <select class="admt-cr-select" id="admtCrPattern" onchange="admtCrHandlePattern()">
+            <option value="daily">Every Day</option>
+            <option value="weekly" selected>Weekly</option>
+            <option value="monthly">Monthly</option>
+          </select>
+        </div>
+        <div>
+          <label class="admt-cr-label">Deadline Time</label>
+          <input type="time" class="admt-cr-input" id="admtCrDeadlineTime">
+        </div>
+        <div>
+          <label class="admt-cr-label">End Date</label>
+          <input type="date" class="admt-cr-input" id="admtCrEndDate">
+        </div>
+      </div>
+      <div id="admtCrWeeklyDays">
+        <label class="admt-cr-label">Days of Week *</label>
+        <div class="admt-cr-day-row">
+          <button type="button" class="admt-cr-day" data-day="0">Sun</button>
+          <button type="button" class="admt-cr-day" data-day="1">Mon</button>
+          <button type="button" class="admt-cr-day" data-day="2">Tue</button>
+          <button type="button" class="admt-cr-day" data-day="3">Wed</button>
+          <button type="button" class="admt-cr-day" data-day="4">Thu</button>
+          <button type="button" class="admt-cr-day" data-day="5">Fri</button>
+          <button type="button" class="admt-cr-day" data-day="6">Sat</button>
+        </div>
+      </div>
+      <div id="admtCrMonthlyDates" style="display:none">
+        <label class="admt-cr-label">Dates of Month *</label>
+        <div class="admt-cr-date-row" id="admtCrDatePills"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="admt-cr-foot">
+    <button class="admt-cr-foot-btn" onclick="admtCloseCreate()">Cancel</button>
+    <button class="admt-cr-foot-btn primary" id="admtCrSubmit" onclick="admtSubmitCreate()">
+      <i class="bi bi-plus-lg"></i> Create Task
+    </button>
+  </div>
 </div>
 
 <!-- Table -->
@@ -845,6 +1052,135 @@
     } finally {
       if (btn) { btn.disabled = false; btn.innerHTML = '<i class="bi bi-envelope-text"></i> Generate DPR'; }
     }
+  };
+})();
+</script>
+
+<script>
+/* ── Create Task drawer (self-assign) ──────────────────────────── */
+(function () {
+  window.admtOpenCreate = function () {
+    document.getElementById('admtCrTitle').value        = '';
+    document.getElementById('admtCrDesc').value         = '';
+    document.getElementById('admtCrType').value         = 'once';
+    document.getElementById('admtCrPriority').value     = 'medium';
+    document.getElementById('admtCrDueDate').value      = '';
+    document.getElementById('admtCrPattern').value      = 'weekly';
+    document.getElementById('admtCrDeadlineTime').value = '';
+    document.getElementById('admtCrEndDate').value      = '';
+    document.getElementById('admtCrError').style.display = 'none';
+    var sb = document.getElementById('admtCrSubmit');
+    sb.disabled = false;
+    sb.innerHTML = '<i class="bi bi-plus-lg"></i> Create Task';
+    document.querySelectorAll('.admt-cr-day').forEach(function(b){ b.classList.remove('sel'); });
+    document.querySelectorAll('.admt-cr-date').forEach(function(b){ b.classList.remove('sel'); });
+    /* build monthly pills once */
+    var pills = document.getElementById('admtCrDatePills');
+    if (pills && !pills.children.length) {
+      for (var d = 1; d <= 31; d++) {
+        var btn = document.createElement('button');
+        btn.type = 'button'; btn.className = 'admt-cr-date'; btn.textContent = d; btn.dataset.date = d;
+        btn.addEventListener('click', function(){ this.classList.toggle('sel'); });
+        pills.appendChild(btn);
+      }
+    }
+    admtCrHandleType();
+    admtCrHandlePattern();
+    document.getElementById('admtCrOverlay').classList.add('open');
+    document.getElementById('admtCrDrawer').classList.add('open');
+    setTimeout(function(){ document.getElementById('admtCrTitle').focus(); }, 280);
+  };
+
+  window.admtCloseCreate = function () {
+    document.getElementById('admtCrOverlay').classList.remove('open');
+    document.getElementById('admtCrDrawer').classList.remove('open');
+  };
+
+  window.admtCrHandleType = function () {
+    var rec = document.getElementById('admtCrType').value === 'recurring';
+    document.getElementById('admtCrOnceMeta').style.display    = rec ? 'none'  : 'block';
+    document.getElementById('admtCrRecurSection').style.display = rec ? 'flex'  : 'none';
+    if (rec) admtCrHandlePattern();
+  };
+
+  window.admtCrHandlePattern = function () {
+    var pat = document.getElementById('admtCrPattern').value;
+    document.getElementById('admtCrWeeklyDays').style.display   = pat === 'weekly'  ? 'block' : 'none';
+    document.getElementById('admtCrMonthlyDates').style.display = pat === 'monthly' ? 'block' : 'none';
+  };
+
+  document.querySelectorAll('.admt-cr-day').forEach(function(btn){
+    btn.addEventListener('click', function(){ this.classList.toggle('sel'); });
+  });
+
+  window.admtSubmitCreate = function () {
+    var title  = document.getElementById('admtCrTitle').value.trim();
+    var errDiv = document.getElementById('admtCrError');
+    errDiv.style.display = 'none';
+    if (!title) { errDiv.textContent = 'Title is required.'; errDiv.style.display = 'block'; document.getElementById('admtCrTitle').focus(); return; }
+
+    var type    = document.getElementById('admtCrType').value;
+    var pattern = document.getElementById('admtCrPattern').value;
+
+    if (type === 'recurring' && pattern !== 'daily') {
+      var selDays = pattern === 'weekly'
+        ? Array.from(document.querySelectorAll('.admt-cr-day.sel')).map(function(b){ return b.dataset.day; })
+        : Array.from(document.querySelectorAll('.admt-cr-date.sel')).map(function(b){ return b.dataset.date; });
+      if (!selDays.length) {
+        errDiv.textContent = pattern === 'weekly' ? 'Select at least one day of the week.' : 'Select at least one date of the month.';
+        errDiv.style.display = 'block'; return;
+      }
+    }
+
+    var sb = document.getElementById('admtCrSubmit');
+    sb.disabled = true; sb.innerHTML = '<i class="bi bi-hourglass-split"></i> Creating…';
+
+    var payload = {
+      title:       title,
+      description: document.getElementById('admtCrDesc').value.trim(),
+      type:        type,
+      priority:    document.getElementById('admtCrPriority').value,
+      assigned_to: [<%= user.id %>]
+    };
+
+    if (type === 'once') {
+      var dd = document.getElementById('admtCrDueDate').value;
+      if (dd) payload.due_date = dd;
+    } else {
+      payload.recurrence_pattern = pattern;
+      var dt = document.getElementById('admtCrDeadlineTime').value;
+      var ed = document.getElementById('admtCrEndDate').value;
+      if (dt) payload.deadline_time = dt;
+      if (ed) payload.recurrence_end_date = ed;
+      if (pattern !== 'daily') {
+        var days = pattern === 'weekly'
+          ? Array.from(document.querySelectorAll('.admt-cr-day.sel')).map(function(b){ return b.dataset.day; })
+          : Array.from(document.querySelectorAll('.admt-cr-date.sel')).map(function(b){ return b.dataset.date; });
+        payload.recurrence_days = days.join(',');
+      }
+    }
+
+    fetch('/tasks/create', {
+      method: 'POST', credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(data) {
+      if (data.success) {
+        admtCloseCreate();
+        window.location.reload();
+      } else {
+        errDiv.textContent = data.message || 'Failed to create task.';
+        errDiv.style.display = 'block';
+        sb.disabled = false; sb.innerHTML = '<i class="bi bi-plus-lg"></i> Create Task';
+      }
+    })
+    .catch(function() {
+      errDiv.textContent = 'Network error. Please try again.';
+      errDiv.style.display = 'block';
+      sb.disabled = false; sb.innerHTML = '<i class="bi bi-plus-lg"></i> Create Task';
+    });
   };
 })();
 </script>
