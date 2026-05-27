@@ -10,3 +10,4 @@ backups/
 *.log
 .DS_Store
 .claude/settings.local.json
+tms_new/
