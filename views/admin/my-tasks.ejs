@@ -1,4 +1,16 @@
 <style>
+/* ── DPR Button ─────────────────────────────────────────────────── */
+.admt-dpr-btn {
+  height: 36px; padding: 0 14px; border-radius: 9px;
+  border: 1px solid rgba(16,185,129,0.3); background: rgba(16,185,129,0.07);
+  color: #10b981; cursor: pointer; font-size: 0.8rem;
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: var(--adm-font); font-weight: 600; white-space: nowrap;
+  transition: all 0.15s; margin-left: auto;
+}
+.admt-dpr-btn:hover { background: rgba(16,185,129,0.15); border-color: rgba(16,185,129,0.5); }
+.admt-dpr-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
 /* ── Stats ───────────────────────────────────────────────────────── */
 .admt-stats {
   display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px;
@@ -330,6 +342,13 @@
   </select>
 
   <span class="admt-count" id="admtCount"></span>
+
+  <% if (user.role_name !== 'LOCAL_ADMIN') { %>
+  <button class="admt-dpr-btn" id="admDprBtn"
+          onclick="admGenerateDpr(document.getElementById('admtDate').value)">
+    <i class="bi bi-envelope-text"></i> Generate DPR
+  </button>
+  <% } %>
 </div>
 
 <!-- Table -->
@@ -722,5 +741,112 @@
   document.getElementById('admtCommentInput').addEventListener('keydown', function(e) {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); admtSendComment(); }
   });
+})();
+</script>
+
+<script>
+/* ── DPR Generator ─────────────────────────────────────────────── */
+(function() {
+  function fmtDuration(mins) {
+    if (!mins || mins <= 0) return '';
+    var h = Math.floor(mins / 60), m = mins % 60;
+    if (h === 0) return m + 'm';
+    return h + 'h' + (m > 0 ? ' ' + m + 'm' : '');
+  }
+  function fmtTime(dtStr) {
+    if (!dtStr) return '';
+    return new Date(dtStr).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+  }
+  function fmtDate(dateStr) {
+    return new Date(dateStr + 'T12:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+  }
+
+  function buildDprBody(data) {
+    var done    = data.tasks.filter(function(t) { return t.status === 'done'; });
+    var inProg  = data.tasks.filter(function(t) { return t.status === 'in_progress'; });
+    var pending = data.tasks.filter(function(t) { return t.status === 'pending'; });
+    var sep  = '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━';
+    var thin = '────────────────────────────────────────────────';
+    var n    = '\n';
+
+    var b = '';
+    b += 'Dear Sir,' + n + n;
+    b += 'Please find below my Daily Progress Report for ' + fmtDate(data.date) + '.' + n + n;
+    b += sep + n;
+    b += 'DAILY PROGRESS REPORT' + n;
+    b += 'Date: ' + fmtDate(data.date) + '   |   Employee: ' + data.userName + n;
+    b += sep + n + n;
+
+    b += '✅  COMPLETED (' + done.length + ')' + n + thin + n;
+    if (done.length === 0) {
+      b += '    —  None' + n;
+    } else {
+      done.forEach(function(t, i) {
+        var dur = t.duration_minutes ? '  –  ' + fmtDuration(t.duration_minutes) : '';
+        b += '    ' + (i + 1) + '.  ' + t.title + dur + n;
+      });
+    }
+    b += n;
+
+    b += '🔄  IN PROGRESS (' + inProg.length + ')' + n + thin + n;
+    if (inProg.length === 0) {
+      b += '    —  None' + n;
+    } else {
+      inProg.forEach(function(t, i) {
+        var since = t.started_at ? '  (started ' + fmtTime(t.started_at) + ')' : '';
+        b += '    ' + (i + 1) + '.  ' + t.title + since + n;
+      });
+    }
+    b += n;
+
+    b += '⏳  PENDING (' + pending.length + ')' + n + thin + n;
+    if (pending.length === 0) {
+      b += '    —  None' + n;
+    } else {
+      pending.forEach(function(t, i) {
+        b += '    ' + (i + 1) + '.  ' + t.title + n;
+      });
+    }
+    b += n;
+
+    if (data.queueRequests && data.queueRequests.length > 0) {
+      b += '📋  CLIENT REQUESTS HANDLED (' + data.queueRequests.length + ')' + n + thin + n;
+      data.queueRequests.forEach(function(q, i) {
+        var st = q.status === 'done' ? 'Done' : 'In Progress';
+        b += '    ' + (i + 1) + '.  ' + q.title + '  –  ' + st + n;
+      });
+      b += n;
+    }
+
+    b += sep + n;
+    b += 'Summary:  ✅ ' + done.length + ' completed   🔄 ' + inProg.length + ' in progress   ⏳ ' + pending.length + ' pending';
+    if (data.queueRequests && data.queueRequests.length > 0) {
+      b += '   📋 ' + data.queueRequests.length + ' client request(s)';
+    }
+    b += n + sep + n + n;
+    b += 'Regards,' + n + data.userName;
+    return b;
+  }
+
+  window.admGenerateDpr = async function(dateStr) {
+    var btn = document.getElementById('admDprBtn');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Loading…'; }
+    try {
+      var resp = await fetch('/admin/dpr/data?date=' + encodeURIComponent(dateStr));
+      var data = await resp.json();
+      if (!data.success) throw new Error(data.message || 'Server error');
+
+      var subject  = 'DPR – ' + fmtDate(data.date) + ' – ' + data.userName;
+      var body     = buildDprBody(data);
+      var gmailUrl = 'https://mail.google.com/mail/?view=cm&fs=1&to=sunilgupta%40123cfc.com&su=' +
+                     encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
+      window.open(gmailUrl, '_blank');
+    } catch (e) {
+      alert('Could not generate DPR. Please try again.');
+      console.error('DPR error:', e);
+    } finally {
+      if (btn) { btn.disabled = false; btn.innerHTML = '<i class="bi bi-envelope-text"></i> Generate DPR'; }
+    }
+  };
 })();
 </script>

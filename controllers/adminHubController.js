@@ -1446,6 +1446,81 @@ class AdminHubController {
       res.status(500).send('Server error');
     }
   }
+
+  static async getDprData(req, res) {
+    try {
+      const [[localOrgRow]] = await db.query("SELECT timezone FROM organizations WHERE org_type = 'LOCAL' LIMIT 1");
+      const localTz = (localOrgRow && localOrgRow.timezone) || req.user.org_timezone || 'UTC';
+      const today   = getToday(localTz);
+      const date    = req.query.date || today;
+      const userId  = req.user.id;
+
+      // Recurring tasks scheduled for this date
+      const [recurringTasks] = await db.query(
+        `SELECT id, title, type, recurrence_pattern, recurrence_days, recurrence_end_date, deadline_time
+         FROM tasks
+         WHERE is_deleted = 0 AND type = 'recurring' AND status = 'active' AND assigned_to = ?
+         ORDER BY deadline_time, title`,
+        [userId]
+      );
+      const scheduledRecurring = recurringTasks.filter(t => isScheduledForDate(t, date));
+
+      // One-time tasks due on this date
+      const [onceTasks] = await db.query(
+        `SELECT id, title, type, status, due_date
+         FROM tasks
+         WHERE is_deleted = 0 AND type = 'once' AND assigned_to = ?
+           AND status IN ('pending', 'in_progress', 'completed')
+           AND (due_date = ? OR due_date IS NULL)
+         ORDER BY title`,
+        [userId, date]
+      );
+
+      // Completion records for the date
+      const [completions] = await db.query(
+        `SELECT task_id, started_at, completed_at, duration_minutes
+         FROM task_completions WHERE user_id = ? AND completion_date = ?`,
+        [userId, date]
+      );
+      const compMap = {};
+      completions.forEach(c => { compMap[c.task_id] = c; });
+
+      const tasks = [];
+      scheduledRecurring.forEach(t => {
+        const comp = compMap[t.id];
+        tasks.push({
+          title: t.title,
+          status: (comp && comp.completed_at) ? 'done' : (comp && comp.started_at) ? 'in_progress' : 'pending',
+          duration_minutes: comp ? comp.duration_minutes : null,
+          started_at: comp ? comp.started_at : null,
+        });
+      });
+      onceTasks.forEach(t => {
+        const comp = compMap[t.id];
+        tasks.push({
+          title: t.title,
+          status: t.status === 'completed' ? 'done' : (comp && comp.started_at ? 'in_progress' : t.status),
+          duration_minutes: comp ? comp.duration_minutes : null,
+          started_at: comp ? comp.started_at : null,
+        });
+      });
+
+      // Client queue requests picked by this user on this date
+      const [queueRequests] = await db.query(
+        `SELECT cr.title, cri.status, cri.picked_at
+         FROM client_request_instances cri
+         JOIN client_requests cr ON cri.request_id = cr.id
+         WHERE cri.picked_by = ? AND DATE(cri.picked_at) = ?
+         ORDER BY cri.picked_at`,
+        [userId, date]
+      );
+
+      return res.json({ success: true, date, today, userName: req.user.name, tasks, queueRequests });
+    } catch (err) {
+      console.error('DPR data error:', err);
+      return res.json({ success: false, message: 'Server error' });
+    }
+  }
 }
 
 module.exports = AdminHubController;

@@ -195,6 +195,7 @@ const requireLocalAll   = requireRoles('LOCAL_ADMIN', 'LOCAL_MANAGER', 'LOCAL_US
 router.get('/admin',                    authenticate, requireLocalAll,   AdminHubController.dashboard);
 router.get('/admin/my-tasks',           authenticate, requireLocalAll,   AdminHubController.myTasks);
 router.get('/admin/my-tasks/data',      authenticate, requireLocalAll,   AdminHubController.myTasksData);
+router.get('/admin/dpr/data',           authenticate, requireLocalAll,   AdminHubController.getDprData);
 router.get('/admin/queue',              authenticate, requireLocalAll,   AdminHubController.queue);
 router.get('/admin/comms',              authenticate, requireLocalAll,   AdminHubController.comms);
 router.get('/admin/chat',               authenticate, requireLocalAll,   AdminHubController.chat);
