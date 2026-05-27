@@ -1471,7 +1471,7 @@ class AdminHubController {
          FROM tasks
          WHERE is_deleted = 0 AND type = 'once' AND assigned_to = ?
            AND status IN ('pending', 'in_progress', 'completed')
-           AND (due_date = ? OR due_date IS NULL)
+           AND due_date = ?
          ORDER BY title`,
         [userId, date]
       );

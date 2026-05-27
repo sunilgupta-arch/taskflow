@@ -782,8 +782,7 @@
       b += '    —  None' + n;
     } else {
       done.forEach(function(t, i) {
-        var dur = t.duration_minutes ? '  –  ' + fmtDuration(t.duration_minutes) : '';
-        b += '    ' + (i + 1) + '.  ' + t.title + dur + n;
+        b += '    ' + (i + 1) + '.  ' + t.title + n;
       });
     }
     b += n;
@@ -793,8 +792,7 @@
       b += '    —  None' + n;
     } else {
       inProg.forEach(function(t, i) {
-        var since = t.started_at ? '  (started ' + fmtTime(t.started_at) + ')' : '';
-        b += '    ' + (i + 1) + '.  ' + t.title + since + n;
+        b += '    ' + (i + 1) + '.  ' + t.title + n;
       });
     }
     b += n;
