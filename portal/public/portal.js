@@ -421,6 +421,35 @@ function sendFile() {
   uploadChatFileDirect(file);
 }
 
+function showChatPastePreview(file) {
+  if (file.size > 10 * 1024 * 1024) { alert('File too large. Max 10 MB.'); return; }
+  const fname = file.name || ('screenshot-' + Date.now() + '.png');
+  const modalId = 'chatPastePreviewModal';
+  const existing = document.getElementById(modalId);
+  if (existing) existing.remove();
+  const el = document.createElement('div');
+  el.id = modalId;
+  el.className = 'modal fade';
+  el.setAttribute('tabindex', '-1');
+  el.innerHTML = '<div class="modal-dialog modal-dialog-centered">'
+    + '<div class="modal-content"><div class="modal-header py-2 px-3">'
+    + '<h6 class="modal-title mb-0"><i class="bi bi-clipboard me-1"></i>Send image</h6>'
+    + '<button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>'
+    + '<div class="modal-body"><img id="chatPastePreviewImg" src="" alt="preview" style="max-width:100%;max-height:320px;object-fit:contain;border-radius:8px;display:block;margin:0 auto">'
+    + '<div class="text-muted small text-center mt-2">' + (fname.length > 40 ? fname.substring(0, 37) + '...' : fname) + '</div></div>'
+    + '<div class="modal-footer py-2"><button class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button>'
+    + '<button class="btn btn-sm btn-primary" id="chatPasteSendBtn"><i class="bi bi-send me-1"></i>Send</button></div>'
+    + '</div></div>';
+  document.body.appendChild(el);
+  const reader = new FileReader();
+  reader.onload = ev => { const img = el.querySelector('#chatPastePreviewImg'); if (img) img.src = ev.target.result; };
+  reader.readAsDataURL(file);
+  const modal = new bootstrap.Modal(el);
+  el.querySelector('#chatPasteSendBtn').onclick = function() { modal.hide(); uploadChatFileDirect(file); };
+  el.addEventListener('hidden.bs.modal', function() { el.remove(); });
+  modal.show();
+}
+
 // Paste screenshot/image directly into chat
 document.addEventListener('DOMContentLoaded', function() {
   const input = document.getElementById('messageInput');
@@ -431,7 +460,7 @@ document.addEventListener('DOMContentLoaded', function() {
     for (let i = 0; i < items.length; i++) {
       if (items[i].kind === 'file') {
         const file = items[i].getAsFile();
-        if (file) { e.preventDefault(); uploadChatFileDirect(file); return; }
+        if (file) { e.preventDefault(); showChatPastePreview(file); return; }
       }
     }
   });

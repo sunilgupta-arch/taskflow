@@ -1617,7 +1617,7 @@
     var viewUrl  = att.drive_view_link || proxyUrl;
     var fn  = att.file_name || 'file';
     var ext = fn.split('.').pop().toLowerCase();
-    if (GC_IMG_EXTS.indexOf(ext) !== -1) return '<a href="'+proxyUrl+'" target="_blank"><img src="'+proxyUrl+'" class="adm-gc-img" alt="'+admEsc(fn)+'" loading="lazy"></a>';
+    if (GC_IMG_EXTS.indexOf(ext) !== -1) return '<img src="'+proxyUrl+'" class="adm-gc-img" alt="'+admEsc(fn)+'" loading="lazy" style="cursor:zoom-in" onclick="admGcOpenLightbox(\''+proxyUrl+'\')">';
     var icons = {pdf:'bi-file-earmark-pdf-fill',doc:'bi-file-earmark-word-fill',docx:'bi-file-earmark-word-fill',xls:'bi-file-earmark-excel-fill',xlsx:'bi-file-earmark-excel-fill',zip:'bi-file-earmark-zip-fill'};
     var ic = icons[ext] || 'bi-file-earmark-fill';
     return '<a class="adm-gc-file" href="'+viewUrl+'" target="_blank"><i class="bi '+ic+'" style="font-size:1.4rem"></i><span>'+admEsc(fn)+'</span></a>';
@@ -1806,6 +1806,44 @@
     fetch('/channel/file', {method:'POST', body:fd}).catch(function(){});
     document.getElementById('admGcFile').value = '';
   };
+
+  document.getElementById('admGcInput').addEventListener('paste', function(e) {
+    var items = (e.clipboardData || window.clipboardData || {}).items || [];
+    for (var i = 0; i < items.length; i++) {
+      if (items[i].kind === 'file') {
+        var f = items[i].getAsFile();
+        if (f) { e.preventDefault(); admGcShowPastePreview(f); return; }
+      }
+    }
+  });
+
+  function admGcShowPastePreview(file) {
+    if (file.size > 5*1024*1024) { showToast('File too large. Max 5 MB.', 'error'); return; }
+    var fname = file.name || ('screenshot-' + Date.now() + '.png');
+    var ov = document.createElement('div');
+    ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9998;display:flex;align-items:center;justify-content:center;';
+    ov.innerHTML = '<div style="background:var(--adm-surface,#242424);border:1px solid var(--adm-border,#383838);border-radius:12px;padding:20px;max-width:440px;width:95%;">'
+      + '<p style="margin:0 0 10px;font-weight:600;color:var(--adm-text,#e0e0e0);">Send this image?</p>'
+      + '<img id="admGcPasteImg" src="" style="max-width:100%;max-height:280px;border-radius:8px;display:block;margin-bottom:12px;" alt="preview">'
+      + '<div style="display:flex;gap:8px;justify-content:flex-end;">'
+      + '<button id="admGcPasteCancel" style="padding:6px 16px;border:1px solid var(--adm-border,#383838);border-radius:6px;background:transparent;color:var(--adm-text,#e0e0e0);cursor:pointer;">Cancel</button>'
+      + '<button id="admGcPasteSend" style="padding:6px 16px;border:none;border-radius:6px;background:var(--adm-accent,#00d4ff);color:#000;font-weight:600;cursor:pointer;">Send</button>'
+      + '</div></div>';
+    var reader = new FileReader();
+    reader.onload = function(ev) { var img = ov.querySelector('#admGcPasteImg'); if (img) img.src = ev.target.result; };
+    reader.readAsDataURL(file);
+    document.body.appendChild(ov);
+    ov.querySelector('#admGcPasteCancel').onclick = function() { ov.remove(); };
+    ov.querySelector('#admGcPasteSend').onclick = function() {
+      ov.remove();
+      if (file.size > 5*1024*1024) { showToast('File too large. Max 5 MB.', 'error'); return; }
+      var fd = new FormData(); fd.append('file', file, fname);
+      if (_gcReplyingTo) { fd.append('reply_to_id', _gcReplyingTo.id); admGcCancelReply(); }
+      fetch('/channel/file', { method: 'POST', body: fd }).catch(function(){});
+    };
+    ov.addEventListener('click', function(e) { if (e.target === ov) ov.remove(); });
+    document.addEventListener('keydown', function esc(e) { if (e.key === 'Escape') { ov.remove(); document.removeEventListener('keydown', esc); } });
+  }
 
   document.getElementById('admGcInput').addEventListener('keydown', function(e) {
     if (_gcMActive) {
@@ -2485,6 +2523,20 @@ function admSubmitLateReason() {
     document.getElementById('admLateLoginModal').style.display = 'none';
   });
 }
+
+window.admGcOpenLightbox = function(url) {
+  var ov = document.createElement('div');
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:9999;display:flex;align-items:center;justify-content:center;';
+  ov.innerHTML = '<div style="position:relative;max-width:90vw;max-height:90vh;">'
+    + '<img src="' + url + '" style="max-width:90vw;max-height:85vh;border-radius:8px;box-shadow:0 8px 32px rgba(0,0,0,.6);" alt="image">'
+    + '<button onclick="this.closest(\'[data-admgclb]\').remove()" style="position:absolute;top:-14px;right:-14px;background:#fff;border:none;border-radius:50%;width:28px;height:28px;font-size:16px;cursor:pointer;line-height:1;">&times;</button>'
+    + '<a href="' + url + '" target="_blank" rel="noopener" style="position:absolute;bottom:-26px;left:50%;transform:translateX(-50%);font-size:12px;color:#bbb;white-space:nowrap;">Open original</a>'
+    + '</div>';
+  ov.setAttribute('data-admgclb', '1');
+  ov.addEventListener('click', function(e) { if (e.target === ov) ov.remove(); });
+  document.addEventListener('keydown', function esc(e) { if (e.key === 'Escape') { ov.remove(); document.removeEventListener('keydown', esc); } });
+  document.body.appendChild(ov);
+};
 </script>
 <script>
 // Shift-end warning & auto-logout (LOCAL_MANAGER and LOCAL_USER only)

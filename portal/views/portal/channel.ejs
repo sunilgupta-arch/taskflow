@@ -7,6 +7,15 @@
   </div>
   <button class="gc-search-toggle" onclick="toggleGcSearch()" title="Search"><i class="bi bi-search"></i></button>
   <button class="gc-help-toggle" onclick="openGcHelp()" title="Help"><i class="bi bi-question-circle"></i></button>
+  <button class="gc-search-toggle" id="gcMentionBtn" onclick="toggleGcMentions()" title="My mentions" style="position:relative"><i class="bi bi-at"></i><span id="gcMentionBadge" style="display:none;position:absolute;top:2px;right:2px;background:#ef4444;color:#fff;font-size:0.5rem;font-weight:700;border-radius:10px;padding:0 3px;min-width:13px;text-align:center;line-height:13px">0</span></button>
+  <!-- Mention inbox panel -->
+  <div id="gcMentionsPanel" style="display:none;border-bottom:1px solid var(--tf-border,#e2e8f0);background:var(--tf-surface,#fff);max-height:260px;overflow-y:auto">
+    <div class="d-flex align-items-center justify-content-between px-3 py-2 border-bottom">
+      <span class="small fw-semibold text-muted text-uppercase" style="font-size:0.68rem;letter-spacing:0.7px"><i class="bi bi-at me-1"></i>My Mentions</span>
+      <button class="btn btn-link btn-sm p-0 text-primary" style="font-size:0.7rem" onclick="gcMarkAllMentionsSeen()">Mark all seen</button>
+    </div>
+    <div id="gcMentionsList"></div>
+  </div>
   <div class="gc-search-bar" id="gcSearchBar" style="display:none">
     <input type="text" class="form-control form-control-sm" id="gcSearchInput" placeholder="Search messages...">
     <i class="bi bi-x-lg gc-search-close" onclick="toggleGcSearch()" title="Close"></i>
@@ -890,7 +899,7 @@
     var ext = fname.split('.').pop().toLowerCase();
     var url = _baseUrl + '/attachment/' + msgId;
     if (IMAGE_EXTS.indexOf(ext) !== -1) {
-      return '<a href="' + url + '" target="_blank"><img src="' + url + '" style="max-width:300px;border-radius:8px;" loading="lazy"></a>';
+      return '<img src="' + url + '" style="max-width:300px;border-radius:8px;cursor:zoom-in" loading="lazy" onclick="gcOpenLightbox(\'' + url + '\')">';
     }
     var short = fname.length > 30 ? fname.substring(0, 27) + '...' : fname;
     var size = attachment.file_size ? (attachment.file_size < 1048576 ? (attachment.file_size/1024).toFixed(1)+' KB' : (attachment.file_size/1048576).toFixed(1)+' MB') : '';
@@ -1057,10 +1066,74 @@
     for (var i = 0; i < items.length; i++) {
       if (items[i].kind === 'file') {
         var file = items[i].getAsFile();
-        if (file) { e.preventDefault(); uploadFileDirect(file); return; }
+        if (file) { e.preventDefault(); showGcPastePreview(file); return; }
       }
     }
   });
+
+  window.gcOpenLightbox = function(url) {
+    var modalId = 'gcLightboxModal';
+    var existing = document.getElementById(modalId);
+    if (existing) existing.remove();
+    var el = document.createElement('div');
+    el.id = modalId;
+    el.className = 'modal fade';
+    el.setAttribute('tabindex', '-1');
+    el.innerHTML =
+      '<div class="modal-dialog modal-dialog-centered modal-lg">'
+      + '<div class="modal-content bg-dark border-0">'
+      + '<div class="modal-header border-0 py-2 px-3">'
+      + '<button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>'
+      + '<div class="modal-body p-2 text-center">'
+      + '<img src="' + url + '" alt="image" style="max-width:100%;max-height:80vh;object-fit:contain;border-radius:8px">'
+      + '</div>'
+      + '<div class="modal-footer border-0 py-2 justify-content-center">'
+      + '<a href="' + url + '" target="_blank" rel="noopener" class="btn btn-sm btn-outline-light"><i class="bi bi-box-arrow-up-right me-1"></i>Open original</a>'
+      + '</div></div></div>';
+    document.body.appendChild(el);
+    var modal = new bootstrap.Modal(el);
+    el.addEventListener('hidden.bs.modal', function() { el.remove(); });
+    modal.show();
+  };
+
+  function showGcPastePreview(file) {
+    if (file.size > 5*1024*1024) { alert('File too large. Max 5 MB.'); return; }
+    var isImage = file.type.startsWith('image/');
+    var fname = file.name || ('screenshot-' + Date.now() + '.png');
+    // Build Bootstrap modal dynamically
+    var modalId = 'gcPastePreviewModal';
+    var existing = document.getElementById(modalId);
+    if (existing) existing.remove();
+    var imgHtml = isImage
+      ? '<img id="gcPastePreviewImg" src="" alt="preview" style="max-width:100%;max-height:360px;object-fit:contain;border-radius:8px;display:block;margin:0 auto">'
+      : '<div class="text-center text-muted py-4" style="font-size:2.5rem"><i class="bi bi-file-earmark"></i></div>';
+    var el = document.createElement('div');
+    el.id = modalId;
+    el.className = 'modal fade';
+    el.setAttribute('tabindex', '-1');
+    el.innerHTML =
+      '<div class="modal-dialog modal-dialog-centered">'
+      + '<div class="modal-content">'
+      + '<div class="modal-header py-2 px-3"><h6 class="modal-title mb-0"><i class="bi bi-clipboard me-1"></i>Send image</h6>'
+      + '<button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>'
+      + '<div class="modal-body">' + imgHtml + '<div class="text-muted small text-center mt-2">' + _esc(fname) + '</div></div>'
+      + '<div class="modal-footer py-2"><button class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button>'
+      + '<button class="btn btn-sm btn-primary" id="gcPasteSendBtn"><i class="bi bi-send me-1"></i>Send</button></div>'
+      + '</div></div>';
+    document.body.appendChild(el);
+    if (isImage) {
+      var reader = new FileReader();
+      reader.onload = function(ev) { var img = el.querySelector('#gcPastePreviewImg'); if(img) img.src = ev.target.result; };
+      reader.readAsDataURL(file);
+    }
+    var modal = new bootstrap.Modal(el);
+    el.querySelector('#gcPasteSendBtn').onclick = function() {
+      modal.hide();
+      uploadFileDirect(file);
+    };
+    el.addEventListener('hidden.bs.modal', function() { el.remove(); });
+    modal.show();
+  }
 
   function playGcAlert() {
     try {
@@ -1216,6 +1289,10 @@
     renderGcPresence();
   });
 
+  mainSocket.on('channel:mention:badge', function(data) {
+    if (data.user_id === _userId) _gcUpdateMentionBadge(data.count);
+  });
+
   document.getElementById('gcFullMessages')?.addEventListener('scroll', function() {
     _gcUpdateScrollBtn();
     if (this.scrollTop < 80) _gcLoadMore();
@@ -1225,5 +1302,66 @@
   loadMessages();
   loadGcUsers();
   loadGcPinned();
+  loadGcMentions();
+
+  // ── Mention inbox ──────────────────────────────────────────────
+  var _gcMentionsPanelOpen = false;
+
+  function _gcUpdateMentionBadge(count) {
+    var badge = document.getElementById('gcMentionBadge');
+    if (!badge) return;
+    if (count > 0) { badge.textContent = count > 99 ? '99+' : count; badge.style.display = ''; }
+    else { badge.style.display = 'none'; }
+  }
+
+  function loadGcMentions() {
+    fetch('/portal/channel/mentions', { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+      .then(function(r) { return r.json(); })
+      .then(function(res) {
+        if (!res.success) return;
+        _gcUpdateMentionBadge(res.data.unseen);
+        _gcRenderMentions(res.data.mentions);
+      }).catch(function() {});
+  }
+
+  function _gcRenderMentions(mentions) {
+    var el = document.getElementById('gcMentionsList');
+    if (!el) return;
+    if (!mentions || !mentions.length) {
+      el.innerHTML = '<div class="text-muted small text-center py-3">No mentions yet</div>';
+      return;
+    }
+    el.innerHTML = mentions.map(function(m) {
+      var unseen = !m.seen_at;
+      var preview = m.is_deleted ? '(deleted message)' : (m.type === 'file' ? '📎 attachment' : (m.content || '').substring(0, 80));
+      var ts = m.message_at ? new Date(m.message_at).toLocaleString() : '';
+      return '<div class="d-flex align-items-start gap-2 px-3 py-2 border-bottom small" style="cursor:pointer' + (unseen ? ';border-left:2px solid #ef4444' : '') + '" onclick="gcMentionJump(' + m.message_id + ')">'
+        + '<div style="flex:1;min-width:0">'
+        + '<div class="text-muted" style="font-size:0.68rem">' + _esc(m.sender_name) + ' &middot; ' + _esc(ts) + '</div>'
+        + '<div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + _esc(preview) + '</div>'
+        + '</div></div>';
+    }).join('');
+  }
+
+  window.toggleGcMentions = function() {
+    _gcMentionsPanelOpen = !_gcMentionsPanelOpen;
+    var panel = document.getElementById('gcMentionsPanel');
+    if (panel) panel.style.display = _gcMentionsPanelOpen ? 'block' : 'none';
+    if (_gcMentionsPanelOpen) loadGcMentions();
+  };
+
+  window.gcMentionJump = function(msgId) {
+    _gcSearchJump(msgId);
+    _gcMentionsPanelOpen = false;
+    var panel = document.getElementById('gcMentionsPanel');
+    if (panel) panel.style.display = 'none';
+  };
+
+  window.gcMarkAllMentionsSeen = function() {
+    fetch('/portal/channel/mentions/seen', { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+      .then(function(r) { return r.json(); })
+      .then(function() { _gcUpdateMentionBadge(0); loadGcMentions(); })
+      .catch(function() {});
+  };
 })();
 </script>

@@ -66,7 +66,9 @@ const isSalesUser = user.role_name === 'CLIENT_SALES';
   <% if (!isToday) { %>
   <a href="/portal/requests?date=<%= nextDate(selectedDate) %>" class="btn btn-sm btn-outline-secondary"><i class="bi bi-chevron-right"></i></a>
   <% } %>
+  <a href="/portal/requests?date=<%= prevDate(today) %>" class="btn btn-sm btn-outline-secondary">Yesterday</a>
   <a href="/portal/requests" class="btn btn-sm btn-outline-primary <%= isToday ? 'disabled' : '' %>"><i class="bi bi-calendar-today me-1"></i>Today</a>
+  <a href="/portal/requests?date=<%= nextDate(today) %>" class="btn btn-sm btn-outline-secondary">Tomorrow</a>
   <span class="ms-auto small text-muted"><strong><%= fmtDate(selectedDate) %></strong></span>
 </div>
 
@@ -182,10 +184,9 @@ const isSalesUser = user.role_name === 'CLIENT_SALES';
           </div>
           <div class="col-md-6">
             <label class="form-label small fw-semibold">Task Type</label>
-            <input type="text" class="form-control form-control-sm" id="crTaskType" list="crTaskTypeList" placeholder="e.g. Data Entry, PO Ordering..." value="General">
-            <datalist id="crTaskTypeList">
-              <% taskTypes.forEach(t => { %><option value="<%= t %>"><% }); %>
-            </datalist>
+            <select class="form-select form-select-sm" id="crTaskType">
+              <% taskTypes.forEach(t => { %><option value="<%= t %>" <%= t === 'General' ? 'selected' : '' %>><%= t %></option><% }); %>
+            </select>
           </div>
           <div class="col-md-6">
             <label class="form-label small fw-semibold">Priority</label>
@@ -274,10 +275,9 @@ const isSalesUser = user.role_name === 'CLIENT_SALES';
           </div>
           <div class="col-12">
             <label class="form-label small fw-semibold">Task Type</label>
-            <input type="text" class="form-control form-control-sm" id="qrTaskType" list="qrTaskTypeList" placeholder="e.g. Data Entry, PO Ordering..." value="General">
-            <datalist id="qrTaskTypeList">
-              <% taskTypes.forEach(t => { %><option value="<%= t %>"><% }); %>
-            </datalist>
+            <select class="form-select form-select-sm" id="qrTaskType">
+              <% taskTypes.forEach(t => { %><option value="<%= t %>" <%= t === 'General' ? 'selected' : '' %>><%= t %></option><% }); %>
+            </select>
           </div>
           <div class="col-12">
             <label class="form-label small fw-semibold">Description</label>
@@ -326,7 +326,9 @@ const isSalesUser = user.role_name === 'CLIENT_SALES';
               </div>
               <div class="col-6" id="erTaskTypeCol">
                 <label class="form-label small fw-semibold">Task Type</label>
-                <input type="text" class="form-control form-control-sm" id="erTaskType" list="crTaskTypeList">
+                <select class="form-select form-select-sm" id="erTaskType">
+                  <% taskTypes.forEach(t => { %><option value="<%= t %>"><%= t %></option><% }); %>
+                </select>
               </div>
               <div class="col-6">
                 <label class="form-label small fw-semibold">Priority</label>
@@ -490,13 +492,34 @@ const isSalesUser = user.role_name === 'CLIENT_SALES';
 
   const recLabels = { none: 'One-time', daily: 'Daily', weekly: 'Weekly', monthly: 'Monthly' };
 
+  function fmtTime(dtStr) {
+    if (!dtStr) return '';
+    var timePart = String(dtStr).split(' ')[1] || '';
+    var p = timePart.split(':');
+    var h = parseInt(p[0]||0), m = parseInt(p[1]||0);
+    var ampm = h >= 12 ? 'PM' : 'AM';
+    h = h % 12 || 12;
+    return h + ':' + String(m).padStart(2,'0') + ' ' + ampm;
+  }
+  function fmtDuration(from, to) {
+    if (!from || !to) return null;
+    var ms = new Date(to) - new Date(from);
+    if (ms <= 0) return null;
+    var mins = Math.round(ms / 60000);
+    if (mins < 60) return mins + 'm';
+    var h = Math.floor(mins / 60), m = mins % 60;
+    return h + 'h' + (m ? ' ' + m + 'm' : '');
+  }
+
   function commentSnippet(inst) {
     var body = (inst.latest_comment || '').trim();
-    if (!body) return '<span class="preq-comment-snip" style="opacity:0.35">—</span>';
+    var count = parseInt(inst.comment_count) || 0;
+    var countBadge = count > 0 ? '<span class="badge bg-secondary ms-1" style="font-size:0.6rem;font-weight:500">'+count+'</span>' : '';
+    if (!body) return '<span class="preq-comment-snip" style="opacity:0.35">—</span>' + countBadge;
     var by = inst.latest_comment_by ? '<span style="font-size:0.68rem;color:var(--tf-text-muted,#94a3b8)"> · ' + escHtml(inst.latest_comment_by) + '</span>' : '';
     var limit = 35;
     var snippet = body.length <= limit ? escHtml(body) : escHtml(body.substring(0, limit)) + '…';
-    return '<span class="preq-comment-snip">' + snippet + '</span>' + by;
+    return '<span class="preq-comment-snip">' + snippet + '</span>' + by + countBadge;
   }
 
   function descSnippet(inst) {
@@ -558,6 +581,7 @@ const isSalesUser = user.role_name === 'CLIENT_SALES';
           <a href="#" class="portal-req-detail-link" data-id="${inst.id}">${escHtml(inst.title)}</a>
           ${actionsDropdown}
           ${isOverdue ? '<span class="badge bg-danger ms-1 small">Overdue</span>' : ''}
+          ${inst.rescheduled_from_date ? `<span class="badge bg-secondary ms-1 small" title="Rescheduled from ${escHtml(inst.rescheduled_from_date)}${inst.rescheduled_by_name ? ' by '+escHtml(inst.rescheduled_by_name) : ''}"><i class="bi bi-arrow-repeat me-1"></i>Rescheduled</span>` : ''}
           ${descSnippet(inst)}
         </td>
         <td><span class="badge" style="background:var(--bs-info-bg-subtle);color:var(--bs-info-text-emphasis)">${escHtml(inst.task_type)}</span></td>
@@ -565,8 +589,9 @@ const isSalesUser = user.role_name === 'CLIENT_SALES';
         <td>${priorityBadge(inst.priority)}</td>
         <td class="small text-muted">${inst.due_time ? inst.due_time.substring(0,5) : '—'}</td>
         <td class="small" title="${escHtml(inst.created_by_name || '—')}">${escHtml((inst.created_by_name || '—').split(' ')[0])}</td>
-        <td>
+        <td style="line-height:1.4">
           ${statusBadge(inst.status, inst.rescheduled_to)}
+          ${['done','approved'].includes(inst.status) && fmtDuration(inst.picked_at, inst.completed_at) ? `<div class="text-muted" style="font-size:0.7rem;font-family:monospace">${fmtDuration(inst.picked_at, inst.completed_at)}</div>` : ''}
           ${inst.status === 'done' && inst.created_by === CURRENT_USER_ID
             ? `<div class="d-flex gap-1 mt-1">
                 <button class="btn btn-xs btn-outline-success py-0 px-1" style="font-size:0.68rem" onclick="event.stopPropagation();preqApprove(${inst.id})" title="Approve"><i class="bi bi-check-lg"></i> Approve</button>
@@ -574,7 +599,10 @@ const isSalesUser = user.role_name === 'CLIENT_SALES';
               </div>`
             : ''}
         </td>
-        <td class="small" title="${escHtml(inst.picked_by_name || inst.completed_by_name || '—')}">${escHtml(((inst.picked_by_name || inst.completed_by_name || '—').split(' ')[0]))}</td>
+        <td class="small" style="line-height:1.4" title="${escHtml(inst.picked_by_name || inst.completed_by_name || '—')}">
+          ${escHtml(((inst.picked_by_name || inst.completed_by_name || '—').split(' ')[0]))}
+          ${(inst.picked_by_name || inst.completed_by_name) && inst.picked_at ? `<br><span class="text-muted" style="font-size:0.7rem;font-family:monospace">${fmtTime(inst.picked_at)}</span>` : ''}
+        </td>
         <td class="preq-comment-cell"${inst.latest_comment ? ' data-tooltip="'+escHtml((inst.latest_comment||'').trim())+'"' : ''}>${commentSnippet(inst)}</td>
       </tr>`;
     });
@@ -987,6 +1015,8 @@ const isSalesUser = user.role_name === 'CLIENT_SALES';
       <div class="col-6"><div class="small text-muted mb-1">Due Time</div>${inst.due_time ? inst.due_time.substring(0,5) : '—'}</div>
       <div class="col-6"><div class="small text-muted mb-1">Status</div>${statusBadge(inst.status, inst.rescheduled_to)}</div>
       <div class="col-6"><div class="small text-muted mb-1">Handled By</div>${escHtml(inst.picked_by_name || inst.completed_by_name || '—')}</div>
+      ${fmtDuration(inst.picked_at, inst.completed_at) ? `<div class="col-6"><div class="small text-muted mb-1">Time Taken</div><span class="small" style="font-family:monospace;color:#198754">${fmtDuration(inst.picked_at, inst.completed_at)}</span></div>` : ''}
+      ${inst.rescheduled_from_date ? `<div class="col-12"><div class="small text-muted mb-1">Rescheduled From</div><span class="small" style="font-family:monospace">${escHtml(inst.rescheduled_from_date)}</span>${inst.rescheduled_by_name ? `<span class="text-muted small ms-2">by ${escHtml(inst.rescheduled_by_name)}</span>` : ''}</div>` : ''}
     </div>`;
     if (inst.description) html += `<div class="mb-3"><div class="small text-muted mb-1">Description</div><div class="p-2 rounded" style="background:var(--tf-surface-2);white-space:pre-wrap">${escHtml(inst.description)}</div></div>`;
     const PREQ_IMG_EXTS = ['jpg','jpeg','png','gif','webp','bmp','svg','avif'];

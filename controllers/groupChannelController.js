@@ -34,10 +34,50 @@ class GroupChannelController {
         io.emit('channel:message', message);
       } catch (_) {}
 
+      // Parse and save @mentions (fire-and-forget — never blocks the response)
+      GroupChannel.resolveMentionedUserIds(content.trim())
+        .then(async userIds => {
+          // Exclude self-mentions
+          const others = userIds.filter(id => id !== req.user.id);
+          if (!others.length) return;
+          await GroupChannel.saveMentions(message.id, others);
+          // Notify each mentioned user's badge count via socket
+          const { getIO } = require('../config/socket');
+          try {
+            const io = getIO();
+            for (const uid of others) {
+              const count = await GroupChannel.getUnseenMentionCount(uid);
+              io.emit('channel:mention:badge', { user_id: uid, count });
+            }
+          } catch (_) {}
+        })
+        .catch(err => console.error('GroupChannel mention parse error:', err));
+
       return ApiResponse.success(res, { message }, 'Message sent');
     } catch (err) {
       console.error('GroupChannel send error:', err);
       return ApiResponse.error(res, 'Failed to send message');
+    }
+  }
+
+  static async getMentions(req, res) {
+    try {
+      const mentions = await GroupChannel.getMentionsForUser(req.user.id, 30);
+      const unseen = await GroupChannel.getUnseenMentionCount(req.user.id);
+      return ApiResponse.success(res, { mentions, unseen });
+    } catch (err) {
+      console.error('GroupChannel getMentions error:', err);
+      return ApiResponse.error(res, 'Failed to load mentions');
+    }
+  }
+
+  static async markAllMentionsSeen(req, res) {
+    try {
+      await GroupChannel.markAllMentionsSeen(req.user.id);
+      return ApiResponse.success(res, {}, 'Mentions marked as seen');
+    } catch (err) {
+      console.error('GroupChannel markAllMentionsSeen error:', err);
+      return ApiResponse.error(res, 'Failed to mark mentions as seen');
     }
   }
 

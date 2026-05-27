@@ -86,7 +86,10 @@ class ClientRequest {
               COALESCE(instanceAssignee.name, defaultAssignee.name) as effective_assigned_to_name,
               lc.body as latest_comment,
               lc_user.name as latest_comment_by,
-              lc.created_at as latest_comment_at
+              lc.created_at as latest_comment_at,
+              (SELECT COUNT(*) FROM client_request_comments WHERE instance_id = cri.id) as comment_count,
+              orig.instance_date as rescheduled_from_date,
+              rescheduler.name as rescheduled_by_name
        FROM client_request_instances cri
        JOIN client_requests cr ON cri.request_id = cr.id
        JOIN organizations o ON cr.org_id = o.id
@@ -99,6 +102,8 @@ class ClientRequest {
          SELECT MAX(id) FROM client_request_comments WHERE instance_id = cri.id
        )
        LEFT JOIN users lc_user ON lc.user_id = lc_user.id
+       LEFT JOIN client_request_instances orig ON orig.rescheduled_instance_id = cri.id
+       LEFT JOIN users rescheduler ON orig.rescheduled_by = rescheduler.id
        WHERE (cri.instance_date = ? ${carryForward}) AND cr.is_active = 1
        ORDER BY cri.status = 'cancelled' ASC, cri.id ASC`,
       queryParams
@@ -116,13 +121,17 @@ class ClientRequest {
               cr.org_id, o.name as org_name,
               cr.created_by, creator.name as created_by_name, creator.email as creator_email,
               picker.name as picked_by_name,
-              completer.name as completed_by_name
+              completer.name as completed_by_name,
+              orig.instance_date as rescheduled_from_date,
+              rescheduler.name as rescheduled_by_name
        FROM client_request_instances cri
        JOIN client_requests cr ON cri.request_id = cr.id
        JOIN organizations o ON cr.org_id = o.id
        JOIN users creator ON cr.created_by = creator.id
        LEFT JOIN users picker ON cri.picked_by = picker.id
        LEFT JOIN users completer ON cri.completed_by = completer.id
+       LEFT JOIN client_request_instances orig ON orig.rescheduled_instance_id = cri.id
+       LEFT JOIN users rescheduler ON orig.rescheduled_by = rescheduler.id
        WHERE cri.id = ?`,
       [instanceId]
     );
@@ -346,7 +355,10 @@ class ClientRequest {
               completer.name as completed_by_name,
               lc.body as latest_comment,
               lc_user.name as latest_comment_by,
-              lc.created_at as latest_comment_at
+              lc.created_at as latest_comment_at,
+              (SELECT COUNT(*) FROM client_request_comments WHERE instance_id = cri.id) as comment_count,
+              orig.instance_date as rescheduled_from_date,
+              rescheduler.name as rescheduled_by_name
        FROM client_request_instances cri
        JOIN client_requests cr ON cri.request_id = cr.id
        JOIN users creator ON cr.created_by = creator.id
@@ -356,6 +368,8 @@ class ClientRequest {
          SELECT MAX(id) FROM client_request_comments WHERE instance_id = cri.id
        )
        LEFT JOIN users lc_user ON lc.user_id = lc_user.id
+       LEFT JOIN client_request_instances orig ON orig.rescheduled_instance_id = cri.id
+       LEFT JOIN users rescheduler ON orig.rescheduled_by = rescheduler.id
        WHERE (cri.instance_date = ? AND cr.org_id = ? AND cr.is_active = 1${salesFilter} ${carryForward})
        ORDER BY
          cr.due_time ASC,
@@ -414,11 +428,18 @@ class ClientRequest {
 
   // Autocomplete task types for the portal's datalist
   static async getTaskTypes(orgId) {
+    const defaults = [
+      'General', 'Issue', 'Report', 'Technical', 'Ticket',
+      'Suggestion', 'Support', 'Data Entry', 'Follow-up', 'Document Review'
+    ];
     const [rows] = await db.query(
       `SELECT DISTINCT task_type FROM client_requests WHERE org_id = ? ORDER BY task_type ASC`,
       [orgId]
     );
-    return rows.map(r => r.task_type);
+    const priorityWords = new Set(['urgent', 'high', 'normal', 'low']);
+    const fromDb = rows.map(r => r.task_type).filter(t => !priorityWords.has(t.toLowerCase()));
+    const merged = [...new Set([...defaults, ...fromDb])].sort();
+    return merged;
   }
 
   // Edit a request template (portal admin)

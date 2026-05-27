@@ -2254,7 +2254,7 @@
     var ext = fname.split('.').pop().toLowerCase();
     var url = _gcBaseUrl + '/attachment/' + msgId;
     if (GC_IMAGE_EXTS.indexOf(ext) !== -1) {
-      return '<a href="' + url + '" target="_blank" class="msg-image-link"><img src="' + url + '" class="msg-image-preview" alt="' + fname + '" loading="lazy" style="max-width:180px;border-radius:6px;"></a>';
+      return '<img src="' + url + '" class="msg-image-preview" alt="' + fname + '" loading="lazy" style="max-width:180px;border-radius:6px;cursor:zoom-in" onclick="gcLayoutOpenLightbox(\'' + url + '\')">';
     }
     var short = fname.length > 20 ? fname.substring(0, 17) + '...' : fname;
     var size = attachment.file_size ? (attachment.file_size < 1048576 ? (attachment.file_size/1024).toFixed(1)+' KB' : (attachment.file_size/1048576).toFixed(1)+' MB') : '';
@@ -2429,6 +2429,35 @@
       .catch(function() { markGcUploadFailed(placeholderId, 'Upload failed'); });
   }
 
+  function showGcPanelPastePreview(file) {
+    if (file.size > 5*1024*1024) { alert('File too large. Max 5 MB.'); return; }
+    var fname = file.name || ('screenshot-' + Date.now() + '.png');
+    var modalId = 'gcPanelPasteModal';
+    var existing = document.getElementById(modalId);
+    if (existing) existing.remove();
+    var el = document.createElement('div');
+    el.id = modalId;
+    el.className = 'modal fade';
+    el.setAttribute('tabindex', '-1');
+    el.innerHTML = '<div class="modal-dialog modal-dialog-centered">'
+      + '<div class="modal-content"><div class="modal-header py-2 px-3">'
+      + '<h6 class="modal-title mb-0"><i class="bi bi-clipboard me-1"></i>Send image</h6>'
+      + '<button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>'
+      + '<div class="modal-body"><img id="gcPanelPasteImg" src="" alt="preview" style="max-width:100%;max-height:300px;object-fit:contain;border-radius:8px;display:block;margin:0 auto">'
+      + '<div class="text-muted small text-center mt-2">' + (fname.length > 40 ? fname.substring(0,37)+'...' : fname) + '</div></div>'
+      + '<div class="modal-footer py-2"><button class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button>'
+      + '<button class="btn btn-sm btn-primary" id="gcPanelPasteSend"><i class="bi bi-send me-1"></i>Send</button></div>'
+      + '</div></div>';
+    document.body.appendChild(el);
+    var reader = new FileReader();
+    reader.onload = function(ev) { var img = el.querySelector('#gcPanelPasteImg'); if (img) img.src = ev.target.result; };
+    reader.readAsDataURL(file);
+    var modal = new bootstrap.Modal(el);
+    el.querySelector('#gcPanelPasteSend').onclick = function() { modal.hide(); uploadGcFileDirect(file); };
+    el.addEventListener('hidden.bs.modal', function() { el.remove(); });
+    modal.show();
+  }
+
   document.getElementById('gcInput')?.addEventListener('paste', function(e) {
     var items = (e.clipboardData || window.clipboardData)?.items;
     if (!items) return;
@@ -2437,7 +2466,7 @@
         var file = items[i].getAsFile();
         if (file) {
           e.preventDefault();
-          uploadGcFileDirect(file);
+          showGcPanelPastePreview(file);
           return;
         }
       }
@@ -2634,6 +2663,22 @@
   loadGcMessages();
   loadGcUsers();
   loadGcPinned();
+
+  window.gcLayoutOpenLightbox = function(url) {
+    var existing = document.getElementById('gcLayoutLightbox');
+    if (existing) existing.remove();
+    var ov = document.createElement('div');
+    ov.id = 'gcLayoutLightbox';
+    ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:9999;display:flex;align-items:center;justify-content:center;';
+    ov.innerHTML = '<div style="position:relative;max-width:90vw;max-height:90vh;">'
+      + '<img src="' + url + '" style="max-width:90vw;max-height:85vh;border-radius:8px;box-shadow:0 8px 32px rgba(0,0,0,.6);" alt="image">'
+      + '<button onclick="document.getElementById(\'gcLayoutLightbox\').remove()" style="position:absolute;top:-14px;right:-14px;background:#fff;color:#111;border:none;border-radius:50%;width:32px;height:32px;font-size:18px;font-weight:700;cursor:pointer;line-height:32px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.4);">&times;</button>'
+      + '<a href="' + url + '" target="_blank" rel="noopener" style="position:absolute;bottom:-26px;left:50%;transform:translateX(-50%);font-size:12px;color:#bbb;white-space:nowrap;">Open original</a>'
+      + '</div>';
+    ov.addEventListener('click', function(e) { if (e.target === ov) ov.remove(); });
+    document.addEventListener('keydown', function esc(e) { if (e.key === 'Escape') { ov.remove(); document.removeEventListener('keydown', esc); } });
+    document.body.appendChild(ov);
+  };
   </script>
   <% } %>
 

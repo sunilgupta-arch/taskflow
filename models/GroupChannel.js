@@ -240,6 +240,62 @@ class GroupChannel {
     const [rows] = await db.query('SELECT * FROM group_channel_attachments WHERE message_id = ?', [messageId]);
     return rows[0] || null;
   }
+
+  // Resolve @[Name] patterns in content to user IDs (excluding CLIENT_SALES)
+  static async resolveMentionedUserIds(content) {
+    const names = [];
+    const re = /@\[([^\]]+)\]/g;
+    let m;
+    while ((m = re.exec(content)) !== null) names.push(m[1]);
+    if (!names.length) return [];
+    const [rows] = await db.query(
+      `SELECT u.id FROM users u
+       JOIN roles r ON u.role_id = r.id
+       WHERE u.name IN (?) AND u.is_active = 1 AND r.name != 'CLIENT_SALES'`,
+      [names]
+    );
+    return rows.map(r => r.id);
+  }
+
+  static async saveMentions(messageId, userIds) {
+    if (!userIds.length) return;
+    const values = userIds.map(uid => [messageId, uid]);
+    await db.query(
+      'INSERT IGNORE INTO group_channel_mentions (message_id, mentioned_user_id) VALUES ?',
+      [values]
+    );
+  }
+
+  static async getMentionsForUser(userId, limit = 30) {
+    const [rows] = await db.query(
+      `SELECT gcm.id, gcm.message_id, gcm.seen_at, gcm.created_at,
+              m.content, m.type, m.is_deleted, m.created_at AS message_at,
+              u.name AS sender_name, u.id AS sender_id
+       FROM group_channel_mentions gcm
+       JOIN group_channel_messages m ON m.id = gcm.message_id
+       JOIN users u ON u.id = m.sender_id
+       WHERE gcm.mentioned_user_id = ?
+       ORDER BY gcm.id DESC
+       LIMIT ?`,
+      [userId, limit]
+    );
+    return rows;
+  }
+
+  static async getUnseenMentionCount(userId) {
+    const [[row]] = await db.query(
+      'SELECT COUNT(*) AS cnt FROM group_channel_mentions WHERE mentioned_user_id = ? AND seen_at IS NULL',
+      [userId]
+    );
+    return row.cnt;
+  }
+
+  static async markAllMentionsSeen(userId) {
+    await db.query(
+      'UPDATE group_channel_mentions SET seen_at = NOW() WHERE mentioned_user_id = ? AND seen_at IS NULL',
+      [userId]
+    );
+  }
 }
 
 module.exports = GroupChannel;

@@ -706,6 +706,8 @@ router.get('/channel/pinned', gcExcludeSales, GroupChannelController.getPinned);
 router.get('/channel/search', gcExcludeSales, GroupChannelController.search);
 router.get('/channel/unfurl', gcExcludeSales, GroupChannelController.unfurl);
 router.get('/channel/attachment/:messageId', gcExcludeSales, GroupChannelController.serveAttachment);
+router.get('/channel/mentions', gcExcludeSales, GroupChannelController.getMentions);
+router.post('/channel/mentions/seen', gcExcludeSales, GroupChannelController.markAllMentionsSeen);
 
 // ── Change Password (all portal users) ───────────────────
 router.post('/change-password', (req, res) => {

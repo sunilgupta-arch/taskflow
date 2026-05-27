@@ -184,6 +184,8 @@ router.get('/channel/pinned', authenticate, GroupChannelController.getPinned);
 router.get('/channel/search', authenticate, GroupChannelController.search);
 router.get('/channel/unfurl', authenticate, GroupChannelController.unfurl);
 router.get('/channel/attachment/:messageId', authenticate, GroupChannelController.serveAttachment);
+router.get('/channel/mentions', authenticate, GroupChannelController.getMentions);
+router.post('/channel/mentions/seen', authenticate, GroupChannelController.markAllMentionsSeen);
 
 // ── Admin Hub (new clean UI for LOCAL_ADMIN / LOCAL_MANAGER / LOCAL_USER) ─
 const AdminHubController = require('../controllers/adminHubController');

@@ -129,6 +129,45 @@
 @keyframes admchnJFlash { 0%,100%{box-shadow:none} 50%{box-shadow:0 0 0 3px rgba(59,130,246,0.6)} }
 .admchn-jump-flash { animation:admchnJFlash 1.2s ease; }
 
+/* ── Image lightbox ── */
+.admchn-lightbox { position:fixed; inset:0; background:rgba(0,0,0,0.88); z-index:10200; display:flex; align-items:center; justify-content:center; cursor:zoom-out; }
+.admchn-lightbox img { max-width:92vw; max-height:92vh; object-fit:contain; border-radius:10px; box-shadow:0 8px 40px rgba(0,0,0,0.7); cursor:default; }
+.admchn-lightbox-close { position:absolute; top:14px; right:18px; background:rgba(0,0,0,0.5); border:none; color:#fff; font-size:1.2rem; border-radius:50%; width:34px; height:34px; display:flex; align-items:center; justify-content:center; cursor:pointer; }
+.admchn-lightbox-close:hover { background:rgba(255,255,255,0.15); }
+.admchn-lightbox-open { position:absolute; bottom:18px; right:18px; background:rgba(0,0,0,0.5); border:none; color:#fff; font-size:0.75rem; padding:5px 12px; border-radius:8px; cursor:pointer; text-decoration:none; }
+.admchn-lightbox-open:hover { background:rgba(255,255,255,0.15); color:#fff; }
+
+/* ── Paste preview modal ── */
+.admchn-paste-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:10100; display:flex; align-items:center; justify-content:center; }
+.admchn-paste-modal { background:var(--adm-surface,#242424); border:1px solid var(--adm-border,#383838); border-radius:14px; width:min(480px,92vw); max-height:90vh; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 8px 32px rgba(0,0,0,0.6); }
+.admchn-paste-modal-hdr { display:flex; align-items:center; justify-content:space-between; padding:12px 16px; border-bottom:1px solid var(--adm-border,#383838); }
+.admchn-paste-modal-title { font-size:0.82rem; font-weight:700; color:var(--adm-text,#e0e0e0); }
+.admchn-paste-modal-close { background:none; border:none; color:var(--adm-muted); cursor:pointer; font-size:1rem; line-height:1; padding:0; }
+.admchn-paste-modal-close:hover { color:var(--adm-text); }
+.admchn-paste-modal-body { padding:16px; overflow-y:auto; display:flex; flex-direction:column; gap:12px; }
+.admchn-paste-preview-img { max-width:100%; max-height:320px; object-fit:contain; border-radius:8px; border:1px solid var(--adm-border,#383838); display:block; margin:0 auto; }
+.admchn-paste-fname { font-size:0.75rem; color:var(--adm-muted); text-align:center; }
+.admchn-paste-modal-footer { display:flex; gap:8px; justify-content:flex-end; padding:12px 16px; border-top:1px solid var(--adm-border,#383838); }
+.admchn-paste-btn-cancel { background:none; border:1px solid var(--adm-border,#383838); color:var(--adm-muted); border-radius:8px; padding:6px 16px; font-size:0.8rem; cursor:pointer; }
+.admchn-paste-btn-cancel:hover { border-color:var(--adm-muted); }
+.admchn-paste-btn-send { background:var(--adm-accent,#00d4ff); color:#000; border:none; border-radius:8px; padding:6px 20px; font-size:0.8rem; font-weight:700; cursor:pointer; }
+.admchn-paste-btn-send:hover { opacity:0.88; }
+
+/* ── Mention inbox ── */
+.admchn-tbtn-badge { position:absolute; top:1px; right:1px; background:#ef4444; color:#fff; font-size:0.52rem; font-weight:700; border-radius:10px; padding:0 4px; min-width:14px; text-align:center; line-height:14px; pointer-events:none; }
+.admchn-mentions-panel { border-bottom:1px solid var(--adm-border,#1a3050); background:var(--adm-surface,#0e1d30); display:none; max-height:260px; overflow-y:auto; flex-shrink:0; }
+.admchn-mentions-hdr { display:flex; align-items:center; justify-content:space-between; padding:6px 12px; border-bottom:1px solid var(--adm-border,#1a3050); }
+.admchn-mentions-hdr-title { font-size:0.7rem; font-weight:700; font-family:var(--adm-mono); text-transform:uppercase; color:var(--adm-muted); letter-spacing:0.8px; }
+.admchn-mentions-hdr-btn { font-size:0.68rem; color:var(--adm-accent,#00d4ff); background:none; border:none; cursor:pointer; padding:0; }
+.admchn-mentions-hdr-btn:hover { text-decoration:underline; }
+.admchn-mention-row { display:flex; align-items:flex-start; gap:8px; padding:7px 12px; border-bottom:1px solid rgba(255,255,255,0.04); cursor:pointer; transition:background 0.1s; }
+.admchn-mention-row:hover { background:rgba(255,255,255,0.04); }
+.admchn-mention-row.unseen { border-left:2px solid #ef4444; }
+.admchn-mention-row-body { flex:1; min-width:0; }
+.admchn-mention-row-meta { font-size:0.68rem; color:var(--adm-muted); margin-bottom:2px; }
+.admchn-mention-row-text { font-size:0.75rem; color:var(--adm-text,#dceaf8); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.admchn-mentions-empty { padding:18px; text-align:center; font-size:0.78rem; color:var(--adm-muted); }
+
 /* ── Emoji picker ── */
 .admchn-emoji-picker { position:fixed; background:var(--adm-surface,#0e1d30); border:1px solid var(--adm-border,#1a3050); border-radius:10px; padding:6px; box-shadow:0 4px 16px rgba(0,0,0,0.45); display:grid; grid-template-columns:repeat(8,30px); gap:3px; z-index:10000; width:max-content; }
 .admchn-emoji { cursor:pointer; padding:3px; border-radius:5px; font-size:1.12rem; text-align:center; transition:background 0.1s; }
@@ -188,6 +227,16 @@
     <div class="admchn-presence" id="admchnPresence"></div>
     <button class="admchn-tbtn" id="admchnSearchBtn" title="Search" onclick="ADMCHN.toggleSearch()"><i class="bi bi-search"></i></button>
     <button class="admchn-tbtn" id="admchnPinBtn" title="Pinned messages" onclick="ADMCHN.togglePinned()"><i class="bi bi-pin-angle"></i></button>
+    <button class="admchn-tbtn" id="admchnMentionBtn" title="My mentions" onclick="ADMCHN.toggleMentions()" style="position:relative"><i class="bi bi-at"></i><span class="admchn-tbtn-badge" id="admchnMentionBadge" style="display:none">0</span></button>
+  </div>
+
+  <!-- Mentions panel -->
+  <div class="admchn-mentions-panel" id="admchnMentionsPanel">
+    <div class="admchn-mentions-hdr">
+      <span class="admchn-mentions-hdr-title"><i class="bi bi-at me-1"></i>My Mentions</span>
+      <button class="admchn-mentions-hdr-btn" onclick="ADMCHN.markAllMentionsSeen()">Mark all seen</button>
+    </div>
+    <div id="admchnMentionsList"></div>
   </div>
 
   <!-- Pinned bar -->
@@ -331,7 +380,7 @@
     var fn=att.file_name, ext=fn.split('.').pop().toLowerCase();
     var proxyUrl='/channel/attachment/'+msgId;
     var viewUrl=att.drive_view_link||proxyUrl;
-    if (IMG_EXTS.indexOf(ext)!==-1) return '<a href="'+proxyUrl+'" target="_blank"><img src="'+proxyUrl+'" class="admchn-file-img" alt="'+esc(fn)+'" loading="lazy"></a>';
+    if (IMG_EXTS.indexOf(ext)!==-1) return '<img src="'+proxyUrl+'" class="admchn-file-img" alt="'+esc(fn)+'" loading="lazy" style="cursor:zoom-in" onclick="admchnOpenLightbox(\''+proxyUrl+'\')">';
     var short=fn.length>28?fn.substring(0,25)+'…':fn, sz=fmtBytes(att.file_size), meta=fileIconMeta(ext);
     return '<a class="admchn-file-box" href="'+viewUrl+'" target="_blank"><div class="admchn-file-icon"><i class="bi '+meta.i+'" style="color:'+meta.c+'"></i></div><div style="min-width:0"><div class="admchn-file-name">'+esc(short)+'</div>'+(sz?'<div class="admchn-file-size">'+sz+'</div>':'')+'</div></a>';
   }
@@ -391,7 +440,7 @@
         /* Legacy file message — no attachment record, use server route as best effort */
         var _fbUrl='/channel/attachment/'+m.id;
         var _fbExt=(m.content||'').split('.').pop().toLowerCase();
-        if (IMG_EXTS.indexOf(_fbExt)!==-1) content='<a href="'+_fbUrl+'" target="_blank"><img src="'+_fbUrl+'" class="admchn-file-img" loading="lazy" onerror="this.onerror=null;this.style.display=\'none\'"></a>';
+        if (IMG_EXTS.indexOf(_fbExt)!==-1) content='<img src="'+_fbUrl+'" class="admchn-file-img" loading="lazy" style="cursor:zoom-in" onclick="admchnOpenLightbox(\''+_fbUrl+'\')" onerror="this.onerror=null;this.style.display=\'none\'">';
         else content='<a class="admchn-file-box" href="'+_fbUrl+'" target="_blank"><div class="admchn-file-icon"><i class="bi bi-file-earmark-fill" style="color:#94a3b8"></i></div><div style="min-width:0"><div class="admchn-file-name">'+esc(m.content||'File')+'</div></div></a>';
       }
     }
@@ -859,6 +908,66 @@
     }).catch(function(){ loader.remove(); _loadingMore=false; });
   }
 
+  /* ── Mention inbox ── */
+  var _mentionsPanelOpen = false;
+
+  function updateMentionBadge(count) {
+    var badge = document.getElementById('admchnMentionBadge');
+    if (!badge) return;
+    if (count > 0) { badge.textContent = count > 99 ? '99+' : count; badge.style.display = ''; }
+    else { badge.style.display = 'none'; }
+  }
+
+  function loadMentions() {
+    apiFetch('/channel/mentions').then(function(res) {
+      if (!res.success) return;
+      updateMentionBadge(res.data.unseen);
+      renderMentionsList(res.data.mentions);
+    }).catch(function(){});
+  }
+
+  function renderMentionsList(mentions) {
+    var el = document.getElementById('admchnMentionsList');
+    if (!el) return;
+    if (!mentions || !mentions.length) {
+      el.innerHTML = '<div class="admchn-mentions-empty">No mentions yet</div>';
+      return;
+    }
+    el.innerHTML = mentions.map(function(m) {
+      var unseen = !m.seen_at;
+      var preview = m.is_deleted ? '(deleted message)' : (m.type === 'file' ? '📎 attachment' : (m.content || '').substring(0, 80));
+      var ts = m.message_at ? new Date(m.message_at).toLocaleString() : '';
+      return '<div class="admchn-mention-row' + (unseen ? ' unseen' : '') + '" onclick="ADMCHN.mentionJump(' + m.message_id + ')">'
+        + '<div class="admchn-mention-row-body">'
+        + '<div class="admchn-mention-row-meta">' + esc(m.sender_name) + ' &middot; ' + esc(ts) + '</div>'
+        + '<div class="admchn-mention-row-text">' + esc(preview) + '</div>'
+        + '</div>'
+        + '</div>';
+    }).join('');
+  }
+
+  function toggleMentions() {
+    _mentionsPanelOpen = !_mentionsPanelOpen;
+    var panel = document.getElementById('admchnMentionsPanel');
+    if (panel) panel.style.display = _mentionsPanelOpen ? 'block' : 'none';
+    if (_mentionsPanelOpen) loadMentions();
+  }
+
+  function mentionJump(msgId) {
+    jumpToMsg(msgId);
+    // close panel after jumping
+    _mentionsPanelOpen = false;
+    var panel = document.getElementById('admchnMentionsPanel');
+    if (panel) panel.style.display = 'none';
+  }
+
+  function markAllMentionsSeen() {
+    apiFetch('/channel/mentions/seen', { method: 'POST' }).then(function() {
+      updateMentionBadge(0);
+      loadMentions();
+    }).catch(function(){});
+  }
+
   /* ── Socket ── */
   function setupSocket() {
     if (typeof io==='undefined') return;
@@ -918,6 +1027,9 @@
       _allUsers.forEach(function(u){ if(u.id===data.user_id) u.online=data.online; });
       renderPresence();
     });
+    _socket.on('channel:mention:badge', function(data) {
+      if (data.user_id === _userId) updateMentionBadge(data.count);
+    });
   }
 
   /* ── Init ── */
@@ -940,11 +1052,17 @@
       if (_socket&&Date.now()-(ADMCHN._lastTyp||0)>2000) { _socket.emit('channel:typing'); ADMCHN._lastTyp=Date.now(); clearTimeout(_typTimer); _typTimer=setTimeout(function(){_socket.emit('channel:typing:stop');},2000); }
     });
     inp.addEventListener('blur', function(){ setTimeout(hideMention,150); });
-    /* Paste image */
-    inp.addEventListener('paste', function(e) {
+    /* Paste image — document-level so it works even without input focus */
+    document.addEventListener('paste', function(e) {
+      // Ignore if user is typing in a non-channel input (e.g. search bar)
+      var active = document.activeElement;
+      if (active && active !== inp && active.tagName === 'INPUT' && active.id !== 'admchnInput') return;
       var items=(e.clipboardData||window.clipboardData||{}).items||[];
       for (var i=0;i<items.length;i++) {
-        if (items[i].kind==='file') { var f=items[i].getAsFile(); if(f){e.preventDefault();uploadFileDirect(f);return;} }
+        if (items[i].kind==='file') {
+          var f=items[i].getAsFile();
+          if (f) { e.preventDefault(); showPastePreview(f); return; }
+        }
       }
     });
     /* Scroll / load older */
@@ -959,6 +1077,60 @@
     setupSocket();
     loadMessages();
     loadUsers();
+    loadMentions();
+  }
+
+  /* ── Image lightbox ── */
+  window.admchnOpenLightbox = function(url) {
+    var overlay = document.createElement('div');
+    overlay.className = 'admchn-lightbox';
+    overlay.innerHTML =
+      '<button class="admchn-lightbox-close" title="Close"><i class="bi bi-x-lg"></i></button>'
+      + '<img src="'+url+'" alt="image">'
+      + '<a class="admchn-lightbox-open" href="'+url+'" target="_blank" rel="noopener" onclick="event.stopPropagation()"><i class="bi bi-box-arrow-up-right me-1"></i>Open original</a>';
+    document.body.appendChild(overlay);
+    overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
+    overlay.querySelector('.admchn-lightbox-close').onclick = function() { overlay.remove(); };
+    var onKey = function(e) { if (e.key === 'Escape') { overlay.remove(); document.removeEventListener('keydown', onKey); } };
+    document.addEventListener('keydown', onKey);
+  };
+
+  /* ── Paste preview ── */
+  function showPastePreview(file) {
+    if (file.size > 5*1024*1024) { if(typeof showToast==='function') showToast('File too large. Max 5 MB.','error'); else alert('File too large. Max 5 MB.'); return; }
+    var isImage = file.type.startsWith('image/');
+    var fname = file.name || ('screenshot-' + Date.now() + '.png');
+    var overlay = document.createElement('div');
+    overlay.className = 'admchn-paste-overlay';
+    var imgHtml = isImage
+      ? '<img class="admchn-paste-preview-img" id="admchnPasteImg" alt="preview">'
+      : '<div style="text-align:center;padding:24px;font-size:2.5rem;color:var(--adm-muted)"><i class="bi bi-file-earmark"></i></div>';
+    overlay.innerHTML =
+      '<div class="admchn-paste-modal">'
+      + '<div class="admchn-paste-modal-hdr"><span class="admchn-paste-modal-title"><i class="bi bi-clipboard me-1"></i>Send image</span><button class="admchn-paste-modal-close" onclick="this.closest(\'.admchn-paste-overlay\').remove()"><i class="bi bi-x-lg"></i></button></div>'
+      + '<div class="admchn-paste-modal-body">'
+      + imgHtml
+      + '<div class="admchn-paste-fname">' + esc(fname) + '</div>'
+      + '</div>'
+      + '<div class="admchn-paste-modal-footer">'
+      + '<button class="admchn-paste-btn-cancel" onclick="this.closest(\'.admchn-paste-overlay\').remove()">Cancel</button>'
+      + '<button class="admchn-paste-btn-send" id="admchnPasteSend"><i class="bi bi-send me-1"></i>Send</button>'
+      + '</div></div>';
+    document.body.appendChild(overlay);
+    if (isImage) {
+      var reader = new FileReader();
+      reader.onload = function(ev) { var img = overlay.querySelector('#admchnPasteImg'); if(img) img.src = ev.target.result; };
+      reader.readAsDataURL(file);
+    }
+    overlay.querySelector('#admchnPasteSend').onclick = function() {
+      overlay.remove();
+      uploadFileDirect(file);
+    };
+    // Close on backdrop click
+    overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
+    // Close on Escape
+    var onKey = function(e) { if (e.key === 'Escape') { overlay.remove(); document.removeEventListener('keydown', onKey); } };
+    document.addEventListener('keydown', onKey);
   }
 
   function uploadFileDirect(file) {
@@ -994,6 +1166,9 @@
     selectMention: selectMention,
     searchJump: searchJump,
     onSearch: onSearch,
+    toggleMentions: toggleMentions,
+    mentionJump: mentionJump,
+    markAllMentionsSeen: markAllMentionsSeen,
   };
 
   if (document.readyState === 'loading') {
