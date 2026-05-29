@@ -16,6 +16,10 @@ const AnnouncementController = require('../controllers/announcementController');
 const NotificationController = require('../controllers/notificationController');
 const DownloadController = require('../controllers/downloadController');
 
+// ── Public downloads (no auth required) ───────────────────────────────
+router.get('/downloads',                   DownloadController.publicIndex);
+router.get('/downloads/:id/download',      DownloadController.publicServe);
+
 // Dashboard — old dashboard at /dashboard/overview; /dashboard redirects to task board
 router.get('/dashboard/overview', authenticate, DashboardController.show);
 router.get('/dashboard', authenticate, (req, res) => res.redirect('/tasks/board'));
@@ -219,7 +223,8 @@ router.post('/admin/downloads/upload',           authenticate, requireDownloadUp
 router.get('/admin/downloads/:id/download',      authenticate, requireLocalAll,       DownloadController.serveFile);
 router.put('/admin/downloads/:id',               authenticate, requireDownloadUpload, DownloadController.update);
 router.delete('/admin/downloads/:id',            authenticate, requireDownloadUpload, DownloadController.remove);
-router.patch('/admin/downloads/:id/toggle',      authenticate, requireRoles('LOCAL_ADMIN'), DownloadController.toggle);
+router.patch('/admin/downloads/:id/toggle',        authenticate, requireRoles('LOCAL_ADMIN'), DownloadController.toggle);
+router.patch('/admin/downloads/:id/toggle-public', authenticate, requireRoles('LOCAL_ADMIN', 'LOCAL_MANAGER'), DownloadController.togglePublic);
 router.get('/admin/my-attendance',      authenticate, requireLocalAll,   AdminHubController.myAttendance);
 router.get('/admin/my-progress',        authenticate, requireLocalAll,   AdminHubController.myProgress);
 // Pages admin/manager only

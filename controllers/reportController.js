@@ -321,6 +321,7 @@ class ReportController {
         db.query(
           `SELECT date, logout_reason, late_login_reason,
                   DATE_FORMAT(login_time, '%h:%i %p') as loginFormatted,
+                  DATE_FORMAT(CONVERT_TZ(login_time, 'America/New_York', 'Asia/Kolkata'), '%h:%i %p') as loginIst,
                   DATE_FORMAT(logout_time, '%h:%i %p') as logoutFormatted,
                   TIMEDIFF(COALESCE(logout_time, NOW()), login_time) as duration,
                   is_manual, manual_status
@@ -331,6 +332,7 @@ class ReportController {
         ),
         db.query(
           `SELECT DATE_FORMAT(login_time, '%h:%i %p') as loginFormatted,
+                  DATE_FORMAT(CONVERT_TZ(login_time, 'America/New_York', 'Asia/Kolkata'), '%h:%i %p') as loginIst,
                   DATE_FORMAT(logout_time, '%h:%i %p') as logoutFormatted,
                   TIMEDIFF(COALESCE(logout_time, NOW()), login_time) as duration,
                   login_time, logout_time, logout_reason, late_login_reason

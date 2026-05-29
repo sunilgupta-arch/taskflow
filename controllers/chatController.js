@@ -381,6 +381,199 @@ class ChatController {
     }
   }
 
+  // PATCH /chat/messages/:id — edit a message
+  static async editMessage(req, res) {
+    try {
+      const messageId = parseInt(req.params.id);
+      const { content } = req.body;
+      const updated = await ChatModel.editMessage(messageId, req.user.id, content);
+      try {
+        const io = getIO();
+        const participantIds = await ChatModel.getParticipantIds(updated.conversation_id);
+        participantIds.forEach(uid => io.to(`user:${uid}`).emit('chat:message_edited', { message: updated }));
+      } catch (_) {}
+      return ApiResponse.success(res, { message: updated });
+    } catch (err) {
+      return ApiResponse.error(res, err.message || 'Failed to edit message', 400);
+    }
+  }
+
+  // DELETE /chat/messages/:id — soft-delete a message
+  static async deleteMessage(req, res) {
+    try {
+      const messageId = parseInt(req.params.id);
+      const [[msg]] = await db.query('SELECT conversation_id FROM chat_messages WHERE id = ?', [messageId]);
+      if (!msg) return ApiResponse.error(res, 'Not found', 404);
+      await ChatModel.deleteMessage(messageId, req.user.id, req.user.role_name);
+      try {
+        const io = getIO();
+        const participantIds = await ChatModel.getParticipantIds(msg.conversation_id);
+        participantIds.forEach(uid => io.to(`user:${uid}`).emit('chat:message_deleted', { message_id: messageId, conversation_id: msg.conversation_id }));
+      } catch (_) {}
+      return ApiResponse.success(res, {}, 'Message deleted');
+    } catch (err) {
+      return ApiResponse.error(res, err.message || 'Failed to delete message', 400);
+    }
+  }
+
+  // POST /chat/conversations/:id/reply
+  static async sendReply(req, res) {
+    try {
+      const conversationId = parseInt(req.params.id);
+      const { content, reply_to_id } = req.body;
+      if (!reply_to_id) return ApiResponse.error(res, 'reply_to_id is required', 400);
+      const isParticipant = await ChatModel.isParticipant(conversationId, req.user.id);
+      if (!isParticipant) return ApiResponse.error(res, 'Access denied', 403);
+      const message = await ChatModel.sendReply({ conversation_id: conversationId, sender_id: req.user.id, content, reply_to_id: parseInt(reply_to_id) });
+      const participantIds = await ChatModel.getParticipantIds(conversationId);
+      try {
+        const io = getIO();
+        emitToParticipants(io, participantIds, req.user.id, conversationId, message);
+      } catch (_) {}
+      return ApiResponse.success(res, { message }, 'Reply sent', 201);
+    } catch (err) {
+      return ApiResponse.error(res, err.message || 'Failed to send reply', 400);
+    }
+  }
+
+  // POST /chat/messages/:id/react
+  static async toggleReaction(req, res) {
+    try {
+      const messageId = parseInt(req.params.id);
+      const { emoji } = req.body;
+      if (!emoji) return ApiResponse.error(res, 'Emoji is required', 400);
+      const [[msg]] = await db.query('SELECT conversation_id FROM chat_messages WHERE id = ?', [messageId]);
+      if (!msg) return ApiResponse.error(res, 'Not found', 404);
+      const result = await ChatModel.toggleReaction(messageId, req.user.id, emoji);
+      const reactions = await ChatModel.getReactions([messageId]);
+      try {
+        const io = getIO();
+        const participantIds = await ChatModel.getParticipantIds(msg.conversation_id);
+        participantIds.forEach(uid => io.to(`user:${uid}`).emit('chat:reaction', { message_id: messageId, conversation_id: msg.conversation_id, reactions: reactions[messageId] || {} }));
+      } catch (_) {}
+      return ApiResponse.success(res, { action: result.action, reactions: reactions[messageId] || {} });
+    } catch (err) {
+      return ApiResponse.error(res, err.message || 'Failed to react', 400);
+    }
+  }
+
+  // GET /chat/conversations/:id/search?q=
+  static async searchMessages(req, res) {
+    try {
+      const conversationId = parseInt(req.params.id);
+      const q = (req.query.q || '').trim();
+      if (q.length < 2) return ApiResponse.error(res, 'Search query too short', 400);
+      const isParticipant = await ChatModel.isParticipant(conversationId, req.user.id);
+      if (!isParticipant) return ApiResponse.error(res, 'Access denied', 403);
+      const messages = await ChatModel.searchMessages(conversationId, q, req.user.id);
+      return ApiResponse.success(res, { messages, query: q });
+    } catch (err) {
+      return ApiResponse.error(res, 'Search failed', 500);
+    }
+  }
+
+  // POST /chat/conversations/:id/members — add members to group
+  static async addMembers(req, res) {
+    try {
+      const conversationId = parseInt(req.params.id);
+      const { user_ids } = req.body;
+      if (!Array.isArray(user_ids) || !user_ids.length) return ApiResponse.error(res, 'No users selected', 400);
+      const ids = user_ids.map(id => parseInt(id));
+      const added = await ChatModel.addMembers(conversationId, ids, req.user.id, req.user.role_name);
+      if (added.length) {
+        const conv = await ChatModel.getConversationById(conversationId);
+        try {
+          const io = getIO();
+          const participantIds = await ChatModel.getParticipantIds(conversationId);
+          participantIds.forEach(uid => io.to(`user:${uid}`).emit('chat:members_added', { conversation_id: conversationId, conversation: conv }));
+        } catch (_) {}
+      }
+      return ApiResponse.success(res, { added }, added.length ? `${added.length} member(s) added` : 'All selected users are already members');
+    } catch (err) {
+      return ApiResponse.error(res, err.message || 'Failed to add members', 400);
+    }
+  }
+
+  // PATCH /chat/conversations/:id/name — rename group
+  static async renameGroup(req, res) {
+    try {
+      const conversationId = parseInt(req.params.id);
+      const { name } = req.body;
+      await ChatModel.renameGroup(conversationId, name, req.user.id, req.user.role_name);
+      try {
+        const io = getIO();
+        const participantIds = await ChatModel.getParticipantIds(conversationId);
+        participantIds.forEach(uid => io.to(`user:${uid}`).emit('chat:renamed', { conversation_id: conversationId, name: name.trim() }));
+      } catch (_) {}
+      return ApiResponse.success(res, { name: name.trim() }, 'Group renamed');
+    } catch (err) {
+      return ApiResponse.error(res, err.message || 'Failed to rename group', 400);
+    }
+  }
+
+  // POST /chat/conversations/:id/mute — toggle mute
+  static async toggleMute(req, res) {
+    try {
+      const conversationId = parseInt(req.params.id);
+      const result = await ChatModel.toggleMute(conversationId, req.user.id);
+      return ApiResponse.success(res, result, result.muted ? 'Conversation muted' : 'Conversation unmuted');
+    } catch (err) {
+      return ApiResponse.error(res, err.message || 'Failed to toggle mute', 400);
+    }
+  }
+
+  // POST /chat/conversations/:id/leave
+  static async leaveGroup(req, res) {
+    try {
+      const conversationId = parseInt(req.params.id);
+      await ChatModel.leaveGroup(conversationId, req.user.id);
+      try {
+        const io = getIO();
+        io.emit('chat:member_removed', { conversation_id: conversationId, user_id: req.user.id });
+      } catch (_) {}
+      return ApiResponse.success(res, {}, 'You have left the group');
+    } catch (err) {
+      console.error('Leave group error:', err);
+      return ApiResponse.error(res, err.message || 'Failed to leave group', 400);
+    }
+  }
+
+  // DELETE /chat/conversations/:id
+  static async deleteGroup(req, res) {
+    try {
+      const conversationId = parseInt(req.params.id);
+      const participantIds = await ChatModel.getParticipantIds(conversationId);
+      await ChatModel.deleteGroup(conversationId, req.user.id, req.user.role_name);
+      try {
+        const io = getIO();
+        participantIds.forEach(uid => {
+          io.to(`user:${uid}`).emit('chat:group_deleted', { conversation_id: conversationId });
+        });
+      } catch (_) {}
+      return ApiResponse.success(res, {}, 'Group deleted');
+    } catch (err) {
+      console.error('Delete group error:', err);
+      return ApiResponse.error(res, err.message || 'Failed to delete group', 400);
+    }
+  }
+
+  // DELETE /chat/conversations/:id/members/:userId
+  static async removeMember(req, res) {
+    try {
+      const conversationId = parseInt(req.params.id);
+      const targetUserId   = parseInt(req.params.userId);
+      await ChatModel.removeMember(conversationId, targetUserId, req.user.id, req.user.role_name);
+      try {
+        const io = getIO();
+        io.emit('chat:member_removed', { conversation_id: conversationId, user_id: targetUserId });
+      } catch (_) {}
+      return ApiResponse.success(res, {}, 'Member removed');
+    } catch (err) {
+      console.error('Remove member error:', err);
+      return ApiResponse.error(res, err.message || 'Failed to remove member', 400);
+    }
+  }
+
   // GET /chat/unread-count — API: total unread count (for badge)
   static async unreadCount(req, res) {
     try {

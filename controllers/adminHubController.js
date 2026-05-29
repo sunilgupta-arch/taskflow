@@ -361,12 +361,12 @@ class AdminHubController {
     try {
       const today = new Date().toISOString().split('T')[0];
       const dateStr = req.query.date || today;
-      const [instances, stats, localUsers] = await Promise.all([
+      const [queueData, localUsers] = await Promise.all([
         ClientRequest.getQueueForDate(dateStr),
-        ClientRequest.getDateStats(dateStr),
         ClientRequest.getLocalUsers()
       ]);
-      res.render('admin/queue', { title: 'Client Queue', layout: 'admin/layout', section: 'work', instances, stats, localUsers, selectedDate: dateStr, today });
+      const { instances, cancelledInstances, stats } = queueData;
+      res.render('admin/queue', { title: 'Client Queue', layout: 'admin/layout', section: 'work', instances, cancelledInstances, stats, localUsers, selectedDate: dateStr, today });
     } catch (err) {
       console.error('AdminHub queue error:', err);
       res.status(500).send('Server error');
@@ -1316,6 +1316,7 @@ class AdminHubController {
         db.query(
           `SELECT date, logout_reason, late_login_reason,
                   DATE_FORMAT(login_time,  '%h:%i %p') as loginFormatted,
+                  DATE_FORMAT(CONVERT_TZ(login_time, 'America/New_York', 'Asia/Kolkata'), '%h:%i %p') as loginIst,
                   DATE_FORMAT(logout_time, '%h:%i %p') as logoutFormatted,
                   TIMEDIFF(COALESCE(logout_time, NOW()), login_time) as duration,
                   login_time, logout_time, is_manual, manual_status
@@ -1326,6 +1327,7 @@ class AdminHubController {
         ),
         db.query(
           `SELECT DATE_FORMAT(login_time,  '%h:%i %p') as loginFormatted,
+                  DATE_FORMAT(CONVERT_TZ(login_time, 'America/New_York', 'Asia/Kolkata'), '%h:%i %p') as loginIst,
                   DATE_FORMAT(logout_time, '%h:%i %p') as logoutFormatted,
                   TIMEDIFF(COALESCE(logout_time, NOW()), login_time) as duration,
                   login_time, logout_time, logout_reason, late_login_reason

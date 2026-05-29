@@ -149,6 +149,14 @@
       </div>
     </div>
 
+    <div class="up-field">
+      <label class="up-label" style="display:flex;align-items:center;gap:10px;cursor:pointer;">
+        <input type="checkbox" id="upIsPublic" style="width:16px;height:16px;accent-color:#00d4ff;cursor:pointer;flex-shrink:0;">
+        Make publicly available
+      </label>
+      <div class="up-hint">When enabled, this file will appear on the public <a href="/downloads" target="_blank" style="color:#00d4ff;text-decoration:none;">/downloads</a> page — no login required to download.</div>
+    </div>
+
     <!-- Progress -->
     <div class="up-progress" id="upProgress">
       <div class="up-prog-label"><span>Uploading…</span><span id="upPct">0%</span></div>
@@ -233,6 +241,7 @@ function upSubmit() {
   fd.append('name', name);
   fd.append('description', document.getElementById('upDesc').value.trim());
   fd.append('version', document.getElementById('upVersion').value.trim());
+  fd.append('is_public', document.getElementById('upIsPublic').checked ? '1' : '0');
 
   const btn = document.getElementById('upSubmitBtn');
   btn.disabled = true;

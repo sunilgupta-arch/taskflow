@@ -5,20 +5,24 @@ const GoogleDriveService = require('../services/googleDriveService');
 const EmailService = require('../services/emailService');
 const { getOnlineClientIds } = require('../portal/socket/portalSocket');
 
+function isValidDate(str) {
+  return typeof str === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(str) && !isNaN(Date.parse(str));
+}
+
 class ClientQueueController {
 
   static async index(req, res) {
     try {
       const today = new Date().toISOString().split('T')[0];
-      const dateStr = req.query.date || today;
-      const instances = await ClientRequest.getQueueForDate(dateStr);
-      const stats = await ClientRequest.getDateStats(dateStr);
+      const dateStr = (req.query.date && isValidDate(req.query.date)) ? req.query.date : today;
+      const { instances, cancelledInstances, stats } = await ClientRequest.getQueueForDate(dateStr);
       const localUsers = await ClientRequest.getLocalUsers();
 
       res.render('queue/index', {
         title: 'Client Queue',
         layout: 'layouts/main',
         instances,
+        cancelledInstances,
         stats,
         localUsers,
         selectedDate: dateStr,
@@ -35,10 +39,9 @@ class ClientQueueController {
   static async getQueue(req, res) {
     try {
       const today = new Date().toISOString().split('T')[0];
-      const dateStr = req.query.date || today;
-      const instances = await ClientRequest.getQueueForDate(dateStr);
-      const stats = await ClientRequest.getDateStats(dateStr);
-      return ApiResponse.success(res, { instances, stats, date: dateStr });
+      const dateStr = (req.query.date && isValidDate(req.query.date)) ? req.query.date : today;
+      const { instances, cancelledInstances, stats } = await ClientRequest.getQueueForDate(dateStr);
+      return ApiResponse.success(res, { instances, cancelledInstances, stats, date: dateStr });
     } catch (err) {
       console.error('ClientQueue getQueue error:', err);
       return ApiResponse.error(res, 'Failed to load queue');
@@ -48,6 +51,18 @@ class ClientQueueController {
   static async pick(req, res) {
     try {
       const instanceId = parseInt(req.params.id);
+
+      // Re-picking a rejected task requires admin or manager
+      const [[cur]] = await (require('../config/db')).query(
+        'SELECT status FROM client_request_instances WHERE id = ?', [instanceId]
+      );
+      if (cur && cur.status === 'rejected') {
+        const role = req.user.role_name || '';
+        if (!['LOCAL_ADMIN', 'LOCAL_MANAGER'].includes(role)) {
+          return ApiResponse.error(res, 'Only admins and managers can re-pick a rejected task', 403);
+        }
+      }
+
       await ClientRequest.pick(instanceId, req.user.id);
       const instance = await ClientRequest.getInstanceById(instanceId);
       try { const io = getIO(); io.emit('queue:updated', { instance }); io.of('/portal').emit('queue:updated', { instance }); } catch (_) {}
@@ -62,6 +77,16 @@ class ClientQueueController {
     try {
       const instanceId = parseInt(req.params.id);
       const { reason } = req.body;
+
+      const [[cur]] = await (require('../config/db')).query(
+        'SELECT picked_by FROM client_request_instances WHERE id = ?', [instanceId]
+      );
+      const role = req.user.role_name || '';
+      const isAdmin = ['LOCAL_ADMIN', 'LOCAL_MANAGER'].includes(role);
+      if (cur && cur.picked_by !== req.user.id && !isAdmin) {
+        return ApiResponse.error(res, 'You can only release tasks you picked', 403);
+      }
+
       await ClientRequest.release(instanceId, req.user.id, reason);
       const instance = await ClientRequest.getInstanceById(instanceId);
       try { const io = getIO(); io.emit('queue:updated', { instance }); io.of('/portal').emit('queue:updated', { instance }); } catch (_) {}
@@ -96,7 +121,7 @@ class ClientQueueController {
     try {
       const instanceId = parseInt(req.params.id);
       const { new_date, reason, assigned_to } = req.body;
-      if (!new_date) return ApiResponse.error(res, 'New date is required', 400);
+      if (!new_date || !isValidDate(new_date)) return ApiResponse.error(res, 'A valid date is required (YYYY-MM-DD)', 400);
       if (!reason || !reason.trim()) return ApiResponse.error(res, 'A reason for rescheduling is required', 400);
       const today = new Date().toISOString().split('T')[0];
       if (new_date <= today) return ApiResponse.error(res, 'Reschedule date must be in the future', 400);
@@ -130,7 +155,7 @@ class ClientQueueController {
   static async uncancel(req, res) {
     try {
       const instanceId = parseInt(req.params.id);
-      await ClientRequest.uncancelInstance(instanceId);
+      await ClientRequest.uncancelInstance(instanceId, req.user.id);
       const instance = await ClientRequest.getInstanceById(instanceId);
       try { const io = getIO(); io.emit('queue:updated', { instance }); io.of('/portal').emit('queue:updated', { instance }); } catch (_) {}
       return ApiResponse.success(res, { instance }, 'Request restored to open');

@@ -2484,14 +2484,27 @@
     });
   });
 
-  fetch('/auth/check-late').then(function(r) { return r.json(); }).then(function(data) {
-    if (data.success && data.data.needsReason) {
-      var mins = data.data.lateByMinutes || 0;
-      var lateText = mins >= 60 ? Math.floor(mins / 60) + 'h ' + (mins % 60) + 'm' : mins + ' minutes';
-      document.getElementById('admLateLoginSubtext').textContent = 'You logged in ' + lateText + ' after your shift started. Please provide a reason.';
-      document.getElementById('admLateLoginModal').style.display = 'flex';
-    }
-  }).catch(function() {});
+  // Exposed so the comp-off block can call it after the user makes their day-off choice.
+  // Not auto-fired if a day-off modal is pending — comp-off block controls the trigger.
+  var _lateChecked = false;
+  window._admRunLateCheck = function() {
+    if (_lateChecked) return;
+    _lateChecked = true;
+    fetch('/auth/check-late').then(function(r) { return r.json(); }).then(function(data) {
+      if (data.success && data.data.needsReason) {
+        var mins = data.data.lateByMinutes || 0;
+        var lateText = mins >= 60 ? Math.floor(mins / 60) + 'h ' + (mins % 60) + 'm' : mins + ' minutes';
+        document.getElementById('admLateLoginSubtext').textContent = 'You logged in ' + lateText + ' after your shift started. Please provide a reason.';
+        document.getElementById('admLateLoginModal').style.display = 'flex';
+      }
+    }).catch(function() {});
+  };
+
+  // Auto-fire after a short delay so the comp-off block (loaded below) can set
+  // window._admCoModalPending = true first if today is a day-off.
+  setTimeout(function() {
+    if (!window._admCoModalPending) window._admRunLateCheck();
+  }, 150);
 })();
 
 function admSubmitLateReason() {
@@ -2792,13 +2805,26 @@ function handleLogout() {
   <% if (typeof user !== 'undefined' && user && !user.role_name.startsWith('CLIENT_')) { %>
   var _coSelectedDate = null;
 
+  // Block the auto late-check until we know if today is a day-off.
+  // If it IS a day-off, we only trigger the late check after the user picks
+  // 'working' or 'half_day' — not for 'check_in'.
+  window._admCoModalPending = true;
+
   fetch('/comp-off/check-today', { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
     .then(function(r){ return r.json(); })
     .then(function(res) {
       if (res.success && res.data.showModal) {
         document.getElementById('coModal').style.display = 'flex';
+        // Late check will be triggered by submitAction below based on user's choice
+      } else {
+        // Not a day-off — release the late check
+        window._admCoModalPending = false;
+        if (window._admRunLateCheck) window._admRunLateCheck();
       }
-    }).catch(function(){});
+    }).catch(function(){
+      window._admCoModalPending = false;
+      if (window._admRunLateCheck) window._admRunLateCheck();
+    });
 
   window.coChoose = function(action) {
     if (action === 'working') {
@@ -2852,7 +2878,15 @@ function handleLogout() {
       .then(function(res) {
         document.getElementById('coModal').style.display = 'none';
         if (!res.success) console.warn('Comp-off action failed:', res.message);
-      }).catch(function(){});
+        window._admCoModalPending = false;
+        // Only check for late login if the user is actually working today.
+        // 'check_in' means just checking in — no shift obligation, no late penalty.
+        if (action !== 'check_in' && window._admRunLateCheck) {
+          window._admRunLateCheck();
+        }
+      }).catch(function(){
+        window._admCoModalPending = false;
+      });
   }
   <% } %>
 })();

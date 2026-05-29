@@ -123,7 +123,7 @@ html.sidebar-expanded .activity-bar-bottom { align-items: stretch; }
 }
 
 .activity-bar-brand {
-  display: flex;
+  display: none;
   align-items: center;
   justify-content: center;
   flex: 1;
@@ -137,7 +137,7 @@ html.sidebar-expanded .activity-bar-bottom { align-items: stretch; }
 html.sidebar-expanded .activity-bar-brand-row { justify-content: flex-start; }
 
 .portal-activity-bar.expanded .activity-bar-brand,
-html.sidebar-expanded .activity-bar-brand { justify-content: flex-start; padding-left: 10px; gap: 8px; }
+html.sidebar-expanded .activity-bar-brand { display: flex; justify-content: flex-start; padding-left: 10px; gap: 8px; }
 
 .ab-brand-name {
   display: none;
@@ -259,7 +259,7 @@ html.sidebar-expanded .activity-bar-item:hover .ab-tooltip { display: none; }
   flex-shrink: 0;
   padding: 0;
   border-radius: 6px;
-  margin-right: 4px;
+  margin-right: 0;
 }
 
 .ab-toggle:hover { color: var(--tf-text); background: color-mix(in srgb, var(--tf-accent) 10%, transparent); }

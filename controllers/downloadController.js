@@ -37,6 +37,47 @@ class DownloadController {
     return upload.single('file');
   }
 
+  // ── GET /downloads (public, no auth) ────────────────────────────────
+  static async publicIndex(req, res) {
+    const files = await Download.getPublicFiles();
+    res.render('public/downloads', {
+      layout: false,
+      title:  'Downloads',
+      files,
+    });
+  }
+
+  // ── GET /downloads/:id/download (public, no auth) ────────────────────
+  static async publicServe(req, res) {
+    const file = await Download.getPublicById(req.params.id);
+    if (!file) return res.status(404).send('File not found or not publicly available.');
+
+    await Download.incrementDownload(file.id);
+
+    if (file.stored_name) {
+      const localPath = path.join(UPLOADS_DIR, file.stored_name);
+      if (fs.existsSync(localPath)) {
+        res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(file.original_name)}"`);
+        res.setHeader('Content-Type', file.mime_type || 'application/octet-stream');
+        return res.sendFile(localPath);
+      }
+    }
+
+    if (file.drive_file_id) {
+      try {
+        const { stream, mimeType } = await GoogleDriveService.downloadFile(file.drive_file_id);
+        res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(file.original_name)}"`);
+        res.setHeader('Content-Type', mimeType || file.mime_type || 'application/octet-stream');
+        return stream.pipe(res);
+      } catch (err) {
+        console.error('[Downloads] Public Drive serve error:', err.message);
+        return res.status(500).send('Could not retrieve file.');
+      }
+    }
+
+    res.status(404).send('File not available.');
+  }
+
   // ── GET /admin/downloads ─────────────────────────────────────────────
   static async index(req, res) {
     const role  = req.user.role_name;
@@ -47,8 +88,9 @@ class DownloadController {
       section:  'downloads',
       files,
       search:   req.query.search || '',
-      canUpload: CAN_UPLOAD.includes(role),
-      isAdmin:  role === 'LOCAL_ADMIN',
+      canUpload:        CAN_UPLOAD.includes(role),
+      isAdmin:          role === 'LOCAL_ADMIN',
+      canTogglePublic:  ['LOCAL_ADMIN', 'LOCAL_MANAGER'].includes(role),
       userId:   req.user.id,
     });
   }
@@ -91,6 +133,7 @@ class DownloadController {
       uploaded_by:   req.user.id,
       uploader_name: req.user.name,
       uploader_side: side,
+      is_public:     req.body.is_public === '1',
     });
 
     // Respond immediately — file is already on disk and downloadable
@@ -184,6 +227,17 @@ class DownloadController {
     if (!file) return res.status(404).json({ success: false, message: 'Not found' });
     const newState = await Download.toggleDisabled(file.id);
     res.json({ success: true, is_disabled: newState });
+  }
+
+  // ── PATCH /admin/downloads/:id/toggle-public ─────────────────────────
+  static async togglePublic(req, res) {
+    if (!['LOCAL_ADMIN', 'LOCAL_MANAGER'].includes(req.user.role_name)) {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
+    const file = await Download.getById(req.params.id);
+    if (!file) return res.status(404).json({ success: false, message: 'Not found' });
+    const newState = await Download.togglePublic(file.id);
+    res.json({ success: true, is_public: newState });
   }
 }
 

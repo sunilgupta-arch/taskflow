@@ -71,7 +71,33 @@ class ClientRequestController {
       const { title, task_type, description, priority, recurrence, recurrence_days,
               start_date, recurrence_end_date, due_time, assigned_to } = req.body;
       if (!title || !title.trim()) return ApiResponse.error(res, 'Title is required', 400);
+
+      const VALID_RECURRENCE = ['none', 'daily', 'weekly', 'monthly'];
+      const VALID_PRIORITY   = ['low', 'normal', 'high', 'urgent'];
+      const DATE_RE          = /^\d{4}-\d{2}-\d{2}$/;
+      const TIME_RE          = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+      if (recurrence && !VALID_RECURRENCE.includes(recurrence))
+        return ApiResponse.error(res, `Invalid recurrence. Must be one of: ${VALID_RECURRENCE.join(', ')}`, 400);
+      if (priority && !VALID_PRIORITY.includes(priority))
+        return ApiResponse.error(res, `Invalid priority. Must be one of: ${VALID_PRIORITY.join(', ')}`, 400);
+      if (start_date && (!DATE_RE.test(start_date) || isNaN(Date.parse(start_date))))
+        return ApiResponse.error(res, 'Invalid start_date. Use YYYY-MM-DD format', 400);
+      if (due_time && !TIME_RE.test(due_time))
+        return ApiResponse.error(res, 'Invalid due_time. Use HH:MM format (24-hour)', 400);
+      if (recurrence === 'weekly' && !recurrence_days)
+        return ApiResponse.error(res, 'Select at least one day for weekly recurrence', 400);
+
       const effectiveStartDate = start_date || new Date().toISOString().split('T')[0];
+
+      const db = require('../../config/db');
+      const [[duplicate]] = await db.query(
+        `SELECT id FROM client_requests
+         WHERE created_by = ? AND title = ? AND is_active = 1
+         AND created_at > NOW() - INTERVAL 30 SECOND`,
+        [req.user.id, title.trim()]
+      );
+      if (duplicate) return ApiResponse.error(res, 'This request was just submitted. Please wait a moment before trying again.', 429);
       const effectiveTaskType = (task_type && task_type.trim()) ? task_type.trim() : 'General';
 
       const id = await ClientRequest.create({
@@ -122,9 +148,19 @@ class ClientRequestController {
       if (!isAdmin) return ApiResponse.error(res, 'Not authorized', 403);
       const { title, task_type, description, priority, due_time, recurrence_end_date, assigned_to, recurrence, recurrence_days } = req.body;
       if (title !== undefined && !title.trim()) return ApiResponse.error(res, 'Title cannot be empty', 400);
-      if (recurrence === 'weekly' && recurrence_days !== undefined && !recurrence_days) {
+
+      const VALID_RECURRENCE = ['none', 'daily', 'weekly', 'monthly'];
+      const VALID_PRIORITY   = ['low', 'normal', 'high', 'urgent'];
+      const TIME_RE          = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+      if (recurrence !== undefined && !VALID_RECURRENCE.includes(recurrence))
+        return ApiResponse.error(res, `Invalid recurrence. Must be one of: ${VALID_RECURRENCE.join(', ')}`, 400);
+      if (priority !== undefined && !VALID_PRIORITY.includes(priority))
+        return ApiResponse.error(res, `Invalid priority. Must be one of: ${VALID_PRIORITY.join(', ')}`, 400);
+      if (due_time !== undefined && due_time && !TIME_RE.test(due_time))
+        return ApiResponse.error(res, 'Invalid due_time. Use HH:MM format (24-hour)', 400);
+      if (recurrence === 'weekly' && recurrence_days !== undefined && !recurrence_days)
         return ApiResponse.error(res, 'Select at least one day for weekly recurrence', 400);
-      }
       await ClientRequest.update(requestId, orgId, {
         ...(title !== undefined && { title: title.trim() }),
         ...(task_type !== undefined && { task_type: task_type.trim() || 'General' }),
@@ -150,7 +186,7 @@ class ClientRequestController {
   static async cancelInstance(req, res) {
     try {
       const instanceId = parseInt(req.params.id);
-      await ClientRequest.cancelInstance(instanceId, req.user.organization_id);
+      await ClientRequest.cancelInstance(instanceId, req.user.organization_id, req.user.id);
       try { const io = getIO(); io.emit('queue:updated', { cancelled: instanceId }); io.of('/portal').emit('queue:updated', { cancelled: instanceId }); } catch (_) {}
       return ApiResponse.success(res, {}, 'Request cancelled');
     } catch (err) {
@@ -183,8 +219,10 @@ class ClientRequestController {
       const instance = await ClientRequest.getInstanceById(instanceId);
       if (!instance || instance.org_id !== req.user.organization_id)
         return ApiResponse.error(res, 'Not found', 404);
-      if (instance.created_by !== req.user.id)
-        return ApiResponse.error(res, 'Only the request creator can approve it', 403);
+      const canApprove = instance.created_by === req.user.id ||
+        ['CLIENT_ADMIN', 'CLIENT_TOP_MGMT', 'CLIENT_MANAGER'].includes(req.user.role_name);
+      if (!canApprove)
+        return ApiResponse.error(res, 'Only the request creator or a manager can approve', 403);
       await ClientRequest.approveInstance(instanceId, req.user.id);
       const updated = await ClientRequest.getInstanceById(instanceId);
       try { const io = getIO(); io.emit('queue:updated', { instance: updated }); io.of('/portal').emit('queue:updated', { instance: updated }); } catch (_) {}
@@ -201,8 +239,10 @@ class ClientRequestController {
       const instance = await ClientRequest.getInstanceById(instanceId);
       if (!instance || instance.org_id !== req.user.organization_id)
         return ApiResponse.error(res, 'Not found', 404);
-      if (instance.created_by !== req.user.id)
-        return ApiResponse.error(res, 'Only the request creator can reject it', 403);
+      const canReject = instance.created_by === req.user.id ||
+        ['CLIENT_ADMIN', 'CLIENT_TOP_MGMT', 'CLIENT_MANAGER'].includes(req.user.role_name);
+      if (!canReject)
+        return ApiResponse.error(res, 'Only the request creator or a manager can reject', 403);
       await ClientRequest.rejectInstance(instanceId, req.user.id);
       const reason = (req.body.reason || '').trim();
       const commentBody = reason

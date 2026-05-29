@@ -5,7 +5,7 @@ class Download {
     let sql = `
       SELECT id, name, description, version, original_name, stored_name, drive_file_id,
              file_size, mime_type, uploaded_by, uploader_name, uploader_side,
-             download_count, is_disabled, created_at
+             download_count, is_disabled, is_public, created_at
       FROM downloads`;
     const params = [];
     if (search) {
@@ -18,6 +18,25 @@ class Download {
     return rows;
   }
 
+  static async getPublicFiles() {
+    const [rows] = await db.query(`
+      SELECT id, name, description, version, original_name, stored_name, drive_file_id,
+             file_size, mime_type, uploader_name, download_count, created_at
+      FROM downloads
+      WHERE is_public = 1 AND is_disabled = 0
+      ORDER BY name ASC, created_at DESC
+    `);
+    return rows;
+  }
+
+  static async getPublicById(id) {
+    const [rows] = await db.query(
+      `SELECT * FROM downloads WHERE id = ? AND is_public = 1 AND is_disabled = 0`,
+      [id]
+    );
+    return rows[0] || null;
+  }
+
   static async getById(id) {
     const [rows] = await db.query(`SELECT * FROM downloads WHERE id = ?`, [id]);
     return rows[0] || null;
@@ -25,14 +44,14 @@ class Download {
 
   static async create(data) {
     const { name, description, version, original_name, stored_name,
-            file_size, mime_type, uploaded_by, uploader_name, uploader_side } = data;
+            file_size, mime_type, uploaded_by, uploader_name, uploader_side, is_public } = data;
     const [result] = await db.query(
       `INSERT INTO downloads
          (name, description, version, original_name, stored_name, drive_file_id, file_size,
-          mime_type, uploaded_by, uploader_name, uploader_side)
-       VALUES (?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, ?)`,
+          mime_type, uploaded_by, uploader_name, uploader_side, is_public)
+       VALUES (?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, ?)`,
       [name, description || null, version || null, original_name, stored_name,
-       file_size, mime_type, uploaded_by, uploader_name, uploader_side]
+       file_size, mime_type, uploaded_by, uploader_name, uploader_side, is_public ? 1 : 0]
     );
     return result.insertId;
   }
@@ -67,6 +86,12 @@ class Download {
     await db.query(`UPDATE downloads SET is_disabled = NOT is_disabled WHERE id = ?`, [id]);
     const [rows] = await db.query(`SELECT is_disabled FROM downloads WHERE id = ?`, [id]);
     return rows[0]?.is_disabled;
+  }
+
+  static async togglePublic(id) {
+    await db.query(`UPDATE downloads SET is_public = NOT is_public WHERE id = ?`, [id]);
+    const [rows] = await db.query(`SELECT is_public FROM downloads WHERE id = ?`, [id]);
+    return rows[0]?.is_public;
   }
 
   static async incrementDownload(id) {

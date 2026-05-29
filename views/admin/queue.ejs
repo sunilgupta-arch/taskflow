@@ -472,7 +472,7 @@
   });
 
   // ── Bootstrap data (closing-tag sequences in JSON escaped to avoid early parse end) ──
-  var _raw = <%- JSON.stringify({ instances: instances, stats: stats, selectedDate: selectedDate, today: today }).replace(/<\//g, '<\\/') %>;
+  var _raw = <%- JSON.stringify({ instances: instances, cancelledInstances: cancelledInstances, stats: stats, selectedDate: selectedDate, today: today }).replace(/<\//g, '<\\/') %>;
   var _localUsers = <%- JSON.stringify(localUsers || []).replace(/<\//g, '<\\/') %>;
   var _onlineClients = new Set();
   var _date      = _raw.selectedDate;
@@ -602,11 +602,11 @@
   }
 
   // ── Table ────────────────────────────────────────────────────────────
-  function renderTable(instances, date) {
+  function renderTable(instances, cancelledInstances, date) {
     var area = document.getElementById('admqTableArea');
-    _loadedInstances = instances || [];
-    var active    = (instances || []).filter(function(i) { return i.status !== 'cancelled'; });
-    var cancelled = (instances || []).filter(function(i) { return i.status === 'cancelled'; });
+    var active    = instances || [];
+    var cancelled = cancelledInstances || [];
+    _loadedInstances = active.concat(cancelled);
     if (!active.length && !cancelled.length) {
       area.innerHTML = '<div class="admq-empty"><i class="bi bi-inbox"></i><div class="admq-empty-title">Queue is empty</div><div class="admq-empty-sub">No requests for '+fmtDate(date)+'</div></div>';
       return;
@@ -643,14 +643,23 @@
                   + '<button class="admq-btn release" title="Release" onclick="event.stopPropagation();admqOpenRelease('+inst.id+')"><i class="bi bi-arrow-counterclockwise"></i></button>';
         }
       }
-      if (inst.status === 'rejected') {
-        actions = '<button class="admq-btn pick" title="Re-pick rejected task" onclick="event.stopPropagation();admqPick('+inst.id+')"><i class="bi bi-arrow-repeat"></i> Re-pick</button>';
+      if (inst.status === 'rejected' && isAdmin()) {
+        actions = '<button class="admq-btn pick" title="Re-pick rejected task" onclick="event.stopPropagation();admqConfirmRepick('+inst.id+')"><i class="bi bi-arrow-repeat"></i> Re-pick</button>';
       }
       if (inst.status === 'open') {
         actions += '<button class="admq-btn act" title="Reschedule to another date" onclick="event.stopPropagation();admqOpenReschedule('+inst.id+')"><i class="bi bi-calendar-plus"></i></button>';
       }
-      if (inst.status === 'cancelled' && isAdmin()) {
-        actions = '<button class="admq-btn act" title="Restore to open" onclick="event.stopPropagation();admqUncancel('+inst.id+')"><i class="bi bi-arrow-counterclockwise"></i> Restore</button>';
+      if (inst.status === 'cancelled') {
+        var cancelInfo = '';
+        if (inst.cancelled_by_name || inst.cancelled_at) {
+          cancelInfo = '<span style="font-size:0.7rem;color:var(--adm-muted);display:block;margin-bottom:4px">'
+            + 'By ' + esc(inst.cancelled_by_name || '—')
+            + (inst.cancelled_at ? ' · ' + fmtTime(inst.cancelled_at) : '')
+            + '</span>';
+        }
+        actions = cancelInfo + (isAdmin()
+          ? '<button class="admq-btn act" title="Restore to open" onclick="event.stopPropagation();admqUncancel('+inst.id+')"><i class="bi bi-arrow-counterclockwise"></i> Restore</button>'
+          : '');
       }
       var titleAttr   = esc(inst.title||'');
       var descAttr    = esc((inst.description||'').trim());
@@ -727,7 +736,7 @@
       if (!res.success) return;
       _activeFilter = null;
       renderStats(res.data.stats, date);
-      renderTable(res.data.instances, date);
+      renderTable(res.data.instances, res.data.cancelledInstances, date);
     }).catch(function(){
       document.getElementById('admqTableArea').innerHTML = '<div class="admq-empty"><i class="bi bi-exclamation-circle"></i><div class="admq-empty-title">Failed to load</div></div>';
     });
@@ -750,6 +759,16 @@
     postJson('/queue/'+id+'/pick').then(function(res){
       if (res.success) { loadDate(_date); if (_detailId===id) admqOpenDetail(id); }
       else alert(res.message||'Failed to pick');
+    });
+  };
+
+  window.admqConfirmRepick = function(id) {
+    var inst = _loadedInstances.find(function(i) { return i.id === id; });
+    var title = inst ? esc(inst.title) : 'this task';
+    if (!confirm('Re-pick "' + title + '"?\n\nThis task was rejected. Re-picking it will bypass the rejection and assign it back to you.')) return;
+    postJson('/queue/'+id+'/pick').then(function(res){
+      if (res.success) { loadDate(_date); if (_detailId===id) admqOpenDetail(id); }
+      else alert(res.message||'Failed to re-pick');
     });
   };
   var _doneInstanceId = null;
@@ -1112,7 +1131,7 @@
 
   // ── Initial render ───────────────────────────────────────────────────
   renderStats(_raw.stats, _date);
-  renderTable(_raw.instances, _date);
+  renderTable(_raw.instances, _raw.cancelledInstances, _date);
 
 })();
 

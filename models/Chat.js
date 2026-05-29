@@ -67,6 +67,7 @@ class ChatModel {
             )
             AND cm.sender_id != ?
         ) AS unread_count
+        cp.is_muted
       FROM chat_conversations c
       JOIN chat_participants cp ON cp.conversation_id = c.id AND cp.user_id = ?
       LEFT JOIN chat_messages lm ON lm.id = (
@@ -144,28 +145,32 @@ class ChatModel {
 
     let query, params;
 
-    if (before_id) {
-      query = `SELECT m.*, u.name AS sender_name, u.avatar AS sender_avatar, r.name AS sender_role, o.org_type AS sender_org_type
+    const msgSelect = `SELECT m.*, u.name AS sender_name, u.avatar AS sender_avatar, r.name AS sender_role, o.org_type AS sender_org_type,
+               p.content AS reply_preview, p.is_deleted AS reply_deleted, pu.name AS reply_sender_name
                FROM chat_messages m
                JOIN users u ON u.id = m.sender_id
                JOIN roles r ON r.id = u.role_id
                JOIN organizations o ON o.id = u.organization_id
-               WHERE m.conversation_id = ? AND m.id < ? AND m.id > ?
-               ORDER BY m.id DESC LIMIT ?`;
+               LEFT JOIN chat_messages p ON p.id = m.reply_to_id
+               LEFT JOIN users pu ON pu.id = p.sender_id`;
+
+    if (before_id) {
+      query = `${msgSelect} WHERE m.conversation_id = ? AND m.id < ? AND m.id > ? ORDER BY m.id DESC LIMIT ?`;
       params = [conversationId, before_id, clearedBeforeId, parseInt(limit)];
     } else {
-      query = `SELECT m.*, u.name AS sender_name, u.avatar AS sender_avatar, r.name AS sender_role, o.org_type AS sender_org_type
-               FROM chat_messages m
-               JOIN users u ON u.id = m.sender_id
-               JOIN roles r ON r.id = u.role_id
-               JOIN organizations o ON o.id = u.organization_id
-               WHERE m.conversation_id = ? AND m.id > ?
-               ORDER BY m.id DESC LIMIT ?`;
+      query = `${msgSelect} WHERE m.conversation_id = ? AND m.id > ? ORDER BY m.id DESC LIMIT ?`;
       params = [conversationId, clearedBeforeId, parseInt(limit)];
     }
 
     const [rows] = await db.query(query, params);
-    const messages = rows.reverse(); // Return in chronological order
+    const messages = rows.reverse();
+
+    // Attach reactions
+    if (messages.length) {
+      const ids = messages.map(m => m.id);
+      const reactions = await ChatModel.getReactions(ids);
+      messages.forEach(m => { m.reactions = reactions[m.id] || {}; });
+    } // Return in chronological order
 
     // Compute per-message read status for sent messages
     if (currentUserId && messages.length > 0) {
@@ -381,6 +386,121 @@ class ChatModel {
   }
 
   // Clear chat history for a specific user (hides all current messages for that user only)
+  // Edit a message (sender only, text messages only)
+  static async editMessage(messageId, userId, newContent) {
+    const [[msg]] = await db.query('SELECT sender_id, is_deleted, message_type FROM chat_messages WHERE id = ?', [messageId]);
+    if (!msg) throw new Error('Message not found');
+    if (msg.sender_id !== userId) throw new Error('You can only edit your own messages');
+    if (msg.is_deleted) throw new Error('Cannot edit a deleted message');
+    if (msg.message_type !== 'text') throw new Error('Only text messages can be edited');
+    if (!newContent || !newContent.trim()) throw new Error('Message cannot be empty');
+    await db.query(
+      'UPDATE chat_messages SET content = ?, is_edited = 1, edited_at = NOW() WHERE id = ?',
+      [newContent.trim(), messageId]
+    );
+    const [[updated]] = await db.query(
+      `SELECT m.*, u.name AS sender_name FROM chat_messages m JOIN users u ON u.id = m.sender_id WHERE m.id = ?`,
+      [messageId]
+    );
+    return updated;
+  }
+
+  // Soft-delete a message (sender or admin/manager)
+  static async deleteMessage(messageId, userId, userRole) {
+    const [[msg]] = await db.query('SELECT sender_id, is_deleted FROM chat_messages WHERE id = ?', [messageId]);
+    if (!msg) throw new Error('Message not found');
+    if (msg.is_deleted) throw new Error('Message already deleted');
+    const isAdmin = ['LOCAL_ADMIN', 'LOCAL_MANAGER'].includes(userRole);
+    if (msg.sender_id !== userId && !isAdmin) throw new Error('You can only delete your own messages');
+    await db.query(
+      'UPDATE chat_messages SET is_deleted = 1, content = NULL WHERE id = ?',
+      [messageId]
+    );
+  }
+
+  // Send a reply (wraps sendMessage with reply_to_id)
+  static async sendReply({ conversation_id, sender_id, content, reply_to_id, attachment }) {
+    const [[parent]] = await db.query(
+      'SELECT id, content, sender_id FROM chat_messages WHERE id = ? AND conversation_id = ? AND is_deleted = 0',
+      [reply_to_id, conversation_id]
+    );
+    if (!parent) throw new Error('Replied-to message not found');
+    const [result] = await db.query(
+      `INSERT INTO chat_messages (conversation_id, sender_id, content, reply_to_id,
+        attachment_drive_id, attachment_name, attachment_mime, attachment_size, attachment_link)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [conversation_id, sender_id, content || null, reply_to_id,
+       attachment ? attachment.drive_id : null, attachment ? attachment.name : null,
+       attachment ? attachment.mime : null, attachment ? attachment.size : null,
+       attachment ? attachment.link : null]
+    );
+    await db.query('UPDATE chat_conversations SET updated_at = NOW() WHERE id = ?', [conversation_id]);
+    const [[msg]] = await db.query(
+      `SELECT m.*, u.name AS sender_name, u.avatar AS sender_avatar, r.name AS sender_role, o.org_type AS sender_org_type,
+              p.content AS reply_preview, pu.name AS reply_sender_name
+       FROM chat_messages m
+       JOIN users u ON u.id = m.sender_id
+       JOIN roles r ON r.id = u.role_id
+       JOIN organizations o ON o.id = u.organization_id
+       LEFT JOIN chat_messages p ON p.id = m.reply_to_id
+       LEFT JOIN users pu ON pu.id = p.sender_id
+       WHERE m.id = ?`,
+      [result.insertId]
+    );
+    return msg;
+  }
+
+  // Toggle emoji reaction
+  static async toggleReaction(messageId, userId, emoji) {
+    const [[exists]] = await db.query(
+      'SELECT id FROM chat_reactions WHERE message_id = ? AND user_id = ? AND emoji = ?',
+      [messageId, userId, emoji]
+    );
+    if (exists) {
+      await db.query('DELETE FROM chat_reactions WHERE message_id = ? AND user_id = ? AND emoji = ?', [messageId, userId, emoji]);
+      return { action: 'removed' };
+    } else {
+      await db.query('INSERT INTO chat_reactions (message_id, user_id, emoji) VALUES (?, ?, ?)', [messageId, userId, emoji]);
+      return { action: 'added' };
+    }
+  }
+
+  // Get reactions for a set of message IDs
+  static async getReactions(messageIds) {
+    if (!messageIds.length) return {};
+    const [rows] = await db.query(
+      `SELECT r.message_id, r.emoji, r.user_id, u.name as user_name
+       FROM chat_reactions r JOIN users u ON u.id = r.user_id
+       WHERE r.message_id IN (?)`,
+      [messageIds]
+    );
+    const map = {};
+    rows.forEach(r => {
+      if (!map[r.message_id]) map[r.message_id] = {};
+      if (!map[r.message_id][r.emoji]) map[r.message_id][r.emoji] = [];
+      map[r.message_id][r.emoji].push({ user_id: r.user_id, user_name: r.user_name });
+    });
+    return map;
+  }
+
+  // Search messages in a conversation
+  static async searchMessages(conversationId, query, userId) {
+    const [[cp]] = await db.query(
+      'SELECT cleared_before_id FROM chat_participants WHERE conversation_id = ? AND user_id = ?',
+      [conversationId, userId]
+    );
+    const clearedBefore = (cp && cp.cleared_before_id) ? parseInt(cp.cleared_before_id) : 0;
+    const [rows] = await db.query(
+      `SELECT m.id, m.content, m.created_at, u.name AS sender_name
+       FROM chat_messages m JOIN users u ON u.id = m.sender_id
+       WHERE m.conversation_id = ? AND m.is_deleted = 0 AND m.content LIKE ?
+         AND m.id > ? AND m.message_type = 'text'
+       ORDER BY m.created_at DESC LIMIT 30`,
+      [conversationId, '%' + query + '%', clearedBefore]
+    );
+    return rows;
+  }
+
   static async clearChatForUser(conversationId, userId) {
     const [[latest]] = await db.query(
       'SELECT MAX(id) AS max_id FROM chat_messages WHERE conversation_id = ?',
@@ -391,6 +511,121 @@ class ChatModel {
     await db.query(
       'UPDATE chat_participants SET cleared_before_id = ? WHERE conversation_id = ? AND user_id = ?',
       [clearUpTo, conversationId, userId]
+    );
+  }
+
+  // Add members to an existing group (creator or admin only)
+  static async addMembers(conversationId, userIds, requestingUserId, requestingRole) {
+    const [[conv]] = await db.query('SELECT type, created_by FROM chat_conversations WHERE id = ?', [conversationId]);
+    if (!conv) throw new Error('Conversation not found');
+    if (conv.type !== 'group') throw new Error('Can only add members to group conversations');
+    const isCreator = conv.created_by === requestingUserId;
+    const isAdmin   = ['LOCAL_ADMIN', 'LOCAL_MANAGER'].includes(requestingRole);
+    if (!isCreator && !isAdmin) throw new Error('Only the group creator or an admin can add members');
+    const added = [];
+    for (const uid of userIds) {
+      const already = await this.isParticipant(conversationId, uid);
+      if (!already) {
+        await db.query('INSERT INTO chat_participants (conversation_id, user_id) VALUES (?, ?)', [conversationId, uid]);
+        added.push(uid);
+      }
+    }
+    return added;
+  }
+
+  // Rename a group (creator or admin only)
+  static async renameGroup(conversationId, newName, requestingUserId, requestingRole) {
+    const [[conv]] = await db.query('SELECT type, created_by FROM chat_conversations WHERE id = ?', [conversationId]);
+    if (!conv) throw new Error('Conversation not found');
+    if (conv.type !== 'group') throw new Error('Can only rename group conversations');
+    const isCreator = conv.created_by === requestingUserId;
+    const isAdmin   = ['LOCAL_ADMIN', 'LOCAL_MANAGER'].includes(requestingRole);
+    if (!isCreator && !isAdmin) throw new Error('Only the group creator or an admin can rename this group');
+    if (!newName || !newName.trim()) throw new Error('Group name cannot be empty');
+    await db.query('UPDATE chat_conversations SET name = ? WHERE id = ?', [newName.trim(), conversationId]);
+  }
+
+  // Toggle mute for a conversation participant
+  static async toggleMute(conversationId, userId) {
+    const [[cp]] = await db.query(
+      'SELECT is_muted FROM chat_participants WHERE conversation_id = ? AND user_id = ?',
+      [conversationId, userId]
+    );
+    if (!cp) throw new Error('Not a participant');
+    const newState = cp.is_muted ? 0 : 1;
+    await db.query(
+      'UPDATE chat_participants SET is_muted = ? WHERE conversation_id = ? AND user_id = ?',
+      [newState, conversationId, userId]
+    );
+    return { muted: !!newState };
+  }
+
+  // Leave a group conversation (removes the user from participants)
+  static async leaveGroup(conversationId, userId) {
+    const [[conv]] = await db.query(
+      'SELECT type, created_by FROM chat_conversations WHERE id = ?',
+      [conversationId]
+    );
+    if (!conv) throw new Error('Conversation not found');
+    if (conv.type !== 'group') throw new Error('Can only leave group conversations');
+
+    const isParticipant = await this.isParticipant(conversationId, userId);
+    if (!isParticipant) throw new Error('You are not a member of this group');
+
+    await db.query(
+      'DELETE FROM chat_participants WHERE conversation_id = ? AND user_id = ?',
+      [conversationId, userId]
+    );
+
+    // If no members remain, delete the conversation entirely
+    const [[{ cnt }]] = await db.query(
+      'SELECT COUNT(*) as cnt FROM chat_participants WHERE conversation_id = ?',
+      [conversationId]
+    );
+    if (parseInt(cnt) === 0) {
+      await db.query('DELETE FROM chat_messages WHERE conversation_id = ?', [conversationId]);
+      await db.query('DELETE FROM chat_conversations WHERE id = ?', [conversationId]);
+    }
+  }
+
+  // Delete a group conversation entirely (creator or LOCAL_ADMIN/MANAGER only)
+  static async deleteGroup(conversationId, requestingUserId, requestingRole) {
+    const [[conv]] = await db.query(
+      'SELECT type, created_by FROM chat_conversations WHERE id = ?',
+      [conversationId]
+    );
+    if (!conv) throw new Error('Conversation not found');
+    if (conv.type !== 'group') throw new Error('Can only delete group conversations');
+
+    const isCreator = conv.created_by === requestingUserId;
+    const isAdmin   = ['LOCAL_ADMIN', 'LOCAL_MANAGER'].includes(requestingRole);
+    if (!isCreator && !isAdmin) throw new Error('Only the group creator or an admin can delete this group');
+
+    await db.query('DELETE FROM chat_participants WHERE conversation_id = ?', [conversationId]);
+    await db.query('DELETE FROM chat_messages WHERE conversation_id = ?', [conversationId]);
+    await db.query('DELETE FROM chat_conversations WHERE id = ?', [conversationId]);
+  }
+
+  // Remove a specific member from a group (creator or LOCAL_ADMIN/MANAGER only)
+  static async removeMember(conversationId, targetUserId, requestingUserId, requestingRole) {
+    const [[conv]] = await db.query(
+      'SELECT type, created_by FROM chat_conversations WHERE id = ?',
+      [conversationId]
+    );
+    if (!conv) throw new Error('Conversation not found');
+    if (conv.type !== 'group') throw new Error('Can only remove members from group conversations');
+
+    const isCreator = conv.created_by === requestingUserId;
+    const isAdmin   = ['LOCAL_ADMIN', 'LOCAL_MANAGER'].includes(requestingRole);
+    if (!isCreator && !isAdmin) throw new Error('Only the group creator or an admin can remove members');
+    if (targetUserId === conv.created_by) throw new Error('The group creator cannot be removed');
+
+    const isParticipant = await this.isParticipant(conversationId, targetUserId);
+    if (!isParticipant) throw new Error('User is not a member of this group');
+
+    await db.query(
+      'DELETE FROM chat_participants WHERE conversation_id = ? AND user_id = ?',
+      [conversationId, targetUserId]
     );
   }
 }

@@ -72,8 +72,7 @@ class ClientRequest {
       : '';
     const queryParams = dateStr === today ? [dateStr, dateStr] : [dateStr];
 
-    const [instances] = await db.query(
-      `SELECT cri.*,
+    const instanceCols = `cri.*,
               cr.title, cr.task_type, cr.description, cr.priority,
               cr.recurrence, cr.due_time, cr.assigned_to as default_assigned_to,
               cr.org_id, o.name as org_name,
@@ -87,10 +86,11 @@ class ClientRequest {
               lc.body as latest_comment,
               lc_user.name as latest_comment_by,
               lc.created_at as latest_comment_at,
-              (SELECT COUNT(*) FROM client_request_comments WHERE instance_id = cri.id) as comment_count,
+              COALESCE(crc_agg.cnt, 0) as comment_count,
               orig.instance_date as rescheduled_from_date,
-              rescheduler.name as rescheduled_by_name
-       FROM client_request_instances cri
+              rescheduler.name as rescheduled_by_name,
+              cb_user.name as cancelled_by_name`;
+    const instanceJoins = `FROM client_request_instances cri
        JOIN client_requests cr ON cri.request_id = cr.id
        JOIN organizations o ON cr.org_id = o.id
        JOIN users creator ON cr.created_by = creator.id
@@ -98,18 +98,41 @@ class ClientRequest {
        LEFT JOIN users completer ON cri.completed_by = completer.id
        LEFT JOIN users defaultAssignee ON cr.assigned_to = defaultAssignee.id
        LEFT JOIN users instanceAssignee ON cri.assigned_to = instanceAssignee.id
-       LEFT JOIN client_request_comments lc ON lc.id = (
-         SELECT MAX(id) FROM client_request_comments WHERE instance_id = cri.id
-       )
+       LEFT JOIN (
+         SELECT instance_id, MAX(id) as max_id, COUNT(*) as cnt
+         FROM client_request_comments
+         GROUP BY instance_id
+       ) crc_agg ON crc_agg.instance_id = cri.id
+       LEFT JOIN client_request_comments lc ON lc.id = crc_agg.max_id
        LEFT JOIN users lc_user ON lc.user_id = lc_user.id
        LEFT JOIN client_request_instances orig ON orig.rescheduled_instance_id = cri.id
        LEFT JOIN users rescheduler ON orig.rescheduled_by = rescheduler.id
-       WHERE (cri.instance_date = ? ${carryForward}) AND cr.is_active = 1
-       ORDER BY cri.status = 'cancelled' ASC, cri.id ASC`,
+       LEFT JOIN users cb_user ON cri.cancelled_by = cb_user.id`;
+
+    const [instances] = await db.query(
+      `SELECT ${instanceCols} ${instanceJoins}
+       WHERE (cri.instance_date = ? ${carryForward}) AND cr.is_active = 1 AND cri.status != 'cancelled'
+       ORDER BY cri.id ASC`,
       queryParams
     );
 
-    return instances;
+    const [cancelledInstances] = await db.query(
+      `SELECT ${instanceCols} ${instanceJoins}
+       WHERE cri.instance_date = ? AND cr.is_active = 1 AND cri.status = 'cancelled'
+       ORDER BY cri.id ASC`,
+      [dateStr]
+    );
+
+    // Derive stats from fetched data — this is accurate because instances
+    // already includes carry-forward open tasks from past dates, which a
+    // plain instance_date = ? query would miss.
+    const stats = { open: 0, picked: 0, done: 0, missed: 0, cancelled: cancelledInstances.length, approved: 0, rejected: 0, rescheduled: 0, total: 0 };
+    instances.forEach(inst => {
+      if (Object.prototype.hasOwnProperty.call(stats, inst.status)) stats[inst.status]++;
+      stats.total++;
+    });
+
+    return { instances, cancelledInstances, stats };
   }
 
   static async getInstanceById(instanceId) {
@@ -139,16 +162,13 @@ class ClientRequest {
   }
 
   static async pick(instanceId, userId) {
-    const [[inst]] = await db.query(
-      'SELECT status FROM client_request_instances WHERE id = ?', [instanceId]
-    );
-    if (!inst || !['open', 'missed', 'rejected'].includes(inst.status)) throw new Error('Task cannot be picked');
-    await db.query(
+    const [result] = await db.query(
       `UPDATE client_request_instances
        SET status = 'picked', picked_by = ?, picked_at = NOW()
        WHERE id = ? AND status IN ('open', 'missed', 'rejected')`,
       [userId, instanceId]
     );
+    if (result.affectedRows === 0) throw new Error('Task cannot be picked — it may have already been picked by someone else');
   }
 
   static async release(instanceId, userId, reason) {
@@ -172,16 +192,14 @@ class ClientRequest {
     const [[inst]] = await db.query(
       'SELECT status, instance_date FROM client_request_instances WHERE id = ?', [instanceId]
     );
-    if (!inst || !['picked', 'open'].includes(inst.status)) throw new Error('Cannot complete this task');
+    if (!inst || inst.status !== 'picked') throw new Error('Task must be picked before it can be completed');
     const today = new Date().toISOString().split('T')[0];
     const isLate = inst.instance_date < today ? 1 : 0;
     await db.query(
       `UPDATE client_request_instances
-       SET status = 'done', completed_by = ?, completed_at = NOW(),
-           picked_by = COALESCE(picked_by, ?), picked_at = COALESCE(picked_at, NOW()),
-           completed_late = ?
+       SET status = 'done', completed_by = ?, completed_at = NOW(), completed_late = ?
        WHERE id = ?`,
-      [userId, userId, isLate, instanceId]
+      [userId, isLate, instanceId]
     );
   }
 
@@ -472,7 +490,7 @@ class ClientRequest {
   }
 
   // Cancel a specific instance (portal side, only when open)
-  static async cancelInstance(instanceId, orgId) {
+  static async cancelInstance(instanceId, orgId, userId) {
     const [[inst]] = await db.query(
       `SELECT cri.status, cr.org_id
        FROM client_request_instances cri
@@ -484,12 +502,14 @@ class ClientRequest {
     if (inst.org_id !== orgId) throw new Error('Not authorized');
     if (inst.status !== 'open') throw new Error('Only open tasks can be cancelled');
     await db.query(
-      `UPDATE client_request_instances SET status = 'cancelled' WHERE id = ?`,
-      [instanceId]
+      `UPDATE client_request_instances
+       SET status = 'cancelled', cancelled_by = ?, cancelled_at = NOW()
+       WHERE id = ?`,
+      [userId || null, instanceId]
     );
   }
 
-  static async uncancelInstance(instanceId) {
+  static async uncancelInstance(instanceId, userId) {
     const [[inst]] = await db.query(
       `SELECT cri.status, cri.instance_date
        FROM client_request_instances cri
@@ -499,37 +519,51 @@ class ClientRequest {
     if (!inst) throw new Error('Not found');
     if (inst.status !== 'cancelled') throw new Error('Only cancelled requests can be restored');
     await db.query(
-      `UPDATE client_request_instances SET status = 'open' WHERE id = ?`,
-      [instanceId]
+      `UPDATE client_request_instances
+       SET status = 'open', uncancelled_by = ?, uncancelled_at = NOW()
+       WHERE id = ?`,
+      [userId || null, instanceId]
     );
   }
 
   static async rescheduleInstance(instanceId, userId, newDate, reason, assignedTo = null) {
-    const [[inst]] = await db.query(
-      'SELECT status, request_id FROM client_request_instances WHERE id = ?', [instanceId]
-    );
-    if (!inst) throw new Error('Not found');
-    if (inst.status !== 'open') throw new Error('Only open requests can be rescheduled');
+    const conn = await db.getConnection();
+    try {
+      await conn.beginTransaction();
 
-    // Create the new instance for the new date
-    const [result] = await db.query(
-      `INSERT INTO client_request_instances (request_id, instance_date, status, assigned_to)
-       VALUES (?, ?, 'open', ?)`,
-      [inst.request_id, newDate, assignedTo || null]
-    );
-    const newInstanceId = result.insertId;
+      const [[inst]] = await conn.query(
+        'SELECT status, request_id FROM client_request_instances WHERE id = ? FOR UPDATE',
+        [instanceId]
+      );
+      if (!inst) throw new Error('Not found');
+      if (inst.status !== 'open') throw new Error('Only open requests can be rescheduled');
 
-    // Mark original as rescheduled
-    await db.query(
-      `UPDATE client_request_instances
-       SET status = 'rescheduled', rescheduled_to = ?, rescheduled_by = ?, rescheduled_instance_id = ?
-       WHERE id = ?`,
-      [newDate, userId, newInstanceId, instanceId]
-    );
+      const [result] = await conn.query(
+        `INSERT INTO client_request_instances (request_id, instance_date, status, assigned_to)
+         VALUES (?, ?, 'open', ?)`,
+        [inst.request_id, newDate, assignedTo || null]
+      );
+      const newInstanceId = result.insertId;
 
-    // Add comment so both sides can see the reason
-    const commentBody = `Rescheduled to ${newDate}: ${reason}`;
-    await ClientRequest.addComment(instanceId, userId, commentBody);
+      await conn.query(
+        `UPDATE client_request_instances
+         SET status = 'rescheduled', rescheduled_to = ?, rescheduled_by = ?, rescheduled_instance_id = ?
+         WHERE id = ?`,
+        [newDate, userId, newInstanceId, instanceId]
+      );
+
+      await conn.query(
+        `INSERT INTO client_request_comments (instance_id, user_id, body) VALUES (?, ?, ?)`,
+        [instanceId, userId, `Rescheduled to ${newDate}: ${reason}`]
+      );
+
+      await conn.commit();
+    } catch (err) {
+      await conn.rollback();
+      throw err;
+    } finally {
+      conn.release();
+    }
   }
 
   static async approveInstance(instanceId, userId) {

@@ -82,6 +82,12 @@
   color:#f87171; border-radius:5px; padding:1px 7px;
   font-size:0.67rem; font-weight:700; margin-left:7px; vertical-align:middle;
 }
+.dl-public-chip {
+  display:inline-flex; align-items:center; gap:3px;
+  background:rgba(0,212,255,0.08); border:1px solid rgba(0,212,255,0.2);
+  color:#00d4ff; border-radius:5px; padding:1px 7px;
+  font-size:0.67rem; font-weight:700; margin-left:7px; vertical-align:middle;
+}
 
 /* ── Meta cells ──────────────────────────────────────────────── */
 .dl-meta { font-size:0.8rem; color:var(--adm-muted); }
@@ -107,6 +113,8 @@
 .dl-btn-delete:hover   { color:#f87171; border-color:rgba(248,113,113,0.35); background:rgba(248,113,113,0.07); }
 .dl-btn-disable.active { color:#f59e0b; border-color:rgba(245,158,11,0.35); background:rgba(245,158,11,0.07); }
 .dl-btn-disable:hover  { color:#f59e0b; border-color:rgba(245,158,11,0.35); background:rgba(245,158,11,0.07); }
+.dl-btn-public.active  { color:#00d4ff; border-color:rgba(0,212,255,0.35); background:rgba(0,212,255,0.07); }
+.dl-btn-public:hover   { color:#00d4ff; border-color:rgba(0,212,255,0.35); background:rgba(0,212,255,0.07); }
 .dl-btn[disabled]      { opacity:0.3; pointer-events:none; }
 
 /* ── Empty state ─────────────────────────────────────────────── */
@@ -214,6 +222,7 @@
               <%= f.name %>
               <% if (f.version) { %><span class="dl-version-badge">v<%= f.version %></span><% } %>
               <% if (f.is_disabled) { %><span class="dl-disabled-chip"><i class="bi bi-slash-circle"></i> Disabled</span><% } %>
+              <% if (f.is_public) { %><span class="dl-public-chip"><i class="bi bi-globe"></i> Public</span><% } %>
             </div>
             <% if (f.description) { %><div class="dl-desc"><%= f.description %></div><% } %>
           </td>
@@ -246,6 +255,13 @@
                       title="<%= f.is_disabled ? 'Enable' : 'Disable' %>"
                       onclick="dlToggle(<%= f.id %>, this)">
                 <i class="bi <%= f.is_disabled ? 'bi-eye-fill' : 'bi-slash-circle' %>"></i>
+              </button>
+              <% } %>
+              <% if (canTogglePublic) { %>
+              <button class="dl-btn dl-btn-public <%= f.is_public ? 'active' : '' %>"
+                      title="<%= f.is_public ? 'Remove from public page' : 'Make publicly available' %>"
+                      onclick="dlTogglePublic(<%= f.id %>, this)">
+                <i class="bi bi-globe<%= f.is_public ? '-americas' : '' %>"></i>
               </button>
               <% } %>
             </div>
@@ -395,6 +411,18 @@ async function dlToggle(id, btn) {
   btn.disabled = true;
   try {
     const r = await fetch('/admin/downloads/' + id + '/toggle', { method: 'PATCH' });
+    const data = await r.json();
+    if (data.success) { location.reload(); }
+    else alert(data.message || 'Failed');
+  } catch(e) { alert('Network error'); }
+  finally { btn.disabled = false; }
+}
+
+// ── Toggle public ─────────────────────────────────────────────
+async function dlTogglePublic(id, btn) {
+  btn.disabled = true;
+  try {
+    const r = await fetch('/admin/downloads/' + id + '/toggle-public', { method: 'PATCH' });
     const data = await r.json();
     if (data.success) { location.reload(); }
     else alert(data.message || 'Failed');

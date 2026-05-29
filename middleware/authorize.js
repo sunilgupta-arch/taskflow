@@ -1,10 +1,18 @@
 const { PERMISSIONS } = require('../config/constants');
 
+// Safe home page for each role family — guaranteed accessible to all roles in that family
+function safeHome(role) {
+  if (!role) return '/auth/login';
+  if (role.startsWith('CLIENT_')) return '/portal';
+  return '/admin'; // /admin uses requireLocalAll — accessible to every LOCAL_* role
+}
+
 const authorize = (...permissions) => {
   return (req, res, next) => {
     const userRole = req.user?.role_name;
     if (!userRole) {
-      return res.status(403).json({ success: false, message: 'Access denied' });
+      if (req.xhr || req.path.startsWith('/api/')) return res.status(403).json({ success: false, message: 'Access denied' });
+      return res.redirect('/auth/login');
     }
 
     const userPermissions = PERMISSIONS[userRole] || [];
@@ -14,12 +22,7 @@ const authorize = (...permissions) => {
       if (req.xhr || req.path.startsWith('/api/')) {
         return res.status(403).json({ success: false, message: 'Insufficient permissions' });
       }
-      return res.status(403).render('error', {
-        title: 'Access Denied',
-        message: 'You do not have permission to access this page.',
-        code: 403,
-        layout: false
-      });
+      return res.redirect(safeHome(userRole));
     }
 
     next();
@@ -33,12 +36,7 @@ const requireRoles = (...roles) => {
       if (req.xhr || req.path.startsWith('/api/')) {
         return res.status(403).json({ success: false, message: 'Role not authorized' });
       }
-      return res.status(403).render('error', {
-        title: 'Access Denied',
-        message: 'Your role does not have access to this resource.',
-        code: 403,
-        layout: false
-      });
+      return res.redirect(safeHome(userRole));
     }
     next();
   };

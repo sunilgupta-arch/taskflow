@@ -113,8 +113,21 @@
   display: flex; align-items: center; gap: 2px;
 }
 .adma-cal-time {
-  font-size: 0.55rem; font-family: var(--adm-mono); color: var(--adm-muted);
+  display: inline-flex; align-items: center; flex-wrap: wrap; gap: 2px;
+  margin-top: 3px;
+  background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 5px; padding: 2px 5px;
+  font-size: 0.6rem; font-family: var(--adm-font); font-weight: 500;
+  color: var(--adm-text-2); letter-spacing: 0.01em; line-height: 1.2;
 }
+.adma-cal-ist {
+  display: inline; font-size: 0.58rem; font-family: var(--adm-font);
+  color: #7dd3fc; font-weight: 500;
+}
+[data-bs-theme="light"] .adma-cal-time {
+  background: rgba(0,0,0,0.06); border-color: rgba(0,0,0,0.1); color: #374151;
+}
+[data-bs-theme="light"] .adma-cal-ist { color: #0369a1; }
 .adma-cal-legend {
   display: flex; flex-wrap: wrap; gap: 12px; justify-content: center;
   padding: 10px 14px; border-top: 1px solid var(--adm-border);
@@ -408,7 +421,9 @@
       <% if (hasLate) { %><div class="adma-late-badge"><i class="bi bi-clock"></i> Late</div><% } %>
       <% } %>
       <% if (cd.log) { %>
-      <div class="adma-cal-time"><%= cd.log.loginFormatted || '' %></div>
+      <div class="adma-cal-time">
+        <%= cd.log.loginFormatted || '' %><% if (cd.log.loginIst) { %> / <span class="adma-cal-ist"><%= cd.log.loginIst %> IST</span><% } %>
+      </div>
       <% if (cd.sessions && cd.sessions.length > 1) { %>
       <div class="adma-sess-badge"><i class="bi bi-arrow-repeat"></i> <%= cd.sessions.length %> sessions</div>
       <% } %>

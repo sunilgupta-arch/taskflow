@@ -1,6 +1,6 @@
 <style>
   /* ── Layout ── */
-  .admc-wrap { display:flex; height:calc(100vh - 176px); background:var(--adm-surface,#0f172a); border:1px solid var(--adm-border,#334155); border-radius:14px; overflow:hidden; }
+  .admc-wrap { display:flex; height:calc(100vh - 92px); background:var(--adm-surface,#0f172a); border:1px solid var(--adm-border,#334155); border-radius:14px; overflow:hidden; }
 
   /* ── Sidebar ── */
   .admc-sidebar { width:300px; min-width:300px; border-right:1px solid var(--adm-border,#334155); display:flex; flex-direction:column; }
@@ -78,6 +78,79 @@
   .admc-attach-action { font-size:0.78rem; color:var(--adm-muted,#64748b); flex-shrink:0; cursor:pointer; background:none; border:none; padding:2px 4px; border-radius:4px; transition:color 0.15s; }
   .admc-attach-action:hover { color:#00d4ff; }
   .admc-attach-action.saved { color:#10b981; cursor:default; }
+
+  /* ── Reply bar ── */
+  .admc-reply-bar { display:none; padding:6px 1.1rem; border-top:1px solid var(--adm-border,#334155); background:var(--adm-surface-2); align-items:center; gap:8px; }
+  .admc-reply-bar.show { display:flex; }
+  .admc-reply-preview { flex:1; min-width:0; border-left:3px solid #00d4ff; padding:2px 8px; }
+  .admc-reply-preview-name { font-size:0.62rem; font-weight:700; color:#00d4ff; }
+  .admc-reply-preview-text { font-size:0.72rem; color:var(--adm-muted,#64748b); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:360px; }
+  .admc-reply-cancel { background:none; border:none; color:var(--adm-muted,#64748b); cursor:pointer; font-size:0.95rem; padding:3px; border-radius:4px; }
+  .admc-reply-cancel:hover { color:#ef4444; }
+
+  /* ── Reply quote in bubble ── */
+  .admc-reply-quote { border-left:3px solid #00d4ff; padding:4px 8px; margin-bottom:5px; border-radius:0 4px 4px 0; background:rgba(0,212,255,0.05); cursor:pointer; }
+  .admc-reply-quote-name { font-size:0.58rem; font-weight:700; color:#00d4ff; }
+  .admc-reply-quote-text { font-size:0.72rem; color:var(--adm-muted,#64748b); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:280px; }
+
+  /* ── Edit mode ── */
+  .admc-edit-bar { display:none; padding:6px 1.1rem; border-top:1px solid var(--adm-border,#334155); background:rgba(245,158,11,0.05); align-items:center; gap:8px; font-size:0.72rem; color:#f59e0b; }
+  .admc-edit-bar.show { display:flex; }
+
+  /* ── Reactions ── */
+  .admc-reactions { display:flex; flex-wrap:wrap; gap:4px; margin-top:4px; }
+  .admc-reaction-chip { display:inline-flex; align-items:center; gap:3px; background:var(--adm-surface-2); border:1px solid var(--adm-border,#334155); border-radius:12px; padding:2px 7px; font-size:0.75rem; cursor:pointer; transition:all 0.12s; }
+  .admc-reaction-chip.mine { border-color:rgba(0,212,255,0.4); background:rgba(0,212,255,0.08); }
+  .admc-reaction-chip:hover { border-color:var(--adm-accent,#00d4ff); }
+  .admc-reaction-count { font-size:0.65rem; color:var(--adm-muted,#64748b); }
+
+  /* ── Emoji picker ── */
+  .admc-emoji-picker { display:none; position:absolute; bottom:calc(100% + 6px); right:0; background:var(--adm-surface,#0f172a); border:1px solid var(--adm-border,#334155); border-radius:12px; padding:8px; box-shadow:0 8px 24px rgba(0,0,0,0.35); z-index:200; width:272px; }
+  .admc-emoji-picker.show { display:block; }
+  .admc-emoji-grid { display:grid; grid-template-columns:repeat(8,1fr); gap:2px; }
+  .admc-emoji-btn { background:none; border:none; font-size:1.2rem; cursor:pointer; padding:4px; border-radius:6px; transition:background 0.12s; text-align:center; line-height:1; }
+  .admc-emoji-btn:hover { background:var(--adm-surface-2); }
+
+  /* ── Search bar ── */
+  .admc-search-bar { display:none; padding:8px 1.1rem; border-bottom:1px solid var(--adm-border,#334155); background:var(--adm-surface-2); align-items:center; gap:8px; }
+  .admc-search-bar.show { display:flex; }
+  .admc-search-input { flex:1; background:var(--adm-surface,#0f172a); border:1px solid var(--adm-border,#334155); color:var(--adm-text,#f1f5f9); border-radius:8px; padding:5px 10px; font-size:0.78rem; outline:none; }
+  .admc-search-input:focus { border-color:rgba(0,212,255,0.4); }
+  .admc-search-results { overflow-y:auto; max-height:200px; border-top:1px solid var(--adm-border,#334155); }
+  .admc-search-result { padding:8px 1.1rem; cursor:pointer; border-bottom:1px solid var(--adm-border,#334155); }
+  .admc-search-result:hover { background:var(--adm-surface-2); }
+  .admc-search-result-name { font-size:0.65rem; font-weight:700; color:#00d4ff; }
+  .admc-search-result-text { font-size:0.78rem; color:var(--adm-text,#f1f5f9); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .admc-search-result-time { font-size:0.58rem; color:var(--adm-muted,#64748b); }
+  .admc-highlight { background:rgba(245,158,11,0.25); border-radius:2px; }
+
+  /* ── Image lightbox ── */
+  .admc-lightbox { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.92); z-index:9000; align-items:center; justify-content:center; cursor:zoom-out; }
+  .admc-lightbox.show { display:flex; }
+  .admc-lightbox img { max-width:92vw; max-height:90vh; border-radius:8px; object-fit:contain; box-shadow:0 20px 60px rgba(0,0,0,0.6); }
+  .admc-lightbox-close { position:absolute; top:16px; right:20px; background:none; border:none; color:#fff; font-size:1.5rem; cursor:pointer; opacity:0.7; }
+  .admc-lightbox-close:hover { opacity:1; }
+
+  /* ── Muted badge in sidebar ── */
+  .admc-muted-icon { font-size:0.7rem; color:var(--adm-muted,#64748b); margin-left:2px; }
+
+  /* ── Add member modal ── */
+  .admc-addmember-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.65); z-index:500; align-items:center; justify-content:center; padding:1rem; }
+  .admc-addmember-modal.show { display:flex; }
+
+  /* ── Inline group rename ── */
+  .admc-group-rename-input { background:var(--adm-surface-2); border:1px solid rgba(0,212,255,0.4); color:var(--adm-text,#f1f5f9); border-radius:6px; padding:2px 8px; font-size:0.88rem; font-weight:600; font-family:inherit; outline:none; max-width:200px; }
+
+  /* ── Online dot ── */
+  .admc-online-dot { width:9px; height:9px; border-radius:50%; background:#10b981; border:2px solid var(--adm-surface,#0f172a); display:inline-block; flex-shrink:0; }
+
+  /* ── Message hover actions ── */
+  .admc-bubble { position:relative; }
+  .admc-msg-acts { display:none; position:absolute; top:-28px; right:0; background:var(--adm-surface,#0f172a); border:1px solid var(--adm-border,#334155); border-radius:7px; padding:2px; gap:1px; z-index:5; white-space:nowrap; }
+  .admc-msg-row.received .admc-bubble .admc-msg-acts { right:auto; left:0; }
+  .admc-bubble:hover .admc-msg-acts { display:flex; }
+  .admc-msg-act { background:none; border:none; color:var(--adm-muted,#64748b); cursor:pointer; padding:3px 7px; border-radius:5px; font-size:0.72rem; transition:all 0.12s; display:flex; align-items:center; gap:4px; }
+  .admc-msg-act:hover { background:var(--adm-surface-2,#1e293b); color:var(--adm-text,#f1f5f9); }
 
   /* ── Typing ── */
   .admc-typing { font-size:0.68rem; color:var(--adm-muted,#64748b); font-style:italic; padding:2px 4px; min-height:18px; }
@@ -166,6 +239,26 @@
   #admc-clear-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:600; align-items:center; justify-content:center; padding:1rem; }
   #admc-clear-modal.show { display:flex; }
 
+  /* ── Jump to latest ── */
+  .admc-jump-btn { display:none; position:absolute; bottom:76px; right:1.2rem; background:var(--adm-accent,#00d4ff); color:#000; border:none; border-radius:20px; padding:5px 14px; font-size:0.72rem; font-weight:700; cursor:pointer; box-shadow:0 4px 14px rgba(0,0,0,0.35); z-index:10; align-items:center; gap:5px; white-space:nowrap; }
+  .admc-jump-btn.show { display:flex; }
+
+  /* ── @mention dropdown ── */
+  .admc-mention-drop { display:none; position:absolute; bottom:calc(100% + 6px); left:0; right:0; background:var(--adm-surface,#0f172a); border:1px solid var(--adm-border,#334155); border-radius:10px; max-height:180px; overflow-y:auto; box-shadow:0 8px 24px rgba(0,0,0,0.35); z-index:200; }
+  .admc-mention-drop.show { display:block; }
+  .admc-mention-item { display:flex; align-items:center; gap:8px; padding:7px 12px; cursor:pointer; font-size:0.78rem; color:var(--adm-text,#f1f5f9); transition:background 0.12s; }
+  .admc-mention-item:hover, .admc-mention-item.active { background:var(--adm-surface-2,#1e293b); }
+  .admc-mention-name { font-weight:600; }
+  .admc-mention-role { font-size:0.64rem; color:var(--adm-muted,#64748b); margin-left:2px; }
+
+  /* ── Member list modal ── */
+  .admc-members-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.65); z-index:500; align-items:center; justify-content:center; padding:1rem; }
+  .admc-members-modal.show { display:flex; }
+
+  /* ── Drop overlay ── */
+  .admc-drop-overlay { display:none; position:absolute; inset:0; background:rgba(0,212,255,0.05); border:2px dashed rgba(0,212,255,0.5); border-radius:14px; z-index:100; align-items:center; justify-content:center; pointer-events:none; }
+  .admc-drop-overlay.show { display:flex; }
+
   /* Mobile */
   .admc-back-btn { display:none; background:none; border:none; color:var(--adm-muted,#64748b); font-size:1.1rem; cursor:pointer; padding:0; }
   @media (max-width:768px) {
@@ -177,14 +270,15 @@
   }
 </style>
 
-<a href="/admin/comms" class="adm-back-btn"><i class="bi bi-arrow-left"></i> Comms</a>
-
 <div class="admc-wrap" id="admc-wrap">
 
   <!-- ── Sidebar ── -->
   <div class="admc-sidebar">
     <div class="admc-sidebar-head">
       <span class="admc-sidebar-title">Conversations</span>
+      <button class="admc-head-btn" id="admc-sound-btn" onclick="ADMC.toggleSound()" title="Toggle notification sound" style="padding:3px 6px;">
+        <i class="bi bi-volume-up-fill" id="admc-sound-icon"></i>
+      </button>
       <button class="admc-new-btn" onclick="ADMC.openNewModal()">
         <i class="bi bi-plus-lg"></i> New
       </button>
@@ -221,6 +315,7 @@
           <div class="admc-conv-item <%= activeConversationId === c.id ? 'active' : '' %>"
                data-id="<%= c.id %>"
                data-search="<%= searchKey %>"
+               data-muted="<%= c.is_muted ? '1' : '0' %>"
                onclick="ADMC.openConv(<%= c.id %>)">
             <div class="admc-avatar <%= c.type %>">
               <% if (c.type === 'system') { %><i class="bi bi-robot"></i>
@@ -231,6 +326,7 @@
             <div class="admc-conv-info">
               <div class="admc-conv-name">
                 <%= displayName %>
+                <% if (c.is_muted) { %><i class="bi bi-bell-slash admc-muted-icon"></i><% } %>
                 <% if (c.type === 'system') { %>
                   <span class="admc-org-tag LOCAL" style="background:rgba(99,102,241,0.15);color:#818cf8;">BOT</span>
                 <% } else if (c.type === 'direct' && c.other_user) { %>
@@ -259,7 +355,9 @@
   </div>
 
   <!-- ── Main panel ── -->
-  <div class="admc-main" id="admc-main">
+  <div class="admc-main" id="admc-main" style="position:relative;">
+    <div class="admc-drop-overlay" id="admc-drop-overlay"><span style="font-size:1rem;font-weight:700;color:#00d4ff;"><i class="bi bi-cloud-upload me-2"></i>Drop file to send</span></div>
+    <button class="admc-jump-btn" id="admc-jump-btn" onclick="ADMC.jumpToLatest()"><i class="bi bi-arrow-down"></i> Latest</button>
     <div id="admc-head-area">
       <!-- filled dynamically -->
     </div>
@@ -288,7 +386,25 @@
           <div class="admc-upload-track"><div class="admc-upload-fill" id="admc-upload-fill"></div></div>
         </div>
       </div>
-      <div class="admc-input-area">
+      <div id="admc-search-bar" class="admc-search-bar">
+        <i class="bi bi-search" style="color:var(--adm-muted,#64748b);font-size:0.8rem;"></i>
+        <input class="admc-search-input" id="admc-search-input" placeholder="Search messages…">
+        <button onclick="ADMC.closeSearch()" style="background:none;border:none;color:var(--adm-muted,#64748b);cursor:pointer;font-size:0.9rem;padding:2px;"><i class="bi bi-x-lg"></i></button>
+      </div>
+      <div class="admc-search-results" id="admc-search-results" style="display:none;"></div>
+      <div class="admc-edit-bar" id="admc-edit-bar">
+        <i class="bi bi-pencil-fill"></i> <span>Editing message</span>
+        <button onclick="ADMC.cancelEdit()" style="margin-left:auto;background:none;border:none;color:var(--adm-muted,#64748b);cursor:pointer;font-size:0.85rem;"><i class="bi bi-x-lg"></i></button>
+      </div>
+      <div class="admc-reply-bar" id="admc-reply-bar">
+        <div class="admc-reply-preview">
+          <div class="admc-reply-preview-name" id="admc-reply-name"></div>
+          <div class="admc-reply-preview-text" id="admc-reply-text"></div>
+        </div>
+        <button class="admc-reply-cancel" onclick="ADMC.cancelReply()"><i class="bi bi-x-lg"></i></button>
+      </div>
+      <div class="admc-input-area" style="position:relative;">
+        <div class="admc-mention-drop" id="admc-mention-drop"></div>
         <div style="position:relative;">
           <button class="admc-attach-btn" id="admc-attach-btn" onclick="ADMC.toggleAttachMenu(event)">
             <i class="bi bi-paperclip"></i>
@@ -298,6 +414,14 @@
             <button class="admc-attach-menu-item" onclick="ADMC.openDrivePicker()"><i class="bi bi-cloud"></i> From Drive</button>
           </div>
           <input type="file" id="admc-file-input" style="display:none;" onchange="ADMC.handleFile(this)">
+        </div>
+        <div style="position:relative;">
+          <button class="admc-attach-btn" id="admc-emoji-btn" onclick="ADMC.toggleEmojiPicker(event)" title="Emoji" style="background:none;border:none;">
+            <i class="bi bi-emoji-smile" style="font-size:1.1rem;color:var(--adm-muted,#64748b);"></i>
+          </button>
+          <div class="admc-emoji-picker" id="admc-emoji-picker">
+            <div class="admc-emoji-grid" id="admc-emoji-grid"></div>
+          </div>
         </div>
         <textarea class="admc-textarea" id="admc-input" placeholder="Type a message…" rows="1"></textarea>
         <button class="admc-send-btn" id="admc-send-btn" onclick="ADMC.send()">
@@ -394,6 +518,41 @@
   </div>
 </div>
 
+<!-- Image lightbox -->
+<div class="admc-lightbox" id="admc-lightbox" onclick="ADMC.closeLightbox()">
+  <button class="admc-lightbox-close" onclick="ADMC.closeLightbox()"><i class="bi bi-x-lg"></i></button>
+  <img id="admc-lightbox-img" src="" alt="">
+</div>
+
+<!-- Add member modal -->
+<div class="admc-addmember-modal" id="admc-addmember-modal">
+  <div style="background:var(--adm-surface,#0f172a);border:1px solid var(--adm-border,#334155);border-radius:14px;width:100%;max-width:400px;max-height:80vh;display:flex;flex-direction:column;">
+    <div style="padding:1rem 1.25rem;border-bottom:1px solid var(--adm-border,#334155);display:flex;align-items:center;justify-content:space-between;">
+      <span style="font-size:0.78rem;font-weight:700;font-family:var(--adm-mono);color:var(--adm-text,#f1f5f9);"><i class="bi bi-person-plus-fill me-1"></i>ADD MEMBERS</span>
+      <button onclick="document.getElementById('admc-addmember-modal').classList.remove('show')" style="background:none;border:none;color:var(--adm-muted,#64748b);cursor:pointer;font-size:1.1rem;"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <div style="padding:0.75rem 1.25rem;border-bottom:1px solid var(--adm-border,#334155);">
+      <input class="admc-input" id="admc-addmember-search" placeholder="Search users…" oninput="ADMC.filterAddMembers()" style="margin-bottom:0;">
+    </div>
+    <div id="admc-addmember-list" style="overflow-y:auto;flex:1;padding:0.5rem 1.25rem;"></div>
+    <div style="padding:0.75rem 1.25rem;border-top:1px solid var(--adm-border,#334155);display:flex;justify-content:flex-end;gap:0.5rem;">
+      <button class="admc-btn admc-btn-ghost" onclick="document.getElementById('admc-addmember-modal').classList.remove('show')">Cancel</button>
+      <button class="admc-btn admc-btn-primary" id="admc-addmember-btn" onclick="ADMC.submitAddMembers()">Add Selected</button>
+    </div>
+  </div>
+</div>
+
+<!-- Group member list modal -->
+<div class="admc-members-modal" id="admc-members-modal">
+  <div style="background:var(--adm-surface,#0f172a);border:1px solid var(--adm-border,#334155);border-radius:14px;width:100%;max-width:360px;max-height:80vh;display:flex;flex-direction:column;">
+    <div style="padding:1rem 1.25rem;border-bottom:1px solid var(--adm-border,#334155);display:flex;align-items:center;justify-content:space-between;">
+      <span style="font-size:0.78rem;font-weight:700;font-family:var(--adm-mono);color:var(--adm-text,#f1f5f9);letter-spacing:0.5px;"><i class="bi bi-people-fill me-1"></i>GROUP MEMBERS</span>
+      <button onclick="document.getElementById('admc-members-modal').classList.remove('show')" style="background:none;border:none;color:var(--adm-muted,#64748b);cursor:pointer;font-size:1.1rem;padding:3px;border-radius:6px;"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <div id="admc-members-list" style="padding:0.75rem 1.25rem;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:6px;"></div>
+  </div>
+</div>
+
 <script>
 (function() {
   'use strict';
@@ -402,18 +561,49 @@
   var _userId      = <%= user.id %>;
   var _maxMB       = <%= maxAttachMB %>;
   var _chatType    = 'direct';
-  var _pending     = null; // attachment
+  var _pending     = null;
   var _typingTimer = null;
   var _dpRoot      = null;
   var _dpSelected  = null;
   var _ctxMsgId    = null;
   var _socket      = null;
+  var _totalUnread = 0;
+  var _baseTitle   = document.title;
+  var _convType     = null;
+  var _participants = [];
+  var _currentConv  = null;
+  var _editingMsgId = null;
+  var _replyToId    = null;
+  var _onlineUsers  = new Set();
+
+  var EMOJIS = ['👍','❤️','😂','😮','😢','🔥','✅','👀','🙌','😊','🤔','💯','🎉','👎','😅','🤣','😍','🥳','💪','🙏','✨','😎','🤝','👏','💡','⚡','🚀','🎯','📌','💬','😴','🤦'];
+
+  function buildReactions(msgId, reactions) {
+    if (!reactions || !Object.keys(reactions).length) return '';
+    var html = '<div class="admc-reactions">';
+    Object.keys(reactions).forEach(function(emoji) {
+      var users = reactions[emoji] || [];
+      var mine = users.some(function(u){ return u.user_id === _userId; });
+      var names = users.map(function(u){ return u.user_name; }).join(', ');
+      html += '<span class="admc-reaction-chip'+(mine?' mine':'')+'" title="'+esc(names)+'" onclick="ADMC.react('+msgId+',\''+emoji+'\')">'+emoji+' <span class="admc-reaction-count">'+users.length+'</span></span>';
+    });
+    html += '</div>';
+    return html;
+  }
+
+  function updateTabTitle() {
+    document.title = _totalUnread > 0 ? '(' + _totalUnread + ') ' + _baseTitle : _baseTitle;
+  }
 
   function esc(s) {
     if (!s) return '';
     var d = document.createElement('div');
     d.appendChild(document.createTextNode(s));
     return d.innerHTML;
+  }
+  function linkify(s) {
+    if (!s) return '';
+    return esc(s).replace(/(https?:\/\/[^\s<>"]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer" style="color:#00d4ff;text-decoration:underline;word-break:break-all;">$1</a>');
   }
 
   function apiFetch(url, opts) {
@@ -480,7 +670,9 @@
     h += '<div style="flex:1;min-width:0;"><div class="admc-attach-name">'+esc(m.attachment_name)+'</div>';
     if (size) h += '<div class="admc-attach-size">'+size+'</div>';
     h += '</div>';
-    if (viewable) {
+    if (m.attachment_mime && m.attachment_mime.startsWith('image/')) {
+      h += '<button class="admc-attach-action" title="View image" onclick="event.stopPropagation();ADMC.openLightbox(\'/chat/attachment/'+m.id+'?action=view\')"><i class="bi bi-zoom-in"></i></button>';
+    } else if (viewable) {
       h += '<a href="/chat/attachment/'+m.id+'?action=view" target="_blank" class="admc-attach-action" title="Open"><i class="bi bi-box-arrow-up-right"></i></a>';
     } else if (alreadySaved) {
       h += '<span class="admc-attach-action saved" title="Saved"><i class="bi bi-check-lg"></i></span>';
@@ -515,7 +707,7 @@
         html += '<div class="admc-sys-msg" data-mid="'+m.id+'">';
         html += '<div class="admc-sys-bubble">';
         html += '<div class="admc-sys-label"><i class="bi bi-robot me-1"></i>System</div>';
-        if (m.content) html += '<div class="admc-sys-content">'+esc(m.content)+'</div>';
+        if (m.content) html += '<div class="admc-sys-content">'+linkify(m.content)+'</div>';
         html += '<div class="admc-sys-time">'+time+'</div>';
         html += '</div></div>';
         return;
@@ -523,11 +715,30 @@
       var sent = m.sender_id === _userId;
       html += '<div class="admc-msg-row '+(sent?'sent':'received')+'" data-mid="'+m.id+'">';
       html += '<div class="admc-bubble">';
+      if (!m.is_deleted) {
+        html += '<div class="admc-msg-acts">';
+        html += '<button class="admc-msg-act" title="Reply" onclick="ADMC.setReply('+m.id+',\''+esc(m.sender_name||'You')+'\',\''+esc((m.content||'').substring(0,60))+'\')"><i class="bi bi-reply-fill"></i></button>';
+        html += '<button class="admc-msg-act" title="React" onclick="ADMC.openReactPicker(event,'+m.id+')"><i class="bi bi-emoji-smile"></i></button>';
+        if (m.content) html += '<button class="admc-msg-act" title="Copy" onclick="ADMC.copyMsg(\''+m.id+'\',this)"><i class="bi bi-clipboard"></i></button>';
+        if (sent) html += '<button class="admc-msg-act" title="Edit" onclick="ADMC.startEdit('+m.id+',\''+esc((m.content||'').replace(/'/g,"\\'"))+'\')"><i class="bi bi-pencil"></i></button>';
+        html += '<button class="admc-msg-act" title="Delete" onclick="ADMC.confirmDeleteMsg('+m.id+')"><i class="bi bi-trash3" style="color:#ef4444"></i></button>';
+        html += '</div>';
+      }
       if (!sent && m.sender_name) html += '<div class="admc-msg-sender">'+esc(m.sender_name)+'</div>';
+      if (m.reply_to_id && m.reply_preview !== undefined) {
+        var rText = m.reply_deleted ? '[deleted]' : esc((m.reply_preview||'').substring(0,80));
+        html += '<div class="admc-reply-quote" onclick="ADMC.scrollToMsg('+m.reply_to_id+')"><div class="admc-reply-quote-name">'+esc(m.reply_sender_name||'')+'</div><div class="admc-reply-quote-text">'+rText+'</div></div>';
+      }
       html += buildAttach(m);
-      if (m.content) html += '<div>'+esc(m.content)+'</div>';
+      if (m.is_deleted) {
+        html += '<div style="font-style:italic;color:var(--adm-muted,#64748b);font-size:0.78rem;"><i class="bi bi-slash-circle me-1"></i>Message deleted</div>';
+      } else if (m.content) {
+        html += '<div>'+linkify(m.content)+'</div>';
+      }
+      if (m.is_edited && !m.is_deleted) html += '<div style="font-size:0.55rem;color:var(--adm-muted,#64748b);margin-top:2px;">edited</div>';
       var tick = sent ? '<span class="admc-tick '+(m.is_read?'read':'sent')+'" data-tick="'+m.id+'"><i class="bi bi-check2-all"></i></span>' : '';
       html += '<div class="admc-msg-time"><span>'+time+'</span>'+tick+'</div>';
+      if (m.reactions && Object.keys(m.reactions).length) html += buildReactions(m.id, m.reactions);
       html += '</div></div>';
     });
     return html;
@@ -549,7 +760,11 @@
     });
     document.getElementById('admc-wrap').classList.add('conv-open');
     var item = document.querySelector('.admc-conv-item[data-id="'+id+'"]');
-    if (item) { var b = item.querySelector('.admc-unread'); if (b) b.remove(); }
+    if (item) {
+      var b = item.querySelector('.admc-unread');
+      if (b) { var n = parseInt(b.textContent) || 1; _totalUnread = Math.max(0, _totalUnread - n); updateTabTitle(); b.remove(); }
+      _isMuted = item.dataset.muted === '1';
+    }
     loadMessages(id);
   }
 
@@ -581,6 +796,9 @@
 
   /* ── Render header ── */
   function renderHeader(conv) {
+    _convType    = conv.type;
+    _participants = conv.participants || [];
+    _currentConv  = conv;
     var name, sub, avatarClass, avatarContent;
     if (conv.type === 'system') {
       name = 'System Notifications'; sub = 'Automated reminders';
@@ -594,21 +812,41 @@
       sub = conv.participants.map(function(p){return p.name.split(' ')[0];}).join(', ');
       avatarClass = 'group'; avatarContent = '<i class="bi bi-people-fill"></i>';
     }
+    var isCreator = conv.type === 'group' && conv.created_by === _userId;
+    var isAdmin   = ['LOCAL_ADMIN','LOCAL_MANAGER'].includes('<%= user.role_name %>');
+    var isMuted   = !!conv.is_muted;
     var actions = '';
+    if (conv.type === 'group') {
+      if (isCreator || isAdmin) {
+        actions += '<button class="admc-head-btn" title="Add members" onclick="ADMC.openAddMembers()"><i class="bi bi-person-plus"></i></button>';
+      }
+      actions += '<button class="admc-head-btn" title="View / manage members" onclick="ADMC.showMembers()"><i class="bi bi-people"></i></button>';
+      actions += '<button class="admc-head-btn" title="Leave group" onclick="ADMC.confirmLeave()"><i class="bi bi-box-arrow-right"></i></button>';
+      if (isCreator || isAdmin) {
+        actions += '<button class="admc-head-btn danger" title="Delete group for everyone" onclick="ADMC.confirmDeleteGroup()"><i class="bi bi-x-octagon-fill"></i></button>';
+      }
+    }
     if (conv.type !== 'system') {
+      actions += '<button class="admc-head-btn" id="admc-mute-btn" title="'+(isMuted?'Unmute':'Mute')+'" onclick="ADMC.toggleMute()"><i class="bi bi-bell'+(isMuted?'-slash':'')+'-fill"></i></button>';
+      actions += '<button class="admc-head-btn" title="Search messages (Ctrl+F)" onclick="ADMC.toggleSearch()"><i class="bi bi-search"></i></button>';
       actions += '<button class="admc-head-btn danger" title="Clear chat" onclick="ADMC.confirmClear()"><i class="bi bi-trash3"></i></button>';
     }
+    var nameHtml = conv.type === 'group'
+      ? '<span id="admc-group-name-display">'+esc(name)+'</span>'
+        + ((isCreator||isAdmin) ? ' <button onclick="ADMC.startRename()" style="background:none;border:none;color:var(--adm-muted,#64748b);cursor:pointer;font-size:0.7rem;padding:1px 3px;" title="Rename group"><i class="bi bi-pencil-fill"></i></button>' : '')
+      : esc(name);
     document.getElementById('admc-head-area').innerHTML =
       '<div class="admc-main-head">'+
         '<button class="admc-back-btn" onclick="ADMC.goBack()"><i class="bi bi-arrow-left"></i></button>'+
         '<div class="admc-avatar '+avatarClass+'">'+avatarContent+'</div>'+
-        '<div style="flex:1;min-width:0;"><div class="admc-head-name">'+esc(name)+'</div>'+
+        '<div style="flex:1;min-width:0;"><div class="admc-head-name">'+nameHtml+'</div>'+
         '<div class="admc-head-sub">'+sub+'</div></div>'+
         '<div class="admc-head-actions">'+actions+'</div>'+
       '</div>';
 
     var inputWrap = document.getElementById('admc-input-wrap');
     inputWrap.style.display = conv.type === 'system' ? 'none' : 'block';
+    if (conv.type !== 'system') setTimeout(function(){ document.getElementById('admc-input').focus(); }, 80);
 
     var notice = document.getElementById('admc-sys-notice');
     if (conv.type === 'system') {
@@ -628,6 +866,15 @@
     var inp = document.getElementById('admc-input');
     var content = inp.value.trim();
     if (!content && !_pending) return;
+
+    // Edit mode
+    if (_editingMsgId) {
+      apiFetch('/chat/messages/'+_editingMsgId, { method:'PATCH', json:{ content:content } }).then(function(d) {
+        if (d.success) { cancelEdit(); } else if(typeof showToast==='function') showToast(d.message||'Failed to edit','error');
+      });
+      return;
+    }
+
     inp.value = '';
     inp.style.height = 'auto';
     document.getElementById('admc-send-btn').disabled = true;
@@ -663,6 +910,11 @@
       document.getElementById('admc-attach-preview').classList.remove('show');
       p = apiFetch('/chat/conversations/'+_convId+'/attach-drive', {
         method:'POST', json:{ drive_file_id:_pending.driveFileId, content:content||null }
+      });
+    } else if (_replyToId) {
+      var rId = _replyToId; cancelReply();
+      p = apiFetch('/chat/conversations/'+_convId+'/reply', {
+        method:'POST', json:{ content:content, reply_to_id:rId }
       });
     } else {
       p = apiFetch('/chat/conversations/'+_convId+'/messages', {
@@ -702,8 +954,15 @@
     html += '<div class="admc-msg-row '+(sent?'sent':'received')+'" data-mid="'+m.id+'">';
     html += '<div class="admc-bubble">';
     if (!sent && m.sender_name) html += '<div class="admc-msg-sender">'+esc(m.sender_name)+'</div>';
+    html += '<div class="admc-msg-acts">';
+    html += '<button class="admc-msg-act" title="Reply" onclick="ADMC.setReply('+m.id+',\''+esc(m.sender_name||'You')+'\',\''+esc((m.content||'').substring(0,60))+'\')"><i class="bi bi-reply-fill"></i></button>';
+    html += '<button class="admc-msg-act" title="React" onclick="ADMC.openReactPicker(event,'+m.id+')"><i class="bi bi-emoji-smile"></i></button>';
+    if (m.content) html += '<button class="admc-msg-act" title="Copy" onclick="ADMC.copyMsg(\''+m.id+'\',this)"><i class="bi bi-clipboard"></i></button>';
+    if (sent) html += '<button class="admc-msg-act" title="Edit" onclick="ADMC.startEdit('+m.id+',\''+esc((m.content||'').replace(/'/g,"\\'"))+'\')"><i class="bi bi-pencil"></i></button>';
+    html += '<button class="admc-msg-act" title="Delete" onclick="ADMC.confirmDeleteMsg('+m.id+')"><i class="bi bi-trash3" style="color:#ef4444"></i></button>';
+    html += '</div>';
     html += buildAttach(m);
-    if (m.content) html += '<div>'+esc(m.content)+'</div>';
+    if (m.content) html += '<div>'+linkify(m.content)+'</div>';
     var tick = sent ? '<span class="admc-tick '+(m.is_read?'read':'sent')+'" data-tick="'+m.id+'"><i class="bi bi-check2-all"></i></span>' : '';
     html += '<div class="admc-msg-time"><span>'+time+'</span>'+tick+'</div>';
     html += '</div></div>';
@@ -870,9 +1129,14 @@
       } else {
         var item = document.querySelector('.admc-conv-item[data-id="'+cid+'"]');
         if (item) {
-          var b=item.querySelector('.admc-unread');
-          if (b) { var n=parseInt(b.textContent)||0; b.textContent=n+1>9?'9+':n+1; }
-          else { var m=item.querySelector('.admc-conv-meta'); if(m) m.insertAdjacentHTML('beforeend','<span class="admc-unread">1</span>'); }
+          var isMutedConv = !!item.dataset.muted;
+          if (!isMutedConv) {
+            var b=item.querySelector('.admc-unread');
+            if (b) { var n=parseInt(b.textContent)||0; b.textContent=n+1>9?'9+':n+1; }
+            else { var m=item.querySelector('.admc-conv-meta'); if(m) m.insertAdjacentHTML('beforeend','<span class="admc-unread">1</span>'); }
+            _totalUnread++; updateTabTitle();
+            playNotifSound();
+          }
         } else { location.reload(); }
       }
       updateConvPreview(cid, msg);
@@ -885,12 +1149,314 @@
         _typingTimer=setTimeout(function(){el.textContent='';},3000);
       }
     });
+    _socket.on('chat:message_edited', function(data) {
+      var m = data.message;
+      var row = document.querySelector('.admc-msg-row[data-mid="'+m.id+'"]');
+      if (!row) return;
+      var contentDiv = row.querySelector('.admc-bubble > div:not(.admc-msg-sender):not(.admc-msg-time):not(.admc-msg-acts):not(.admc-reply-quote):not(.admc-reactions)');
+      if (contentDiv) contentDiv.innerHTML = linkify(m.content);
+      var existingEdited = row.querySelector('.admc-bubble [data-edited]');
+      if (!existingEdited) {
+        var editedBadge = document.createElement('div');
+        editedBadge.setAttribute('data-edited','1');
+        editedBadge.style.cssText='font-size:0.55rem;color:var(--adm-muted,#64748b);margin-top:2px;';
+        editedBadge.textContent='edited';
+        var timeDiv = row.querySelector('.admc-msg-time');
+        if (timeDiv) timeDiv.parentNode.insertBefore(editedBadge, timeDiv);
+      }
+    });
+    _socket.on('chat:message_deleted', function(data) {
+      var row = document.querySelector('.admc-msg-row[data-mid="'+data.message_id+'"]');
+      if (!row) return;
+      var bubble = row.querySelector('.admc-bubble');
+      var acts = bubble.querySelector('.admc-msg-acts'); if(acts) acts.remove();
+      var content = bubble.querySelector('div:not(.admc-msg-sender):not(.admc-msg-time):not(.admc-reply-quote):not(.admc-reactions)');
+      if (content) { content.style.fontStyle='italic'; content.style.color='var(--adm-muted,#64748b)'; content.style.fontSize='0.78rem'; content.innerHTML='<i class="bi bi-slash-circle me-1"></i>Message deleted'; }
+    });
+    _socket.on('chat:reaction', function(data) {
+      if (data.conversation_id !== _convId) return;
+      var row = document.querySelector('.admc-msg-row[data-mid="'+data.message_id+'"]');
+      if (!row) return;
+      var existing = row.querySelector('.admc-reactions');
+      var newHtml = buildReactions(data.message_id, data.reactions);
+      if (existing) existing.outerHTML = newHtml;
+      else { var timeDiv = row.querySelector('.admc-msg-time'); if(timeDiv&&newHtml) timeDiv.insertAdjacentHTML('afterend', newHtml); }
+    });
+    _socket.on('chat:user_online', function(data) { _onlineUsers.add(data.user_id); if(_currentConv) updateOnlineIndicator(_currentConv); });
+    _socket.on('chat:user_offline', function(data) { _onlineUsers.delete(data.user_id); if(_currentConv) updateOnlineIndicator(_currentConv); });
+    _socket.on('chat:renamed', function(data) {
+      if (data.conversation_id === _convId) {
+        var display = document.getElementById('admc-group-name-display');
+        if (display) display.textContent = data.name;
+      }
+      var sidebarName = document.querySelector('.admc-conv-item[data-id="'+data.conversation_id+'"] .admc-conv-name');
+      if (sidebarName && sidebarName.childNodes[0]) sidebarName.childNodes[0].textContent = data.name;
+    });
+    _socket.on('chat:members_added', function(data) {
+      if (data.conversation_id === _convId && data.conversation) {
+        _participants = data.conversation.participants || [];
+        _currentConv = data.conversation;
+      }
+    });
+    _socket.on('chat:group_deleted', function(data) {
+      ADMC.removeConvFromSidebar(data.conversation_id);
+      if (data.conversation_id === _convId) {
+        ADMC.goBack();
+        document.getElementById('admc-messages').innerHTML = '<div class="admc-empty"><i class="bi bi-trash3"></i><span>This group was deleted.</span></div>';
+        if(typeof showToast==='function') showToast('This group was deleted by the creator','info');
+      }
+    });
+    _socket.on('chat:member_removed', function(data) {
+      if (data.user_id === _userId && data.conversation_id === _convId) {
+        ADMC.removeConvFromSidebar(data.conversation_id);
+        ADMC.goBack();
+        if(typeof showToast==='function') showToast('You were removed from this group','info');
+      } else if (data.conversation_id === _convId) {
+        _participants = _participants.filter(function(p){ return p.id !== data.user_id; });
+      }
+    });
     _socket.on('chat:read', function(data) {
       if (data.conversation_id!==_convId) return;
       document.querySelectorAll('.admc-tick.sent').forEach(function(t){
         if (parseInt(t.dataset.tick)<=data.last_read_message_id) { t.classList.remove('sent'); t.classList.add('read'); }
       });
     });
+  }
+
+  /* ── Notification sound (Web Audio API, no file needed) ── */
+  var _soundEnabled = localStorage.getItem('admc-sound') !== '0';
+  var _audioCtx = null;
+  function playNotifSound() {
+    if (!_soundEnabled) return;
+    try {
+      if (!_audioCtx) _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      var osc = _audioCtx.createOscillator();
+      var gain = _audioCtx.createGain();
+      osc.connect(gain); gain.connect(_audioCtx.destination);
+      osc.frequency.setValueAtTime(880, _audioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(440, _audioCtx.currentTime + 0.15);
+      gain.gain.setValueAtTime(0.15, _audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, _audioCtx.currentTime + 0.3);
+      osc.start(_audioCtx.currentTime);
+      osc.stop(_audioCtx.currentTime + 0.3);
+    } catch(_) {}
+  }
+
+  /* ── Lightbox ── */
+  function openLightbox(src) {
+    document.getElementById('admc-lightbox-img').src = src;
+    document.getElementById('admc-lightbox').classList.add('show');
+  }
+  function closeLightbox() {
+    document.getElementById('admc-lightbox').classList.remove('show');
+    document.getElementById('admc-lightbox-img').src='';
+  }
+
+  /* ── Mute ── */
+  var _isMuted = false;
+  function toggleMute() {
+    if (!_convId) return;
+    apiFetch('/chat/conversations/'+_convId+'/mute', { method:'POST' }).then(function(d) {
+      if (!d.success) return;
+      _isMuted = d.data.muted;
+      var btn = document.getElementById('admc-mute-btn');
+      if (btn) {
+        btn.title = _isMuted ? 'Unmute' : 'Mute';
+        btn.innerHTML = '<i class="bi bi-bell'+(_isMuted?'-slash':'')+'-fill"></i>';
+      }
+      var item = document.querySelector('.admc-conv-item[data-id="'+_convId+'"] .admc-muted-icon');
+      if (_isMuted && !item) {
+        var nameEl = document.querySelector('.admc-conv-item[data-id="'+_convId+'"] .admc-conv-name');
+        if (nameEl) nameEl.insertAdjacentHTML('beforeend','<i class="bi bi-bell-slash admc-muted-icon"></i>');
+      } else if (!_isMuted && item) { item.remove(); }
+      if(typeof showToast==='function') showToast(_isMuted?'Conversation muted':'Conversation unmuted','success');
+    });
+  }
+
+  /* ── Rename group ── */
+  function startRename() {
+    var display = document.getElementById('admc-group-name-display');
+    if (!display) return;
+    var current = display.textContent;
+    var inp = document.createElement('input');
+    inp.className = 'admc-group-rename-input';
+    inp.value = current; inp.maxLength = 60;
+    display.replaceWith(inp); inp.focus(); inp.select();
+    function submit() {
+      var newName = inp.value.trim();
+      if (!newName || newName === current) { inp.replaceWith(display); return; }
+      apiFetch('/chat/conversations/'+_convId+'/name', { method:'PATCH', json:{ name:newName } }).then(function(d) {
+        if (d.success) {
+          display.textContent = newName;
+          var sidebarName = document.querySelector('.admc-conv-item[data-id="'+_convId+'"] .admc-conv-name');
+          if (sidebarName) sidebarName.childNodes[0].textContent = newName;
+        } else display.textContent = current;
+        inp.replaceWith(display);
+      });
+    }
+    inp.addEventListener('blur', submit);
+    inp.addEventListener('keydown', function(e) { if(e.key==='Enter'){e.preventDefault();submit();} if(e.key==='Escape'){inp.replaceWith(display);} });
+  }
+
+  /* ── Add members ── */
+  var _addMemberSelected = new Set();
+  function openAddMembers() {
+    _addMemberSelected.clear();
+    var existingIds = new Set(_participants.map(function(p){ return p.id; }));
+    var list = document.getElementById('admc-addmember-list');
+    list.innerHTML = '<%= users.map(u => JSON.stringify({id:u.id,name:u.name,role_name:u.role_name})).join(",") %>';
+    // We stored the EJS user list in a data attribute; rebuild from the global users array
+    var allUsers = <%- JSON.stringify(users) %>;
+    list.innerHTML = allUsers.filter(function(u){ return !existingIds.has(u.id); }).map(function(u) {
+      return '<div class="admc-user-item" data-uid="'+u.id+'" data-name="'+esc(u.name.toLowerCase())+'" onclick="ADMC.toggleAddMember(this)">'+
+        '<input type="checkbox" data-uid="'+u.id+'" style="accent-color:#00d4ff;flex-shrink:0;">'+
+        '<div class="admc-avatar direct" style="width:30px;height:30px;font-size:0.65rem;flex-shrink:0;">'+u.name.charAt(0).toUpperCase()+'</div>'+
+        '<div style="flex:1;min-width:0;"><div style="font-size:0.8rem;font-weight:600;color:var(--adm-text,#f1f5f9);">'+esc(u.name)+'</div>'+
+        '<div style="font-size:0.62rem;color:var(--adm-muted,#64748b);">'+esc(u.role_name||'')+'</div></div>'+
+      '</div>';
+    }).join('') || '<div style="padding:1rem;font-size:0.78rem;color:var(--adm-muted,#64748b);">All users are already in this group.</div>';
+    document.getElementById('admc-addmember-search').value='';
+    document.getElementById('admc-addmember-modal').classList.add('show');
+  }
+
+  /* ── Edit ── */
+  function startEdit(id, content) {
+    _editingMsgId = id;
+    var inp = document.getElementById('admc-input');
+    inp.value = content; inp.focus(); inp.style.height='auto'; inp.style.height=Math.min(inp.scrollHeight,120)+'px';
+    document.getElementById('admc-edit-bar').classList.add('show');
+    document.getElementById('admc-reply-bar').classList.remove('show');
+    _replyToId = null;
+  }
+  function cancelEdit() {
+    _editingMsgId = null;
+    document.getElementById('admc-input').value='';
+    document.getElementById('admc-input').style.height='auto';
+    document.getElementById('admc-edit-bar').classList.remove('show');
+  }
+
+  /* ── Reply ── */
+  function setReply(id, senderName, previewText) {
+    _replyToId = id;
+    cancelEdit();
+    document.getElementById('admc-reply-name').textContent = senderName;
+    document.getElementById('admc-reply-text').textContent = previewText || '';
+    document.getElementById('admc-reply-bar').classList.add('show');
+    document.getElementById('admc-input').focus();
+  }
+  function cancelReply() {
+    _replyToId = null;
+    document.getElementById('admc-reply-bar').classList.remove('show');
+  }
+
+  /* ── Delete ── */
+  function confirmDeleteMsg(id) {
+    if (!confirm('Delete this message? It will be removed for everyone.')) return;
+    apiFetch('/chat/messages/'+id, { method:'DELETE' }).then(function(d) {
+      if (!d.success && typeof showToast==='function') showToast(d.message||'Failed to delete','error');
+    });
+  }
+
+  /* ── Reactions ── */
+  var _reactPickerMsgId = null;
+  function openReactPicker(e, msgId) {
+    e.stopPropagation();
+    _reactPickerMsgId = msgId;
+    var picker = document.getElementById('admc-emoji-picker');
+    var grid = document.getElementById('admc-emoji-grid');
+    grid.innerHTML = EMOJIS.map(function(em) {
+      return '<button class="admc-emoji-btn" onclick="ADMC.react('+msgId+',\''+em+'\')">'+em+'</button>';
+    }).join('');
+    // position near click
+    picker.style.bottom='auto'; picker.style.top=(e.clientY+8)+'px'; picker.style.right='auto'; picker.style.left=(e.clientX-136)+'px';
+    picker.style.position='fixed';
+    picker.classList.add('show');
+  }
+
+  /* ── Emoji picker for input ── */
+  function toggleEmojiPicker(e) {
+    e.stopPropagation();
+    var picker = document.getElementById('admc-emoji-picker');
+    var grid   = document.getElementById('admc-emoji-grid');
+    if (picker.classList.contains('show') && _reactPickerMsgId === null) { picker.classList.remove('show'); return; }
+    _reactPickerMsgId = null;
+    picker.style.position=''; picker.style.top=''; picker.style.left='';
+    grid.innerHTML = EMOJIS.map(function(em) {
+      return '<button class="admc-emoji-btn" onclick="ADMC.insertEmoji(\''+em+'\')">'+em+'</button>';
+    }).join('');
+    picker.classList.add('show');
+  }
+
+  /* ── Search ── */
+  var _searchTimer = null;
+  function toggleSearch() {
+    var bar = document.getElementById('admc-search-bar');
+    if (bar.classList.contains('show')) { ADMC.closeSearch(); return; }
+    bar.classList.add('show');
+    document.getElementById('admc-search-input').focus();
+  }
+  function runSearch(q) {
+    if (!_convId || q.length < 2) { document.getElementById('admc-search-results').style.display='none'; return; }
+    apiFetch('/chat/conversations/'+_convId+'/search?q='+encodeURIComponent(q)).then(function(d) {
+      var res = document.getElementById('admc-search-results');
+      if (!d.success || !d.data.messages.length) { res.innerHTML='<div style="padding:12px 1.1rem;font-size:0.75rem;color:var(--adm-muted,#64748b);">No results found.</div>'; res.style.display='block'; return; }
+      var re = new RegExp('('+q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','gi');
+      res.innerHTML = d.data.messages.map(function(m) {
+        var hi = esc(m.content).replace(re,'<span class="admc-highlight">$1</span>');
+        return '<div class="admc-search-result" onclick="ADMC.scrollToMsg('+m.id+')">'
+          +'<div class="admc-search-result-name">'+esc(m.sender_name)+'</div>'
+          +'<div class="admc-search-result-text">'+hi+'</div>'
+          +'<div class="admc-search-result-time">'+fmtTime(m.created_at)+'</div>'
+        +'</div>';
+      }).join('');
+      res.style.display='block';
+    });
+  }
+
+  /* ── Online status ── */
+  function updateOnlineIndicator(conv) {
+    var headSub = document.querySelector('.admc-head-sub');
+    if (!headSub || conv.type !== 'direct') return;
+    var other = conv.participants.find(function(p){ return p.id !== _userId; });
+    if (!other) return;
+    var dot = _onlineUsers.has(other.id) ? '<span class="admc-online-dot" style="margin-right:4px;"></span>' : '';
+    headSub.innerHTML = dot + other.role_name + ' &middot; ' + other.org_type;
+  }
+
+  /* ── @mention ── */
+  function getMentionQuery(inp) {
+    var val = inp.value, pos = inp.selectionStart;
+    var before = val.substring(0, pos);
+    var match = before.match(/@(\w*)$/);
+    return match ? match[1] : null;
+  }
+  function handleMentionInput(inp) {
+    if (_convType !== 'group') { hideMentionDrop(); return; }
+    var query = getMentionQuery(inp);
+    if (query === null) { hideMentionDrop(); return; }
+    var others = _participants.filter(function(p){ return p.id !== _userId && p.name.toLowerCase().includes(query.toLowerCase()); });
+    if (!others.length) { hideMentionDrop(); return; }
+    var drop = document.getElementById('admc-mention-drop');
+    drop.innerHTML = others.map(function(p){
+      return '<div class="admc-mention-item" data-name="'+esc(p.name)+'" onclick="ADMC.insertMention(\''+esc(p.name)+'\')">'+
+        '<div class="admc-avatar direct" style="width:24px;height:24px;font-size:0.6rem;flex-shrink:0;">'+p.name.charAt(0).toUpperCase()+'</div>'+
+        '<span class="admc-mention-name">'+esc(p.name)+'</span>'+
+        '<span class="admc-mention-role">'+esc(p.role_name||'')+'</span>'+
+      '</div>';
+    }).join('');
+    drop.classList.add('show');
+  }
+  function hideMentionDrop() {
+    document.getElementById('admc-mention-drop').classList.remove('show');
+  }
+  function insertMention(name) {
+    var inp = document.getElementById('admc-input');
+    var val = inp.value, pos = inp.selectionStart;
+    var before = val.substring(0, pos).replace(/@\w*$/, '@'+name+' ');
+    inp.value = before + val.substring(pos);
+    inp.selectionStart = inp.selectionEnd = before.length;
+    inp.focus();
+    hideMentionDrop();
   }
 
   /* ── Init ── */
@@ -904,6 +1470,17 @@
       if (!_convId) return;
       var now=Date.now();
       if (_socket && now-(ADMC._lastTyping||0)>2000) { _socket.emit('chat:typing',{conversation_id:_convId}); ADMC._lastTyping=now; }
+      handleMentionInput(this);
+    });
+    inp.addEventListener('keydown', function(e) {
+      var drop = document.getElementById('admc-mention-drop');
+      if (!drop.classList.contains('show')) return;
+      var items = drop.querySelectorAll('.admc-mention-item');
+      var active = drop.querySelector('.admc-mention-item.active');
+      if (e.key === 'ArrowDown') { e.preventDefault(); var next = active ? (active.nextElementSibling||items[0]) : items[0]; if(active)active.classList.remove('active'); if(next)next.classList.add('active'); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); var prev = active ? (active.previousElementSibling||items[items.length-1]) : items[items.length-1]; if(active)active.classList.remove('active'); if(prev)prev.classList.add('active'); }
+      else if ((e.key === 'Enter' || e.key === 'Tab') && active) { e.preventDefault(); insertMention(active.dataset.name); }
+      else if (e.key === 'Escape') { hideMentionDrop(); }
     });
     /* paste image */
     inp.addEventListener('paste', function(e) {
@@ -912,18 +1489,33 @@
         if (items[i].kind==='file') { var f=items[i].getAsFile(); if(f){e.preventDefault();attachFile(f);return;} }
       }
     });
-    /* close attach menu on outside click */
+    /* close menus on outside click */
     document.addEventListener('click', function(e) {
       var menu=document.getElementById('admc-attach-menu');
       if (menu&&!e.target.closest('.admc-attach-btn')) menu.classList.remove('show');
       if (!document.getElementById('admc-ctx-menu').contains(e.target)) {
         document.getElementById('admc-ctx-menu').classList.remove('show'); _ctxMsgId=null;
       }
+      if (!e.target.closest('.admc-mention-drop') && !e.target.closest('.admc-textarea')) hideMentionDrop();
+      if (!e.target.closest('.admc-emoji-picker') && !e.target.closest('#admc-emoji-btn')) document.getElementById('admc-emoji-picker').classList.remove('show');
     });
     document.addEventListener('keydown',function(e){
       if(e.key==='Escape'){
         document.getElementById('admc-ctx-menu').classList.remove('show');
         document.getElementById('admc-clear-modal').classList.remove('show');
+        document.getElementById('admc-members-modal').classList.remove('show');
+        hideMentionDrop();
+      }
+      if((e.ctrlKey||e.metaKey)&&e.key==='k'){
+        e.preventDefault();
+        var s=document.getElementById('admc-search'); s.focus(); s.select();
+      }
+      if((e.ctrlKey||e.metaKey)&&e.key==='n'){
+        e.preventDefault();
+        ADMC.openNewModal();
+      }
+      if((e.ctrlKey||e.metaKey)&&e.key==='f'&&_convId){
+        e.preventDefault(); toggleSearch();
       }
     });
     /* ctx menu actions */
@@ -935,6 +1527,50 @@
       if(_ctxMsgId){var a=document.createElement('a');a.href='/chat/attachment/'+_ctxMsgId+'?action=download';a.download='';document.body.appendChild(a);a.click();document.body.removeChild(a);}
       document.getElementById('admc-ctx-menu').classList.remove('show');
     });
+
+    /* drag-and-drop file upload */
+    var _dragCounter = 0;
+    var mainEl = document.getElementById('admc-main');
+    mainEl.addEventListener('dragenter', function(e) {
+      if (!_convId) return;
+      e.preventDefault(); _dragCounter++;
+      document.getElementById('admc-drop-overlay').classList.add('show');
+    });
+    mainEl.addEventListener('dragleave', function() {
+      _dragCounter--; if (_dragCounter <= 0) { _dragCounter=0; document.getElementById('admc-drop-overlay').classList.remove('show'); }
+    });
+    mainEl.addEventListener('dragover', function(e) { if (_convId) e.preventDefault(); });
+    mainEl.addEventListener('drop', function(e) {
+      e.preventDefault(); _dragCounter=0;
+      document.getElementById('admc-drop-overlay').classList.remove('show');
+      if (!_convId) return;
+      var files = e.dataTransfer.files;
+      if (files && files[0]) { attachFile(files[0]); document.getElementById('admc-input').focus(); }
+    });
+
+    /* jump-to-latest scroll tracking */
+    document.getElementById('admc-messages').addEventListener('scroll', function() {
+      var el = this, atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+      document.getElementById('admc-jump-btn').classList.toggle('show', !atBottom);
+    });
+
+    /* search input */
+    document.getElementById('admc-search-input').addEventListener('input', function() {
+      var q = this.value.trim();
+      clearTimeout(_searchTimer);
+      if (q.length < 2) { document.getElementById('admc-search-results').style.display='none'; return; }
+      _searchTimer = setTimeout(function(){ runSearch(q); }, 300);
+    });
+
+    /* init sound icon */
+    var si = document.getElementById('admc-sound-icon');
+    if (si) si.className = 'bi bi-volume-' + (_soundEnabled ? 'up-fill' : 'mute-fill');
+
+    /* seed unread count from existing sidebar badges */
+    document.querySelectorAll('.admc-conv-item .admc-unread').forEach(function(b) {
+      _totalUnread += parseInt(b.textContent) || 1;
+    });
+    updateTabTitle();
 
     setupSocket();
     if (_convId) openConv(_convId);
@@ -948,6 +1584,115 @@
     loadOlder: function() {
       var first=document.querySelector('.admc-msg-row[data-mid]');
       if (first) loadMessages(_convId, first.dataset.mid);
+    },
+    toggleSound: function() {
+      _soundEnabled = !_soundEnabled;
+      localStorage.setItem('admc-sound', _soundEnabled ? '1' : '0');
+      document.getElementById('admc-sound-icon').className = 'bi bi-volume-' + (_soundEnabled ? 'up-fill' : 'mute-fill');
+      document.getElementById('admc-sound-btn').title = _soundEnabled ? 'Sound on' : 'Sound off';
+      if (_soundEnabled) playNotifSound();
+    },
+    openLightbox: openLightbox,
+    closeLightbox: closeLightbox,
+    toggleMute: toggleMute,
+    startRename: startRename,
+    openAddMembers: openAddMembers,
+    filterAddMembers: function() {
+      var q = document.getElementById('admc-addmember-search').value.toLowerCase();
+      document.querySelectorAll('#admc-addmember-list .admc-user-item').forEach(function(el) {
+        el.style.display = (el.dataset.name||'').includes(q) ? '' : 'none';
+      });
+    },
+    toggleAddMember: function(el) {
+      var uid = parseInt(el.dataset.uid);
+      var cb = el.querySelector('input[type="checkbox"]');
+      el.classList.toggle('selected'); cb.checked = el.classList.contains('selected');
+      if (cb.checked) _addMemberSelected.add(uid); else _addMemberSelected.delete(uid);
+    },
+    submitAddMembers: function() {
+      if (!_addMemberSelected.size) { if(typeof showToast==='function') showToast('Select at least one user','error'); return; }
+      var btn = document.getElementById('admc-addmember-btn'); btn.disabled=true;
+      apiFetch('/chat/conversations/'+_convId+'/members', { method:'POST', json:{ user_ids: Array.from(_addMemberSelected) } }).then(function(d) {
+        btn.disabled=false;
+        if (d.success) {
+          document.getElementById('admc-addmember-modal').classList.remove('show');
+          if(typeof showToast==='function') showToast(d.message||'Members added','success');
+        } else if(typeof showToast==='function') showToast(d.message||'Failed','error');
+      });
+    },
+    startEdit: startEdit,
+    cancelEdit: cancelEdit,
+    setReply: setReply,
+    cancelReply: cancelReply,
+    confirmDeleteMsg: confirmDeleteMsg,
+    react: function(msgId, emoji) {
+      document.getElementById('admc-emoji-picker').classList.remove('show');
+      apiFetch('/chat/messages/'+msgId+'/react', { method:'POST', json:{ emoji:emoji } });
+    },
+    openReactPicker: openReactPicker,
+    toggleEmojiPicker: toggleEmojiPicker,
+    insertEmoji: function(emoji) {
+      var inp = document.getElementById('admc-input');
+      var start = inp.selectionStart, end = inp.selectionEnd;
+      inp.value = inp.value.substring(0,start) + emoji + inp.value.substring(end);
+      inp.selectionStart = inp.selectionEnd = start + emoji.length;
+      inp.focus();
+      document.getElementById('admc-emoji-picker').classList.remove('show');
+    },
+    toggleSearch: toggleSearch,
+    closeSearch: function() {
+      document.getElementById('admc-search-bar').classList.remove('show');
+      document.getElementById('admc-search-results').style.display='none';
+      document.getElementById('admc-search-input').value='';
+    },
+    scrollToMsg: function(id) {
+      var el = document.querySelector('.admc-msg-row[data-mid="'+id+'"]');
+      if (!el) return;
+      el.scrollIntoView({ behavior:'smooth', block:'center' });
+      el.querySelector('.admc-bubble').style.outline='2px solid rgba(0,212,255,0.5)';
+      setTimeout(function(){ el.querySelector('.admc-bubble').style.outline=''; }, 1500);
+    },
+    showMembers: function() {
+      var conv = _currentConv;
+      var canManage = conv && (conv.created_by === _userId || ['LOCAL_ADMIN','LOCAL_MANAGER'].includes('<%= user.role_name %>'));
+      var list = document.getElementById('admc-members-list');
+      list.innerHTML = _participants.map(function(p) {
+        var isMe = p.id === _userId;
+        var isCreatorP = conv && p.id === conv.created_by;
+        var canRemove = canManage && !isMe && !isCreatorP;
+        return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--adm-border,#334155);">'+
+          '<div class="admc-avatar direct" style="width:32px;height:32px;font-size:0.68rem;flex-shrink:0;">'+p.name.charAt(0).toUpperCase()+'</div>'+
+          '<div style="flex:1;min-width:0;">'+
+            '<div style="font-size:0.8rem;font-weight:600;color:var(--adm-text,#f1f5f9);">'+esc(p.name)+
+              (isMe?' <span style="font-size:0.6rem;color:var(--adm-muted)">(you)</span>':'')+
+              (isCreatorP?' <span style="font-size:0.6rem;color:#00d4ff">Creator</span>':'')+
+            '</div>'+
+            '<div style="font-size:0.62rem;color:var(--adm-muted,#64748b);">'+esc(p.role_name||'')+'</div>'+
+          '</div>'+
+          '<span class="admc-org-tag '+(p.org_type||'LOCAL')+'">'+esc(p.org_type||'LOCAL')+'</span>'+
+          (canRemove
+            ? '<button onclick="ADMC.confirmRemoveMember('+p.id+',\''+esc(p.name)+'\')" style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.25);color:#ef4444;border-radius:6px;padding:3px 8px;font-size:0.7rem;cursor:pointer;margin-left:6px;white-space:nowrap;">Remove</button>'
+            : '')+
+        '</div>';
+      }).join('');
+      document.getElementById('admc-members-modal').classList.add('show');
+    },
+    insertMention: insertMention,
+    copyMsg: function(id, btn) {
+      var row = document.querySelector('.admc-msg-row[data-mid="'+id+'"]');
+      if (!row) return;
+      var contentDiv = row.querySelector('.admc-bubble > div:not(.admc-msg-sender):not(.admc-msg-time):not(.admc-msg-acts):not(.admc-attach-box)');
+      if (!contentDiv) return;
+      var text = contentDiv.innerText || contentDiv.textContent || '';
+      navigator.clipboard.writeText(text.trim()).then(function() {
+        var orig = btn.innerHTML; btn.innerHTML='<i class="bi bi-check-lg"></i>';
+        setTimeout(function(){ btn.innerHTML=orig; }, 1500);
+      }).catch(function(){});
+    },
+    jumpToLatest: function() {
+      var el = document.getElementById('admc-messages');
+      el.scrollTop = el.scrollHeight;
+      document.getElementById('admc-jump-btn').classList.remove('show');
     },
     goBack: function() {
       document.getElementById('admc-wrap').classList.remove('conv-open');
@@ -992,6 +1737,37 @@
     selectDriveFile: selectDriveFile,
     saveToDrive: saveToDrive,
     openCtxMenu: openCtxMenu,
+    confirmLeave: function() {
+      if (!_convId) return;
+      if (!confirm('Leave this group? You will no longer receive messages from it.')) return;
+      apiFetch('/chat/conversations/'+_convId+'/leave', { method:'POST' }).then(function(d) {
+        if (d.success) { ADMC.removeConvFromSidebar(_convId); ADMC.goBack(); if(typeof showToast==='function') showToast('You left the group','success'); }
+        else if(typeof showToast==='function') showToast(d.message||'Failed to leave','error');
+      });
+    },
+    confirmDeleteGroup: function() {
+      if (!_convId) return;
+      if (!confirm('Delete this group for everyone? All messages will be permanently removed. This cannot be undone.')) return;
+      apiFetch('/chat/conversations/'+_convId, { method:'DELETE' }).then(function(d) {
+        if (d.success) { ADMC.removeConvFromSidebar(_convId); ADMC.goBack(); if(typeof showToast==='function') showToast('Group deleted','success'); }
+        else if(typeof showToast==='function') showToast(d.message||'Failed to delete','error');
+      });
+    },
+    confirmRemoveMember: function(userId, name) {
+      if (!_convId) return;
+      if (!confirm('Remove '+name+' from this group?')) return;
+      apiFetch('/chat/conversations/'+_convId+'/members/'+userId, { method:'DELETE' }).then(function(d) {
+        if (d.success) {
+          _participants = _participants.filter(function(p){ return p.id !== userId; });
+          ADMC.showMembers();
+          if(typeof showToast==='function') showToast(name+' removed from group','success');
+        } else if(typeof showToast==='function') showToast(d.message||'Failed to remove','error');
+      });
+    },
+    removeConvFromSidebar: function(id) {
+      var item = document.querySelector('.admc-conv-item[data-id="'+id+'"]');
+      if (item) item.remove();
+    },
     confirmClear: function() { if(_convId) document.getElementById('admc-clear-modal').classList.add('show'); },
     execClearChat: function() {
       document.getElementById('admc-clear-modal').classList.remove('show');

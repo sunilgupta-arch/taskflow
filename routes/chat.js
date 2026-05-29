@@ -26,6 +26,17 @@ router.post('/save-to-drive', ChatController.saveToDrive);
 router.get('/drive-files', ChatController.listDriveFiles);
 router.post('/conversations/:id/read', ChatController.markAsRead);
 router.post('/conversations/:id/clear', ChatController.clearChat);
+router.patch('/messages/:id', ChatController.editMessage);
+router.delete('/messages/:id', ChatController.deleteMessage);
+router.post('/conversations/:id/reply', ChatController.sendReply);
+router.post('/messages/:id/react', ChatController.toggleReaction);
+router.get('/conversations/:id/search', ChatController.searchMessages);
+router.post('/conversations/:id/members', ChatController.addMembers);
+router.patch('/conversations/:id/name', ChatController.renameGroup);
+router.post('/conversations/:id/mute', ChatController.toggleMute);
+router.post('/conversations/:id/leave', ChatController.leaveGroup);
+router.delete('/conversations/:id', ChatController.deleteGroup);
+router.delete('/conversations/:id/members/:userId', ChatController.removeMember);
 router.get('/unread-count', ChatController.unreadCount);
 router.get('/attachment/:messageId', ChatController.serveAttachment);
 

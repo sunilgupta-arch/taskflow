@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Downloads</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #111;
+      color: #e2e8f0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      min-height: 100vh;
+    }
+
+    /* ── Page shell ────────────────────────────────── */
+    .pub-shell {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 48px 24px 80px;
+    }
+
+    /* ── Header ────────────────────────────────────── */
+    .pub-header {
+      margin-bottom: 36px;
+    }
+    .pub-pill {
+      display: inline-flex; align-items: center; gap: 5px;
+      background: rgba(0,212,255,0.08); border: 1px solid rgba(0,212,255,0.2);
+      color: #00d4ff; border-radius: 20px; padding: 3px 11px;
+      font-size: 0.67rem; font-weight: 700; letter-spacing: 0.4px;
+      text-transform: uppercase; font-family: 'Courier New', monospace;
+      margin-bottom: 12px;
+    }
+    .pub-title {
+      font-size: 1.55rem; font-weight: 700; color: #f1f5f9;
+      letter-spacing: -0.3px; margin-bottom: 6px;
+    }
+    .pub-sub {
+      font-size: 0.86rem; color: #64748b;
+    }
+
+    /* ── Search ────────────────────────────────────── */
+    .pub-search-wrap {
+      position: relative; margin-bottom: 24px;
+    }
+    .pub-search-icon {
+      position: absolute; left: 13px; top: 50%; transform: translateY(-50%);
+      color: #475569; font-size: 0.88rem; pointer-events: none;
+    }
+    .pub-search {
+      width: 100%; background: #1e293b; border: 1px solid #334155;
+      color: #e2e8f0; border-radius: 10px; padding: 10px 14px 10px 38px;
+      font-size: 0.88rem; outline: none; transition: border-color 0.15s;
+    }
+    .pub-search:focus { border-color: rgba(0,212,255,0.4); }
+    .pub-search::placeholder { color: #475569; }
+
+    /* ── File count ────────────────────────────────── */
+    .pub-count {
+      font-size: 0.78rem; color: #475569; margin-bottom: 16px;
+    }
+    .pub-count span { color: #94a3b8; font-weight: 600; }
+
+    /* ── Cards ─────────────────────────────────────── */
+    .pub-list { display: flex; flex-direction: column; gap: 10px; }
+
+    .pub-card {
+      background: #1a1a1a; border: 1px solid #2d2d2d;
+      border-radius: 12px; padding: 16px 18px;
+      display: flex; align-items: center; gap: 16px;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .pub-card:hover { border-color: #3d3d3d; background: #1e1e1e; }
+
+    /* ── File icon ─────────────────────────────────── */
+    .pub-icon {
+      width: 42px; height: 42px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.1rem; flex-shrink: 0;
+    }
+    .pi-exe  { background: rgba(239,68,68,0.1);   color: #f87171; }
+    .pi-zip  { background: rgba(245,158,11,0.1);  color: #fbbf24; }
+    .pi-pdf  { background: rgba(239,68,68,0.1);   color: #f87171; }
+    .pi-doc  { background: rgba(59,130,246,0.1);  color: #60a5fa; }
+    .pi-img  { background: rgba(16,185,129,0.1);  color: #34d399; }
+    .pi-code { background: rgba(139,92,246,0.1);  color: #c084fc; }
+    .pi-file { background: rgba(100,116,139,0.1); color: #94a3b8; }
+
+    /* ── File info ─────────────────────────────────── */
+    .pub-info { flex: 1; min-width: 0; }
+    .pub-name {
+      font-weight: 600; font-size: 0.92rem; color: #f1f5f9;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .pub-ver {
+      display: inline-flex; align-items: center;
+      background: rgba(0,212,255,0.08); border: 1px solid rgba(0,212,255,0.2);
+      color: #00d4ff; border-radius: 4px; padding: 1px 6px;
+      font-size: 0.64rem; font-weight: 700; font-family: monospace;
+      margin-left: 7px; vertical-align: middle;
+    }
+    .pub-desc {
+      font-size: 0.78rem; color: #64748b;
+      margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .pub-meta {
+      display: flex; align-items: center; gap: 14px;
+      margin-top: 5px; flex-wrap: wrap;
+    }
+    .pub-meta-item {
+      font-size: 0.72rem; color: #475569;
+      display: flex; align-items: center; gap: 4px;
+    }
+
+    /* ── Download button ───────────────────────────── */
+    .pub-dl-btn {
+      display: inline-flex; align-items: center; gap: 7px;
+      background: rgba(0,212,255,0.1); border: 1px solid rgba(0,212,255,0.25);
+      color: #00d4ff; border-radius: 8px; padding: 0 14px; height: 36px;
+      font-size: 0.82rem; font-weight: 600; text-decoration: none;
+      flex-shrink: 0; transition: all 0.15s; white-space: nowrap;
+    }
+    .pub-dl-btn:hover {
+      background: rgba(0,212,255,0.18); border-color: rgba(0,212,255,0.45);
+      color: #00d4ff;
+    }
+
+    /* ── Empty ─────────────────────────────────────── */
+    .pub-empty {
+      text-align: center; padding: 72px 20px; color: #475569;
+    }
+    .pub-empty i { font-size: 2.8rem; display: block; margin-bottom: 14px; opacity: 0.3; }
+    .pub-empty p { font-size: 0.9rem; }
+
+    /* ── Hidden (search filter) ────────────────────── */
+    .pub-card.hidden { display: none; }
+
+    @media (max-width: 560px) {
+      .pub-card { flex-wrap: wrap; }
+      .pub-dl-btn { width: 100%; justify-content: center; }
+    }
+  </style>
+</head>
+<body>
+<div class="pub-shell">
+
+  <!-- Header -->
+  <div class="pub-header">
+    <div class="pub-pill"><i class="bi bi-download"></i> Public Downloads</div>
+    <div class="pub-title">Downloads</div>
+    <div class="pub-sub">Publicly available files — no account required</div>
+  </div>
+
+  <% if (files.length > 0) { %>
+
+  <!-- Search -->
+  <div class="pub-search-wrap">
+    <i class="bi bi-search pub-search-icon"></i>
+    <input type="text" class="pub-search" id="pubSearch" placeholder="Search files…" oninput="pubSearch(this.value)">
+  </div>
+
+  <div class="pub-count" id="pubCount">
+    Showing <span id="pubVisible"><%= files.length %></span> of <%= files.length %> file<%= files.length !== 1 ? 's' : '' %>
+  </div>
+
+  <!-- File list -->
+  <div class="pub-list" id="pubList">
+    <% files.forEach(function(f) { %>
+    <%
+      const ext = (f.original_name || '').split('.').pop().toLowerCase();
+      const mime = f.mime_type || '';
+      let iconCls = 'pi-file', iconBi = 'bi-file-earmark-fill';
+      if (['exe','msi','deb','dmg','apk','app','bat','sh','cmd'].includes(ext)) { iconCls='pi-exe'; iconBi='bi-boxes'; }
+      else if (['zip','rar','7z','tar','gz','bz2','xz'].includes(ext)) { iconCls='pi-zip'; iconBi='bi-file-zip-fill'; }
+      else if (mime.includes('pdf') || ext==='pdf') { iconCls='pi-pdf'; iconBi='bi-file-pdf-fill'; }
+      else if (mime.includes('image')) { iconCls='pi-img'; iconBi='bi-file-image-fill'; }
+      else if (['doc','docx','xls','xlsx','ppt','pptx'].includes(ext)) { iconCls='pi-doc'; iconBi='bi-file-earmark-text-fill'; }
+      else if (['js','ts','py','java','cpp','c','cs','go','rb','php','json','xml','yaml','yml','sql'].includes(ext)) { iconCls='pi-code'; iconBi='bi-file-code-fill'; }
+
+      function fmtSize(b) {
+        if (!b) return '—';
+        if (b < 1024) return b + ' B';
+        if (b < 1048576) return (b/1024).toFixed(1) + ' KB';
+        if (b < 1073741824) return (b/1048576).toFixed(1) + ' MB';
+        return (b/1073741824).toFixed(2) + ' GB';
+      }
+    %>
+    <div class="pub-card"
+         data-search="<%= (f.name + ' ' + (f.description||'')).toLowerCase() %>">
+      <div class="pub-icon <%= iconCls %>"><i class="bi <%= iconBi %>"></i></div>
+      <div class="pub-info">
+        <div class="pub-name">
+          <%= f.name %>
+          <% if (f.version) { %><span class="pub-ver">v<%= f.version %></span><% } %>
+        </div>
+        <% if (f.description) { %>
+        <div class="pub-desc"><%= f.description %></div>
+        <% } %>
+        <div class="pub-meta">
+          <span class="pub-meta-item"><i class="bi bi-hdd"></i> <%= fmtSize(f.file_size) %></span>
+          <span class="pub-meta-item"><i class="bi bi-download"></i> <%= f.download_count %> download<%= f.download_count !== 1 ? 's' : '' %></span>
+          <span class="pub-meta-item"><i class="bi bi-person"></i> <%= f.uploader_name %></span>
+        </div>
+      </div>
+      <a href="/downloads/<%= f.id %>/download" class="pub-dl-btn">
+        <i class="bi bi-download"></i> Download
+      </a>
+    </div>
+    <% }); %>
+  </div>
+
+  <% } else { %>
+  <div class="pub-empty">
+    <i class="bi bi-cloud-arrow-down"></i>
+    <p>No public files available at this time.</p>
+  </div>
+  <% } %>
+
+</div>
+
+<script>
+function pubSearch(term) {
+  term = term.toLowerCase().trim();
+  const cards = document.querySelectorAll('#pubList .pub-card');
+  let visible = 0;
+  cards.forEach(c => {
+    const match = !term || c.dataset.search.includes(term);
+    c.classList.toggle('hidden', !match);
+    if (match) visible++;
+  });
+  document.getElementById('pubVisible').textContent = visible;
+}
+</script>
+</body>
+</html>

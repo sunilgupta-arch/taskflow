@@ -31,6 +31,12 @@ router.get('/google', AuthController.googleAuth);
 router.get('/google/callback', AuthController.googleCallback);
 router.get('/logout', authenticate, AuthController.logout);
 router.post('/logout', authenticate, AuthController.logout);
+// No authenticate — this is the escape hatch when the token itself is the problem
+router.get('/clear-session', (req, res) => {
+  res.clearCookie('token');
+  res.clearCookie('tf-token');
+  res.redirect('/auth/login');
+});
 router.get('/profile', authenticate, AuthController.getProfile);
 router.get('/check-late', authenticate, AuthController.checkLateLogin);
 router.post('/late-reason', authenticate, AuthController.submitLateReason);
