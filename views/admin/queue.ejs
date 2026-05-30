@@ -499,9 +499,9 @@
   }
   function fmtTime(dtStr) {
     if (!dtStr) return '—';
-    var timePart = String(dtStr).split(' ')[1] || '';
-    var p = timePart.split(':');
-    var h = parseInt(p[0]||0), m = parseInt(p[1]||0);
+    var d = new Date(dtStr);
+    if (isNaN(d)) return '—';
+    var h = d.getUTCHours(), m = d.getUTCMinutes();
     var ampm = h >= 12 ? 'PM' : 'AM';
     h = h % 12 || 12;
     return h + ':' + String(m).padStart(2,'0') + ' ' + ampm;

@@ -496,10 +496,10 @@ const isSalesUser = user.role_name === 'CLIENT_SALES';
     if (!dtStr) return '';
     var d = new Date(dtStr);
     if (isNaN(d)) return '';
-    return d.toLocaleTimeString('en-US', {
-      hour: 'numeric', minute: '2-digit',
-      hour12: true, timeZone: 'America/New_York'
-    });
+    var h = d.getUTCHours(), m = d.getUTCMinutes();
+    var ampm = h >= 12 ? 'PM' : 'AM';
+    h = h % 12 || 12;
+    return h + ':' + String(m).padStart(2,'0') + ' ' + ampm;
   }
   function fmtDuration(from, to) {
     if (!from || !to) return null;
