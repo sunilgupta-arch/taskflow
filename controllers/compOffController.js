@@ -142,36 +142,8 @@ class CompOffController {
   }
 
   static async _notifyManagers(userId, userName, compOffDate, type) {
-    try {
-      const io = getIO();
-      const [managers] = await db.query(
-        `SELECT u.id FROM users u JOIN roles r ON u.role_id = r.id
-         WHERE r.name IN ('LOCAL_ADMIN','LOCAL_MANAGER') AND u.is_active = 1 AND u.id != ?`,
-        [userId]
-      );
-
-      let title, msg;
-      if (type === 'comp_off' && compOffDate) {
-        const fmt = new Date(compOffDate + 'T12:00:00').toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-        title = 'Comp-Off Applied';
-        msg   = `${userName} has applied a comp-off on ${fmt}`;
-      } else if (type === 'half_day') {
-        title = 'Half Day on Off Day';
-        msg   = `${userName} is working a half day today (their off day)`;
-      } else {
-        return;
-      }
-
-      for (const mgr of managers) {
-        const notifId = await Notification.create(mgr.id, type, title, msg, '/admin/attendance');
-        try {
-          io.to(`user:${mgr.id}`).emit('notification:new', {
-            id: notifId, type, title, body: msg,
-            link: '/admin/attendance', is_read: 0, created_at: new Date()
-          });
-        } catch (_) {}
-      }
-    } catch (_) {}
+    // Comp-off / half-day are informational — no action required from managers.
+    // Removed notifications here to avoid inbox noise. Visible in attendance view.
   }
 }
 

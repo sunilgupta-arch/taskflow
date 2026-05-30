@@ -3,6 +3,7 @@ const GoogleDriveService = require('../services/googleDriveService');
 const db = require('../config/db');
 const { ApiResponse } = require('../utils/response');
 const { getIO } = require('../config/socket');
+const Notification = require('../models/Notification');
 
 
 // Max attachment size by role
@@ -181,8 +182,30 @@ class ChatController {
 
       await ChatModel.markAsRead(conversationId, req.user.id);
 
+      const io = getIO();
       const participantIds = await ChatModel.getParticipantIds(conversationId);
-      emitToParticipants(getIO(), participantIds, req.user.id, conversationId, message);
+      emitToParticipants(io, participantIds, req.user.id, conversationId, message);
+
+      // Create a notification for each recipient who doesn't already have
+      // an unread chat notification for this conversation
+      const recipients = participantIds.filter(uid => uid !== req.user.id);
+      const senderName = req.user.name.split(' ')[0];
+      const preview = (content.trim()).slice(0, 60);
+      for (const uid of recipients) {
+        const nid = await Notification.createIfNotExists(
+          uid, 'chat_message', `Message from ${senderName}`,
+          preview, '/admin/comms',
+          'chat_conv', conversationId
+        );
+        if (nid) {
+          io.to(`user:${uid}`).emit('notification:new', {
+            id: nid, type: 'chat_message', title: `Message from ${senderName}`,
+            body: preview, link: '/admin/comms',
+            ref_type: 'chat_conv', ref_id: conversationId,
+            is_read: 0, created_at: new Date()
+          });
+        }
+      }
 
       return ApiResponse.success(res, { message }, 'Message sent', 201);
     } catch (err) {
@@ -344,9 +367,10 @@ class ChatController {
 
       const lastReadId = await ChatModel.markAsRead(conversationId, req.user.id);
 
-      // Notify other participants so their sent-message ticks turn blue
+      const io = getIO();
+
+      // Notify senders so their read ticks turn blue
       if (lastReadId) {
-        const io = getIO();
         const participantIds = await ChatModel.getParticipantIds(conversationId);
         participantIds.forEach(uid => {
           if (uid !== req.user.id) {
@@ -358,6 +382,10 @@ class ChatController {
           }
         });
       }
+
+      // Clear the chat_message notification for this user for this conversation
+      await Notification.clearByRefForUser(req.user.id, 'chat_conv', conversationId);
+      io.to(`user:${req.user.id}`).emit('notification:cleared', { ref_type: 'chat_conv', ref_id: conversationId });
 
       return ApiResponse.success(res, {}, 'Marked as read');
     } catch (err) {

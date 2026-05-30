@@ -671,6 +671,9 @@
     }
     .adm-notif-icon.i-task     { background: rgba(59,130,246,0.12);  color: #3b82f6; }
     .adm-notif-icon.i-leave    { background: rgba(16,185,129,0.12);  color: #10b981; }
+    .adm-notif-icon.i-queue    { background: rgba(245,158,11,0.12);  color: #f59e0b; }
+    .adm-notif-icon.i-chat     { background: rgba(139,92,246,0.12);  color: #8b5cf6; }
+    .adm-notif-icon.i-reject   { background: rgba(239,68,68,0.12);   color: #ef4444; }
     .adm-notif-icon.i-default  { background: rgba(100,116,139,0.12); color: #94a3b8; }
     .adm-notif-content { flex: 1; min-width: 0; }
     .adm-notif-item-title {
@@ -2205,8 +2208,12 @@
   }
 
   function iconClass(type) {
-    if (type === 'task_assigned') return 'i-task bi-person-check-fill';
+    if (type === 'task_assigned')      return 'i-task   bi-person-check-fill';
     if (type === 'leave_approved' || type === 'leave_granted') return 'i-leave bi-calendar-check-fill';
+    if (type === 'leave_pending')      return 'i-leave  bi-calendar-plus-fill';
+    if (type === 'leave_rejected')     return 'i-reject bi-calendar-x-fill';
+    if (type === 'client_request_new') return 'i-queue  bi-inbox-fill';
+    if (type === 'chat_message')       return 'i-chat   bi-chat-fill';
     return 'i-default bi-bell-fill';
   }
 
@@ -2305,6 +2312,22 @@
         var unread = _notifs.filter(function(n){ return !n.is_read; }).length;
         updateBadge(unread);
         if (_notifOpen) renderList();
+      });
+
+      // Remove notifications whose linked item has been handled
+      sock.on('notification:cleared', function(data) {
+        var before = _notifs.length;
+        _notifs = _notifs.filter(function(n) {
+          if (data.ref_type && data.ref_id) {
+            return !(n.ref_type === data.ref_type && n.ref_id === data.ref_id);
+          }
+          return true;
+        });
+        if (_notifs.length !== before) {
+          var unread = _notifs.filter(function(n){ return !n.is_read; }).length;
+          updateBadge(unread);
+          if (_notifOpen) renderList();
+        }
       });
     }
   });

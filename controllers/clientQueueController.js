@@ -65,7 +65,25 @@ class ClientQueueController {
 
       await ClientRequest.pick(instanceId, req.user.id);
       const instance = await ClientRequest.getInstanceById(instanceId);
-      try { const io = getIO(); io.emit('queue:updated', { instance }); io.of('/portal').emit('queue:updated', { instance }); } catch (_) {}
+      try {
+        const io = getIO();
+        io.emit('queue:updated', { instance });
+        io.of('/portal').emit('queue:updated', { instance });
+
+        // Clear the client_request_new notification for all managers/admins
+        const Notification = require('../models/Notification');
+        const db2 = require('../config/db');
+        const [[inst]] = await db2.query('SELECT request_id FROM client_request_instances WHERE id = ?', [instanceId]);
+        if (inst && inst.request_id) {
+          const [managers] = await db2.query(
+            `SELECT u.id FROM users u JOIN roles r ON u.role_id = r.id
+             WHERE r.name IN ('LOCAL_ADMIN','LOCAL_MANAGER') AND u.is_active = 1`
+          );
+          const mgrIds = managers.map(m => m.id);
+          await Notification.clearByRef(mgrIds, 'client_request', inst.request_id);
+          mgrIds.forEach(uid => io.to(`user:${uid}`).emit('notification:cleared', { ref_type: 'client_request', ref_id: inst.request_id }));
+        }
+      } catch (_) {}
       return ApiResponse.success(res, { instance });
     } catch (err) {
       console.error('ClientQueue pick error:', err);

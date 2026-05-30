@@ -117,7 +117,29 @@ class ClientRequestController {
 
       await ClientRequest.getQueueForDate(effectiveStartDate);
 
-      try { const io = getIO(); io.emit('queue:new_request', { id, date: effectiveStartDate }); io.of('/portal').emit('queue:new_request', { id, date: effectiveStartDate }); } catch (_) {}
+      try {
+        const io = getIO();
+        io.emit('queue:new_request', { id, date: effectiveStartDate });
+        io.of('/portal').emit('queue:new_request', { id, date: effectiveStartDate });
+
+        // Notify all LOCAL admins + managers about the new client request
+        const Notification = require('../../models/Notification');
+        const db2 = require('../../config/db');
+        const [managers] = await db2.query(
+          `SELECT u.id FROM users u JOIN roles r ON u.role_id = r.id
+           WHERE r.name IN ('LOCAL_ADMIN','LOCAL_MANAGER') AND u.is_active = 1`
+        );
+        const notifBody = `${req.user.name}: ${title.trim()}`;
+        const notifLink = `/admin/queue`;
+        for (const mgr of managers) {
+          const nid = await Notification.create(mgr.id, 'client_request_new', 'New Client Request', notifBody, notifLink, 'client_request', id);
+          io.to(`user:${mgr.id}`).emit('notification:new', {
+            id: nid, type: 'client_request_new', title: 'New Client Request',
+            body: notifBody, link: notifLink, ref_type: 'client_request', ref_id: id,
+            is_read: 0, created_at: new Date()
+          });
+        }
+      } catch (_) {}
 
       return ApiResponse.success(res, { id }, 'Request created');
     } catch (err) {
