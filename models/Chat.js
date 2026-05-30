@@ -66,7 +66,7 @@ class ChatModel {
                WHERE conversation_id = c.id AND user_id = ?), 0
             )
             AND cm.sender_id != ?
-        ) AS unread_count
+        ) AS unread_count,
         cp.is_muted
       FROM chat_conversations c
       JOIN chat_participants cp ON cp.conversation_id = c.id AND cp.user_id = ?

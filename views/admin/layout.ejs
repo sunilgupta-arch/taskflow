@@ -1187,12 +1187,6 @@
           <span>My Attendance</span>
         </a>
 
-        <a href="/admin/leaves" data-s="leaves"
-           class="adm-nav-link <%= section === 'leaves' ? 'active' : '' %>">
-          <div class="adm-nav-icon"><i class="bi bi-calendar-check-fill"></i></div>
-          <span>Leaves</span>
-        </a>
-
         <a href="/admin/tools" data-s="tools"
            class="adm-nav-link <%= section === 'tools' ? 'active' : '' %>">
           <div class="adm-nav-icon"><i class="bi bi-tools"></i></div>
@@ -1249,6 +1243,10 @@
         <i class="bi bi-people-fill"></i>
         <span class="adm-gc-badge" id="admGcBadge" style="display:none"></span>
       </button>
+      <button class="lcw-topbtn" id="admChatBtn" onclick="lcwToggle()" title="Local Chat">
+        <i class="bi bi-chat-fill"></i>
+        <span class="lcw-topbtn-badge" id="lcwTopBadge"></span>
+      </button>
       <button class="adm-bridge-btn" id="admBridgeBtn" onclick="toggleAdmBridge()" title="Client Messages">
         <i class="bi bi-chat-dots-fill"></i>
         <span class="adm-bridge-badge" id="admBridgeBadge" style="display:none"></span>
@@ -1261,6 +1259,8 @@
   </main>
 
 </div>
+<%- include('partials/_local-chat') %>
+
 <!-- Notification dropdown -->
 <div class="adm-notif-dropdown" id="admNotifDropdown">
   <div class="adm-notif-dd-header">

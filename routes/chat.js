@@ -38,6 +38,7 @@ router.post('/conversations/:id/leave', ChatController.leaveGroup);
 router.delete('/conversations/:id', ChatController.deleteGroup);
 router.delete('/conversations/:id/members/:userId', ChatController.removeMember);
 router.get('/unread-count', ChatController.unreadCount);
+router.get('/users', ChatController.listUsers);
 router.get('/attachment/:messageId', ChatController.serveAttachment);
 
 module.exports = router;

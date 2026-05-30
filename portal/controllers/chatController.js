@@ -265,6 +265,15 @@ class PortalChatController {
   }
 
   // Total unread count
+  static async listUsers(req, res) {
+    try {
+      const users = await PortalChat.getClientUsers(req.user.id);
+      return ApiResponse.success(res, { users });
+    } catch (err) {
+      return ApiResponse.error(res, 'Failed to load users');
+    }
+  }
+
   static async unreadCount(req, res) {
     try {
       const total = await PortalChat.getTotalUnreadCount(req.user.id);

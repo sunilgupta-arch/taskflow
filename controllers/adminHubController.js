@@ -561,7 +561,7 @@ class AdminHubController {
       res.render('admin/leaves', {
         title: 'Leave Management',
         layout: 'admin/layout',
-        section: 'team',
+        section: 'leaves',
         leaves: rows,
         leaveUsers
       });

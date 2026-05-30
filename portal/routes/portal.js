@@ -514,6 +514,7 @@ router.post('/chat/conversations/:id/file', (req, res, next) => portalChatUpload
 router.get('/chat/attachment/:messageId', PortalChatController.serveAttachment);
 router.post('/chat/conversations/:id/read', PortalChatController.markAsRead);
 router.get('/chat/unread-count', PortalChatController.unreadCount);
+router.get('/chat/users', PortalChatController.listUsers);
 router.get('/chat/conversations/:id/search', PortalChatController.searchMessages);
 router.put('/chat/messages/:messageId', PortalChatController.editMessage);
 router.delete('/chat/messages/:messageId', PortalChatController.deleteMessage);

@@ -1,0 +1,1568 @@
+<%# ── Local Chat Floating Widget ────────────────────────────────────────────── %>
+<style>
+/* ── Widget shell ─────────────────────────────────────────────────────────── */
+.lcw {
+  position: fixed;
+  bottom: 70px; right: 20px;
+  width: 740px; height: 520px;
+  display: flex; flex-direction: column;
+  background: #1a1a1a;
+  border: 1px solid #2c2c2c;
+  border-radius: 14px;
+  box-shadow: 0 28px 70px rgba(0,0,0,.65), 0 0 0 1px rgba(255,255,255,.04);
+  z-index: 8500;
+  overflow: hidden;
+  font-family: 'Inter','Segoe UI',system-ui,sans-serif;
+  font-weight: 300;
+  transition: height .2s cubic-bezier(.4,0,.2,1);
+  user-select: none;
+}
+.lcw.lcw-min { height: 46px; }
+.lcw.lcw-min .lcw-body { display: none; }
+
+/* ── Header (drag handle) ─────────────────────────────────────────────────── */
+.lcw-hdr {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 10px; height: 46px;
+  background: #161616; border-bottom: 1px solid #2c2c2c;
+  border-radius: 14px 14px 0 0;
+  cursor: grab; flex-shrink: 0;
+}
+.lcw-hdr:active { cursor: grabbing; }
+.lcw-hdr-l { display: flex; align-items: center; gap: 8px; }
+.lcw-hdr-icon { color: #00d4ff; font-size: .8rem; }
+.lcw-hdr-title { font-size: .74rem; font-weight: 500; color: #e0e0e0; letter-spacing: .2px; }
+.lcw-hdr-badge {
+  background: #ef4444; color: #fff;
+  font-size: .58rem; font-weight: 700;
+  border-radius: 10px; padding: 1px 6px;
+  min-width: 18px; text-align: center;
+}
+.lcw-hdr-r { display: flex; align-items: center; gap: 2px; }
+
+/* ── Generic icon button ──────────────────────────────────────────────────── */
+.lcw-ibtn {
+  background: none; border: none; cursor: pointer;
+  width: 28px; height: 28px; border-radius: 7px;
+  display: flex; align-items: center; justify-content: center;
+  color: #555; font-size: .76rem;
+  transition: background .12s, color .12s;
+}
+.lcw-ibtn:hover { background: rgba(255,255,255,.07); color: #e0e0e0; }
+.lcw-ibtn.accent { color: #00d4ff; }
+
+/* ── Body ─────────────────────────────────────────────────────────────────── */
+.lcw-body { display: flex; flex: 1; overflow: hidden; min-height: 0; }
+
+/* ── Sidebar ──────────────────────────────────────────────────────────────── */
+.lcw-sb {
+  width: 240px; min-width: 240px;
+  border-right: 1px solid #2c2c2c;
+  display: flex; flex-direction: column;
+  background: #141414;
+}
+.lcw-sb-search {
+  padding: 9px 10px; border-bottom: 1px solid #2c2c2c;
+  position: relative; flex-shrink: 0;
+}
+.lcw-sb-search-icon {
+  position: absolute; left: 19px; top: 50%; transform: translateY(-50%);
+  color: #444; font-size: .68rem; pointer-events: none;
+}
+.lcw-search {
+  width: 100%; box-sizing: border-box;
+  background: #1e1e1e; border: 1px solid #2c2c2c; border-radius: 8px;
+  padding: 6px 10px 6px 28px;
+  font-size: .73rem; font-weight: 300; font-family: inherit;
+  color: #ddd; outline: none;
+  transition: border-color .15s;
+}
+.lcw-search:focus { border-color: rgba(0,212,255,.35); }
+.lcw-search::placeholder { color: #3d3d3d; }
+
+.lcw-conv-list { flex: 1; overflow-y: auto; }
+.lcw-conv-list::-webkit-scrollbar { width: 3px; }
+.lcw-conv-list::-webkit-scrollbar-thumb { background: #2c2c2c; border-radius: 2px; }
+
+.lcw-conv-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px; cursor: pointer;
+  border-bottom: 1px solid rgba(255,255,255,.025);
+  transition: background .1s;
+  border-left: 2px solid transparent;
+}
+.lcw-conv-item:hover { background: rgba(255,255,255,.035); }
+.lcw-conv-item.lcw-active { background: rgba(0,212,255,.05); border-left-color: #00d4ff; }
+.lcw-conv-item.lcw-muted { opacity: .5; }
+
+.lcw-av {
+  width: 36px; height: 36px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 600; font-size: .7rem; color: #fff; flex-shrink: 0;
+}
+.lcw-av-g { border-radius: 9px; }
+
+.lcw-conv-meta { flex: 1; min-width: 0; }
+.lcw-conv-name {
+  font-size: .76rem; font-weight: 400; color: #ccc;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.lcw-conv-preview {
+  font-size: .66rem; font-weight: 300; color: #555; margin-top: 2px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.lcw-conv-r { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0; }
+.lcw-conv-time { font-size: .6rem; font-weight: 300; color: #3d3d3d; }
+.lcw-unread-badge {
+  background: #00d4ff; color: #000;
+  font-size: .58rem; font-weight: 700;
+  border-radius: 10px; padding: 1px 6px; min-width: 18px; text-align: center;
+}
+
+.lcw-empty { padding: 24px 14px; text-align: center; color: #3d3d3d; font-size: .72rem; }
+
+/* ── Main area ────────────────────────────────────────────────────────────── */
+.lcw-main { flex: 1; display: flex; flex-direction: column; min-width: 0; background: #1a1a1a; }
+
+.lcw-placeholder {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 10px;
+}
+.lcw-placeholder i { font-size: 2.2rem; color: #252525; }
+.lcw-placeholder p { font-size: .74rem; font-weight: 300; color: #3a3a3a; margin: 0; }
+
+/* ── Thread ───────────────────────────────────────────────────────────────── */
+.lcw-thread { display: none; flex-direction: column; flex: 1; min-height: 0; }
+.lcw-thread.lcw-show { display: flex; }
+
+.lcw-thread-hdr {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 12px; border-bottom: 1px solid #2c2c2c;
+  background: #141414; flex-shrink: 0;
+}
+.lcw-back { display: none; }
+.lcw-th-av {
+  width: 30px; height: 30px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 600; font-size: .63rem; color: #fff; flex-shrink: 0;
+}
+.lcw-th-info { flex: 1; min-width: 0; }
+.lcw-th-name { font-size: .77rem; font-weight: 500; color: #e0e0e0; }
+.lcw-th-sub { font-size: .63rem; font-weight: 300; color: #555; margin-top: 1px; }
+
+/* ── Messages area ────────────────────────────────────────────────────────── */
+.lcw-msgs {
+  flex: 1; overflow-y: auto; padding: 10px 12px;
+  display: flex; flex-direction: column; gap: 1px;
+  position: relative;
+}
+.lcw-msgs::-webkit-scrollbar { width: 3px; }
+.lcw-msgs::-webkit-scrollbar-thumb { background: #2c2c2c; border-radius: 2px; }
+
+.lcw-load-more {
+  align-self: center; font-size: .65rem; font-weight: 300; color: #00d4ff;
+  cursor: pointer; padding: 3px 14px;
+  border: 1px solid #2c2c2c; border-radius: 20px;
+  background: #1e1e1e; margin-bottom: 6px; transition: border-color .15s;
+}
+.lcw-load-more:hover { border-color: #00d4ff; }
+
+.lcw-date-div {
+  text-align: center; margin: 6px 0 2px; position: relative;
+}
+.lcw-date-div span {
+  background: #1a1a1a; position: relative; z-index: 1;
+  color: #3d3d3d; font-size: .6rem; font-weight: 300; padding: 0 10px;
+}
+.lcw-date-div::before {
+  content: ''; position: absolute; top: 50%; left: 0; right: 0;
+  height: 1px; background: #262626;
+}
+
+/* Message row */
+.lcw-row { display: flex; gap: 7px; padding: 2px 0; }
+.lcw-row.lcw-mine { flex-direction: row-reverse; }
+.lcw-row.lcw-grp { padding-top: 1px; }
+.lcw-row.lcw-grp .lcw-row-av { visibility: hidden; }
+
+.lcw-row-av {
+  width: 26px; height: 26px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 600; font-size: .56rem; color: #fff; flex-shrink: 0; margin-top: 3px;
+}
+.lcw-row-body { max-width: 74%; display: flex; flex-direction: column; }
+.lcw-mine .lcw-row-body { align-items: flex-end; }
+
+.lcw-row-sender {
+  font-size: .61rem; font-weight: 400; color: #555; margin-bottom: 2px; padding: 0 3px;
+}
+.lcw-grp .lcw-row-sender { display: none; }
+
+.lcw-reply-strip {
+  background: rgba(255,255,255,.04); border-left: 2px solid #555;
+  border-radius: 5px; padding: 3px 8px; font-size: .63rem; font-weight: 300;
+  color: #555; margin-bottom: 3px; max-width: 100%;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.lcw-reply-strip strong { color: #a78bfa; font-weight: 400; }
+
+.lcw-bubble {
+  background: #232323; border-radius: 12px;
+  padding: 7px 11px;
+  font-size: .75rem; font-weight: 300; color: #ccc;
+  line-height: 1.55; word-break: break-word;
+  position: relative; max-width: 100%;
+}
+.lcw-mine .lcw-bubble { background: rgba(0,212,255,.1); border: 1px solid rgba(0,212,255,.12); color: #ddd; }
+.lcw-bubble a { color: #00d4ff; text-decoration: none; }
+.lcw-bubble a:hover { text-decoration: underline; }
+.lcw-mention { color: #a78bfa; font-weight: 400; }
+.lcw-deleted { color: #3d3d3d; font-size: .7rem; font-style: italic; }
+
+/* Image in bubble */
+.lcw-img {
+  max-width: 220px; max-height: 160px; border-radius: 8px;
+  display: block; margin-top: 5px; cursor: zoom-in; object-fit: cover;
+}
+
+/* File attachment in bubble */
+.lcw-file {
+  display: flex; align-items: center; gap: 8px;
+  background: rgba(255,255,255,.04); border: 1px solid #2c2c2c; border-radius: 9px;
+  padding: 8px 10px; margin-top: 5px; text-decoration: none; max-width: 230px;
+  transition: border-color .15s;
+}
+.lcw-file:hover { border-color: #00d4ff; }
+.lcw-file-icon { font-size: 1.1rem; color: #555; flex-shrink: 0; }
+.lcw-file-info { min-width: 0; }
+.lcw-file-name { font-size: .68rem; font-weight: 400; color: #ccc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 170px; }
+.lcw-file-size { font-size: .6rem; font-weight: 300; color: #555; margin-top: 1px; }
+
+/* Message actions (hover) */
+.lcw-acts {
+  position: absolute; top: -16px; right: 6px;
+  background: #1e1e1e; border: 1px solid #2c2c2c; border-radius: 9px;
+  display: flex; gap: 1px; padding: 2px;
+  opacity: 0; pointer-events: none; transition: opacity .12s; z-index: 5;
+}
+.lcw-bubble:hover .lcw-acts { opacity: 1; pointer-events: auto; }
+.lcw-act {
+  background: none; border: none; cursor: pointer; color: #555;
+  width: 22px; height: 22px; border-radius: 5px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: .62rem; transition: all .12s;
+}
+.lcw-act:hover { background: rgba(255,255,255,.07); color: #e0e0e0; }
+.lcw-act.danger:hover { color: #ef4444; }
+
+/* Reactions */
+.lcw-reacts { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 3px; }
+.lcw-react {
+  background: rgba(255,255,255,.04); border: 1px solid #2c2c2c; border-radius: 10px;
+  padding: 1px 6px; font-size: .7rem; cursor: pointer;
+  display: flex; align-items: center; gap: 3px; color: #777;
+  transition: background .12s;
+}
+.lcw-react:hover { background: rgba(255,255,255,.09); }
+.lcw-react.lcw-reacted { border-color: rgba(0,212,255,.4); background: rgba(0,212,255,.07); }
+
+/* Timestamp + tick */
+.lcw-row-foot {
+  display: flex; align-items: center; gap: 4px;
+  margin-top: 2px; padding: 0 3px;
+  font-size: .59rem; font-weight: 300; color: #3a3a3a;
+}
+.lcw-mine .lcw-row-foot { justify-content: flex-end; }
+.lcw-tick-sent { color: #3d3d3d; font-size: .7rem; }
+.lcw-tick-read { color: #00d4ff; font-size: .7rem; }
+
+/* Typing dots */
+.lcw-typing {
+  display: flex; align-items: center; gap: 5px; padding: 4px 0;
+  font-size: .63rem; color: #555; font-weight: 300;
+}
+.lcw-dot {
+  width: 5px; height: 5px; background: #444; border-radius: 50%;
+  animation: lcwPulse 1.2s ease-in-out infinite;
+}
+.lcw-dot:nth-child(2) { animation-delay: .2s; }
+.lcw-dot:nth-child(3) { animation-delay: .4s; }
+@keyframes lcwPulse {
+  0%,60%,100% { transform: scale(1); opacity: .4; }
+  30%          { transform: scale(1.5); opacity: 1; }
+}
+
+/* Drop zone overlay */
+.lcw-drop {
+  position: absolute; inset: 0;
+  background: rgba(0,212,255,.07); border: 2px dashed #00d4ff;
+  border-radius: 10px; display: none;
+  flex-direction: column; align-items: center; justify-content: center;
+  gap: 10px; color: #00d4ff; font-size: .82rem; font-weight: 400;
+  pointer-events: none; z-index: 20;
+}
+.lcw-drop.lcw-dropping { display: flex; }
+.lcw-drop i { font-size: 2rem; }
+
+/* Spinner */
+.lcw-spin { padding: 20px; text-align: center; color: #3d3d3d; font-size: .7rem; font-weight: 300; }
+
+/* ── Reply bar ────────────────────────────────────────────────────────────── */
+.lcw-reply-bar {
+  display: none; align-items: center; gap: 8px;
+  padding: 6px 12px; border-top: 1px solid #2c2c2c; background: #141414; flex-shrink: 0;
+}
+.lcw-reply-bar.lcw-show { display: flex; }
+.lcw-reply-icon { color: #a78bfa; font-size: .8rem; flex-shrink: 0; }
+.lcw-reply-text {
+  flex: 1; font-size: .67rem; font-weight: 300; color: #555;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.lcw-reply-text strong { color: #a78bfa; font-weight: 400; }
+
+/* ── Pending files row ────────────────────────────────────────────────────── */
+.lcw-pend-files {
+  display: none; flex-wrap: wrap; gap: 6px;
+  padding: 6px 12px 0; flex-shrink: 0;
+}
+.lcw-pend-files.lcw-show { display: flex; }
+.lcw-pend-file {
+  display: flex; align-items: center; gap: 5px;
+  background: rgba(255,255,255,.04); border: 1px solid #2c2c2c;
+  border-radius: 8px; padding: 4px 8px;
+  font-size: .67rem; font-weight: 300; color: #888; max-width: 180px;
+}
+.lcw-pend-file span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lcw-pend-rm { background: none; border: none; color: #555; cursor: pointer; padding: 0; font-size: .72rem; flex-shrink: 0; }
+.lcw-pend-rm:hover { color: #ef4444; }
+
+/* ── Input bar ────────────────────────────────────────────────────────────── */
+.lcw-input-bar {
+  display: flex; align-items: flex-end; gap: 6px;
+  padding: 9px 12px; border-top: 1px solid #2c2c2c;
+  background: #141414; flex-shrink: 0;
+}
+.lcw-input-wrap { flex: 1; position: relative; }
+.lcw-input {
+  width: 100%; box-sizing: border-box;
+  min-height: 34px; max-height: 110px;
+  background: #1e1e1e; border: 1px solid #2c2c2c; border-radius: 10px;
+  padding: 8px 12px;
+  font-size: .75rem; font-weight: 300; font-family: inherit;
+  color: #e0e0e0; outline: none; line-height: 1.5;
+  overflow-y: auto; white-space: pre-wrap; word-break: break-word;
+  transition: border-color .15s;
+}
+.lcw-input:focus { border-color: rgba(0,212,255,.3); }
+.lcw-input:empty::before { content: attr(data-ph); color: #3d3d3d; pointer-events: none; }
+.lcw-input::-webkit-scrollbar { width: 3px; }
+.lcw-input::-webkit-scrollbar-thumb { background: #2c2c2c; }
+
+/* @mention dropdown */
+.lcw-mention-dd {
+  position: absolute; bottom: calc(100% + 5px); left: 0; right: 0;
+  background: #1c1c1c; border: 1px solid #2c2c2c; border-radius: 10px;
+  overflow: hidden; max-height: 170px; overflow-y: auto;
+  z-index: 100; box-shadow: 0 10px 28px rgba(0,0,0,.5);
+  display: none;
+}
+.lcw-mention-dd.lcw-show { display: block; }
+.lcw-mitem {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 12px; cursor: pointer;
+  font-size: .73rem; font-weight: 300; color: #ccc;
+  transition: background .1s; border-bottom: 1px solid rgba(255,255,255,.03);
+}
+.lcw-mitem:last-child { border-bottom: none; }
+.lcw-mitem:hover, .lcw-mitem.lcw-msel { background: rgba(0,212,255,.07); }
+.lcw-mitem .lcw-av { width: 22px; height: 22px; font-size: .52rem; }
+.lcw-mitem-role { font-size: .6rem; color: #444; font-weight: 300; }
+
+/* Send button */
+.lcw-send {
+  width: 34px; height: 34px; border-radius: 9px; flex-shrink: 0;
+  background: rgba(0,212,255,.13); border: 1px solid rgba(0,212,255,.28);
+  color: #00d4ff; cursor: pointer; font-size: .8rem;
+  display: flex; align-items: center; justify-content: center;
+  transition: all .15s;
+}
+.lcw-send:hover { background: rgba(0,212,255,.22); }
+
+/* ── New chat modal ───────────────────────────────────────────────────────── */
+.lcw-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.5); backdrop-filter: blur(3px);
+  z-index: 9100; display: none;
+}
+.lcw-overlay.lcw-show { display: block; }
+.lcw-modal {
+  position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%);
+  width: 340px; max-height: 500px;
+  background: #1a1a1a; border: 1px solid #2c2c2c; border-radius: 14px;
+  display: none; flex-direction: column;
+  z-index: 9200; box-shadow: 0 28px 70px rgba(0,0,0,.7);
+  font-family: inherit; font-weight: 300;
+}
+.lcw-modal.lcw-show { display: flex; }
+.lcw-modal-hdr {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 16px 12px; border-bottom: 1px solid #2c2c2c; flex-shrink: 0;
+  font-size: .78rem; font-weight: 500; color: #e0e0e0;
+}
+.lcw-modal-search {
+  margin: 10px; box-sizing: border-box;
+  background: #1e1e1e; border: 1px solid #2c2c2c; border-radius: 9px;
+  padding: 8px 12px; width: calc(100% - 20px);
+  font-size: .74rem; font-weight: 300; font-family: inherit;
+  color: #e0e0e0; outline: none; flex-shrink: 0;
+  transition: border-color .15s;
+}
+.lcw-modal-search:focus { border-color: rgba(0,212,255,.4); }
+.lcw-modal-search::placeholder { color: #3d3d3d; }
+.lcw-user-list { flex: 1; overflow-y: auto; padding: 4px 0; }
+.lcw-user-list::-webkit-scrollbar { width: 3px; }
+.lcw-user-list::-webkit-scrollbar-thumb { background: #2c2c2c; }
+.lcw-uitem {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 14px; cursor: pointer; transition: background .1s;
+}
+.lcw-uitem:hover { background: rgba(255,255,255,.04); }
+.lcw-uitem .lcw-av { width: 32px; height: 32px; font-size: .64rem; }
+.lcw-uitem-name { font-size: .76rem; font-weight: 400; color: #ccc; }
+.lcw-uitem-role { font-size: .61rem; font-weight: 300; color: #555; margin-top: 1px; }
+
+/* ── Topbar button ────────────────────────────────────────────────────────── */
+.lcw-topbtn {
+  position: relative; background: none;
+  border: 1px solid #2c2c2c; color: #666; border-radius: 8px;
+  width: 32px; height: 32px; cursor: pointer; font-size: .82rem;
+  display: flex; align-items: center; justify-content: center;
+  transition: all .15s;
+}
+.lcw-topbtn:hover { border-color: #00d4ff; color: #00d4ff; }
+.lcw-topbtn.lcw-on { border-color: #00d4ff; color: #00d4ff; background: rgba(0,212,255,.07); }
+.lcw-topbtn-badge {
+  position: absolute; top: -5px; right: -5px;
+  background: #ef4444; color: #fff;
+  font-size: .54rem; font-weight: 700;
+  border-radius: 10px; padding: 1px 4px; min-width: 14px; text-align: center;
+  border: 2px solid #1a1a1a; display: none;
+}
+
+/* ── Light theme overrides ────────────────────────────────────────────────── */
+body.adm-light .lcw { background: #f8fafc; border-color: #e2e8f0; box-shadow: 0 16px 44px rgba(0,0,0,.14); }
+body.adm-light .lcw-hdr { background: #f1f5f9; border-color: #e2e8f0; }
+body.adm-light .lcw-hdr-title { color: #1e293b; }
+body.adm-light .lcw-sb { background: #f1f5f9; border-color: #e2e8f0; }
+body.adm-light .lcw-sb-search { border-color: #e2e8f0; }
+body.adm-light .lcw-search { background: #fff; border-color: #e2e8f0; color: #1e293b; }
+body.adm-light .lcw-search::placeholder { color: #94a3b8; }
+body.adm-light .lcw-search-icon { color: #94a3b8; }
+body.adm-light .lcw-conv-item:hover { background: rgba(0,0,0,.03); }
+body.adm-light .lcw-conv-item.lcw-active { background: rgba(0,212,255,.05); }
+body.adm-light .lcw-conv-name { color: #1e293b; }
+body.adm-light .lcw-conv-preview, body.adm-light .lcw-conv-time { color: #64748b; }
+body.adm-light .lcw-main { background: #f8fafc; }
+body.adm-light .lcw-thread-hdr { background: #f1f5f9; border-color: #e2e8f0; }
+body.adm-light .lcw-th-name { color: #1e293b; }
+body.adm-light .lcw-th-sub { color: #64748b; }
+body.adm-light .lcw-msgs { background: #f8fafc; }
+body.adm-light .lcw-date-div span { background: #f8fafc; color: #94a3b8; }
+body.adm-light .lcw-date-div::before { background: #e2e8f0; }
+body.adm-light .lcw-bubble { background: #fff; border: 1px solid #e2e8f0; color: #334155; }
+body.adm-light .lcw-mine .lcw-bubble { background: rgba(0,212,255,.08); border-color: rgba(0,212,255,.2); color: #1e293b; }
+body.adm-light .lcw-row-sender { color: #94a3b8; }
+body.adm-light .lcw-row-foot { color: #94a3b8; }
+body.adm-light .lcw-input-bar, body.adm-light .lcw-reply-bar { background: #f1f5f9; border-color: #e2e8f0; }
+body.adm-light .lcw-input { background: #fff; border-color: #e2e8f0; color: #1e293b; }
+body.adm-light .lcw-input:empty::before { color: #94a3b8; }
+body.adm-light .lcw-mention-dd { background: #fff; border-color: #e2e8f0; }
+body.adm-light .lcw-mitem { color: #334155; }
+body.adm-light .lcw-mitem:hover, body.adm-light .lcw-mitem.lcw-msel { background: rgba(0,212,255,.06); }
+body.adm-light .lcw-mitem-role { color: #64748b; }
+body.adm-light .lcw-acts { background: #fff; border-color: #e2e8f0; }
+body.adm-light .lcw-act { color: #64748b; }
+body.adm-light .lcw-react { background: rgba(0,0,0,.04); border-color: #e2e8f0; color: #64748b; }
+body.adm-light .lcw-modal { background: #fff; border-color: #e2e8f0; }
+body.adm-light .lcw-modal-hdr { color: #1e293b; border-color: #e2e8f0; }
+body.adm-light .lcw-modal-search { background: #f8fafc; border-color: #e2e8f0; color: #1e293b; }
+body.adm-light .lcw-modal-search::placeholder { color: #94a3b8; }
+body.adm-light .lcw-uitem:hover { background: rgba(0,0,0,.03); }
+body.adm-light .lcw-uitem-name { color: #1e293b; }
+body.adm-light .lcw-uitem-role { color: #64748b; }
+body.adm-light .lcw-ibtn { color: #94a3b8; }
+body.adm-light .lcw-ibtn:hover { background: rgba(0,0,0,.05); color: #1e293b; }
+body.adm-light .lcw-empty { color: #94a3b8; }
+body.adm-light .lcw-spin { color: #94a3b8; }
+body.adm-light .lcw-placeholder i { color: #cbd5e1; }
+body.adm-light .lcw-placeholder p { color: #94a3b8; }
+body.adm-light .lcw-topbtn { border-color: #e2e8f0; color: #94a3b8; }
+body.adm-light .lcw-topbtn:hover { border-color: #00d4ff; color: #00d4ff; }
+body.adm-light .lcw-topbtn-badge { border-color: #f8fafc; }
+body.adm-light .lcw-file { background: rgba(0,0,0,.03); border-color: #e2e8f0; }
+body.adm-light .lcw-file-name { color: #334155; }
+body.adm-light .lcw-file-size, body.adm-light .lcw-file-icon { color: #94a3b8; }
+body.adm-light .lcw-pend-file { background: rgba(0,0,0,.03); border-color: #e2e8f0; color: #64748b; }
+body.adm-light .lcw-load-more { background: #fff; border-color: #e2e8f0; color: #00a0c0; }
+body.adm-light .lcw-reply-text { color: #64748b; }
+
+/* ── Online presence dot ──────────────────────────────────────────────────── */
+.lcw-av-wrap { position: relative; flex-shrink: 0; }
+.lcw-online-dot {
+  position: absolute; bottom: 0; right: 0;
+  width: 9px; height: 9px; border-radius: 50%;
+  background: #10b981; border: 2px solid #141414;
+}
+.lcw-thread-hdr .lcw-online-dot {
+  width: 7px; height: 7px; border-color: #141414;
+  bottom: 1px; right: 1px;
+}
+body.adm-light .lcw-online-dot { border-color: #f1f5f9; }
+body.adm-light .lcw-thread-hdr .lcw-online-dot { border-color: #f1f5f9; }
+
+/* ── Scroll-to-bottom button ──────────────────────────────────────────────── */
+.lcw-scroll-btn {
+  position: absolute; bottom: 10px; right: 14px;
+  width: 30px; height: 30px; border-radius: 50%;
+  background: #1e1e1e; border: 1px solid #2c2c2c;
+  color: #6b7280; cursor: pointer; font-size: .72rem;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 4px 12px rgba(0,0,0,.4);
+  transition: all .15s; z-index: 10;
+}
+.lcw-scroll-btn:hover { background: #2a2a2a; color: #00d4ff; border-color: rgba(0,212,255,.3); }
+body.adm-light .lcw-scroll-btn { background: #fff; border-color: #e2e8f0; color: #64748b; box-shadow: 0 4px 12px rgba(0,0,0,.12); }
+body.adm-light .lcw-scroll-btn:hover { color: #00a0c0; border-color: rgba(0,212,255,.4); }
+
+/* ── Edit message ─────────────────────────────────────────────────────────── */
+.lcw-bubble.lcw-editing { background: #1e1e1e; border: 1px solid rgba(0,212,255,.25) !important; }
+.lcw-edit-ta {
+  width: 100%; box-sizing: border-box;
+  background: transparent; border: none; outline: none; resize: none;
+  font-size: .75rem; font-weight: 300; font-family: inherit;
+  color: #e0e0e0; line-height: 1.5; min-height: 34px; max-height: 100px;
+  overflow-y: auto; padding: 0;
+}
+.lcw-edit-ta::-webkit-scrollbar { width: 2px; }
+.lcw-edit-btns { display: flex; gap: 5px; margin-top: 6px; }
+.lcw-edit-save, .lcw-edit-cancel {
+  font-size: .65rem; font-weight: 400; border-radius: 6px;
+  padding: 3px 9px; cursor: pointer; font-family: inherit;
+  transition: all .12s;
+}
+.lcw-edit-save {
+  background: rgba(0,212,255,.15); border: 1px solid rgba(0,212,255,.3); color: #00d4ff;
+}
+.lcw-edit-save:hover { background: rgba(0,212,255,.25); }
+.lcw-edit-cancel {
+  background: rgba(255,255,255,.05); border: 1px solid #2c2c2c; color: #6b7280;
+}
+.lcw-edit-cancel:hover { background: rgba(255,255,255,.09); color: #ccc; }
+.lcw-edited-tag { font-size: .58rem; font-weight: 300; color: #3d3d3d; margin-left: 4px; }
+body.adm-light .lcw-edit-ta { color: #1e293b; }
+body.adm-light .lcw-edit-save { background: rgba(0,212,255,.08); }
+body.adm-light .lcw-edit-cancel { background: rgba(0,0,0,.04); border-color: #e2e8f0; color: #64748b; }
+body.adm-light .lcw-edited-tag { color: #94a3b8; }
+</style>
+
+<!-- ── Floating Widget ───────────────────────────────────────────────────── -->
+<div class="lcw" id="lcwWidget" style="display:none">
+
+  <!-- Header / drag handle -->
+  <div class="lcw-hdr" id="lcwHdr">
+    <div class="lcw-hdr-l">
+      <i class="bi bi-chat-fill lcw-hdr-icon"></i>
+      <span class="lcw-hdr-title">Messages</span>
+      <span class="lcw-hdr-badge" id="lcwHdrBadge" style="display:none"></span>
+    </div>
+    <div class="lcw-hdr-r">
+      <button class="lcw-ibtn accent" onclick="lcwNewChat()" title="New conversation"><i class="bi bi-pencil-square"></i></button>
+      <button class="lcw-ibtn" id="lcwSoundBtn" onclick="lcwToggleSound()" title="Toggle notification sound"><i class="bi bi-volume-up-fill" id="lcwSoundIcon"></i></button>
+      <button class="lcw-ibtn" id="lcwMinBtn" onclick="lcwMinimize()" title="Minimize"><i class="bi bi-dash-lg"></i></button>
+      <button class="lcw-ibtn" onclick="lcwClose()" title="Close"><i class="bi bi-x-lg"></i></button>
+    </div>
+  </div>
+
+  <!-- Body -->
+  <div class="lcw-body">
+
+    <!-- Sidebar: conversation list -->
+    <div class="lcw-sb" id="lcwSb">
+      <div class="lcw-sb-search">
+        <i class="bi bi-search lcw-sb-search-icon"></i>
+        <input class="lcw-search" id="lcwSearch" placeholder="Search…" autocomplete="off"
+               oninput="lcwFilterConvs(this.value)">
+      </div>
+      <div class="lcw-conv-list" id="lcwConvList">
+        <div class="lcw-empty">Loading…</div>
+      </div>
+    </div>
+
+    <!-- Main: placeholder + thread -->
+    <div class="lcw-main">
+
+      <div class="lcw-placeholder" id="lcwPh">
+        <i class="bi bi-chat-dots"></i>
+        <p>Select a conversation or start a new one</p>
+      </div>
+
+      <div class="lcw-thread" id="lcwThread">
+
+        <!-- Thread header -->
+        <div class="lcw-thread-hdr">
+          <button class="lcw-ibtn lcw-back" id="lcwBack" onclick="lcwShowSb()" title="Back"><i class="bi bi-arrow-left"></i></button>
+          <div class="lcw-av-wrap" style="flex-shrink:0">
+            <div class="lcw-th-av" id="lcwThAv"></div>
+          </div>
+          <div class="lcw-th-info">
+            <div class="lcw-th-name" id="lcwThName"></div>
+            <div class="lcw-th-sub" id="lcwThSub"></div>
+          </div>
+        </div>
+
+        <!-- Messages -->
+        <div style="position:relative;flex:1;min-height:0;display:flex;flex-direction:column;">
+          <div class="lcw-msgs" id="lcwMsgs">
+            <div class="lcw-spin">Loading…</div>
+            <div class="lcw-drop" id="lcwDrop">
+              <i class="bi bi-cloud-upload-fill"></i>
+              <span>Drop files to send</span>
+            </div>
+          </div>
+          <button class="lcw-scroll-btn" id="lcwScrollBtn" onclick="lcwScrollBottom()" style="display:none" title="Scroll to bottom">
+            <i class="bi bi-chevron-double-down"></i>
+          </button>
+        </div>
+
+        <!-- Reply bar -->
+        <div class="lcw-reply-bar" id="lcwReplyBar">
+          <i class="bi bi-reply-fill lcw-reply-icon"></i>
+          <div class="lcw-reply-text" id="lcwReplyText"></div>
+          <button class="lcw-ibtn" onclick="lcwCancelReply()"><i class="bi bi-x"></i></button>
+        </div>
+
+        <!-- Pending attachments -->
+        <div class="lcw-pend-files" id="lcwPendFiles"></div>
+
+        <!-- Input bar -->
+        <div class="lcw-input-bar">
+          <label class="lcw-ibtn" title="Attach file" style="cursor:pointer">
+            <i class="bi bi-paperclip"></i>
+            <input type="file" id="lcwFileIn" style="display:none" multiple onchange="lcwFileSelected(event)">
+          </label>
+          <div class="lcw-input-wrap">
+            <div class="lcw-input" id="lcwInput" contenteditable="true" data-ph="Type a message…"
+                 onkeydown="lcwKeydown(event)" oninput="lcwInputChange()" onpaste="lcwPaste(event)"></div>
+            <div class="lcw-mention-dd" id="lcwMentionDd"></div>
+          </div>
+          <button class="lcw-send" onclick="lcwSend()" title="Send  (Enter)"><i class="bi bi-send-fill"></i></button>
+        </div>
+
+      </div><!-- /lcwThread -->
+    </div><!-- /lcw-main -->
+  </div><!-- /lcw-body -->
+</div><!-- /lcw -->
+
+<!-- New chat overlay + modal -->
+<div class="lcw-overlay" id="lcwOverlay" onclick="lcwCloseModal()"></div>
+<div class="lcw-modal" id="lcwModal">
+  <div class="lcw-modal-hdr">
+    <span>New Message</span>
+    <button class="lcw-ibtn" onclick="lcwCloseModal()"><i class="bi bi-x-lg"></i></button>
+  </div>
+  <input class="lcw-modal-search" id="lcwUSearch" placeholder="Search people…"
+         autocomplete="off" oninput="lcwFilterUsers(this.value)">
+  <div class="lcw-user-list" id="lcwUList"></div>
+</div>
+
+<script>
+(function(){
+'use strict';
+
+/* ── constants ──────────────────────────────────────────────────────────── */
+const ME    = <%= user.id %>;
+const EMOJIS = ['👍','❤️','😂','😮','😢','🔥','✅','👀','🎉','💯'];
+const COLORS = ['#6366f1','#8b5cf6','#ec4899','#f59e0b','#10b981','#3b82f6','#14b8a6','#f97316'];
+
+/* ── state ──────────────────────────────────────────────────────────────── */
+let _open = false, _min = false;
+let _cid  = null;           // active conversation id
+let _convs = [];            // all conversations
+let _users = [];            // chatable users (for @mention + modal)
+let _replyTo = null;        // { id, sender, preview }
+let _pending = [];          // pending File objects
+let _hasMore = {};          // convId -> bool
+let _loading = false;
+let _mentionQ = '';
+let _mentionIdx = 0;
+let _mentionOn = false;
+let _typTimer  = null;
+let _dragN = 0;             // dragenter counter
+let _px = null, _py = null; // saved widget position
+let _onlineUsers = new Set(); // user IDs currently online
+let _editMsgId = null;      // message being edited
+let _editOrig = '';         // original text before edit
+let _editActsHtml = '';     // saved .lcw-acts HTML during edit
+let _soundOn = localStorage.getItem('lcw-sound') !== '0'; // sound on by default
+let _audioCtx = null;       // Web Audio API context
+
+/* ── helpers ────────────────────────────────────────────────────────────── */
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+function strip(s) { return (s||'').replace(/<[^>]+>/g,''); }
+function avatarColor(name) {
+  let h=0; for(let c of (name||'?')) h=((h<<5)-h+c.charCodeAt(0))|0;
+  return COLORS[Math.abs(h)%COLORS.length];
+}
+function initials(name) {
+  return (name||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+}
+function fmtShort(dt) {
+  if (!dt) return '';
+  const d = new Date(dt), now = new Date(), diff = now - d;
+  if (diff < 60000) return 'now';
+  if (diff < 3600000) return Math.floor(diff/60000)+'m';
+  if (diff < 86400000) return d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+  const y = new Date(now); y.setDate(y.getDate()-1);
+  if (d.toDateString()===y.toDateString()) return 'Yesterday';
+  return d.toLocaleDateString([],{month:'short',day:'numeric'});
+}
+function fmtTime(dt) {
+  if (!dt) return '';
+  return new Date(dt).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+}
+function fmtDate(dt) {
+  if (!dt) return '';
+  const d=new Date(dt), now=new Date();
+  if (d.toDateString()===now.toDateString()) return 'Today';
+  const y=new Date(now); y.setDate(y.getDate()-1);
+  if (d.toDateString()===y.toDateString()) return 'Yesterday';
+  return d.toLocaleDateString([],{weekday:'long',month:'long',day:'numeric'});
+}
+function fmtSize(b) {
+  if (!b) return '';
+  if (b<1024) return b+' B';
+  if (b<1024*1024) return (b/1024).toFixed(1)+' KB';
+  return (b/(1024*1024)).toFixed(1)+' MB';
+}
+function fileIcon(mime) {
+  if (!mime) return 'bi bi-file-earmark';
+  if (mime.startsWith('image/')) return 'bi bi-file-image';
+  if (mime.startsWith('video/')) return 'bi bi-file-play';
+  if (mime.startsWith('audio/')) return 'bi bi-file-music';
+  if (mime.includes('pdf')) return 'bi bi-file-pdf';
+  if (mime.includes('word')||mime.includes('document')) return 'bi bi-file-word';
+  if (mime.includes('sheet')||mime.includes('excel')||mime.includes('csv')) return 'bi bi-file-excel';
+  if (mime.includes('zip')||mime.includes('compressed')) return 'bi bi-file-zip';
+  return 'bi bi-file-earmark';
+}
+function api(url, opts={}) {
+  opts.headers = Object.assign({'X-Requested-With':'XMLHttpRequest'}, opts.headers||{});
+  return fetch(url, opts).then(r=>r.json());
+}
+
+/* ── open / close / minimize ─────────────────────────────────────────────── */
+window.lcwToggle  = ()=>_open ? lcwClose() : lcwOpen();
+window.lcwClose   = ()=>{ _open=false; $('lcwWidget').style.display='none'; $('admChatBtn').classList.remove('lcw-on'); };
+window.lcwMinimize= ()=>{
+  _min=!_min;
+  $('lcwWidget').classList.toggle('lcw-min',_min);
+  $('lcwMinBtn').innerHTML = _min ? '<i class="bi bi-chevron-up"></i>' : '<i class="bi bi-dash-lg"></i>';
+};
+window.lcwOpen = async ()=>{
+  _open=true;
+  const w=$('lcwWidget');
+  w.style.display='flex'; w.style.flexDirection='column';
+  $('admChatBtn').classList.add('lcw-on');
+  restorePos();
+  if (!_convs.length) await loadConvs();
+  if (!_users.length) await loadUsers();
+};
+
+function $(id)  { return document.getElementById(id); }
+function $$(sel){ return document.querySelector(sel); }
+
+/* ── drag to reposition ──────────────────────────────────────────────────── */
+function restorePos() {
+  const w=$('lcwWidget');
+  try {
+    const s=localStorage.getItem('lcwPos');
+    if (s) { const {x,y}=JSON.parse(s); applyPos(x,y); return; }
+  } catch(e){}
+  w.style.cssText += ';bottom:70px;right:20px;left:auto;top:auto';
+}
+function applyPos(x,y) {
+  const w=$('lcwWidget');
+  const mw=w.offsetWidth||740, mh=48;
+  x=Math.max(10,Math.min(x,window.innerWidth-mw-10));
+  y=Math.max(10,Math.min(y,window.innerHeight-mh-10));
+  w.style.left=x+'px'; w.style.top=y+'px';
+  w.style.right='auto'; w.style.bottom='auto';
+  _px=x; _py=y;
+}
+let _drag=false,_ox=0,_oy=0;
+$('lcwHdr').addEventListener('mousedown',e=>{
+  if (e.target.closest('.lcw-ibtn')) return;
+  _drag=true;
+  const r=$('lcwWidget').getBoundingClientRect();
+  _ox=e.clientX-r.left; _oy=e.clientY-r.top;
+  $('lcwWidget').style.transition='none';
+  e.preventDefault();
+});
+document.addEventListener('mousemove',e=>{ if(!_drag) return; applyPos(e.clientX-_ox,e.clientY-_oy); });
+document.addEventListener('mouseup', ()=>{
+  if(!_drag) return; _drag=false;
+  if(_px!==null) localStorage.setItem('lcwPos',JSON.stringify({x:_px,y:_py}));
+});
+
+/* ── load conversations ──────────────────────────────────────────────────── */
+async function loadConvs() {
+  try {
+    const j = await api('/chat/conversations');
+    _convs = j.data.conversations || [];
+    renderConvList();
+    updateBadge();
+  } catch(e){ console.error('lcw convs',e); }
+}
+
+/* ── load users (for @mention + new chat modal) ─────────────────────────── */
+async function loadUsers() {
+  try {
+    const j = await api('/chat/users');
+    _users = j.data.users || [];
+  } catch(e) {
+    // fallback: extract from conversations
+    const seen=new Set([ME]);
+    _convs.forEach(c=>(c.participants||[]).forEach(p=>{ if(!seen.has(p.id)){ seen.add(p.id); _users.push(p); } }));
+  }
+}
+
+/* ── conversation list rendering ─────────────────────────────────────────── */
+function convName(c) {
+  if (c.type==='group') return c.group_name||'Group';
+  const o=(c.participants||[]).find(p=>p.id!==ME);
+  return o ? o.name : c.group_name||'Chat';
+}
+function renderConvList(q='') {
+  const el=$('lcwConvList');
+  let list=_convs;
+  if (q) { const lq=q.toLowerCase(); list=list.filter(c=>convName(c).toLowerCase().includes(lq)); }
+  if (!list.length) { el.innerHTML=`<div class="lcw-empty">${q?'No results':'No conversations yet'}</div>`; return; }
+  el.innerHTML = list.map(c=>{
+    const name=convName(c), grp=c.type==='group';
+    const col=avatarColor(name), ini=initials(name);
+    const unread=c.unread_count||0;
+    const preview=strip(c.last_message||'').slice(0,38)||(c.last_message_sender?c.last_message_sender+': ':'')||'';
+    const time=fmtShort(c.last_message_at||c.updated_at);
+    const active=c.id===_cid?'lcw-active':'';
+    const muted=c.is_muted?'lcw-muted':'';
+    const otherId=!grp?((c.participants||[]).find(p=>p.id!==ME)||{}).id:null;
+    const online=otherId&&_onlineUsers.has(otherId);
+    return `<div class="lcw-conv-item ${active} ${muted}" data-cid="${c.id}" onclick="lcwOpenConv(${c.id})">
+      <div class="lcw-av-wrap">
+        <div class="lcw-av ${grp?'lcw-av-g':''}" style="background:${col}">${ini}</div>
+        ${online?'<span class="lcw-online-dot"></span>':''}
+      </div>
+      <div class="lcw-conv-meta">
+        <div class="lcw-conv-name">${esc(name)}</div>
+        <div class="lcw-conv-preview">${esc(preview)||'<em style="opacity:.4">No messages yet</em>'}</div>
+      </div>
+      <div class="lcw-conv-r">
+        <span class="lcw-conv-time">${time}</span>
+        ${unread&&!c.is_muted?`<span class="lcw-unread-badge">${unread>99?'99+':unread}</span>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+window.lcwFilterConvs = q => renderConvList(q);
+
+/* ── open conversation ───────────────────────────────────────────────────── */
+window.lcwOpenConv = async function(cid) {
+  _cid = cid;
+  document.querySelectorAll('.lcw-conv-item').forEach(el=>el.classList.toggle('lcw-active', el.dataset.cid==cid));
+  $('lcwPh').style.display='none';
+  $('lcwThread').classList.add('lcw-show');
+  // narrow mode: hide sidebar, show back btn
+  if ($('lcwWidget').offsetWidth < 600) {
+    $('lcwSb').style.display='none';
+    $('lcwBack').style.display='flex';
+  }
+  const conv=_convs.find(c=>c.id===cid);
+  if (conv) setThreadHeader(conv);
+  // join socket room
+  if (typeof socket!=='undefined') socket.emit('chat:join', cid);
+  // clear + load messages
+  $('lcwMsgs').innerHTML='<div class="lcw-spin">Loading…</div><div class="lcw-drop" id="lcwDrop"><i class="bi bi-cloud-upload-fill"></i><span>Drop files to send</span></div>';
+  bindDrop();
+  bindScroll();
+  await loadMsgs(cid, null, true);
+  lcwCancelReply();
+  setTimeout(()=>$('lcwInput').focus(), 80);
+};
+
+function setThreadHeader(c) {
+  const name=convName(c), grp=c.type==='group';
+  const col=avatarColor(name);
+  // Avatar wrapper with optional online dot
+  const avWrap=$('lcwThAv').parentElement;
+  const o=grp?null:(c.participants||[]).find(p=>p.id!==ME);
+  const online=!grp&&o&&_onlineUsers.has(o.id);
+  // Remove any existing dot
+  avWrap.querySelectorAll('.lcw-online-dot').forEach(d=>d.remove());
+  const av=$('lcwThAv');
+  av.style.background=col; av.textContent=initials(name);
+  av.style.borderRadius=grp?'8px':'50%';
+  if (online) {
+    const dot=document.createElement('span');
+    dot.className='lcw-online-dot';
+    avWrap.appendChild(dot);
+  }
+  $('lcwThName').textContent=name;
+  if (grp) {
+    $('lcwThSub').textContent=(c.participants||[]).length+' members';
+  } else {
+    const role=(o?(o.role_name||'').replace('LOCAL_',''):'');
+    $('lcwThSub').innerHTML=online
+      ? `<span style="color:#10b981">● Online</span>${role?' · '+role:''}`
+      : role;
+  }
+}
+window.lcwShowSb = ()=>{ $('lcwSb').style.display=''; $('lcwBack').style.display='none'; };
+
+/* ── load messages ───────────────────────────────────────────────────────── */
+async function loadMsgs(cid, beforeId=null, fresh=false) {
+  try {
+    let url=`/chat/conversations/${cid}/messages`;
+    if (beforeId) url+=`?before=${beforeId}`;
+    const j = await api(url);
+    const msgs = j.data.messages||[];
+    _hasMore[cid] = msgs.length>=50;
+    const el=$('lcwMsgs');
+    if (fresh) {
+      el.innerHTML='<div class="lcw-drop" id="lcwDrop"><i class="bi bi-cloud-upload-fill"></i><span>Drop files to send</span></div>';
+      bindDrop();
+      if (_hasMore[cid]) el.insertAdjacentHTML('afterbegin','<div class="lcw-load-more" onclick="lcwLoadMore()">Load earlier messages</div>');
+      renderMsgs(msgs, el, true);
+      el.scrollTop=el.scrollHeight;
+    } else {
+      const prevH=el.scrollHeight;
+      const firstMsg=el.querySelector('.lcw-row');
+      renderMsgsBefore(msgs, el, firstMsg);
+      el.scrollTop=el.scrollHeight-prevH;
+      if (!_hasMore[cid]) { const lm=el.querySelector('.lcw-load-more'); if(lm) lm.remove(); }
+    }
+    // mark read
+    api(`/chat/conversations/${cid}/read`,{method:'POST',headers:{'Content-Type':'application/json'}});
+    const conv=_convs.find(c=>c.id===cid);
+    if(conv){ conv.unread_count=0; renderConvList($('lcwSearch').value); updateBadge(); }
+  } catch(e){ console.error('lcw msgs',e); }
+}
+
+window.lcwLoadMore = async function() {
+  if (_loading||!_cid) return;
+  const first=$('lcwMsgs').querySelector('.lcw-row');
+  if (!first) return;
+  _loading=true;
+  await loadMsgs(_cid, first.dataset.mid, false);
+  _loading=false;
+};
+
+/* ── message rendering ───────────────────────────────────────────────────── */
+function renderMsgs(msgs, container, append=true) {
+  let lastDate=null, lastSid=null, lastTs=null;
+  const frag=document.createDocumentFragment();
+  msgs.forEach(m=>{
+    const ds=fmtDate(m.created_at);
+    if (ds!==lastDate) {
+      const d=document.createElement('div'); d.className='lcw-date-div';
+      d.innerHTML=`<span>${ds}</span>`; frag.appendChild(d);
+      lastDate=ds; lastSid=null; lastTs=null;
+    }
+    const ts=new Date(m.created_at);
+    const grp=lastSid===m.sender_id && lastTs && (ts-lastTs)<120000;
+    const el=document.createElement('div');
+    el.innerHTML=msgHtml(m, grp); frag.appendChild(el.firstElementChild);
+    lastSid=m.sender_id; lastTs=ts;
+  });
+  container.appendChild(frag);
+}
+
+function renderMsgsBefore(msgs, container, beforeEl) {
+  if (!msgs.length) return;
+  let lastDate=null, lastSid=null, lastTs=null;
+  const frag=document.createDocumentFragment();
+  msgs.forEach(m=>{
+    const ds=fmtDate(m.created_at);
+    if(ds!==lastDate){ const d=document.createElement('div'); d.className='lcw-date-div'; d.innerHTML=`<span>${ds}</span>`; frag.appendChild(d); lastDate=ds; lastSid=null; lastTs=null; }
+    const ts=new Date(m.created_at);
+    const grp=lastSid===m.sender_id&&lastTs&&(ts-lastTs)<120000;
+    const el=document.createElement('div'); el.innerHTML=msgHtml(m,grp); frag.appendChild(el.firstElementChild);
+    lastSid=m.sender_id; lastTs=ts;
+  });
+  if (beforeEl) container.insertBefore(frag, beforeEl);
+  else container.insertBefore(frag, container.querySelector('.lcw-drop'));
+}
+
+function msgHtml(m, grp) {
+  const mine=m.sender_id===ME;
+  const col=avatarColor(m.sender_name||'?');
+  const grpCls=grp?'lcw-grp':'';
+  const mineCls=mine?'lcw-mine':'';
+
+  // reply strip
+  let replyHtml='';
+  if (m.reply_to_id && !m.reply_deleted) {
+    replyHtml=`<div class="lcw-reply-strip"><strong>${esc(m.reply_sender_name||'')}</strong> ${esc((m.reply_preview||'').slice(0,70))}</div>`;
+  }
+
+  // body
+  let body='';
+  if (m.is_deleted) {
+    body=`<span class="lcw-deleted">Message deleted</span>`;
+  } else if (m.attachment_drive_id) {
+    body=attachHtml(m);
+  } else {
+    body=renderContent(m.content||'');
+  }
+
+  // reactions
+  let reacts='';
+  if (m.reactions && Object.keys(m.reactions).length) {
+    reacts='<div class="lcw-reacts">'+
+      Object.entries(m.reactions).map(([em,users])=>
+        `<span class="lcw-react ${(users||[]).includes(ME)?'lcw-reacted':''}"
+          onclick="lcwToggleReact(${m.id},'${em}',this)"
+          title="${esc((users||[]).join(', '))}">${em} <small>${users.length}</small></span>`
+      ).join('')+'</div>';
+  }
+
+  // read tick
+  const tick = mine ? (m.is_read
+    ? '<i class="bi bi-check2-all lcw-tick-read"></i>'
+    : '<i class="bi bi-check2 lcw-tick-sent"></i>') : '';
+
+  const editedTag = m.is_edited ? '<span class="lcw-edited-tag"> · edited</span>' : '';
+  return `<div class="lcw-row ${mineCls} ${grpCls}" data-mid="${m.id}">
+    <div class="lcw-row-av" style="background:${col}">${initials(m.sender_name||'?')}</div>
+    <div class="lcw-row-body">
+      <div class="lcw-row-sender">${esc(m.sender_name||'')}</div>
+      ${replyHtml}
+      <div class="lcw-bubble" data-mid="${m.id}" data-orig="${esc(m.content||'')}">
+        ${body}${editedTag}
+        <div class="lcw-acts">
+          <button class="lcw-act" onclick="lcwReply(${m.id},'${esc(m.sender_name||'')}','${esc((m.content||'').slice(0,60).replace(/'/g,"\\'"))}')" title="Reply"><i class="bi bi-reply-fill"></i></button>
+          <button class="lcw-act" onclick="lcwEmojiPicker(${m.id},this)" title="React"><i class="bi bi-emoji-smile"></i></button>
+          ${mine&&!m.is_deleted&&!m.attachment_drive_id?`<button class="lcw-act" onclick="lcwEditMsg(${m.id})" title="Edit"><i class="bi bi-pencil"></i></button>`:''}
+          ${mine&&!m.is_deleted?`<button class="lcw-act danger" onclick="lcwDelMsg(${m.id},this)" title="Delete"><i class="bi bi-trash3"></i></button>`:''}
+        </div>
+      </div>
+      ${reacts}
+      <div class="lcw-row-foot">${fmtTime(m.created_at)} ${tick}</div>
+    </div>
+  </div>`;
+}
+
+function attachHtml(m) {
+  const mime=m.attachment_mime||'', name=m.attachment_name||'File', link=m.attachment_link||'#';
+  const cap=m.content ? renderContent(m.content)+'<br>' : '';
+  if (mime.startsWith('image/')) {
+    return `${cap}<img class="lcw-img" src="${esc(link)}" alt="${esc(name)}"
+      onclick="window.open('${esc(link)}','_blank')" loading="lazy">`;
+  }
+  return `${cap}<a class="lcw-file" href="${esc(link)}" target="_blank" rel="noopener">
+    <i class="${fileIcon(mime)} lcw-file-icon"></i>
+    <div class="lcw-file-info">
+      <div class="lcw-file-name">${esc(name)}</div>
+      ${m.attachment_size?`<div class="lcw-file-size">${fmtSize(m.attachment_size)}</div>`:''}
+    </div>
+  </a>`;
+}
+
+function renderContent(text) {
+  let out=esc(text);
+  // linkify URLs
+  out=out.replace(/(https?:\/\/[^\s<>"&]+)/g,'<a href="$1" target="_blank" rel="noopener">$1</a>');
+  // @mentions
+  out=out.replace(/@([\w][^\s@]{0,29})/g,'<span class="lcw-mention">@$1</span>');
+  // newlines
+  out=out.replace(/\n/g,'<br>');
+  return out;
+}
+
+/* ── send ────────────────────────────────────────────────────────────────── */
+window.lcwSend = async function() {
+  if (!_cid) return;
+  const inp=$('lcwInput');
+  const text=inp.innerText.trim();
+  if (!text && !_pending.length) return;
+  inp.innerHTML=''; closeMention();
+
+  // upload pending files
+  for (const f of _pending) {
+    const isLast = _pending.indexOf(f)===_pending.length-1;
+    await uploadFile(f, (isLast && text) ? text : null);
+    if (isLast && text) { clearPending(); return; }
+  }
+  clearPending();
+
+  // send text
+  if (text) {
+    const url = _replyTo
+      ? `/chat/conversations/${_cid}/reply`
+      : `/chat/conversations/${_cid}/messages`;
+    const body = _replyTo
+      ? {content:text, reply_to_id:_replyTo.id}
+      : {content:text};
+    const saved=_replyTo;
+    lcwCancelReply();
+    try {
+      const j=await api(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+      if (j.data&&j.data.message) { appendMsg(j.data.message); updateConvPreview(_cid,j.data.message); }
+    } catch(e){ console.error('lcw send',e); }
+  }
+};
+
+function appendMsg(m) {
+  const el=$('lcwMsgs');
+  const tmp=document.createElement('div');
+  tmp.innerHTML=msgHtml(m,false);
+  el.appendChild(tmp.firstElementChild);
+  el.scrollTop=el.scrollHeight;
+}
+
+/* ── file upload ─────────────────────────────────────────────────────────── */
+window.lcwFileSelected = e=>{
+  _pending.push(...Array.from(e.target.files));
+  renderPending(); e.target.value='';
+};
+function renderPending() {
+  const el=$('lcwPendFiles');
+  if (!_pending.length) { el.classList.remove('lcw-show'); el.innerHTML=''; return; }
+  el.classList.add('lcw-show');
+  el.innerHTML=_pending.map((f,i)=>`<div class="lcw-pend-file">
+    <i class="${fileIcon(f.type)}"></i>
+    <span>${esc(f.name)}</span>
+    <button class="lcw-pend-rm" onclick="lcwRmPend(${i})"><i class="bi bi-x"></i></button>
+  </div>`).join('');
+}
+function clearPending() { _pending=[]; renderPending(); }
+window.lcwRmPend = i=>{ _pending.splice(i,1); renderPending(); };
+async function uploadFile(file, caption) {
+  const fd=new FormData(); fd.append('file',file);
+  if (caption) fd.append('content',caption);
+  try {
+    const j=await api(`/chat/conversations/${_cid}/attach-local`,{
+      method:'POST', headers:{}, body:fd
+    });
+    if (j.data&&j.data.message) { appendMsg(j.data.message); updateConvPreview(_cid,j.data.message); }
+  } catch(e){ console.error('lcw upload',e); }
+}
+
+/* ── drag & drop ─────────────────────────────────────────────────────────── */
+function bindDrop() {
+  const el=$('lcwMsgs'), dz=$('lcwDrop');
+  if (!el||!dz) return;
+  el.addEventListener('dragenter',e=>{ e.preventDefault(); _dragN++; if(_cid) dz.classList.add('lcw-dropping'); });
+  el.addEventListener('dragleave',()=>{ _dragN--; if(_dragN<=0){ _dragN=0; dz.classList.remove('lcw-dropping'); } });
+  el.addEventListener('dragover', e=>e.preventDefault());
+  el.addEventListener('drop', e=>{
+    e.preventDefault(); _dragN=0; dz.classList.remove('lcw-dropping');
+    if (!_cid) return;
+    _pending.push(...Array.from(e.dataTransfer.files));
+    renderPending();
+  });
+}
+
+/* ── paste images ────────────────────────────────────────────────────────── */
+window.lcwPaste = e=>{
+  const items=e.clipboardData&&e.clipboardData.items;
+  if (!items) return;
+  for (const it of items) {
+    if (it.kind==='file'&&it.type.startsWith('image/')) {
+      e.preventDefault();
+      const f=it.getAsFile(); if(f){ _pending.push(f); renderPending(); }
+    }
+  }
+};
+
+/* ── reply ───────────────────────────────────────────────────────────────── */
+window.lcwReply = (id, sender, preview)=>{
+  _replyTo={id, sender};
+  $('lcwReplyBar').classList.add('lcw-show');
+  $('lcwReplyText').innerHTML=`<strong>${esc(sender)}</strong> — ${esc(preview)}`;
+  $('lcwInput').focus();
+};
+window.lcwCancelReply = ()=>{ _replyTo=null; $('lcwReplyBar').classList.remove('lcw-show'); };
+
+/* ── emoji reactions ─────────────────────────────────────────────────────── */
+window.lcwEmojiPicker = (msgId, btn)=>{
+  const existing=document.getElementById('lcwEPicker');
+  if (existing) { existing.remove(); return; }
+  const p=document.createElement('div');
+  p.id='lcwEPicker';
+  p.style.cssText='position:fixed;background:#1c1c1c;border:1px solid #2c2c2c;border-radius:10px;padding:6px 8px;display:flex;gap:3px;flex-wrap:wrap;max-width:180px;z-index:9999;box-shadow:0 10px 28px rgba(0,0,0,.55)';
+  const r=btn.getBoundingClientRect();
+  p.style.top=(r.top-48)+'px'; p.style.left=r.left+'px';
+  EMOJIS.forEach(em=>{
+    const b=document.createElement('button');
+    b.textContent=em;
+    b.style.cssText='background:none;border:none;cursor:pointer;font-size:1.1rem;border-radius:6px;padding:3px 5px;transition:transform .1s';
+    b.onmouseenter=()=>b.style.transform='scale(1.3)';
+    b.onmouseleave=()=>b.style.transform='';
+    b.onclick=()=>{ lcwToggleReact(msgId,em,null); p.remove(); };
+    p.appendChild(b);
+  });
+  document.body.appendChild(p);
+  setTimeout(()=>document.addEventListener('click',function _c(){ p.remove(); document.removeEventListener('click',_c); },10));
+};
+window.lcwToggleReact = async (msgId, emoji, el)=>{
+  try {
+    const j=await api(`/chat/messages/${msgId}/react`,{
+      method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({emoji})
+    });
+    if (j.data&&j.data.reactions) {
+      const bubble=document.querySelector(`.lcw-bubble[data-mid="${msgId}"]`);
+      if (!bubble) return;
+      let rEl=bubble.closest('.lcw-row-body').querySelector('.lcw-reacts');
+      const html=Object.entries(j.data.reactions).map(([em,users])=>
+        `<span class="lcw-react ${(users||[]).includes(ME)?'lcw-reacted':''}" onclick="lcwToggleReact(${msgId},'${em}',this)" title="${esc((users||[]).join(', '))}">${em} <small>${users.length}</small></span>`
+      ).join('');
+      if (rEl) { rEl.innerHTML=html; }
+      else if (html) {
+        const d=document.createElement('div'); d.className='lcw-reacts'; d.innerHTML=html;
+        bubble.closest('.lcw-row-body').appendChild(d);
+      }
+    }
+  } catch(e){}
+};
+
+/* ── delete message ──────────────────────────────────────────────────────── */
+window.lcwDelMsg = async (msgId)=>{
+  if (!confirm('Delete this message?')) return;
+  try {
+    await api(`/chat/messages/${msgId}`,{method:'DELETE'});
+    const b=document.querySelector(`.lcw-bubble[data-mid="${msgId}"]`);
+    if (b) b.innerHTML='<span class="lcw-deleted">Message deleted</span>';
+  } catch(e){}
+};
+
+/* ── scroll-to-bottom ────────────────────────────────────────────────────── */
+function bindScroll() {
+  const el=$('lcwMsgs');
+  if (!el) return;
+  el.addEventListener('scroll', ()=>{
+    const btn=$('lcwScrollBtn');
+    if (!btn) return;
+    const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 60;
+    btn.style.display = atBottom ? 'none' : 'flex';
+  }, {passive:true});
+}
+window.lcwScrollBottom = ()=>{
+  const el=$('lcwMsgs');
+  if (el) { el.scrollTo({top:el.scrollHeight, behavior:'smooth'}); }
+  const btn=$('lcwScrollBtn'); if(btn) btn.style.display='none';
+};
+
+/* ── edit message ─────────────────────────────────────────────────────────── */
+window.lcwEditMsg = (msgId)=>{
+  if (_editMsgId) lcwCancelEdit(); // close any open edit first
+  const bubble=document.querySelector(`.lcw-bubble[data-mid="${msgId}"]`);
+  if (!bubble||bubble.classList.contains('lcw-editing')) return;
+  _editMsgId=msgId;
+  _editOrig=bubble.dataset.orig||'';
+  _editActsHtml=bubble.querySelector('.lcw-acts')?.outerHTML||'';
+  bubble.classList.add('lcw-editing');
+  bubble.innerHTML=`<textarea class="lcw-edit-ta" onkeydown="lcwEditKey(event)"></textarea>
+    <div class="lcw-edit-btns">
+      <button class="lcw-edit-save" onclick="lcwSaveEdit()">Save</button>
+      <button class="lcw-edit-cancel" onclick="lcwCancelEdit()">Cancel</button>
+    </div>${_editActsHtml}`;
+  const ta=bubble.querySelector('.lcw-edit-ta');
+  ta.value=_editOrig;
+  ta.style.height='auto';
+  ta.style.height=Math.min(ta.scrollHeight,100)+'px';
+  ta.focus();
+  ta.selectionStart=ta.selectionEnd=ta.value.length;
+};
+window.lcwEditKey = e=>{
+  if (e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); lcwSaveEdit(); }
+  if (e.key==='Escape') lcwCancelEdit();
+};
+window.lcwSaveEdit = async ()=>{
+  if (!_editMsgId) return;
+  const bubble=document.querySelector(`.lcw-bubble[data-mid="${_editMsgId}"]`);
+  if (!bubble) return;
+  const ta=bubble.querySelector('.lcw-edit-ta');
+  const newText=ta?.value.trim();
+  if (!newText){ lcwCancelEdit(); return; }
+  if (newText===_editOrig){ lcwCancelEdit(); return; }
+  const mid=_editMsgId, origText=_editOrig, actsHtml=_editActsHtml;
+  _editMsgId=null; _editOrig=''; _editActsHtml='';
+  bubble.classList.remove('lcw-editing');
+  try {
+    const j=await api(`/chat/messages/${mid}`,{
+      method:'PATCH',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({content:newText})
+    });
+    if (j.data&&j.data.message) {
+      bubble.dataset.orig=newText;
+      bubble.innerHTML=renderContent(newText)+'<span class="lcw-edited-tag"> · edited</span>'+actsHtml;
+    } else {
+      bubble.dataset.orig=origText;
+      bubble.innerHTML=renderContent(origText)+actsHtml;
+    }
+  } catch(e){
+    console.error('lcw edit',e);
+    bubble.dataset.orig=origText;
+    bubble.innerHTML=renderContent(origText)+actsHtml;
+  }
+};
+window.lcwCancelEdit = ()=>{
+  if (!_editMsgId) return;
+  const bubble=document.querySelector(`.lcw-bubble[data-mid="${_editMsgId}"]`);
+  if (bubble) {
+    bubble.classList.remove('lcw-editing');
+    bubble.innerHTML=renderContent(_editOrig)+_editActsHtml;
+  }
+  _editMsgId=null; _editOrig=''; _editActsHtml='';
+};
+
+/* ── @mention ─────────────────────────────────────────────────────────────── */
+window.lcwInputChange = ()=>{ handleMention(); lcwTyping(); };
+function handleMention() {
+  // @mention only makes sense in group chats
+  const conv=_convs.find(c=>c.id===_cid);
+  if (!conv || conv.type!=='group') { closeMention(); return; }
+  const inp=$('lcwInput');
+  const sel=window.getSelection();
+  if (!sel.rangeCount) return;
+  const rng=sel.getRangeAt(0);
+  const node=rng.startContainer;
+  if (node.nodeType!==Node.TEXT_NODE) { closeMention(); return; }
+  const txt=node.textContent, pos=rng.startOffset;
+  const before=txt.slice(0,pos);
+  const atIdx=before.lastIndexOf('@');
+  if (atIdx!==-1 && (atIdx===0||/\s/.test(before[atIdx-1]))) {
+    const q=before.slice(atIdx+1);
+    if (!q.includes(' ')&&q.length<=20) {
+      _mentionQ=q; _mentionOn=true;
+      showMentionDd(q); return;
+    }
+  }
+  closeMention();
+}
+function showMentionDd(q) {
+  const dd=$('lcwMentionDd');
+  const list=_users.filter(u=>u.name.toLowerCase().includes(q.toLowerCase())).slice(0,7);
+  if (!list.length) { closeMention(); return; }
+  _mentionIdx=Math.min(_mentionIdx,list.length-1);
+  dd.innerHTML=list.map((u,i)=>`<div class="lcw-mitem ${i===_mentionIdx?'lcw-msel':''}" onmousedown="lcwPickMention('${esc(u.name)}')" data-i="${i}">
+    <div class="lcw-av" style="background:${avatarColor(u.name)};width:22px;height:22px;font-size:.52rem">${initials(u.name)}</div>
+    <div><div>${esc(u.name)}</div><div class="lcw-mitem-role">${esc((u.role_name||'').replace('LOCAL_','').replace('CLIENT_',''))}</div></div>
+  </div>`).join('');
+  dd.classList.add('lcw-show');
+}
+window.lcwPickMention = name=>{
+  const inp=$('lcwInput');
+  const sel=window.getSelection(); if(!sel.rangeCount) return;
+  const rng=sel.getRangeAt(0), node=rng.startContainer;
+  if (node.nodeType!==Node.TEXT_NODE) { closeMention(); return; }
+  const txt=node.textContent, pos=rng.startOffset, before=txt.slice(0,pos);
+  const atIdx=before.lastIndexOf('@');
+  if (atIdx!==-1) {
+    node.textContent=txt.slice(0,atIdx)+'@'+name+' '+txt.slice(pos);
+    const nr=document.createRange();
+    nr.setStart(node,atIdx+name.length+2); nr.collapse(true);
+    sel.removeAllRanges(); sel.addRange(nr);
+  }
+  closeMention();
+};
+function closeMention() { _mentionOn=false; _mentionIdx=0; $('lcwMentionDd').classList.remove('lcw-show'); }
+
+window.lcwKeydown = e=>{
+  if (_mentionOn) {
+    const dd=$('lcwMentionDd'), items=dd.querySelectorAll('.lcw-mitem');
+    if (e.key==='ArrowDown') { e.preventDefault(); _mentionIdx=Math.min(_mentionIdx+1,items.length-1); items.forEach((el,i)=>el.classList.toggle('lcw-msel',i===_mentionIdx)); return; }
+    if (e.key==='ArrowUp')   { e.preventDefault(); _mentionIdx=Math.max(_mentionIdx-1,0); items.forEach((el,i)=>el.classList.toggle('lcw-msel',i===_mentionIdx)); return; }
+    if (e.key==='Enter'||e.key==='Tab') { e.preventDefault(); const a=dd.querySelector('.lcw-msel'); if(a) a.dispatchEvent(new MouseEvent('mousedown')); return; }
+    if (e.key==='Escape') { closeMention(); return; }
+  }
+  if (e.key==='Enter'&&!e.shiftKey) { e.preventDefault(); lcwSend(); }
+};
+
+/* ── typing indicator ────────────────────────────────────────────────────── */
+window.lcwTyping = ()=>{
+  if (!_cid||typeof socket==='undefined') return;
+  socket.emit('chat:typing',{conversation_id:_cid});
+};
+function showTyping(name) {
+  const el=$('lcwMsgs');
+  let t=el.querySelector('.lcw-typing');
+  if (!t) {
+    t=document.createElement('div'); t.className='lcw-typing';
+    t.innerHTML=`<div class="lcw-dot"></div><div class="lcw-dot"></div><div class="lcw-dot"></div><span style="margin-left:4px">${esc(name)} is typing</span>`;
+    el.appendChild(t); el.scrollTop=el.scrollHeight;
+  }
+  clearTimeout(t._t); t._t=setTimeout(()=>t.remove(),3000);
+}
+
+/* ── notification sound ──────────────────────────────────────────────────── */
+function playSound() {
+  if (!_soundOn) return;
+  try {
+    if (!_audioCtx) _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (_audioCtx.state === 'suspended') _audioCtx.resume();
+    const osc  = _audioCtx.createOscillator();
+    const gain = _audioCtx.createGain();
+    osc.connect(gain); gain.connect(_audioCtx.destination);
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(880, _audioCtx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(440, _audioCtx.currentTime + 0.15);
+    gain.gain.setValueAtTime(0.14, _audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, _audioCtx.currentTime + 0.32);
+    osc.start(_audioCtx.currentTime);
+    osc.stop(_audioCtx.currentTime + 0.32);
+  } catch(_) {}
+}
+window.lcwToggleSound = ()=>{
+  _soundOn = !_soundOn;
+  localStorage.setItem('lcw-sound', _soundOn ? '1' : '0');
+  const icon = $('lcwSoundIcon');
+  if (icon) icon.className = _soundOn ? 'bi bi-volume-up-fill' : 'bi bi-volume-mute-fill';
+  const btn = $('lcwSoundBtn');
+  if (btn) btn.style.color = _soundOn ? '' : '#4b5563';
+  if (btn) btn.title = _soundOn ? 'Mute notification sound' : 'Unmute notification sound';
+};
+// Init button state on load
+(()=>{
+  const icon=$('lcwSoundIcon'); if(icon&&!_soundOn) icon.className='bi bi-volume-mute-fill';
+  const btn=$('lcwSoundBtn'); if(btn&&!_soundOn){ btn.style.color='#4b5563'; btn.title='Unmute notification sound'; }
+})();
+
+/* ── socket listeners ────────────────────────────────────────────────────── */
+if (typeof socket!=='undefined') {
+  socket.on('chat:message', ({conversation_id, message})=>{
+    updateConvPreview(conversation_id, message, true);
+    updateBadge();
+    if (_cid===conversation_id && _open && !_min) {
+      appendMsg(message);
+      api(`/chat/conversations/${conversation_id}/read`,{method:'POST',headers:{'Content-Type':'application/json'}});
+    } else {
+      // Play sound when message is in a different conv, widget is closed, or minimized
+      playSound();
+    }
+  });
+
+  socket.on('chat:typing', d=>{
+    if (d.conversation_id!==_cid || d.user_id===ME) return;
+    showTyping(d.user_name);
+  });
+
+  // Live edit from another user
+  socket.on('chat:message_edited', ({message:m})=>{
+    if (_editMsgId===m.id) return; // we're the one editing, ignore echo
+    const bubble=document.querySelector(`.lcw-bubble[data-mid="${m.id}"]`);
+    if (!bubble) return;
+    bubble.dataset.orig=m.content||'';
+    const actsHtml=bubble.querySelector('.lcw-acts')?.outerHTML||'';
+    bubble.innerHTML=renderContent(m.content||'')+'<span class="lcw-edited-tag"> · edited</span>'+actsHtml;
+  });
+
+  // Live delete from another user
+  socket.on('chat:message_deleted', ({message_id})=>{
+    const bubble=document.querySelector(`.lcw-bubble[data-mid="${message_id}"]`);
+    if (!bubble) return;
+    const actsHtml=bubble.querySelector('.lcw-acts')?.outerHTML||'';
+    bubble.innerHTML='<span class="lcw-deleted">Message deleted</span>'+actsHtml;
+  });
+
+  // Online presence
+  socket.on('channel:presence', ({user_id, online})=>{
+    if (online) _onlineUsers.add(user_id); else _onlineUsers.delete(user_id);
+    // Refresh conv list dots
+    renderConvList($('lcwSearch').value);
+    // Refresh thread header if this is the active DM partner
+    if (_cid) {
+      const conv=_convs.find(c=>c.id===_cid);
+      if (conv&&conv.type==='direct') {
+        const other=(conv.participants||[]).find(p=>p.id!==ME);
+        if (other&&other.id===user_id) setThreadHeader(conv);
+      }
+    }
+  });
+}
+
+/* ── update sidebar preview ──────────────────────────────────────────────── */
+function updateConvPreview(cid, msg, incUnread=false) {
+  const c=_convs.find(x=>x.id===cid);
+  if (c) {
+    c.last_message=msg.content||(msg.attachment_name?'[Attachment]':'');
+    c.last_message_at=msg.created_at;
+    if (incUnread&&cid!==_cid) c.unread_count=(c.unread_count||0)+1;
+    const idx=_convs.indexOf(c);
+    if (idx>0) { _convs.splice(idx,1); _convs.unshift(c); }
+    renderConvList($('lcwSearch').value);
+  } else {
+    loadConvs(); // new conversation — refresh list
+  }
+}
+
+/* ── badge ───────────────────────────────────────────────────────────────── */
+function updateBadge() {
+  const total=_convs.reduce((s,c)=>s+(c.unread_count||0),0);
+  const b1=$('lcwTopBadge'), b2=$('lcwHdrBadge');
+  [b1,b2].forEach(b=>{ if(!b) return; b.textContent=total>99?'99+':total; b.style.display=total?'':'none'; });
+}
+
+/* ── new chat modal ──────────────────────────────────────────────────────── */
+window.lcwNewChat = async ()=>{
+  if (!_users.length) await loadUsers();
+  renderUserList();
+  $('lcwOverlay').classList.add('lcw-show');
+  $('lcwModal').classList.add('lcw-show');
+  setTimeout(()=>$('lcwUSearch').focus(),80);
+};
+window.lcwCloseModal = ()=>{
+  $('lcwOverlay').classList.remove('lcw-show');
+  $('lcwModal').classList.remove('lcw-show');
+};
+function renderUserList(q='') {
+  const el=$('lcwUList');
+  let list=_users;
+  if (q) { const lq=q.toLowerCase(); list=list.filter(u=>u.name.toLowerCase().includes(lq)); }
+  if (!list.length) { el.innerHTML='<div class="lcw-empty">No users found</div>'; return; }
+  el.innerHTML=list.map(u=>`<div class="lcw-uitem" onclick="lcwStartChat(${u.id})">
+    <div class="lcw-av" style="background:${avatarColor(u.name)};width:32px;height:32px;font-size:.64rem">${initials(u.name)}</div>
+    <div><div class="lcw-uitem-name">${esc(u.name)}</div><div class="lcw-uitem-role">${esc((u.role_name||'').replace('LOCAL_','').replace('CLIENT_',''))}</div></div>
+  </div>`).join('');
+}
+window.lcwFilterUsers = q=>renderUserList(q);
+
+window.lcwStartChat = async uid=>{
+  lcwCloseModal();
+  try {
+    const j=await api('/chat/conversations',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({participant_ids:[uid]})
+    });
+    if (j.data&&j.data.conversation_id) {
+      await loadConvs();
+      lcwOpenConv(j.data.conversation_id);
+    }
+  } catch(e){ console.error('lcw start',e); }
+};
+
+/* ── init: fetch unread count for topbar badge ───────────────────────────── */
+(async ()=>{
+  try {
+    const j=await api('/chat/unread-count');
+    const n=j.data&&j.data.count?j.data.count:0;
+    const b=$('lcwTopBadge');
+    if (b&&n) { b.textContent=n>99?'99+':n; b.style.display=''; }
+  } catch(e){}
+})();
+
+})();
+</script>

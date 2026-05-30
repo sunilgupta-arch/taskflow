@@ -574,6 +574,16 @@ class ChatController {
     }
   }
 
+  // GET /chat/users — API: all users this user can start a chat with
+  static async listUsers(req, res) {
+    try {
+      const users = await ChatModel.getChatableUsers(req.user.id);
+      return ApiResponse.success(res, { users });
+    } catch (err) {
+      return ApiResponse.error(res, 'Failed to load users');
+    }
+  }
+
   // GET /chat/unread-count — API: total unread count (for badge)
   static async unreadCount(req, res) {
     try {

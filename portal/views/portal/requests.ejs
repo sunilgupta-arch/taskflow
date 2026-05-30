@@ -494,12 +494,12 @@ const isSalesUser = user.role_name === 'CLIENT_SALES';
 
   function fmtTime(dtStr) {
     if (!dtStr) return '';
-    var timePart = String(dtStr).split(' ')[1] || '';
-    var p = timePart.split(':');
-    var h = parseInt(p[0]||0), m = parseInt(p[1]||0);
-    var ampm = h >= 12 ? 'PM' : 'AM';
-    h = h % 12 || 12;
-    return h + ':' + String(m).padStart(2,'0') + ' ' + ampm;
+    var d = new Date(dtStr);
+    if (isNaN(d)) return '';
+    return d.toLocaleTimeString('en-US', {
+      hour: 'numeric', minute: '2-digit',
+      hour12: true, timeZone: 'America/New_York'
+    });
   }
   function fmtDuration(from, to) {
     if (!from || !to) return null;
