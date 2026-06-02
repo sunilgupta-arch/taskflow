@@ -77,6 +77,8 @@ router.get('/comp-off/check-today',  authenticate, requireRoles('LOCAL_ADMIN','L
 router.post('/comp-off/off-day-action', authenticate, requireRoles('LOCAL_ADMIN','LOCAL_MANAGER','LOCAL_USER'), CompOffController.offDayAction);
 router.post('/comp-off/apply',       authenticate, requireRoles('LOCAL_ADMIN','LOCAL_MANAGER','LOCAL_USER'), CompOffController.applyCompOff);
 router.get('/comp-off/my-balance',   authenticate, requireRoles('LOCAL_ADMIN','LOCAL_MANAGER','LOCAL_USER'), CompOffController.getMyBalance);
+router.delete('/comp-off/:creditId/cancel', authenticate, requireRoles('LOCAL_ADMIN','LOCAL_MANAGER','LOCAL_USER'), CompOffController.cancelCompOff);
+router.delete('/comp-off/:creditId/revoke', authenticate, requireRoles('LOCAL_ADMIN','LOCAL_MANAGER'), CompOffController.revokeCredit);
 router.get('/comp-off/admin-summary',authenticate, requireRoles('LOCAL_ADMIN','LOCAL_MANAGER'), CompOffController.getAdminSummary);
 router.get('/comp-off/:userId/history', authenticate, requireRoles('LOCAL_ADMIN','LOCAL_MANAGER'), CompOffController.getUserHistory);
 

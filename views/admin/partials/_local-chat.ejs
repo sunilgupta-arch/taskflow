@@ -891,7 +891,7 @@ window.lcwOpenConv = async function(cid) {
   const conv=_convs.find(c=>c.id===cid);
   if (conv) setThreadHeader(conv);
   // join socket room
-  if (typeof socket!=='undefined') socket.emit('chat:join', cid);
+  if (typeof admBdrSock!=='undefined'&&admBdrSock) admBdrSock.emit('chat:join', cid);
   // clear + load messages
   $('lcwMsgs').innerHTML='<div class="lcw-spin">Loading…</div><div class="lcw-drop" id="lcwDrop"><i class="bi bi-cloud-upload-fill"></i><span>Drop files to send</span></div>';
   bindDrop();
@@ -1394,8 +1394,8 @@ window.lcwKeydown = e=>{
 
 /* ── typing indicator ────────────────────────────────────────────────────── */
 window.lcwTyping = ()=>{
-  if (!_cid||typeof socket==='undefined') return;
-  socket.emit('chat:typing',{conversation_id:_cid});
+  if (!_cid||typeof admBdrSock==='undefined'||!admBdrSock) return;
+  admBdrSock.emit('chat:typing',{conversation_id:_cid});
 };
 function showTyping(name) {
   const el=$('lcwMsgs');
@@ -1442,7 +1442,12 @@ window.lcwToggleSound = ()=>{
 })();
 
 /* ── socket listeners ────────────────────────────────────────────────────── */
-if (typeof socket!=='undefined') {
+// admBdrSock is defined later in layout.ejs (line ~2005), after this partial is
+// included. Defer listener attachment to DOMContentLoaded so the socket exists.
+document.addEventListener('DOMContentLoaded', function() {
+  var socket = typeof admBdrSock !== 'undefined' ? admBdrSock : null;
+  if (!socket) return;
+
   socket.on('chat:message', ({conversation_id, message})=>{
     updateConvPreview(conversation_id, message, true);
     updateBadge();
@@ -1450,7 +1455,6 @@ if (typeof socket!=='undefined') {
       appendMsg(message);
       api(`/chat/conversations/${conversation_id}/read`,{method:'POST',headers:{'Content-Type':'application/json'}});
     } else {
-      // Play sound when message is in a different conv, widget is closed, or minimized
       playSound();
     }
   });
@@ -1460,9 +1464,8 @@ if (typeof socket!=='undefined') {
     showTyping(d.user_name);
   });
 
-  // Live edit from another user
   socket.on('chat:message_edited', ({message:m})=>{
-    if (_editMsgId===m.id) return; // we're the one editing, ignore echo
+    if (_editMsgId===m.id) return;
     const bubble=document.querySelector(`.lcw-bubble[data-mid="${m.id}"]`);
     if (!bubble) return;
     bubble.dataset.orig=m.content||'';
@@ -1470,7 +1473,6 @@ if (typeof socket!=='undefined') {
     bubble.innerHTML=renderContent(m.content||'')+'<span class="lcw-edited-tag"> · edited</span>'+actsHtml;
   });
 
-  // Live delete from another user
   socket.on('chat:message_deleted', ({message_id})=>{
     const bubble=document.querySelector(`.lcw-bubble[data-mid="${message_id}"]`);
     if (!bubble) return;
@@ -1478,12 +1480,9 @@ if (typeof socket!=='undefined') {
     bubble.innerHTML='<span class="lcw-deleted">Message deleted</span>'+actsHtml;
   });
 
-  // Online presence
   socket.on('channel:presence', ({user_id, online})=>{
     if (online) _onlineUsers.add(user_id); else _onlineUsers.delete(user_id);
-    // Refresh conv list dots
     renderConvList($('lcwSearch').value);
-    // Refresh thread header if this is the active DM partner
     if (_cid) {
       const conv=_convs.find(c=>c.id===_cid);
       if (conv&&conv.type==='direct') {
@@ -1492,7 +1491,7 @@ if (typeof socket!=='undefined') {
       }
     }
   });
-}
+});
 
 /* ── update sidebar preview ──────────────────────────────────────────────── */
 function updateConvPreview(cid, msg, incUnread=false) {

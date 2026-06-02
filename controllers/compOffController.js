@@ -108,6 +108,34 @@ class CompOffController {
     }
   }
 
+  static async revokeCredit(req, res) {
+    try {
+      const creditId = parseInt(req.params.creditId);
+      if (!creditId) return ApiResponse.error(res, 'Invalid credit ID', 400);
+
+      const credit = await CompOff.revokeCredit(creditId);
+      return ApiResponse.success(res, { credit }, 'Credit revoked — attendance corrected');
+    } catch (err) {
+      return ApiResponse.error(res, err.message || 'Failed to revoke credit');
+    }
+  }
+
+  static async cancelCompOff(req, res) {
+    try {
+      const creditId = parseInt(req.params.creditId);
+      const userId   = req.user.id;
+
+      if (!creditId) return ApiResponse.error(res, 'Invalid credit ID', 400);
+
+      const cancelledDate = await CompOff.cancelCredit(creditId, userId);
+      const balance = await CompOff.getBalance(userId);
+
+      return ApiResponse.success(res, { balance, cancelledDate }, 'Comp-off cancelled — credit restored');
+    } catch (err) {
+      return ApiResponse.error(res, err.message || 'Failed to cancel comp-off');
+    }
+  }
+
   static async getMyBalance(req, res) {
     try {
       const [balance, history] = await Promise.all([

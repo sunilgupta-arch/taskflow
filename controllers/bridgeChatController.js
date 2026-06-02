@@ -59,19 +59,34 @@ class BridgeChatController {
       const conv = await BridgeChat.getConversation(convId);
       const otherUserId = conv.client_user_id === req.user.id ? conv.local_user_id : conv.client_user_id;
 
-      // Emit via Socket.IO (main namespace — both sides use it)
+      // Emit via Socket.IO — main namespace (for local users) + portal namespace (for client users)
       const { getIO } = require('../config/socket');
       try {
         const io = getIO();
-        // Emit to both users
-        io.to(`user:${otherUserId}`).emit('bridge:message', {
-          ...message,
-          conversation: conv
-        });
-        io.to(`user:${req.user.id}`).emit('bridge:message', {
-          ...message,
-          conversation: conv
-        });
+        const payload = { ...message, conversation: conv };
+        // Local users join user:X rooms in main namespace
+        io.to(`user:${otherUserId}`).emit('bridge:message', payload);
+        io.to(`user:${req.user.id}`).emit('bridge:message', payload);
+        // Portal/client users don't join user:X in main namespace — emit on /portal too
+        io.of('/portal').to(`portal:user:${conv.client_user_id}`).emit('bridge:message', payload);
+
+        // If a LOCAL user sent this, notify the CLIENT user via the portal bell
+        const isLocalSender = !req.user.role_name.startsWith('CLIENT_');
+        if (isLocalSender) {
+          const Notification = require('../models/Notification');
+          const nTitle = 'Message from ' + req.user.name;
+          const nBody  = (content.trim()).substring(0, 70);
+          const nLink  = '/portal/requests';
+          const nid = await Notification.createIfNotExists(
+            conv.client_user_id, 'bridge_message', nTitle, nBody, nLink,
+            'bridge_conv', convId
+          );
+          io.of('/portal').to(`portal:user:${conv.client_user_id}`).emit('notification:new', {
+            id: nid, type: 'bridge_message', title: nTitle, body: nBody,
+            link: nLink, ref_type: 'bridge_conv', ref_id: convId,
+            is_read: 0, created_at: new Date()
+          });
+        }
       } catch (_) {}
 
       return ApiResponse.success(res, { message }, 'Message sent');
@@ -120,8 +135,10 @@ class BridgeChatController {
       const { getIO } = require('../config/socket');
       try {
         const io = getIO();
-        io.to(`user:${otherUserId}`).emit('bridge:message', { ...fullMessage, conversation: conv });
-        io.to(`user:${req.user.id}`).emit('bridge:message', { ...fullMessage, conversation: conv });
+        const payload = { ...fullMessage, conversation: conv };
+        io.to(`user:${otherUserId}`).emit('bridge:message', payload);
+        io.to(`user:${req.user.id}`).emit('bridge:message', payload);
+        io.of('/portal').to(`portal:user:${conv.client_user_id}`).emit('bridge:message', payload);
       } catch (_) {}
 
       return ApiResponse.success(res, { message: fullMessage }, 'File sent');
@@ -145,6 +162,16 @@ class BridgeChatController {
       try {
         const io = getIO();
         io.to(`user:${otherUserId}`).emit('bridge:read', { conversation_id: convId, read_by: req.user.id });
+
+        // If the CLIENT user read the chat, clear the bridge_message notification from their bell
+        const isClientReading = req.user.role_name && req.user.role_name.startsWith('CLIENT_');
+        if (isClientReading) {
+          const Notification = require('../models/Notification');
+          await Notification.clearByRefForUser(req.user.id, 'bridge_conv', convId);
+          io.of('/portal').to(`portal:user:${req.user.id}`).emit('notification:cleared', {
+            ref_type: 'bridge_conv', ref_id: convId
+          });
+        }
       } catch (_) {}
 
       return ApiResponse.success(res, {}, 'Marked as read');

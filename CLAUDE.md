@@ -19,7 +19,7 @@ TaskFlow is a Node.js/Express/EJS task management and work allocation platform w
 - **Email**: Nodemailer + Gmail SMTP (OAuth2 + app-password fallback) — `services/emailService.js`
 - **Files**: Multer for uploads, Google Drive API integration
 - **Scheduling**: node-cron (`utils/cronJobs.js`)
-- **Migrations**: Auto-run on startup via `utils/auto-migrate.js` (58 SQL files in `migrations/`)
+- **Migrations**: Auto-run on startup via `utils/auto-migrate.js` (59 SQL files in `migrations/`)
 
 ---
 
@@ -115,7 +115,7 @@ taskflow/
 │   │   └── portal.css
 │   └── socket/portalSocket.js # /portal Socket.IO namespace
 ├── public/                    # LOCAL side static assets
-├── migrations/                # 58 sequential SQL files (auto-run on startup)
+├── migrations/                # 59 sequential SQL files (auto-run on startup)
 ├── uploads/                   # File storage (tasks/, portal/, bridge/, urgent/)
 └── frontend/                  # React SPA (separate, Vite-built — experimental)
 ```
@@ -146,7 +146,7 @@ There are two co-existing UIs for the LOCAL side:
 Portal and admin hub pages use `X-SPA-Request: 1` header. `middleware/spaJson.js` intercepts `res.render()` and returns only the data JSON instead of full HTML. This avoids full-page reloads.
 
 ### Migrations
-`utils/auto-migrate.js` tracks which `.sql` files in `migrations/` have been applied (stored in a `migrations` table) and runs new ones on every server start. To add a migration: create `migrations/059_description.sql`.
+`utils/auto-migrate.js` tracks which `.sql` files in `migrations/` have been applied (stored in a `migrations` table) and runs new ones on every server start. To add a migration: create `migrations/060_description.sql`.
 
 ### Timezone
 All datetimes stored in DB as UTC. App runs on Eastern timezone. Use helpers in `utils/timezone.js` — never do raw `new Date()` for display.
@@ -191,6 +191,7 @@ All datetimes stored in DB as UTC. App runs on Eastern timezone. Use helpers in 
 - Portal tasks are in a **separate** `portal_tasks` table — not shared with LOCAL tasks
 - Client requests: `client_requests` table (managed by `models/ClientRequest.js`)
 - Dev workspace: `dev_projects` + related tables (added May 2026, migrations 056–058)
+- Comp-off cancel/revoke: `comp_off_credits.status` now has `revoked` value (migration 059, June 2026)
 - Migrations table: tracks applied SQL files by filename
 
 ---

@@ -503,17 +503,24 @@
           + '<div style="font-size:1.6rem;font-family:var(--adm-mono);font-weight:700;color:var(--adm-text-2)">'
           + history.filter(function(h){ return h.status === 'used'; }).length + '</div></div></div>';
 
+        var todayStr = new Date().toISOString().split('T')[0];
         var rows = history.map(function(h) {
           var earnedFmt = new Date(h.earned_date + 'T12:00:00').toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' });
           var appliedFmt = h.applied_to_date
             ? new Date(h.applied_to_date + 'T12:00:00').toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' })
-            : '<span style="color:var(--adm-muted)">Pending</span>';
+            : '<span style="color:var(--adm-muted)">Not applied</span>';
           var statusBadge = h.status === 'available'
             ? '<span style="background:rgba(167,139,250,0.12);color:#a78bfa;padding:2px 8px;border-radius:6px;font-size:0.68rem;font-weight:600">Available</span>'
             : '<span style="background:rgba(16,185,129,0.1);color:#10b981;padding:2px 8px;border-radius:6px;font-size:0.68rem;font-weight:600">Used</span>';
+          var cancelBtn = (h.status === 'used' && h.applied_to_date && h.applied_to_date >= todayStr)
+            ? '<button onclick="cancelCompOff(' + h.id + ')" title="Cancel this comp-off" '
+                + 'style="background:none;border:1px solid rgba(239,68,68,0.35);color:#f87171;border-radius:6px;padding:2px 8px;font-size:0.67rem;cursor:pointer;font-family:var(--adm-font);white-space:nowrap">'
+                + '<i class="bi bi-x-circle"></i> Cancel</button>'
+            : '';
           return '<tr><td style="padding:8px 10px;font-family:var(--adm-mono);font-size:0.78rem">' + earnedFmt + '</td>'
             + '<td style="padding:8px 10px;font-size:0.78rem">' + appliedFmt + '</td>'
-            + '<td style="padding:8px 10px">' + statusBadge + '</td></tr>';
+            + '<td style="padding:8px 10px">' + statusBadge + '</td>'
+            + '<td style="padding:8px 10px">' + cancelBtn + '</td></tr>';
         }).join('');
 
         body.innerHTML = balHtml
@@ -522,6 +529,7 @@
           + '<th style="padding:6px 10px;font-size:0.65rem;font-family:var(--adm-mono);color:var(--adm-muted);text-align:left;border-bottom:1px solid var(--adm-border)">Earned On</th>'
           + '<th style="padding:6px 10px;font-size:0.65rem;font-family:var(--adm-mono);color:var(--adm-muted);text-align:left;border-bottom:1px solid var(--adm-border)">Applied To</th>'
           + '<th style="padding:6px 10px;font-size:0.65rem;font-family:var(--adm-mono);color:var(--adm-muted);text-align:left;border-bottom:1px solid var(--adm-border)">Status</th>'
+          + '<th style="padding:6px 10px;font-size:0.65rem;font-family:var(--adm-mono);color:var(--adm-muted);text-align:left;border-bottom:1px solid var(--adm-border)"></th>'
           + '</tr></thead><tbody>' + rows + '</tbody></table>';
       }).catch(function(){});
   }
@@ -565,6 +573,18 @@
         else alert(res.message || 'Failed to apply comp-off');
       }).catch(function(){ alert('Network error'); })
       .finally(function(){ btn.disabled = false; });
+  };
+
+  window.cancelCompOff = function(creditId) {
+    if (!confirm('Cancel this comp-off? The credit will be restored to your balance.')) return;
+    fetch('/comp-off/' + creditId + '/cancel', {
+      method: 'DELETE',
+      headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    }).then(function(r){ return r.json(); })
+      .then(function(res) {
+        if (res.success) loadCompOff();
+        else alert(res.message || 'Failed to cancel comp-off');
+      }).catch(function(){ alert('Network error'); });
   };
 
   loadCompOff();

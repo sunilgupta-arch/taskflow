@@ -84,14 +84,23 @@
                 border-bottom:1px solid rgba(255,255,255,0.05); }
 .co-hist-item:last-child { border-bottom:none; }
 .co-hist-dot  { width:8px; height:8px; border-radius:50%; flex-shrink:0; margin-top:1px; }
-.co-hist-dot.avail { background:#10b981; }
-.co-hist-dot.used  { background:#818cf8; }
+.co-hist-dot.avail    { background:#10b981; }
+.co-hist-dot.used     { background:#818cf8; }
+.co-hist-dot.revoked  { background:#6b7280; }
 .co-hist-date { font-family:var(--adm-mono); font-size:0.78rem; color:var(--adm-text); font-weight:600; }
 .co-hist-sub  { font-size:0.7rem; color:var(--adm-muted); margin-top:2px; }
 .co-hist-badge { margin-left:auto; flex-shrink:0; padding:2px 8px; border-radius:10px;
                  font-size:0.65rem; font-weight:700; text-transform:uppercase; letter-spacing:.3px; }
-.co-hist-badge.avail { background:rgba(16,185,129,0.12); color:#10b981; }
-.co-hist-badge.used  { background:rgba(129,140,248,0.12); color:#818cf8; }
+.co-hist-badge.avail   { background:rgba(16,185,129,0.12);  color:#10b981; }
+.co-hist-badge.used    { background:rgba(129,140,248,0.12); color:#818cf8; }
+.co-hist-badge.revoked { background:rgba(107,114,128,0.12); color:#9ca3af; }
+
+/* ── Revoke button ───────────────────────────────────────────────── */
+.co-revoke-btn { background:none; border:1px solid rgba(239,68,68,0.3); border-radius:6px;
+                 color:#f87171; font-size:0.68rem; padding:3px 8px; cursor:pointer;
+                 transition:all .15s; font-family:var(--adm-font); display:inline-flex;
+                 align-items:center; gap:4px; white-space:nowrap; }
+.co-revoke-btn:hover { border-color:#f87171; background:rgba(239,68,68,0.08); }
 </style>
 
 <div class="co-wrap">
@@ -239,6 +248,7 @@
 
   // ── Drawer ──────────────────────────────────────────────────────
   window.coOpenDrawer = function(userId, name) {
+    _drawerUserId = userId;
     document.getElementById('coDrawerTitle').textContent = name + ' — Credits';
     document.getElementById('coDrawerBody').innerHTML = '<div class="co-spinner"><div class="co-spin"></div></div>';
     document.getElementById('coOverlay').classList.add('open');
@@ -253,14 +263,18 @@
       .catch(function() { document.getElementById('coDrawerBody').innerHTML = '<div class="co-empty">Network error</div>'; });
   };
 
+  var _drawerUserId = null;
+
   function renderHistory(history) {
-    var avail = history.filter(function(h){ return h.status === 'available'; }).length;
-    var used  = history.filter(function(h){ return h.status === 'used'; }).length;
+    var today = new Date().toISOString().split('T')[0];
+    var avail   = history.filter(function(h){ return h.status === 'available'; }).length;
+    var used    = history.filter(function(h){ return h.status === 'used'; }).length;
+    var revoked = history.filter(function(h){ return h.status === 'revoked'; }).length;
 
     var statsHtml = '<div class="co-hist-stats">'
       + '<div class="co-hist-stat"><div class="co-hist-stat-val" style="color:#10b981">'+avail+'</div><div class="co-hist-stat-lbl">Available</div></div>'
       + '<div class="co-hist-stat"><div class="co-hist-stat-val" style="color:#818cf8">'+used+'</div><div class="co-hist-stat-lbl">Used</div></div>'
-      + '<div class="co-hist-stat"><div class="co-hist-stat-val" style="color:#f59e0b">'+history.length+'</div><div class="co-hist-stat-lbl">Total Earned</div></div>'
+      + '<div class="co-hist-stat"><div class="co-hist-stat-val" style="color:#f59e0b">'+(history.length - revoked)+'</div><div class="co-hist-stat-lbl">Total Earned</div></div>'
       + '</div>';
 
     if (!history.length) {
@@ -269,22 +283,56 @@
     }
 
     var itemsHtml = history.map(function(h) {
-      var isUsed = h.status === 'used';
-      var sub = isUsed && h.applied_to_date
-        ? 'Applied to ' + fmtDate(h.applied_to_date)
-        : 'Earned · not yet applied';
+      var isUsed    = h.status === 'used';
+      var isRevoked = h.status === 'revoked';
+      var sub = isRevoked
+        ? 'Revoked — attendance corrected'
+        : isUsed && h.applied_to_date
+          ? 'Applied to ' + fmtDate(h.applied_to_date)
+          : 'Earned · not yet applied';
+
+      var badgeLabel = isRevoked ? 'Revoked' : isUsed ? 'Used' : 'Available';
+
+      // Show revoke button for available credits, and for used credits where leave is today or future
+      var canRevoke = !isRevoked && (
+        h.status === 'available' ||
+        (isUsed && h.applied_to_date && h.applied_to_date >= today)
+      );
+      var revokeBtn = canRevoke
+        ? '<button class="co-revoke-btn" onclick="coRevokeCredit('+h.id+')">'
+            + '<i class="bi bi-slash-circle"></i> Revoke'
+          + '</button>'
+        : '';
+
       return '<div class="co-hist-item">'
         + '<div class="co-hist-dot '+h.status+'"></div>'
         + '<div style="flex:1">'
           + '<div class="co-hist-date">Worked ' + fmtDate(h.earned_date) + '</div>'
           + '<div class="co-hist-sub">'+sub+'</div>'
         + '</div>'
-        + '<span class="co-hist-badge '+h.status+'">'+(isUsed ? 'Used' : 'Available')+'</span>'
+        + '<span class="co-hist-badge '+h.status+'" style="margin-right:8px">'+badgeLabel+'</span>'
+        + revokeBtn
         + '</div>';
     }).join('');
 
     document.getElementById('coDrawerBody').innerHTML = statsHtml + itemsHtml;
   }
+
+  window.coRevokeCredit = function(creditId) {
+    if (!confirm('Revoke this comp-off credit?\n\nThis will:\n• Remove the "worked on off day" attendance entry\n• Cancel any future leave scheduled against it\n• The day will revert to week-off on the calendar')) return;
+    fetch('/comp-off/' + creditId + '/revoke', {
+      method: 'DELETE',
+      headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    }).then(function(r){ return r.json(); })
+      .then(function(res) {
+        if (res.success) {
+          coLoad();
+          if (_drawerUserId) coOpenDrawer(_drawerUserId, document.getElementById('coDrawerTitle').textContent.replace(' — Credits',''));
+        } else {
+          alert(res.message || 'Failed to revoke credit');
+        }
+      }).catch(function(){ alert('Network error'); });
+  };
 
   window.coCloseDrawer = function() {
     document.getElementById('coOverlay').classList.remove('open');

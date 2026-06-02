@@ -847,4 +847,39 @@ router.get('/downloads/:id/download',    PortalDownloadController.serveFile);
 router.put('/downloads/:id',             requirePortalUpload, PortalDownloadController.update);
 router.delete('/downloads/:id',          requirePortalUpload, PortalDownloadController.remove);
 
+// ── Notifications (portal users) ────────────────────────────
+router.get('/notifications', async (req, res) => {
+  const Notification = require('../../models/Notification');
+  const { ApiResponse } = require('../../utils/response');
+  try {
+    const notifications = await Notification.getForUser(req.user.id, 25);
+    const unread = await Notification.getUnreadCount(req.user.id);
+    return ApiResponse.success(res, { notifications, unread });
+  } catch (err) {
+    return ApiResponse.error(res, 'Failed to load notifications');
+  }
+});
+
+router.post('/notifications/mark-read', async (req, res) => {
+  const Notification = require('../../models/Notification');
+  const { ApiResponse } = require('../../utils/response');
+  try {
+    await Notification.markAllRead(req.user.id);
+    return ApiResponse.success(res, {}, 'Marked all as read');
+  } catch (err) {
+    return ApiResponse.error(res, 'Failed');
+  }
+});
+
+router.post('/notifications/:id/mark-read', async (req, res) => {
+  const Notification = require('../../models/Notification');
+  const { ApiResponse } = require('../../utils/response');
+  try {
+    await Notification.markRead(parseInt(req.params.id), req.user.id);
+    return ApiResponse.success(res, {}, 'Marked as read');
+  } catch (err) {
+    return ApiResponse.error(res, 'Failed');
+  }
+});
+
 module.exports = router;

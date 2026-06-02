@@ -103,6 +103,12 @@
           <span class="activity-bar-badge" id="delegateChatBadge" style="display:none"></span>
         </button>
       <% } %>
+      <button class="activity-bar-item" id="portalBellBtn" onclick="togglePortalNotifs()" title="Notifications">
+        <i class="bi bi-bell-fill"></i>
+        <span class="ab-label">Alerts</span>
+        <span class="ab-tooltip">Notifications</span>
+        <span class="activity-bar-badge" id="portalNotifBadge" style="display:none">0</span>
+      </button>
       <button class="activity-bar-item" onclick="toggleTheme()" id="themeToggleBtn">
         <i class="bi" id="themeIcon"></i>
         <span class="ab-label">Theme</span>
@@ -2709,5 +2715,203 @@
   </script>
 
 <%- include('partials/_portal-chat') %>
+
+<!-- ── Portal Notification Panel ──────────────────────────── -->
+<style>
+.pnp {
+  position: fixed; top: 0; bottom: 0;
+  left: 48px; width: 300px;
+  background: var(--bs-body-bg);
+  border-right: 1px solid rgba(var(--bs-border-color-rgb, 255,255,255),.12);
+  box-shadow: 4px 0 24px rgba(0,0,0,.35);
+  z-index: 1039;
+  display: flex; flex-direction: column;
+}
+html.sidebar-expanded .pnp { left: 200px; }
+.pnp-hdr {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 13px 14px; border-bottom: 1px solid rgba(var(--bs-border-color-rgb,255,255,255),.1);
+  flex-shrink: 0;
+}
+.pnp-title { font-size: .82rem; font-weight: 600; }
+.pnp-actions { display: flex; gap: 3px; }
+.pnp-btn {
+  background: none; border: none; cursor: pointer;
+  width: 28px; height: 28px; border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: .73rem; color: var(--bs-secondary-color, #8899aa);
+  transition: background .12s;
+}
+.pnp-btn:hover { background: rgba(128,128,128,.15); }
+.pnp-body { overflow-y: auto; flex: 1; }
+.pnp-empty { padding: 28px 16px; text-align: center; font-size: .8rem; color: var(--bs-secondary-color, #8899aa); }
+.pnp-empty small { display: block; margin-top: 6px; font-size: .72rem; opacity: .7; }
+.pnp-item {
+  display: flex; gap: 10px; align-items: flex-start;
+  padding: 11px 14px;
+  border-bottom: 1px solid rgba(var(--bs-border-color-rgb,255,255,255),.06);
+  cursor: pointer; transition: background .12s;
+}
+.pnp-item:hover { background: rgba(128,128,128,.07); }
+.pnp-item.pnp-unread { background: rgba(var(--bs-primary-rgb, 59,130,246),.07); }
+.pnp-icon {
+  width: 30px; height: 30px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: .76rem; flex-shrink: 0;
+}
+.pnp-icon.c-green  { background: rgba(34,197,94,.2);  color:#22c55e; }
+.pnp-icon.c-blue   { background: rgba(59,130,246,.2); color:#3b82f6; }
+.pnp-icon.c-amber  { background: rgba(245,158,11,.2); color:#f59e0b; }
+.pnp-icon.c-purple { background: rgba(168,85,247,.2); color:#a855f7; }
+.pnp-icon.c-gray   { background: rgba(148,163,184,.2);color:#94a3b8; }
+.pnp-content { flex: 1; min-width: 0; }
+.pnp-ntitle { font-size: .77rem; font-weight: 600; margin-bottom: 2px; }
+.pnp-nbody  { font-size: .71rem; color: var(--bs-secondary-color, #8899aa); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pnp-ntime  { font-size: .67rem; color: var(--bs-secondary-color, #8899aa); margin-top: 3px; }
+</style>
+
+<div id="portalNotifPanel" class="pnp" style="display:none">
+  <div class="pnp-hdr">
+    <span class="pnp-title"><i class="bi bi-bell-fill me-2"></i>Notifications</span>
+    <div class="pnp-actions">
+      <button class="pnp-btn" onclick="pnpMarkAllRead()" title="Mark all as read"><i class="bi bi-check-all"></i></button>
+      <button class="pnp-btn" onclick="pnpClose()" title="Close"><i class="bi bi-x-lg"></i></button>
+    </div>
+  </div>
+  <div class="pnp-body" id="portalNotifList">
+    <div class="pnp-empty">Loading...</div>
+  </div>
+</div>
+
+<script>
+(function() {
+  var _pnpOpen = false;
+  var _pnpNotifs = [];
+  var _pnpLoaded = false;
+
+  function _esc(s) {
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function _icon(type) {
+    if (type === 'portal_req_picked')      return ['bi-person-check-fill',   'c-blue'];
+    if (type === 'portal_req_done')        return ['bi-check-circle-fill',    'c-green'];
+    if (type === 'portal_req_rescheduled') return ['bi-calendar-arrow-up',    'c-amber'];
+    if (type === 'portal_req_comment')     return ['bi-chat-fill',            'c-purple'];
+    if (type === 'bridge_message')         return ['bi-chat-dots-fill',       'c-purple'];
+    if (type === 'chat_message')           return ['bi-chat-dots-fill',       'c-blue'];
+    return ['bi-bell-fill', 'c-gray'];
+  }
+
+  function _ago(dt) {
+    var diff = Math.floor((Date.now() - new Date(dt)) / 1000);
+    if (diff < 60)    return 'just now';
+    if (diff < 3600)  return Math.floor(diff / 60) + 'm ago';
+    if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
+    return Math.floor(diff / 86400) + 'd ago';
+  }
+
+  function _render() {
+    var el = document.getElementById('portalNotifList');
+    if (!el) return;
+    if (!_pnpNotifs.length) {
+      el.innerHTML = '<div class="pnp-empty">No notifications yet.<small>Request updates will appear here.</small></div>';
+      return;
+    }
+    el.innerHTML = _pnpNotifs.map(function(n) {
+      var ic = _icon(n.type);
+      var cls = n.is_read ? 'pnp-item' : 'pnp-item pnp-unread';
+      return '<div class="' + cls + '" onclick="pnpClick(' + n.id + ',' + JSON.stringify(n.link || '') + ')">'
+        + '<div class="pnp-icon ' + ic[1] + '"><i class="bi ' + ic[0] + '"></i></div>'
+        + '<div class="pnp-content">'
+        + '<div class="pnp-ntitle">' + _esc(n.title) + '</div>'
+        + (n.body ? '<div class="pnp-nbody">' + _esc(n.body) + '</div>' : '')
+        + '<div class="pnp-ntime">' + _ago(n.created_at) + '</div>'
+        + '</div></div>';
+    }).join('');
+  }
+
+  function _updateBadge() {
+    var unread = _pnpNotifs.filter(function(n) { return !n.is_read; }).length;
+    var badge = document.getElementById('portalNotifBadge');
+    if (badge) {
+      badge.textContent = unread > 9 ? '9+' : String(unread);
+      badge.style.display = unread > 0 ? '' : 'none';
+    }
+  }
+
+  window.togglePortalNotifs = function() {
+    var panel = document.getElementById('portalNotifPanel');
+    if (!panel) return;
+    _pnpOpen = !_pnpOpen;
+    panel.style.display = _pnpOpen ? 'flex' : 'none';
+    if (_pnpOpen) {
+      if (!_pnpLoaded) { _pnpLoaded = true; _load(); }
+      else _render();
+    }
+  };
+
+  window.pnpClose = function() {
+    var panel = document.getElementById('portalNotifPanel');
+    if (panel) panel.style.display = 'none';
+    _pnpOpen = false;
+  };
+
+  window.pnpClick = function(id, link) {
+    _pnpNotifs.forEach(function(n) { if (n.id === id) n.is_read = 1; });
+    _updateBadge();
+    if (_pnpOpen) _render();
+    fetch('/portal/notifications/' + id + '/mark-read', { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' } }).catch(function(){});
+    if (link) window.location.href = link;
+    else pnpClose();
+  };
+
+  window.pnpMarkAllRead = function() {
+    fetch('/portal/notifications/mark-read', { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+      .then(function(r) { return r.json(); })
+      .then(function() {
+        _pnpNotifs.forEach(function(n) { n.is_read = 1; });
+        _updateBadge();
+        if (_pnpOpen) _render();
+      }).catch(function(){});
+  };
+
+  function _load() {
+    fetch('/portal/notifications', { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+      .then(function(r) { return r.json(); })
+      .then(function(res) {
+        if (!res.success) return;
+        _pnpNotifs = res.data.notifications || [];
+        _updateBadge();
+        if (_pnpOpen) _render();
+      }).catch(function(){});
+  }
+
+  // Socket listeners (portalSocket is defined earlier in this page)
+  if (typeof portalSocket !== 'undefined') {
+    portalSocket.on('notification:new', function(notif) {
+      _pnpNotifs.unshift(notif);
+      if (_pnpNotifs.length > 30) _pnpNotifs.pop();
+      _updateBadge();
+      if (_pnpOpen) _render();
+      if (typeof playNotificationSound === 'function') playNotificationSound();
+    });
+    portalSocket.on('notification:cleared', function(data) {
+      _pnpNotifs = _pnpNotifs.filter(function(n) {
+        if (data.ref_type && data.ref_id) return !(n.ref_type === data.ref_type && String(n.ref_id) === String(data.ref_id));
+        return true;
+      });
+      _updateBadge();
+      if (_pnpOpen) _render();
+    });
+  }
+
+  // Load badge count on page load
+  _load();
+  // Periodic refresh
+  setInterval(_load, 90000);
+})();
+</script>
+
 </body>
 </html>

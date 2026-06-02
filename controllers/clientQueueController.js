@@ -83,6 +83,19 @@ class ClientQueueController {
           await Notification.clearByRef(mgrIds, 'client_request', inst.request_id);
           mgrIds.forEach(uid => io.to(`user:${uid}`).emit('notification:cleared', { ref_type: 'client_request', ref_id: inst.request_id }));
         }
+
+        // Notify the portal user (request creator) that their request was picked up
+        if (instance && instance.created_by) {
+          const nTitle = 'Request Picked Up';
+          const nBody = `"${(instance.title || '').substring(0, 55)}" is now being handled by ${req.user.name}`;
+          const nLink = '/portal/requests';
+          const nid = await Notification.createIfNotExists(instance.created_by, 'portal_req_picked', nTitle, nBody, nLink, 'client_request_instance', instanceId);
+          io.of('/portal').to(`portal:user:${instance.created_by}`).emit('notification:new', {
+            id: nid, type: 'portal_req_picked', title: nTitle, body: nBody,
+            link: nLink, ref_type: 'client_request_instance', ref_id: instanceId,
+            is_read: 0, created_at: new Date()
+          });
+        }
       } catch (_) {}
       return ApiResponse.success(res, { instance });
     } catch (err) {
@@ -127,7 +140,27 @@ class ClientQueueController {
       await ClientRequest.complete(instanceId, req.user.id);
       if (trimmedRemark) await ClientRequest.addComment(instanceId, req.user.id, trimmedRemark);
       const instance = await ClientRequest.getInstanceById(instanceId);
-      try { const io = getIO(); io.emit('queue:updated', { instance }); io.of('/portal').emit('queue:updated', { instance }); } catch (_) {}
+      try {
+        const io = getIO();
+        io.emit('queue:updated', { instance });
+        io.of('/portal').emit('queue:updated', { instance });
+
+        // Notify portal user: clear the "picked" notification, create a "done" notification
+        if (instance && instance.created_by) {
+          const Notification = require('../models/Notification');
+          await Notification.clearByRef([instance.created_by], 'client_request_instance', instanceId);
+          io.of('/portal').to(`portal:user:${instance.created_by}`).emit('notification:cleared', { ref_type: 'client_request_instance', ref_id: instanceId });
+          const nTitle = 'Request Completed';
+          const nBody = `"${(instance.title || '').substring(0, 55)}" has been completed by ${req.user.name}`;
+          const nLink = '/portal/requests';
+          const nid = await Notification.create(instance.created_by, 'portal_req_done', nTitle, nBody, nLink, 'client_request_instance', instanceId);
+          io.of('/portal').to(`portal:user:${instance.created_by}`).emit('notification:new', {
+            id: nid, type: 'portal_req_done', title: nTitle, body: nBody,
+            link: nLink, ref_type: 'client_request_instance', ref_id: instanceId,
+            is_read: 0, created_at: new Date()
+          });
+        }
+      } catch (_) {}
       return ApiResponse.success(res, { instance });
     } catch (err) {
       console.error('ClientQueue complete error:', err);
@@ -161,6 +194,23 @@ class ClientQueueController {
             reason: reason.trim()
           }
         });
+      }
+
+      // Notify portal user that their request was rescheduled
+      if (instance && instance.created_by) {
+        try {
+          const Notification = require('../models/Notification');
+          const io2 = getIO();
+          const nTitle = 'Request Rescheduled';
+          const nBody = `"${(instance.title || '').substring(0, 50)}" moved to ${new_date} — ${reason.trim().substring(0, 40)}`;
+          const nLink = '/portal/requests';
+          const nid = await Notification.createIfNotExists(instance.created_by, 'portal_req_rescheduled', nTitle, nBody, nLink, 'client_request_instance', instanceId);
+          io2.of('/portal').to(`portal:user:${instance.created_by}`).emit('notification:new', {
+            id: nid, type: 'portal_req_rescheduled', title: nTitle, body: nBody,
+            link: nLink, ref_type: 'client_request_instance', ref_id: instanceId,
+            is_read: 0, created_at: new Date()
+          });
+        } catch (_) {}
       }
 
       return ApiResponse.success(res, { instance }, 'Request rescheduled');
@@ -292,6 +342,18 @@ class ClientQueueController {
             commenter_role: req.user.role_name
           };
           io.of('/portal').to(`portal:user:${ctx.created_by}`).emit('request:comment', payload);
+
+          // Also create a portal notification for the comment
+          const Notification = require('../models/Notification');
+          const nTitle = 'New Comment on Request';
+          const nBody = `${req.user.name}: "${body.trim().substring(0, 55)}"`;
+          const nLink = '/portal/requests';
+          const nid = await Notification.createIfNotExists(ctx.created_by, 'portal_req_comment', nTitle, nBody, nLink, 'client_request_instance', instanceId);
+          io.of('/portal').to(`portal:user:${ctx.created_by}`).emit('notification:new', {
+            id: nid, type: 'portal_req_comment', title: nTitle, body: nBody,
+            link: nLink, ref_type: 'client_request_instance', ref_id: instanceId,
+            is_read: 0, created_at: new Date()
+          });
         } catch (_) {}
       }
       return ApiResponse.success(res, { comment });

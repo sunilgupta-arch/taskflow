@@ -68,6 +68,68 @@ class CompOff {
     }
   }
 
+  static async revokeCredit(creditId) {
+    const today = new Date().toISOString().split('T')[0];
+
+    const [[credit]] = await db.query(
+      'SELECT id, user_id, status, earned_date, applied_to_date FROM comp_off_credits WHERE id = ?',
+      [creditId]
+    );
+
+    if (!credit) throw new Error('Credit not found');
+    if (credit.status === 'revoked') throw new Error('Credit is already revoked');
+
+    // If applied to a future/present date, remove that leave from attendance
+    if (credit.status === 'used' && credit.applied_to_date && credit.applied_to_date >= today) {
+      await db.query(
+        `DELETE FROM attendance_logs
+         WHERE user_id = ? AND date = ? AND is_manual = 1 AND manual_status = 'comp_off'`,
+        [credit.user_id, credit.applied_to_date]
+      );
+    }
+
+    // Remove the "worked on off day" attendance entry so the day reverts to week-off
+    await db.query(
+      `DELETE FROM attendance_logs
+       WHERE user_id = ? AND date = ? AND is_manual = 1 AND manual_status = 'comp_off'`,
+      [credit.user_id, credit.earned_date]
+    );
+
+    await db.query(
+      'UPDATE comp_off_credits SET status = "revoked", applied_to_date = NULL WHERE id = ?',
+      [creditId]
+    );
+
+    return credit;
+  }
+
+  static async cancelCredit(creditId, userId) {
+    const today = new Date().toISOString().split('T')[0];
+
+    const [[credit]] = await db.query(
+      'SELECT id, status, applied_to_date FROM comp_off_credits WHERE id = ? AND user_id = ?',
+      [creditId, userId]
+    );
+
+    if (!credit) throw new Error('Credit not found');
+    if (credit.status !== 'used') throw new Error('Only applied comp-offs can be cancelled');
+    if (!credit.applied_to_date) throw new Error('No applied date on this credit');
+    if (credit.applied_to_date < today) throw new Error('Cannot cancel a comp-off that has already passed');
+
+    await db.query(
+      'UPDATE comp_off_credits SET status = "available", applied_to_date = NULL WHERE id = ?',
+      [creditId]
+    );
+
+    await db.query(
+      `DELETE FROM attendance_logs
+       WHERE user_id = ? AND date = ? AND is_manual = 1 AND manual_status = 'comp_off'`,
+      [userId, credit.applied_to_date]
+    );
+
+    return credit.applied_to_date;
+  }
+
   static async hasActionToday(userId, dateStr) {
     const [[earnRow]] = await db.query(
       'SELECT COUNT(*) AS cnt FROM comp_off_credits WHERE user_id = ? AND earned_date = ?',
