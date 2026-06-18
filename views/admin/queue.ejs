@@ -116,6 +116,9 @@
 .admq-table tbody tr.row-done   td:first-child { border-left-color: #10b981; }
 .admq-table tbody tr.row-missed   td:first-child { border-left-color: #ef4444; }
 .admq-table tbody tr.row-overdue  td:first-child { border-left-color: #ef4444; }
+.admq-table tbody tr.row-yesterday { background: rgba(239,68,68,0.07); }
+.admq-table tbody tr.row-yesterday:hover { background: rgba(239,68,68,0.13); }
+.admq-table tbody tr.row-yesterday td:first-child { border-left-color: #ef4444; }
 .admq-table tbody tr.row-cancelled td:first-child { border-left-color: #4b5563; }
 .admq-table tbody tr.row-cancelled { opacity: 0.45; }
 .admq-table tbody tr.row-approved     td:first-child { border-left-color: #10b981; }
@@ -155,6 +158,14 @@
   padding: 1px 6px; border-radius: 6px;
   background: rgba(239,68,68,0.12); color: #ef4444;
   border: 1px solid rgba(239,68,68,0.3); margin-left: 5px; vertical-align: middle;
+}
+.admq-yesterday-chip {
+  display: inline-block; font-size: 0.58rem; font-weight: 700;
+  font-family: var(--adm-mono); text-transform: uppercase;
+  padding: 1px 6px; border-radius: 6px;
+  background: rgba(239,68,68,0.18); color: #ef4444;
+  border: 1px solid rgba(239,68,68,0.4); margin-left: 5px; vertical-align: middle;
+  letter-spacing: 0.3px;
 }
 .admq-rescheduled-chip {
   display: inline-block; font-size: 0.58rem; font-weight: 700;
@@ -889,10 +900,12 @@
       return;
     }
     var buildRow = function(inst, idx, hidden, isPastRow) {
-      var past = (isPastRow !== undefined) ? isPastRow : isPast(date);
-      var overdue = inst.instance_date < _today && inst.status === 'open';
-      var rowCls  = overdue ? 'row-overdue' : 'row-'+inst.status;
-      var badge   = overdue ? '<span class="admq-overdue-chip">Overdue</span>' : '';
+      var past       = (isPastRow !== undefined) ? isPastRow : isPast(date);
+      var isYesterday = inst.instance_date === yesterday;
+      var overdue    = !isYesterday && inst.instance_date < _today && inst.status === 'open';
+      var rowCls     = isYesterday ? 'row-yesterday' : (overdue ? 'row-overdue' : 'row-'+inst.status);
+      var badge      = isYesterday ? '<span class="admq-yesterday-chip">Yesterday</span>'
+                     : overdue     ? '<span class="admq-overdue-chip">Overdue</span>' : '';
       if (inst.rescheduled_from_date) badge += '<span class="admq-rescheduled-chip" title="Rescheduled from '+esc(inst.rescheduled_from_date)+(inst.rescheduled_by_name?' by '+esc(inst.rescheduled_by_name):'')+'">↻ Rescheduled</span>';
       var actions = '';
       if (inst.status === 'missed' || (past && inst.status === 'open')) {
@@ -969,7 +982,8 @@
       +'<th style="text-align:center;width:36px">SN</th><th>Request</th><th>Created</th><th>Priority</th><th>Due</th><th>Creator</th><th>Status</th><th>Picked By</th><th>Latest Comment</th><th></th>'
       +'</tr></thead>';
 
-    var isToday = (date === _today);
+    var isToday   = (date === _today);
+    var yesterday = shiftDate(_today, -1);
     var overdueList = isToday ? active.filter(function(i){ return i.instance_date < _today; }) : [];
     var todayList   = isToday ? active.filter(function(i){ return i.instance_date >= _today; }) : active;
 
@@ -985,51 +999,29 @@
         +'</tr>'
       : '';
 
-    if (isToday && overdueList.length > 0) {
-      var sevenDaysAgo  = shiftDate(_today, -7);
-      var recentOverdue = overdueList.filter(function(i){ return i.instance_date >= sevenDaysAgo; })
-                                     .sort(function(a,b){ return b.instance_date.localeCompare(a.instance_date); });
-      var olderOverdue  = overdueList.filter(function(i){ return i.instance_date < sevenDaysAgo; })
-                                     .sort(function(a,b){ return b.instance_date.localeCompare(a.instance_date); });
-
-      var overdueRows = recentOverdue.map(function(inst, i){ return buildRow(inst, i, false, true); }).join('');
-      var todayRows   = todayList.map(function(inst, i)  { return buildRow(inst, i, false, false); }).join('');
-      var emptyToday  = !todayRows ? '<tr><td colspan="10" style="text-align:center;padding:22px;color:var(--adm-muted);font-size:0.82rem"><i class="bi bi-check-circle" style="margin-right:6px"></i>No new requests today</td></tr>' : '';
-      var oc = overdueList.length, os = oc > 1 ? 's' : '';
-
-      // Pre-build older rows HTML while buildRow is still in scope
-      window._admqOlderOverdueHtml = olderOverdue.length
-        ? olderOverdue.map(function(inst, i){ return buildRow(inst, i, false, true); }).join('')
+    if (isToday) {
+      // Yesterday's items shown at top of Today section with danger background
+      // Older items (before yesterday) are hidden for now
+      var yesterdayItems = overdueList.filter(function(i){ return i.instance_date === yesterday; });
+      var yesterdayRows  = yesterdayItems.map(function(inst, i){ return buildRow(inst, i, false, true); }).join('');
+      var todayRows      = todayList.map(function(inst, i){ return buildRow(inst, i, false, false); }).join('');
+      var yc = yesterdayItems.length;
+      var emptyToday = !todayRows && !yesterdayRows
+        ? '<tr><td colspan="10" style="text-align:center;padding:22px;color:var(--adm-muted);font-size:0.82rem"><i class="bi bi-check-circle" style="margin-right:6px"></i>No requests for today</td></tr>'
         : '';
-      var olderLink = olderOverdue.length
-        ? '<tr id="admqViewAllOverdueRow"><td colspan="10" style="text-align:center;padding:8px 0 12px">'
-            +'<button onclick="admqShowAllOverdue()" style="background:none;border:1px solid var(--adm-border);border-radius:6px;color:var(--adm-accent);font-size:0.78rem;cursor:pointer;padding:5px 14px">'
-              +'<i class="bi bi-clock-history" style="margin-right:5px"></i>'
-              +'View all overdue &mdash; '+olderOverdue.length+' older request'+(olderOverdue.length>1?'s':'')+' not shown'
-            +'</button>'
-          +'</td></tr>'
-        : '';
+
+      var hdrCount = '<span class="admq-section-hdr-count admq-today-count">'+todayList.length+'</span>'
+        + (yc > 0 ? '<span class="admq-section-hdr-count admq-overdue-count" style="margin-left:4px" title="'+yc+' from yesterday">+'+yc+' yest.</span>' : '');
 
       area.innerHTML =
-        // ── Today (top) ──────────────────────────────────────────────────
         '<div class="admq-section-hdr admq-section-hdr-today">'
           +'<i class="bi bi-calendar-check"></i>'
           +'<span class="admq-section-hdr-title">Today</span>'
-          +'<span class="admq-section-hdr-count admq-today-count">'+todayList.length+'</span>'
+          +hdrCount
         +'</div>'
-        +'<div class="admq-table-wrap"><table class="admq-table">'+thead+'<tbody>'+emptyToday+todayRows+cancelledFooter+cancelledRows+'</tbody></table></div>'
-
-        // ── Overdue (bottom, collapsed by default) ───────────────────────
-        +'<div class="admq-section-hdr admq-section-hdr-overdue" id="admqOverdueToggleHdr" onclick="admqToggleOverdue()" style="cursor:pointer;margin-top:18px">'
-          +'<i class="bi bi-chevron-right" id="admqOverdueChevron" style="font-size:0.7rem;transition:transform 0.2s"></i>'
-          +'<i class="bi bi-exclamation-triangle-fill"></i>'
-          +'<span class="admq-section-hdr-title">Overdue</span>'
-          +'<span class="admq-section-hdr-count admq-overdue-count">'+oc+'</span>'
-          +'<span class="admq-section-hdr-sub">'+oc+' pending request'+os+' from previous days</span>'
-        +'</div>'
-        +'<div id="admqOverdueBody" style="display:none">'
-          +'<div class="admq-table-wrap"><table class="admq-table" id="admqOverdueTable">'+thead+'<tbody>'+overdueRows+olderLink+'</tbody></table></div>'
-        +'</div>';
+        +'<div class="admq-table-wrap"><table class="admq-table">'+thead
+          +'<tbody>'+yesterdayRows+emptyToday+todayRows+cancelledFooter+cancelledRows+'</tbody>'
+        +'</table></div>';
 
     } else {
       var isPastDate  = isPast(date);
