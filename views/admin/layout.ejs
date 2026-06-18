@@ -1531,7 +1531,7 @@
       var dl = admBdrDateLabel(m.created_at);
       if (dl !== lastDate) { html += '<div class="bdr-date-div"><span>'+dl+'</span></div>'; lastDate = dl; }
       var sent = m.sender_id === admBdrUserId, cls = sent ? 'sent' : 'received';
-      var t = new Date(m.created_at).toLocaleTimeString('en-US',{timeZone:'Asia/Kolkata',hour:'2-digit',minute:'2-digit',hour12:true});
+      var t = new Date(m.created_at).toLocaleTimeString('en-US',{timeZone:'America/New_York',hour:'2-digit',minute:'2-digit',hour12:true});
       var content = '';
       if (m.is_deleted) { content = '<i class="bi bi-ban me-1"></i><em>This message was deleted</em>'; }
       else if (m.type==='file' && m.attachment) { content = admBdrRenderFile(m.attachment, m.id); }
@@ -1699,7 +1699,7 @@
   function _gcBuildBubble(m) {
     var sent = m.sender_id === admGcUserId;
     var cls  = sent ? 'sent' : 'received';
-    var t    = new Date(m.created_at).toLocaleTimeString('en-US',{timeZone:'Asia/Kolkata',hour:'2-digit',minute:'2-digit',hour12:true});
+    var t    = new Date(m.created_at).toLocaleTimeString('en-US',{timeZone:'America/New_York',hour:'2-digit',minute:'2-digit',hour12:true});
     var content = m.is_deleted ? '<em>This message was deleted</em>'
       : (m.type==='file' && m.attachment ? admGcRenderFile(m.attachment, m.id)
         : admGcRenderWithMentions(m.content||''));
@@ -1725,7 +1725,7 @@
     }
     var html = '', lastDate = '';
     messages.forEach(function(m) {
-      var dl = new Date(m.created_at).toLocaleDateString('en-US',{timeZone:'Asia/Kolkata',month:'short',day:'numeric'});
+      var dl = new Date(m.created_at).toLocaleDateString('en-US',{timeZone:'America/New_York',month:'short',day:'numeric'});
       if (dl !== lastDate) { html += '<div class="adm-gc-date-div"><span>'+dl+'</span></div>'; lastDate = dl; }
       html += _gcBuildBubble(m);
     });
@@ -2066,7 +2066,7 @@
         var box = document.getElementById('admBdrMessages');
         if (box.querySelector('.text-center')) box.innerHTML = '';
         var sent = msg.sender_id === admBdrUserId, cls = sent?'sent':'received';
-        var t = new Date(msg.created_at).toLocaleTimeString('en-US',{timeZone:'Asia/Kolkata',hour:'2-digit',minute:'2-digit',hour12:true});
+        var t = new Date(msg.created_at).toLocaleTimeString('en-US',{timeZone:'America/New_York',hour:'2-digit',minute:'2-digit',hour12:true});
         var content = '';
         if (msg.type==='file'&&msg.attachment) content = admBdrRenderFile(msg.attachment, msg.id);
         else { var tmp2=document.createElement('div'); tmp2.textContent=msg.content||''; content=tmp2.innerHTML; }

@@ -619,17 +619,17 @@
 
   function fmtTime(d) {
     if (!d) return '';
-    return new Date(d).toLocaleTimeString('en-US', { timeZone:'Asia/Kolkata', hour:'2-digit', minute:'2-digit', hour12:true });
+    return new Date(d).toLocaleTimeString('en-US', { timeZone:'America/New_York', hour:'2-digit', minute:'2-digit', hour12:true });
   }
   function fmtSidebarTime(d) {
     if (!d) return '';
     var dt = new Date(d), now = new Date(), diff = now - dt;
     if (diff < 86400000 && dt.getDate() === now.getDate()) return fmtTime(d);
-    if (diff < 604800000) return dt.toLocaleDateString('en-US',{timeZone:'Asia/Kolkata',weekday:'short'});
-    return dt.toLocaleDateString('en-US',{timeZone:'Asia/Kolkata',month:'short',day:'numeric'});
+    if (diff < 604800000) return dt.toLocaleDateString('en-US',{timeZone:'America/New_York',weekday:'short'});
+    return dt.toLocaleDateString('en-US',{timeZone:'America/New_York',month:'short',day:'numeric'});
   }
   function fmtDateDiv(d) {
-    return new Date(d).toLocaleDateString('en-US',{timeZone:'Asia/Kolkata',weekday:'long',month:'short',day:'numeric'});
+    return new Date(d).toLocaleDateString('en-US',{timeZone:'America/New_York',weekday:'long',month:'short',day:'numeric'});
   }
   function fmtBytes(b) {
     if (!b) return '';
