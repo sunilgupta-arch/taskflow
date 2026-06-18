@@ -988,10 +988,29 @@
       : '';
 
     if (isToday && overdueList.length > 0) {
-      var overdueRows = overdueList.map(function(inst, i){ return buildRow(inst, i, false, true); }).join('');
+      var sevenDaysAgo  = shiftDate(_today, -7);
+      var recentOverdue = overdueList.filter(function(i){ return i.instance_date >= sevenDaysAgo; })
+                                     .sort(function(a,b){ return b.instance_date.localeCompare(a.instance_date); });
+      var olderOverdue  = overdueList.filter(function(i){ return i.instance_date < sevenDaysAgo; })
+                                     .sort(function(a,b){ return b.instance_date.localeCompare(a.instance_date); });
+
+      var overdueRows = recentOverdue.map(function(inst, i){ return buildRow(inst, i, false, true); }).join('');
       var todayRows   = todayList.map(function(inst, i)  { return buildRow(inst, i, false, false); }).join('');
       var emptyToday  = !todayRows ? '<tr><td colspan="10" style="text-align:center;padding:22px;color:var(--adm-muted);font-size:0.82rem"><i class="bi bi-check-circle" style="margin-right:6px"></i>No new requests today</td></tr>' : '';
       var oc = overdueList.length, os = oc > 1 ? 's' : '';
+
+      // Pre-build older rows HTML while buildRow is still in scope
+      window._admqOlderOverdueHtml = olderOverdue.length
+        ? olderOverdue.map(function(inst, i){ return buildRow(inst, i, false, true); }).join('')
+        : '';
+      var olderLink = olderOverdue.length
+        ? '<tr id="admqViewAllOverdueRow"><td colspan="10" style="text-align:center;padding:8px 0 12px">'
+            +'<button onclick="admqShowAllOverdue()" style="background:none;border:1px solid var(--adm-border);border-radius:6px;color:var(--adm-accent);font-size:0.78rem;cursor:pointer;padding:5px 14px">'
+              +'<i class="bi bi-clock-history" style="margin-right:5px"></i>'
+              +'View all overdue &mdash; '+olderOverdue.length+' older request'+(olderOverdue.length>1?'s':'')+' not shown'
+            +'</button>'
+          +'</td></tr>'
+        : '';
 
       area.innerHTML =
         // ── Today (top) ──────────────────────────────────────────────────
@@ -1011,7 +1030,7 @@
           +'<span class="admq-section-hdr-sub">'+oc+' pending request'+os+' from previous days</span>'
         +'</div>'
         +'<div id="admqOverdueBody" style="display:none">'
-          +'<div class="admq-table-wrap"><table class="admq-table">'+thead+'<tbody>'+overdueRows+'</tbody></table></div>'
+          +'<div class="admq-table-wrap"><table class="admq-table" id="admqOverdueTable">'+thead+'<tbody>'+overdueRows+olderLink+'</tbody></table></div>'
         +'</div>';
 
     } else {
@@ -1044,6 +1063,13 @@
     var opening = body.style.display === 'none';
     body.style.display    = opening ? '' : 'none';
     if (chevron) chevron.style.transform = opening ? 'rotate(90deg)' : '';
+  };
+
+  window.admqShowAllOverdue = function() {
+    var linkRow = document.getElementById('admqViewAllOverdueRow');
+    if (!linkRow || !window._admqOlderOverdueHtml) return;
+    linkRow.outerHTML = window._admqOlderOverdueHtml;
+    window._admqOlderOverdueHtml = null;
   };
 
   window.admqUncancel = function(id) {
