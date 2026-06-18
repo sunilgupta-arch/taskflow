@@ -66,9 +66,9 @@ class ClientRequest {
     await ClientRequest.autoMarkMissed(dateStr);
 
     const today = new Date().toISOString().split('T')[0];
-    // When viewing today, also surface one-time open instances from past dates (carry-forward)
+    // When viewing today, also surface past incomplete instances (open/missed/picked) as overdue
     const carryForward = dateStr === today
-      ? `OR (cri.instance_date < ? AND cri.status = 'open' AND cr.recurrence = 'none')`
+      ? `OR (cri.instance_date < ? AND cri.status IN ('open','missed','picked'))`
       : '';
     const queryParams = dateStr === today ? [dateStr, dateStr] : [dateStr];
 
@@ -225,7 +225,43 @@ class ClientRequest {
        ORDER BY crc.created_at ASC`,
       [instanceId]
     );
-    return rows;
+    if (!rows.length) return rows;
+    const ids = rows.map(r => r.id);
+    const [files] = await db.query(
+      `SELECT * FROM client_request_comment_files WHERE comment_id IN (?)`,
+      [ids]
+    );
+    const fileMap = {};
+    files.forEach(f => {
+      if (!fileMap[f.comment_id]) fileMap[f.comment_id] = [];
+      fileMap[f.comment_id].push(f);
+    });
+    return rows.map(r => ({ ...r, files: fileMap[r.id] || [] }));
+  }
+
+  static async addCommentFiles(commentId, fileRows) {
+    if (!fileRows.length) return;
+    const values = fileRows.map(f => [
+      commentId, f.uploaded_by, f.file_name, f.mime_type,
+      f.drive_file_id, f.drive_view_link || null, f.file_size || null
+    ]);
+    await db.query(
+      `INSERT INTO client_request_comment_files
+       (comment_id, uploaded_by, file_name, mime_type, drive_file_id, drive_view_link, file_size)
+       VALUES ?`,
+      [values]
+    );
+  }
+
+  static async getChatFile(fileId) {
+    const [[row]] = await db.query(
+      `SELECT cf.*, crc.instance_id
+       FROM client_request_comment_files cf
+       JOIN client_request_comments crc ON cf.comment_id = crc.id
+       WHERE cf.id = ?`,
+      [fileId]
+    );
+    return row || null;
   }
 
   static async addComment(instanceId, userId, body) {
@@ -653,6 +689,126 @@ class ClientRequest {
        WHERE o.org_type = 'LOCAL' AND u.is_active = 1
          AND r.name IN ('LOCAL_USER', 'LOCAL_MANAGER')
        ORDER BY u.name ASC`
+    );
+    return rows;
+  }
+
+  // Distinct portal users who have ever submitted a request
+  static async getPortalClients() {
+    const [rows] = await db.query(
+      `SELECT DISTINCT u.id, u.name, o.name as org_name
+       FROM users u
+       JOIN client_requests cr ON cr.created_by = u.id
+       JOIN organizations o ON u.organization_id = o.id
+       WHERE u.is_active = 1
+       ORDER BY u.name ASC`
+    );
+    return rows;
+  }
+
+  // Paginated search + filter across all instances (for the Search & Filter offcanvas)
+  static async searchFilter({ clientId, pickedBy, q, page = 1, limit = 20 }) {
+    const offset = (page - 1) * limit;
+    const params = [];
+    const whereClauses = ['cr.is_active = 1'];
+
+    if (clientId) {
+      whereClauses.push('cr.created_by = ?');
+      params.push(clientId);
+    }
+    if (pickedBy) {
+      whereClauses.push('cri.picked_by = ?');
+      params.push(pickedBy);
+    }
+    if (q) {
+      const like = '%' + q + '%';
+      whereClauses.push(
+        '(cr.title LIKE ? OR cr.description LIKE ? OR EXISTS (SELECT 1 FROM client_request_comments _c WHERE _c.instance_id = cri.id AND _c.body LIKE ?))'
+      );
+      params.push(like, like, like);
+    }
+
+    const where = 'WHERE ' + whereClauses.join(' AND ');
+
+    const baseSql = `
+      FROM client_request_instances cri
+      JOIN client_requests cr ON cri.request_id = cr.id
+      JOIN organizations o ON cr.org_id = o.id
+      JOIN users creator ON cr.created_by = creator.id
+      LEFT JOIN users picker ON cri.picked_by = picker.id
+      LEFT JOIN (
+        SELECT c1.instance_id, c1.body, c1.created_at, c1.user_id
+        FROM client_request_comments c1
+        INNER JOIN (
+          SELECT instance_id, MAX(created_at) as max_at FROM client_request_comments GROUP BY instance_id
+        ) c2 ON c1.instance_id = c2.instance_id AND c1.created_at = c2.max_at
+      ) lc ON lc.instance_id = cri.id
+      LEFT JOIN users lc_user ON lc.user_id = lc_user.id
+      LEFT JOIN (
+        SELECT instance_id, COUNT(*) as comment_count FROM client_request_comments GROUP BY instance_id
+      ) cnt ON cnt.instance_id = cri.id
+      ${where}`;
+
+    const [[{ total }]] = await db.query(`SELECT COUNT(*) as total ${baseSql}`, params);
+
+    const [rows] = await db.query(
+      `SELECT
+        cri.id as instance_id, cri.request_id, cri.instance_date, cri.status,
+        cri.picked_at, cri.completed_at, cri.completed_late, cri.picked_by,
+        cr.title, cr.description, cr.priority, cr.task_type, cr.recurrence,
+        cr.created_by, creator.name as created_by_name,
+        o.name as org_name,
+        picker.name as picked_by_name,
+        lc.body as latest_comment,
+        lc_user.name as latest_comment_by,
+        lc.created_at as latest_comment_at,
+        COALESCE(cnt.comment_count, 0) as comment_count
+       ${baseSql}
+       ORDER BY cri.instance_date DESC, cri.id DESC
+       LIMIT ? OFFSET ?`,
+      [...params, limit, offset]
+    );
+
+    return { rows, total, page, limit, hasMore: offset + rows.length < total };
+  }
+
+  // Same as searchFilter but returns all rows (no pagination) for CSV export
+  static async searchFilterAll({ clientId, pickedBy, q }) {
+    const params = [];
+    const whereClauses = ['cr.is_active = 1'];
+
+    if (clientId) { whereClauses.push('cr.created_by = ?'); params.push(clientId); }
+    if (pickedBy) { whereClauses.push('cri.picked_by = ?'); params.push(pickedBy); }
+    if (q) {
+      const like = '%' + q + '%';
+      whereClauses.push(
+        '(cr.title LIKE ? OR cr.description LIKE ? OR EXISTS (SELECT 1 FROM client_request_comments _c WHERE _c.instance_id = cri.id AND _c.body LIKE ?))'
+      );
+      params.push(like, like, like);
+    }
+
+    const where = 'WHERE ' + whereClauses.join(' AND ');
+
+    const [rows] = await db.query(
+      `SELECT
+        cri.id as instance_id, cri.request_id, cri.instance_date, cri.status,
+        cri.picked_at, cri.completed_at, cri.completed_late, cri.picked_by,
+        cr.title, cr.description, cr.priority, cr.task_type, cr.recurrence,
+        cr.created_by, creator.name as created_by_name,
+        o.name as org_name,
+        picker.name as picked_by_name,
+        COALESCE(cnt.comment_count, 0) as comment_count
+       FROM client_request_instances cri
+       JOIN client_requests cr ON cri.request_id = cr.id
+       JOIN organizations o ON cr.org_id = o.id
+       JOIN users creator ON cr.created_by = creator.id
+       LEFT JOIN users picker ON cri.picked_by = picker.id
+       LEFT JOIN (
+         SELECT instance_id, COUNT(*) as comment_count FROM client_request_comments GROUP BY instance_id
+       ) cnt ON cnt.instance_id = cri.id
+       ${where}
+       ORDER BY cri.instance_date DESC, cri.id DESC`,
+      params
     );
     return rows;
   }

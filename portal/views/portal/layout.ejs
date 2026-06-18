@@ -866,7 +866,7 @@
         }
         var isSent = m.sender_id === PORTAL_USER.id;
         var cls = isSent ? 'sent' : 'received';
-        var time = parseServerDate(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        var time = parseServerDate(m.created_at).toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: '2-digit', minute: '2-digit', hour12: true });
         var content = '';
         if (m.is_deleted) {
           content = '<i class="bi bi-ban me-1"></i><em>This message was deleted</em>';
@@ -1061,7 +1061,7 @@
     function appendSupportMsg(container, msg) {
       var isSent = msg.sender_id === PORTAL_USER.id;
       var cls = isSent ? 'sent' : 'received';
-      var time = parseServerDate(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      var time = parseServerDate(msg.created_at).toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: '2-digit', minute: '2-digit', hour12: true });
       var content = '';
       if (msg.type === 'file' && msg.attachment) {
         content = renderFileContent(msg.attachment, msg.id, '/portal/bridge/attachment');
@@ -1281,7 +1281,7 @@
         }
         var isMine = m.sender_id === PORTAL_USER.id;
         var cls = isMine ? 'sent' : 'received';
-        var time = new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        var time = parseServerDate(m.created_at).toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: '2-digit', minute: '2-digit', hour12: true });
         var content = '';
         if (m.type === 'file' && m.attachment) {
           var _uext = m.attachment.file_name.split('.').pop().toLowerCase();
@@ -1532,8 +1532,8 @@
         document.getElementById('urgentHistoryBody').innerHTML = '<table class="table table-sm table-hover mb-0" style="font-size:0.82rem;">' +
           '<thead><tr><th>Date</th><th>Raised By</th><th>Message</th><th>Accepted By</th><th>Status</th><th>Messages</th><th></th></tr></thead>' +
           '<tbody>' + res.data.chats.map(function(c) {
-            var dt = new Date(c.created_at);
-            var dateStr = dt.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' ' + dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            var dt = parseServerDate(c.created_at);
+            var dateStr = dt.toLocaleDateString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric' }) + ' ' + dt.toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: '2-digit', minute: '2-digit', hour12: true });
             var statusCls = c.status === 'resolved' ? 'text-success' : c.status === 'accepted' ? 'text-info' : 'text-warning';
             var msg = c.message.length > 50 ? c.message.substring(0, 50) + '...' : c.message;
             var duration = '';
@@ -1570,7 +1570,7 @@
           if (m.type === 'system') return '<div class="urgent-msg-system">' + escapeHtml(m.content) + '</div>';
           var isMine = m.sender_id === PORTAL_USER.id;
           var cls = isMine ? 'sent' : 'received';
-          var time = new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          var time = parseServerDate(m.created_at).toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: '2-digit', minute: '2-digit', hour12: true });
           var content = '';
           if (m.type === 'file' && m.attachment) {
             content = '<i class="bi bi-file-earmark me-1"></i>' + escapeHtml(m.attachment.file_name);
@@ -1601,12 +1601,16 @@
 
     function parseServerDate(dateStr) {
       if (!dateStr) return new Date();
-      // If already has timezone info or is ISO format, parse directly
-      if (dateStr.includes('T') || dateStr.includes('Z') || dateStr.includes('+')) return new Date(dateStr);
-      // Append UTC offset for Eastern time (server stores in EDT/EST)
-      // Create the date in the server's timezone context
-      const d = new Date(dateStr.replace(' ', 'T') + '-04:00');
-      return isNaN(d.getTime()) ? new Date(dateStr) : d;
+      const s = String(dateStr);
+      if (s.charAt(s.length - 1) === 'Z' || s.includes('+') ||
+          (s.includes('T') && s.length > 19)) return new Date(s);
+      // MySQL TIMESTAMP arrives in Eastern timezone (server OS = America/New_York).
+      // Compute ET↔UTC offset dynamically so EDT (-4h) and EST (-5h) both work.
+      const now = new Date();
+      const etOffsetMs = new Date(now.toLocaleString('en-US', { timeZone: 'UTC' })).getTime() -
+                         new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' })).getTime();
+      const d = new Date(s.replace(' ', 'T') + 'Z');
+      return isNaN(d.getTime()) ? new Date() : new Date(d.getTime() + etOffsetMs);
     }
 
     function timeAgo(dateStr) {
@@ -2301,7 +2305,7 @@
         unreadInserted = true;
       }
       var cls = isSent ? 'sent' : 'received';
-      var time = new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      var time = parseServerDate(m.created_at).toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: '2-digit', minute: '2-digit', hour12: true });
       var content = '';
       if (m.is_deleted) {
         content = '<em class="text-muted" style="font-size:0.75rem"><i class="bi bi-ban me-1"></i>deleted</em>';
@@ -2517,7 +2521,7 @@
       var wasAtBottom = _gcIsAtBottom(container);
       var isSent = msg.sender_id === _gcUserId;
       var cls = isSent ? 'sent' : 'received';
-      var time = new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      var time = parseServerDate(msg.created_at).toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: '2-digit', minute: '2-digit', hour12: true });
       var content = '';
       if (msg.type === 'file' && msg.attachment) {
         content = gcRenderFile(msg.attachment, msg.id);

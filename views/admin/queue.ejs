@@ -72,6 +72,35 @@
   text-align: left; white-space: nowrap;
   background: var(--adm-surface-2);
 }
+.admq-section-hdr {
+  display:flex; align-items:center; gap:8px;
+  padding:8px 16px; font-size:0.7rem;
+  border-radius:10px; border:1px solid transparent;
+}
+.admq-section-hdr-overdue {
+  background:rgba(245,158,11,0.07);
+  border-color:rgba(245,158,11,0.22);
+  color:#f59e0b;
+}
+.admq-section-hdr-today {
+  background:var(--adm-surface-2);
+  border-color:var(--adm-border);
+  color:var(--adm-text-2);
+  margin-top:18px;
+}
+.admq-section-hdr-title {
+  font-weight:700; letter-spacing:1.5px; text-transform:uppercase;
+}
+.admq-section-hdr-count {
+  display:inline-flex; align-items:center; justify-content:center;
+  padding:1px 8px; border-radius:20px; font-weight:700; font-size:0.66rem;
+}
+.admq-overdue-count { background:rgba(245,158,11,0.18); color:#f59e0b; }
+.admq-today-count   { background:rgba(255,255,255,0.08); color:var(--adm-text-2); }
+[data-bs-theme="light"] .admq-today-count { background:rgba(0,0,0,0.06); }
+.admq-section-hdr-sub {
+  margin-left:2px; font-size:0.64rem; color:var(--adm-muted);
+}
 .admq-table tbody tr {
   border-bottom: 1px solid var(--adm-border);
   transition: background 0.12s; cursor: pointer;
@@ -331,6 +360,141 @@
 .admq-modal-cancel:hover  { border-color: var(--adm-border-2, #1e3860); color: var(--adm-text, #dceaf8); }
 .admq-modal-confirm:hover { background: #2563eb; }
 
+/* ── Chat Modal ───────────────────────────────────────────────────── */
+#admqChatModal {
+  position:fixed; inset:0; z-index:1060; display:none;
+  align-items:center; justify-content:center;
+  background:rgba(0,0,0,0.65); backdrop-filter:blur(5px);
+}
+#admqChatBox {
+  background:var(--adm-surface); border:1px solid var(--adm-border);
+  border-radius:18px; width:680px; max-width:96vw;
+  height:82vh; max-height:700px; display:flex; flex-direction:column;
+  box-shadow:0 24px 72px rgba(0,0,0,0.55); overflow:hidden;
+}
+#admqChatHeader {
+  display:flex; align-items:center; gap:10px;
+  padding:14px 18px; border-bottom:1px solid var(--adm-border);
+  background:var(--adm-surface-2); flex-shrink:0;
+}
+#admqChatTitle {
+  flex:1; font-size:0.88rem; font-weight:700;
+  color:var(--adm-text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+#admqChatTitle small {
+  display:block; font-size:0.65rem; font-weight:400;
+  color:var(--adm-muted); letter-spacing:.5px; margin-top:1px;
+}
+#admqChatClose {
+  width:32px; height:32px; border-radius:8px; border:none;
+  background:transparent; color:var(--adm-muted); cursor:pointer;
+  font-size:1rem; display:flex; align-items:center; justify-content:center;
+  transition:background .15s, color .15s;
+}
+#admqChatClose:hover { background:var(--adm-border); color:var(--adm-text); }
+#admqChatMessages {
+  flex:1; overflow-y:auto; padding:16px 18px;
+  display:flex; flex-direction:column; gap:10px;
+  scroll-behavior:smooth;
+}
+#admqChatMessages::-webkit-scrollbar { width:4px; }
+#admqChatMessages::-webkit-scrollbar-thumb { background:var(--adm-border-2); border-radius:4px; }
+.admqc-bubble-wrap {
+  display:flex; gap:8px; align-items:flex-end; max-width:78%;
+}
+.admqc-bubble-wrap.mine { align-self:flex-end; flex-direction:row-reverse; }
+.admqc-bubble-wrap.theirs { align-self:flex-start; }
+.admqc-avatar {
+  width:28px; height:28px; border-radius:50%; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center;
+  font-size:0.7rem; font-weight:700; color:#fff;
+}
+.admqc-bubble {
+  padding:9px 13px; border-radius:14px; font-size:0.83rem;
+  line-height:1.5; color:var(--adm-text); max-width:100%;
+  word-break:break-word; white-space:pre-wrap;
+}
+.mine .admqc-bubble {
+  background:rgba(16,185,129,0.18); border:1px solid rgba(16,185,129,0.28);
+  border-bottom-right-radius:4px;
+}
+.theirs .admqc-bubble {
+  background:var(--adm-surface-2); border:1px solid var(--adm-border);
+  border-bottom-left-radius:4px;
+}
+.admqc-meta {
+  font-size:0.6rem; color:var(--adm-muted); margin-top:3px;
+  white-space:nowrap;
+}
+.mine  .admqc-meta { text-align:right; }
+.theirs .admqc-meta { text-align:left; }
+.admqc-file-chips { display:flex; flex-wrap:wrap; gap:5px; margin-top:6px; }
+.admqc-chip {
+  display:inline-flex; align-items:center; gap:5px;
+  padding:4px 8px; border-radius:8px; font-size:0.72rem; cursor:pointer;
+  text-decoration:none; color:var(--adm-text);
+  border:1px solid var(--adm-border); background:var(--adm-surface);
+  transition:border-color .15s;
+}
+.admqc-chip:hover { border-color:var(--adm-accent); color:var(--adm-accent); }
+.admqc-img-thumb {
+  max-width:220px; max-height:160px; border-radius:8px; display:block;
+  margin-top:6px; cursor:pointer; border:1px solid var(--adm-border);
+  object-fit:cover;
+}
+.admqc-empty {
+  flex:1; display:flex; flex-direction:column; align-items:center;
+  justify-content:center; color:var(--adm-muted); gap:8px; font-size:0.82rem;
+}
+#admqChatFooter {
+  border-top:1px solid var(--adm-border);
+  background:var(--adm-surface-2); flex-shrink:0;
+}
+#admqChatPreviews {
+  display:flex; flex-wrap:wrap; gap:6px;
+  padding:8px 14px 0; min-height:0;
+}
+.admqc-preview-item {
+  position:relative; display:inline-flex; align-items:center; gap:5px;
+  padding:4px 8px; border-radius:8px; font-size:0.72rem;
+  background:var(--adm-surface); border:1px solid var(--adm-border);
+  color:var(--adm-text-2);
+}
+.admqc-preview-img { width:36px; height:36px; object-fit:cover; border-radius:5px; }
+.admqc-preview-rm {
+  position:absolute; top:-5px; right:-5px;
+  width:16px; height:16px; border-radius:50%;
+  background:#ef4444; border:none; color:#fff;
+  font-size:0.6rem; cursor:pointer; display:flex;
+  align-items:center; justify-content:center; line-height:1;
+}
+#admqChatInputRow {
+  display:flex; align-items:flex-end; gap:8px; padding:10px 14px 12px;
+}
+#admqChatInput {
+  flex:1; resize:none; min-height:40px; max-height:110px;
+  padding:10px 12px; border-radius:12px; border:1px solid var(--adm-border);
+  background:var(--adm-surface); color:var(--adm-text);
+  font-family:var(--adm-font,sans-serif); font-size:0.85rem;
+  overflow-y:auto; box-sizing:border-box; line-height:1.45;
+}
+#admqChatInput:focus { outline:none; border-color:var(--adm-accent); }
+.admqc-icon-btn {
+  width:38px; height:38px; border-radius:10px; border:1px solid var(--adm-border);
+  background:transparent; color:var(--adm-muted); cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  font-size:1rem; flex-shrink:0; transition:color .15s, border-color .15s;
+}
+.admqc-icon-btn:hover { color:var(--adm-accent); border-color:var(--adm-accent); }
+#admqChatSend {
+  width:38px; height:38px; border-radius:10px; border:none;
+  background:#10b981; color:#fff; cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  font-size:1rem; flex-shrink:0; transition:background .15s;
+}
+#admqChatSend:hover { background:#059669; }
+#admqChatSend:disabled { opacity:.5; cursor:not-allowed; }
+
 /* Spinner */
 @keyframes admqSpin { to { transform: rotate(360deg); } }
 .admq-spinner {
@@ -355,6 +519,9 @@
     <button id="admqTestSoundBtn" class="admq-nav-btn" title="Test notification sound" onclick="admqTestSound()" style="color:var(--adm-muted);border-style:dashed">
       <i class="bi bi-volume-up"></i> Test Sound
     </button>
+    <button class="admq-nav-btn" onclick="admqSF.open()" title="Search & filter requests" style="color:#00d4ff;border-color:rgba(0,212,255,0.35)">
+      <i class="bi bi-funnel"></i> Search & Filter
+    </button>
     <button class="admq-nav-btn" onclick="admqOpenMonthlyReport()" title="Send monthly report to your email" style="color:#8b5cf6;border-color:rgba(139,92,246,0.35)">
       <i class="bi bi-file-earmark-bar-graph"></i> Monthly Report
     </button>
@@ -374,6 +541,79 @@
 <!-- Table -->
 <div id="admqTableArea">
   <div class="admq-loading"><div class="admq-spinner"></div></div>
+</div>
+
+<!-- Search & Filter fullscreen offcanvas — teleported to <body> by JS -->
+<div id="admqSFOverlay" style="display:none"></div>
+<div id="admqSFPanel" style="display:none;position:fixed;inset:0;z-index:1401;background:var(--adm-bg,#1a1a1a);flex-direction:column">
+
+  <!-- panel header -->
+  <div style="display:flex;align-items:center;gap:10px;padding:14px 18px;border-bottom:1px solid var(--adm-border,#383838);flex-shrink:0;background:var(--adm-surface,#242424)">
+    <i class="bi bi-funnel" style="color:#00d4ff;font-size:1rem"></i>
+    <span style="font-weight:600;font-size:0.9rem;color:var(--adm-text,#e8e8e8);flex:1">Search &amp; Filter Requests</span>
+    <a id="admqSFExportBtn" href="#" onclick="admqSF.export(event)" style="display:none;align-items:center;gap:6px;padding:5px 14px;border-radius:8px;background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.35);color:#10b981;font-size:0.78rem;font-weight:600;text-decoration:none">
+      <i class="bi bi-download"></i> Export CSV
+    </a>
+    <button onclick="admqSF.close()" style="background:none;border:none;color:var(--adm-muted,#888);cursor:pointer;font-size:1rem;line-height:1;padding:2px"><i class="bi bi-x-lg"></i></button>
+  </div>
+
+  <!-- filter controls -->
+  <div style="display:flex;align-items:flex-end;gap:10px;padding:12px 18px;border-bottom:1px solid var(--adm-border,#383838);flex-wrap:wrap;flex-shrink:0;background:var(--adm-surface,#242424)">
+    <div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:160px">
+      <label style="font-size:0.65rem;font-family:var(--adm-mono);text-transform:uppercase;letter-spacing:.6px;color:var(--adm-muted,#888)">Client</label>
+      <select id="admqSFClient" style="height:36px;padding:0 10px;border-radius:9px;border:1px solid var(--adm-border,#383838);background:var(--adm-surface-2,#2c2c2c);color:var(--adm-text,#e8e8e8);font-size:0.82rem;cursor:pointer">
+        <option value="">All Clients</option>
+      </select>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:160px">
+      <label style="font-size:0.65rem;font-family:var(--adm-mono);text-transform:uppercase;letter-spacing:.6px;color:var(--adm-muted,#888)">Picked By</label>
+      <select id="admqSFPickedBy" style="height:36px;padding:0 10px;border-radius:9px;border:1px solid var(--adm-border,#383838);background:var(--adm-surface-2,#2c2c2c);color:var(--adm-text,#e8e8e8);font-size:0.82rem;cursor:pointer">
+        <option value="">All Users</option>
+      </select>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:4px;flex:2;min-width:200px">
+      <label style="font-size:0.65rem;font-family:var(--adm-mono);text-transform:uppercase;letter-spacing:.6px;color:var(--adm-muted,#888)">Search (title / description / comment)</label>
+      <input type="text" id="admqSFQuery" placeholder="Type any keyword…" maxlength="200"
+        style="height:36px;padding:0 12px;border-radius:9px;border:1px solid var(--adm-border,#383838);background:var(--adm-surface-2,#2c2c2c);color:var(--adm-text,#e8e8e8);font-size:0.82rem">
+    </div>
+    <button onclick="admqSF.apply()" style="height:36px;padding:0 18px;border-radius:9px;border:1px solid rgba(0,212,255,0.4);background:rgba(0,212,255,0.1);color:#00d4ff;font-size:0.82rem;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0">
+      <i class="bi bi-search"></i> Apply
+    </button>
+    <button onclick="admqSF.reset()" title="Clear filters" style="height:36px;padding:0 12px;border-radius:9px;border:1px solid var(--adm-border,#383838);background:transparent;color:var(--adm-muted,#888);font-size:0.82rem;cursor:pointer;flex-shrink:0">
+      <i class="bi bi-x"></i> Clear
+    </button>
+  </div>
+
+  <!-- result count bar -->
+  <div id="admqSFMeta" style="padding:8px 18px;font-size:0.75rem;color:var(--adm-muted,#888);flex-shrink:0;min-height:30px"></div>
+
+  <!-- results table -->
+  <div style="flex:1;overflow-y:auto;padding:0 18px 18px" id="admqSFScroll">
+    <div id="admqSFBody">
+      <div id="admqSFEmpty" style="display:none;padding:60px 0;text-align:center;color:var(--adm-muted,#888)">
+        <i class="bi bi-inbox" style="font-size:2rem;opacity:.3;display:block;margin-bottom:8px"></i>
+        <div style="font-size:0.85rem">No results — try different filters or a different keyword.</div>
+      </div>
+      <table id="admqSFTable" style="display:none;width:100%;border-collapse:collapse;min-width:700px">
+        <thead>
+          <tr style="position:sticky;top:0;z-index:2">
+            <th style="font-family:var(--adm-mono);font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--adm-muted,#888);padding:10px 12px;border-bottom:1px solid var(--adm-border,#383838);background:var(--adm-bg,#1a1a1a);text-align:left;white-space:nowrap">Date</th>
+            <th style="font-family:var(--adm-mono);font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--adm-muted,#888);padding:10px 12px;border-bottom:1px solid var(--adm-border,#383838);background:var(--adm-bg,#1a1a1a);text-align:left;min-width:200px">Request</th>
+            <th style="font-family:var(--adm-mono);font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--adm-muted,#888);padding:10px 12px;border-bottom:1px solid var(--adm-border,#383838);background:var(--adm-bg,#1a1a1a);text-align:left;white-space:nowrap">Client</th>
+            <th style="font-family:var(--adm-mono);font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--adm-muted,#888);padding:10px 12px;border-bottom:1px solid var(--adm-border,#383838);background:var(--adm-bg,#1a1a1a);text-align:left;white-space:nowrap">Priority</th>
+            <th style="font-family:var(--adm-mono);font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--adm-muted,#888);padding:10px 12px;border-bottom:1px solid var(--adm-border,#383838);background:var(--adm-bg,#1a1a1a);text-align:left;white-space:nowrap">Status</th>
+            <th style="font-family:var(--adm-mono);font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--adm-muted,#888);padding:10px 12px;border-bottom:1px solid var(--adm-border,#383838);background:var(--adm-bg,#1a1a1a);text-align:left;white-space:nowrap">Picked By</th>
+            <th style="font-family:var(--adm-mono);font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--adm-muted,#888);padding:10px 12px;border-bottom:1px solid var(--adm-border,#383838);background:var(--adm-bg,#1a1a1a);text-align:left;white-space:nowrap">Comments</th>
+          </tr>
+        </thead>
+        <tbody id="admqSFRows"></tbody>
+      </table>
+      <!-- infinite scroll sentinel -->
+      <div id="admqSFSentinel" style="height:1px"></div>
+      <div id="admqSFLoader" style="display:none;padding:20px;text-align:center"><div class="admq-spinner" style="margin:0 auto"></div></div>
+    </div>
+  </div>
+
 </div>
 
 <!-- Detail drawer & release modal — moved to <body> by JS -->
@@ -398,6 +638,31 @@
     <div class="admq-modal-footer">
       <button class="admq-modal-cancel" onclick="admqCloseCommentModal()">Cancel</button>
       <button class="admq-modal-confirm" id="admqCommentSendBtn" onclick="admqConfirmComment()"><i class="bi bi-send"></i> Send</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Chat Modal ──────────────────────────────────────────────── -->
+<div id="admqChatModal">
+  <div id="admqChatBox">
+    <div id="admqChatHeader">
+      <i class="bi bi-chat-left-dots-fill" style="color:var(--adm-accent);font-size:1rem;flex-shrink:0"></i>
+      <div id="admqChatTitle">Correspondence<small>Loading…</small></div>
+      <button id="admqChatClose" onclick="admqCloseChat()"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <div id="admqChatMessages"></div>
+    <div id="admqChatFooter">
+      <div id="admqChatPreviews"></div>
+      <div id="admqChatInputRow">
+        <textarea id="admqChatInput" placeholder="Type a message… or paste an image" rows="1"></textarea>
+        <input type="file" id="admqChatFileInput" multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv,.zip" style="display:none">
+        <button class="admqc-icon-btn" title="Attach file" onclick="document.getElementById('admqChatFileInput').click()">
+          <i class="bi bi-paperclip"></i>
+        </button>
+        <button id="admqChatSend" title="Send (Ctrl+Enter)" onclick="admqSendChat()">
+          <i class="bi bi-send-fill"></i>
+        </button>
+      </div>
     </div>
   </div>
 </div>
@@ -466,7 +731,7 @@
 <script>
 (function () {
   // ── Teleport fixed elements to <body> to escape overflow containers ──
-  ['admqOverlay','admqDrawer','admqReleaseModal','admqCommentModal','admqRescheduleModal','admqMonthlyReportModal'].forEach(function(id) {
+  ['admqSFOverlay','admqSFPanel','admqOverlay','admqDrawer','admqReleaseModal','admqCommentModal','admqChatModal','admqRescheduleModal','admqMonthlyReportModal'].forEach(function(id) {
     var el = document.getElementById(id);
     if (el) document.body.appendChild(el);
   });
@@ -493,18 +758,32 @@
     var p = d.split('-'), m = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
     return m[parseInt(p[1])-1]+' '+parseInt(p[2])+', '+p[0];
   }
+  // Parse a server datetime string to a correct-epoch Date (handles DST automatically).
+  // MySQL TIMESTAMP strings arrive in Eastern timezone (server OS = America/New_York).
+  // UTC ISO strings (DATETIME columns, JSON) arrive with 'Z' suffix.
+  function _parseET(s) {
+    if (!s) return null;
+    s = String(s);
+    if (s.charAt(s.length - 1) === 'Z' || s.indexOf('+') !== -1 ||
+        (s.indexOf('T') !== -1 && s.length > 19)) return new Date(s);
+    // Eastern string: compute current ET↔UTC offset via Intl (auto-handles EDT/EST)
+    var now = new Date();
+    var etOffsetMs = new Date(now.toLocaleString('en-US', { timeZone: 'UTC' })).getTime() -
+                     new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' })).getTime();
+    var d = new Date(s.replace(' ', 'T') + 'Z');
+    return isNaN(d.getTime()) ? null : new Date(d.getTime() + etOffsetMs);
+  }
   function fmtTs(ts) {
     if (!ts) return '';
-    return new Date(ts).toLocaleString([],{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',hour12:false});
+    var d = _parseET(ts);
+    if (!d) return '';
+    return d.toLocaleString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
   }
   function fmtTime(dtStr) {
     if (!dtStr) return '—';
-    var d = new Date(dtStr);
-    if (isNaN(d)) return '—';
-    var h = d.getUTCHours(), m = d.getUTCMinutes();
-    var ampm = h >= 12 ? 'PM' : 'AM';
-    h = h % 12 || 12;
-    return h + ':' + String(m).padStart(2,'0') + ' ' + ampm;
+    var d = _parseET(dtStr);
+    if (!d) return '—';
+    return d.toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: '2-digit', minute: '2-digit', hour12: true });
   }
   function fmtDateShort(dtStr) {
     if (!dtStr) return '—';
@@ -611,8 +890,8 @@
       area.innerHTML = '<div class="admq-empty"><i class="bi bi-inbox"></i><div class="admq-empty-title">Queue is empty</div><div class="admq-empty-sub">No requests for '+fmtDate(date)+'</div></div>';
       return;
     }
-    var past = isPast(date);
-    var buildRow = function(inst, idx, hidden) {
+    var buildRow = function(inst, idx, hidden, isPastRow) {
+      var past = (isPastRow !== undefined) ? isPastRow : isPast(date);
       var overdue = inst.instance_date < _today && inst.status === 'open';
       var rowCls  = overdue ? 'row-overdue' : 'row-'+inst.status;
       var badge   = overdue ? '<span class="admq-overdue-chip">Overdue</span>' : '';
@@ -688,8 +967,17 @@
         +'<td><div class="admq-actions">'+actions+'</div></td>'
         +'</tr>';
     };
-    var activeRows    = active.map(function(inst, i)    { return buildRow(inst, i, false); }).join('');
-    var cancelledRows = cancelled.map(function(inst, i) { return buildRow(inst, active.length + i, true); }).join('');
+    var thead = '<thead><tr>'
+      +'<th style="text-align:center;width:36px">SN</th><th>Request</th><th>Created</th><th>Priority</th><th>Due</th><th>Creator</th><th>Status</th><th>Picked By</th><th>Latest Comment</th><th></th>'
+      +'</tr></thead>';
+
+    var isToday = (date === _today);
+    var overdueList = isToday ? active.filter(function(i){ return i.instance_date < _today; }) : [];
+    var todayList   = isToday ? active.filter(function(i){ return i.instance_date >= _today; }) : active;
+
+    var cancelledRows = cancelled.map(function(inst, i) {
+      return buildRow(inst, (isToday ? todayList.length : active.length) + i, true, true);
+    }).join('');
     var cancelledFooter = cancelled.length > 0
       ? '<tr id="admqCancelledToggle" onclick="admqToggleCancelled()" style="cursor:pointer">'
           +'<td colspan="10"><div class="admq-cancelled-toggle">'
@@ -698,9 +986,39 @@
           +'</div></td>'
         +'</tr>'
       : '';
-    area.innerHTML = '<div class="admq-table-wrap"><table class="admq-table"><thead><tr>'
-      +'<th style="text-align:center;width:36px">SN</th><th>Request</th><th>Created</th><th>Priority</th><th>Due</th><th>Creator</th><th>Status</th><th>Picked By</th><th>Latest Comment</th><th></th>'
-      +'</tr></thead><tbody>'+activeRows+cancelledFooter+cancelledRows+'</tbody></table></div>';
+
+    if (isToday && overdueList.length > 0) {
+      var overdueRows = overdueList.map(function(inst, i){ return buildRow(inst, i, false, true); }).join('');
+      var todayRows   = todayList.map(function(inst, i)  { return buildRow(inst, i, false, false); }).join('');
+      var emptyToday  = !todayRows ? '<tr><td colspan="10" style="text-align:center;padding:22px;color:var(--adm-muted);font-size:0.82rem"><i class="bi bi-check-circle" style="margin-right:6px"></i>No new requests today</td></tr>' : '';
+      var oc = overdueList.length, os = oc > 1 ? 's' : '';
+
+      area.innerHTML =
+        // ── Today (top) ──────────────────────────────────────────────────
+        '<div class="admq-section-hdr admq-section-hdr-today">'
+          +'<i class="bi bi-calendar-check"></i>'
+          +'<span class="admq-section-hdr-title">Today</span>'
+          +'<span class="admq-section-hdr-count admq-today-count">'+todayList.length+'</span>'
+        +'</div>'
+        +'<div class="admq-table-wrap"><table class="admq-table">'+thead+'<tbody>'+emptyToday+todayRows+cancelledFooter+cancelledRows+'</tbody></table></div>'
+
+        // ── Overdue (bottom, collapsed by default) ───────────────────────
+        +'<div class="admq-section-hdr admq-section-hdr-overdue" id="admqOverdueToggleHdr" onclick="admqToggleOverdue()" style="cursor:pointer;margin-top:18px">'
+          +'<i class="bi bi-chevron-right" id="admqOverdueChevron" style="font-size:0.7rem;transition:transform 0.2s"></i>'
+          +'<i class="bi bi-exclamation-triangle-fill"></i>'
+          +'<span class="admq-section-hdr-title">Overdue</span>'
+          +'<span class="admq-section-hdr-count admq-overdue-count">'+oc+'</span>'
+          +'<span class="admq-section-hdr-sub">'+oc+' pending request'+os+' from previous days</span>'
+        +'</div>'
+        +'<div id="admqOverdueBody" style="display:none">'
+          +'<div class="admq-table-wrap"><table class="admq-table">'+thead+'<tbody>'+overdueRows+'</tbody></table></div>'
+        +'</div>';
+
+    } else {
+      var isPastDate  = isPast(date);
+      var activeRows  = active.map(function(inst, i){ return buildRow(inst, i, false, isPastDate); }).join('');
+      area.innerHTML  = '<div class="admq-table-wrap"><table class="admq-table">'+thead+'<tbody>'+activeRows+cancelledFooter+cancelledRows+'</tbody></table></div>';
+    }
     admqApplyFilter();
   }
 
@@ -717,6 +1035,15 @@
         '<i class="bi bi-chevron-'+(hidden?'down':'right')+'" id="admqCancelledChevron" style="transition:transform 0.2s"></i>'
         +(hidden ? 'Hide' : 'Show')+' '+count+' cancelled request'+(count>1?'s':'');
     }
+  };
+
+  window.admqToggleOverdue = function() {
+    var body    = document.getElementById('admqOverdueBody');
+    var chevron = document.getElementById('admqOverdueChevron');
+    if (!body) return;
+    var opening = body.style.display === 'none';
+    body.style.display    = opening ? '' : 'none';
+    if (chevron) chevron.style.transform = opening ? 'rotate(90deg)' : '';
   };
 
   window.admqUncancel = function(id) {
@@ -883,29 +1210,199 @@
   };
 
   // ── Quick Comment modal ──────────────────────────────────────────────
-  window.admqOpenCommentModal = function(id) {
-    _admqCommentInstanceId = id;
-    document.getElementById('admqQuickCommentInput').value = '';
-    document.getElementById('admqCommentModal').style.display = 'flex';
+  // redirect old quick-comment button → chat modal
+  window.admqOpenCommentModal = function(id) { admqOpenChat(id); };
+  window.admqCloseCommentModal = function() {};
+  window.admqConfirmComment    = function() {};
+
+  // ── Chat Modal ───────────────────────────────────────────────────────
+  var _chatInstanceId  = null;
+  var _chatPendingFiles = [];   // { file, dataUrl, name, mime }
+
+  function _mimeIcon(mime) {
+    if (!mime) return 'bi-file-earmark';
+    if (mime.startsWith('image/'))    return 'bi-file-image';
+    if (mime === 'application/pdf')   return 'bi-file-earmark-pdf';
+    if (mime.includes('word'))        return 'bi-file-earmark-word';
+    if (mime.includes('excel') || mime.includes('spreadsheet')) return 'bi-file-earmark-excel';
+    if (mime.includes('zip'))         return 'bi-file-zip';
+    return 'bi-file-earmark';
+  }
+
+  function _fmtBytes(b) {
+    if (!b) return '';
+    if (b < 1024) return b + ' B';
+    if (b < 1048576) return (b/1024).toFixed(0) + ' KB';
+    return (b/1048576).toFixed(1) + ' MB';
+  }
+
+  function _renderChatMessages(comments) {
+    var box = document.getElementById('admqChatMessages');
+    if (!comments || !comments.length) {
+      box.innerHTML = '<div class="admqc-empty"><i class="bi bi-chat-left-dots" style="font-size:2rem;opacity:.3"></i><span>No messages yet. Start the conversation.</span></div>';
+      return;
+    }
+    box.innerHTML = comments.map(function(c) {
+      var isMe = (c.commenter_role && !c.commenter_role.startsWith('CLIENT'));
+      var side  = isMe ? 'mine' : 'theirs';
+      var bg    = c.commenter_role && c.commenter_role.startsWith('CLIENT') ? '#3b82f6' : '#10b981';
+      var init  = (c.commenter_name || '?').charAt(0).toUpperCase();
+
+      var bodyHtml = c.body ? '<div class="admqc-bubble">'+esc(c.body)+'</div>' : '';
+
+      var filesHtml = '';
+      if (c.files && c.files.length) {
+        var chips = c.files.map(function(f) {
+          var isImg = f.mime_type && f.mime_type.startsWith('image/');
+          if (isImg) {
+            return '<a href="/queue/chat-file/'+f.id+'" target="_blank" rel="noopener">'
+              +'<img src="/queue/chat-file/'+f.id+'" class="admqc-img-thumb" alt="'+esc(f.file_name)+'" loading="lazy" onerror="this.style.display=\'none\'">'
+              +'</a>';
+          }
+          return '<a class="admqc-chip" href="/queue/chat-file/'+f.id+'" target="_blank" rel="noopener">'
+            +'<i class="bi '+_mimeIcon(f.mime_type)+'"></i>'
+            +esc(f.file_name)+(f.file_size?' <span style="opacity:.5">'+_fmtBytes(f.file_size)+'</span>':'')
+            +'</a>';
+        }).join('');
+        filesHtml = '<div class="admqc-file-chips">'+chips+'</div>';
+      }
+
+      if (!bodyHtml && !filesHtml) return '';
+
+      return '<div class="admqc-bubble-wrap '+side+'">'
+        +'<div class="admqc-avatar" style="background:'+bg+'">'+init+'</div>'
+        +'<div>'
+          +(bodyHtml || '') + filesHtml
+          +'<div class="admqc-meta">'+esc(c.commenter_name||'')+'&nbsp;·&nbsp;'+fmtTs(c.created_at)+'</div>'
+        +'</div>'
+      +'</div>';
+    }).join('');
+    box.scrollTop = box.scrollHeight;
+  }
+
+  function _renderPreviews() {
+    var strip = document.getElementById('admqChatPreviews');
+    if (!_chatPendingFiles.length) { strip.innerHTML = ''; return; }
+    strip.innerHTML = _chatPendingFiles.map(function(pf, i) {
+      var preview = pf.dataUrl
+        ? '<img src="'+pf.dataUrl+'" class="admqc-preview-img">'
+        : '<i class="bi '+_mimeIcon(pf.mime)+'" style="font-size:1.2rem"></i>';
+      return '<div class="admqc-preview-item">'
+        +preview
+        +'<span>'+esc(pf.name)+'</span>'
+        +'<button class="admqc-preview-rm" onclick="_admqRemoveFile('+i+')">×</button>'
+      +'</div>';
+    }).join('');
+  }
+
+  window._admqRemoveFile = function(i) {
+    _chatPendingFiles.splice(i, 1);
+    _renderPreviews();
   };
-  window.admqCloseCommentModal = function() {
-    document.getElementById('admqCommentModal').style.display = 'none';
-    _admqCommentInstanceId = null;
+
+  function _addFiles(fileList) {
+    Array.prototype.forEach.call(fileList, function(file) {
+      if (_chatPendingFiles.length >= 5) return;
+      var isImg = file.type.startsWith('image/');
+      if (isImg) {
+        var reader = new FileReader();
+        reader.onload = function(e) {
+          _chatPendingFiles.push({ file: file, dataUrl: e.target.result, name: file.name, mime: file.type });
+          _renderPreviews();
+        };
+        reader.readAsDataURL(file);
+      } else {
+        _chatPendingFiles.push({ file: file, dataUrl: null, name: file.name, mime: file.type });
+        _renderPreviews();
+      }
+    });
+  }
+
+  window.admqOpenChat = function(instanceId) {
+    _chatInstanceId = instanceId;
+    _chatPendingFiles = [];
+    document.getElementById('admqChatInput').value = '';
+    document.getElementById('admqChatPreviews').innerHTML = '';
+    document.getElementById('admqChatMessages').innerHTML = '<div class="admqc-empty"><div class="admq-spinner"></div></div>';
+    var inst = _loadedInstances.find(function(i){ return i.id === instanceId; });
+    var titleEl = document.getElementById('admqChatTitle');
+    titleEl.innerHTML = esc(inst ? inst.title : 'Request')+'<small>Correspondence</small>';
+    document.getElementById('admqChatModal').style.display = 'flex';
+    setTimeout(function(){ document.getElementById('admqChatInput').focus(); }, 80);
+    // Load comments
+    fetch('/queue/'+instanceId+'/detail').then(function(r){ return r.json(); }).then(function(res) {
+      if (res.success) _renderChatMessages(res.data.comments);
+    }).catch(function() {
+      document.getElementById('admqChatMessages').innerHTML = '<div class="admqc-empty">Failed to load messages.</div>';
+    });
   };
-  window.admqConfirmComment = function() {
-    var id = _admqCommentInstanceId;
+
+  window.admqCloseChat = function() {
+    document.getElementById('admqChatModal').style.display = 'none';
+    _chatInstanceId = null;
+    _chatPendingFiles = [];
+  };
+
+  window.admqSendChat = function() {
+    var id = _chatInstanceId;
     if (!id) return;
-    var body = document.getElementById('admqQuickCommentInput').value.trim();
-    if (!body) return;
-    var btn = document.getElementById('admqCommentSendBtn');
+    var body = document.getElementById('admqChatInput').value.trim();
+    if (!body && !_chatPendingFiles.length) return;
+    var btn = document.getElementById('admqChatSend');
     btn.disabled = true;
-    fetch('/queue/'+id+'/comments',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({body:body})})
-      .then(function(r){return r.json();}).then(function(res){
-        admqCloseCommentModal();
-        if (res.success) loadDate(_date);
-        else alert(res.message||'Failed to post comment');
-      }).finally(function(){ btn.disabled = false; });
+    var fd = new FormData();
+    fd.append('body', body);
+    _chatPendingFiles.forEach(function(pf){ fd.append('files', pf.file, pf.name); });
+    fetch('/queue/'+id+'/chat', { method:'POST', body: fd })
+      .then(function(r){ return r.json(); })
+      .then(function(res) {
+        if (!res.success) { alert(res.message || 'Failed to send'); return; }
+        document.getElementById('admqChatInput').value = '';
+        _chatPendingFiles = [];
+        _renderPreviews();
+        // Reload comments in modal
+        return fetch('/queue/'+id+'/detail').then(function(r2){ return r2.json(); }).then(function(d) {
+          if (d.success) { _renderChatMessages(d.data.comments); loadDate(_date); }
+        });
+      })
+      .catch(function(){ alert('Network error'); })
+      .finally(function(){ btn.disabled = false; });
   };
+
+  // File picker
+  document.getElementById('admqChatFileInput').addEventListener('change', function() {
+    _addFiles(this.files);
+    this.value = '';
+  });
+
+  // Paste image from clipboard
+  document.getElementById('admqChatInput').addEventListener('paste', function(e) {
+    var items = (e.clipboardData || e.originalEvent.clipboardData).items;
+    var hasImage = false;
+    Array.prototype.forEach.call(items, function(item) {
+      if (item.type.startsWith('image/')) {
+        hasImage = true;
+        e.preventDefault();
+        _addFiles([item.getAsFile()]);
+      }
+    });
+  });
+
+  // Ctrl+Enter to send
+  document.getElementById('admqChatInput').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); admqSendChat(); }
+  });
+
+  // Auto-resize textarea
+  document.getElementById('admqChatInput').addEventListener('input', function() {
+    this.style.height = 'auto';
+    this.style.height = Math.min(this.scrollHeight, 110) + 'px';
+  });
+
+  // Close on backdrop click
+  document.getElementById('admqChatModal').addEventListener('click', function(e) {
+    if (e.target === this) admqCloseChat();
+  });
 
   // ── Detail drawer ────────────────────────────────────────────────────
   window.admqOpenDetail = function(id) {
@@ -1005,11 +1502,24 @@
     }
 
     // Comments
-    var commentItems = comments.length
-      ? comments.map(function(c){ var bg=c.commenter_role&&c.commenter_role.startsWith('CLIENT')?'#2563eb':'#10b981'; return '<div class="admq-comment"><div class="admq-comment-avatar" style="background:'+bg+'">'+(c.commenter_name||'?').charAt(0).toUpperCase()+'</div><div style="flex:1"><div class="admq-comment-meta">'+esc(c.commenter_name||'')+'&nbsp;·&nbsp;'+fmtTs(c.created_at)+'</div><div class="admq-comment-body">'+esc(c.body||'')+'</div></div></div>'; }).join('')
-      : '<div style="font-size:0.78rem;color:var(--adm-muted)">No comments yet</div>';
-    html += '<div><div class="admq-section-label">Comments</div><div class="admq-comments-list">'+commentItems+'</div>'
-      +'<div class="admq-comment-input-row"><textarea class="admq-comment-textarea" id="admqCommentInput" placeholder="Add a comment…" rows="2"></textarea><button class="admq-comment-send" onclick="admqSubmitComment('+inst.id+')"><i class="bi bi-send"></i></button></div></div>';
+    var lastComment = comments.length
+      ? comments[comments.length-1]
+      : null;
+    var previewHtml = lastComment
+      ? '<div style="font-size:0.78rem;color:var(--adm-muted);white-space:pre-wrap;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">'
+          +(lastComment.body ? esc(lastComment.body) : '<em>attachment</em>')
+        +'</div>'
+        +'<div style="font-size:0.65rem;color:var(--adm-muted);margin-top:3px">'+esc(lastComment.commenter_name||'')+'&nbsp;·&nbsp;'+fmtTs(lastComment.created_at)+'</div>'
+      : '<div style="font-size:0.78rem;color:var(--adm-muted)">No messages yet</div>';
+    html += '<div>'
+      +'<div class="admq-section-label">Correspondence</div>'
+      +'<div style="display:flex;align-items:center;justify-content:space-between;gap:10px">'
+        +'<div style="flex:1">'+previewHtml+'</div>'
+        +'<button onclick="admqOpenChat('+inst.id+')" style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:10px;border:1px solid var(--adm-border);background:var(--adm-surface-2);color:var(--adm-text-2);cursor:pointer;font-size:0.78rem;white-space:nowrap;flex-shrink:0;transition:border-color .15s,color .15s" onmouseover="this.style.borderColor=\'var(--adm-accent)\';this.style.color=\'var(--adm-accent)\'" onmouseout="this.style.borderColor=\'var(--adm-border)\';this.style.color=\'var(--adm-text-2)\'">'
+          +'<i class="bi bi-chat-left-dots-fill"></i> Open Chat'+(comments.length?' ('+comments.length+')':'')
+        +'</button>'
+      +'</div>'
+    +'</div>';
 
     document.getElementById('admqDrawerBody').innerHTML = html;
   }
@@ -1201,5 +1711,222 @@ function admqTestSound() {
 
   // Hide on scroll or drawer open
   document.addEventListener('scroll', hide, true);
+})();
+
+// ── Search & Filter offcanvas ─────────────────────────────────────────────
+var admqSF = (function() {
+  var page = 1, hasMore = false, loading = false, total = 0;
+  var optionsLoaded = false;
+  var observer = null;
+
+  function esc(s) { var d=document.createElement('div'); d.appendChild(document.createTextNode(s||'')); return d.innerHTML; }
+
+  function fmtDate(d) {
+    if (!d) return '—';
+    var p = String(d).split('-');
+    if (p.length < 3) return d;
+    var m = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return m[parseInt(p[1])-1]+' '+parseInt(p[2])+', '+p[0];
+  }
+
+  function priorityHtml(p) {
+    var colors = {high:'#ef4444', urgent:'#ef4444', normal:'#f59e0b', medium:'#f59e0b', low:'#6b7280'};
+    var col = colors[p] || '#6b7280';
+    return '<span style="display:inline-flex;align-items:center;gap:5px;font-size:0.76rem;color:'+col+'"><span style="width:7px;height:7px;border-radius:50%;background:'+col+'"></span>'+(p||'—')+'</span>';
+  }
+
+  function statusHtml(s, late) {
+    var map = {
+      open:   {lbl:'Open',        col:'#f97316', bg:'rgba(249,115,22,0.1)'},
+      picked: {lbl:'In Progress', col:'#3b82f6', bg:'rgba(59,130,246,0.1)'},
+      done:   {lbl:'Done',        col:'#10b981', bg:'rgba(16,185,129,0.1)'},
+      missed: {lbl:'Missed',      col:'#ef4444', bg:'rgba(239,68,68,0.1)'},
+      cancelled:{lbl:'Cancelled', col:'#9ca3af', bg:'rgba(75,85,99,0.1)'},
+      rescheduled:{lbl:'Rescheduled',col:'#8b5cf6',bg:'rgba(139,92,246,0.1)'},
+      approved:{lbl:'Approved',   col:'#10b981', bg:'rgba(16,185,129,0.1)'},
+      rejected:{lbl:'Rejected',   col:'#ef4444', bg:'rgba(239,68,68,0.1)'},
+    };
+    var info = map[s] || {lbl:s||'—', col:'#888', bg:'rgba(136,136,136,0.1)'};
+    if (s === 'done' && late) { info = {lbl:'Delayed Done', col:'#f59e0b', bg:'rgba(245,158,11,0.1)'}; }
+    return '<span style="font-size:0.72rem;font-weight:600;padding:2px 9px;border-radius:6px;background:'+info.bg+';color:'+info.col+'">'+info.lbl+'</span>';
+  }
+
+  function buildParams(forExport) {
+    var client  = document.getElementById('admqSFClient').value;
+    var picked  = document.getElementById('admqSFPickedBy').value;
+    var q       = document.getElementById('admqSFQuery').value.trim();
+    var p = [];
+    if (client)  p.push('client_id=' + encodeURIComponent(client));
+    if (picked)  p.push('picked_by=' + encodeURIComponent(picked));
+    if (q)       p.push('q=' + encodeURIComponent(q));
+    if (!forExport) p.push('page=' + page);
+    return p.join('&');
+  }
+
+  function renderRows(rows) {
+    var tbody = document.getElementById('admqSFRows');
+    rows.forEach(function(r) {
+      var tr = document.createElement('tr');
+      tr.style.cssText = 'border-bottom:1px solid var(--adm-border,#383838);cursor:pointer;transition:background .12s';
+      tr.onmouseenter = function() { this.style.background = 'var(--adm-surface,#242424)'; };
+      tr.onmouseleave = function() { this.style.background = ''; };
+      tr.onclick = function() { admqOpenDetail(r.instance_id); };
+      var desc = (r.description || '').trim();
+      var descHtml = desc ? '<div style="font-size:0.73rem;color:var(--adm-muted,#888);margin-top:2px;max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(desc)+'</div>' : '';
+      tr.innerHTML =
+        '<td style="padding:10px 12px;font-size:0.8rem;color:var(--adm-text-2,#aaa);white-space:nowrap">'+fmtDate(r.instance_date)+'</td>' +
+        '<td style="padding:10px 12px;max-width:320px">' +
+          '<div style="font-size:0.82rem;font-weight:500;color:var(--adm-text,#e8e8e8)">'+esc(r.title)+'</div>' +
+          descHtml +
+        '</td>' +
+        '<td style="padding:10px 12px;font-size:0.78rem;color:var(--adm-text-2,#aaa);white-space:nowrap">'+esc(r.created_by_name||'—')+'<div style="font-size:0.68rem;color:var(--adm-muted,#888)">'+esc(r.org_name||'')+'</div></td>' +
+        '<td style="padding:10px 12px">'+priorityHtml(r.priority)+'</td>' +
+        '<td style="padding:10px 12px">'+statusHtml(r.status, r.completed_late)+'</td>' +
+        '<td style="padding:10px 12px;font-size:0.78rem;color:var(--adm-text-2,#aaa);white-space:nowrap">'+(r.picked_by_name ? esc(r.picked_by_name) : '<span style="color:var(--adm-muted,#888)">—</span>')+'</td>' +
+        '<td style="padding:10px 12px;font-size:0.75rem;color:var(--adm-muted,#888);font-family:var(--adm-mono)">'+r.comment_count+'</td>';
+      tbody.appendChild(tr);
+    });
+  }
+
+  function loadPage() {
+    if (loading || !hasMore) return;
+    loading = true;
+    document.getElementById('admqSFLoader').style.display = 'block';
+
+    fetch('/queue/search?' + buildParams(false), { headers: {'X-Requested-With':'XMLHttpRequest'} })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        loading = false;
+        document.getElementById('admqSFLoader').style.display = 'none';
+        if (!data.success) return;
+        var result = data.data;
+        hasMore = result.hasMore;
+        page    = result.page + 1;
+        renderRows(result.rows);
+        if (!hasMore && observer) { observer.disconnect(); observer = null; }
+      })
+      .catch(function() {
+        loading = false;
+        document.getElementById('admqSFLoader').style.display = 'none';
+      });
+  }
+
+  function setupObserver() {
+    if (observer) observer.disconnect();
+    observer = new IntersectionObserver(function(entries) {
+      if (entries[0].isIntersecting) loadPage();
+    }, { root: document.getElementById('admqSFScroll'), threshold: 0.1 });
+    observer.observe(document.getElementById('admqSFSentinel'));
+  }
+
+  function doSearch(resetPage) {
+    if (resetPage) {
+      page = 1; hasMore = true;
+      document.getElementById('admqSFRows').innerHTML = '';
+      document.getElementById('admqSFTable').style.display = 'none';
+      document.getElementById('admqSFEmpty').style.display = 'none';
+      document.getElementById('admqSFMeta').textContent = '';
+      document.getElementById('admqSFExportBtn').style.display = 'none';
+    }
+
+    loading = true;
+    document.getElementById('admqSFLoader').style.display = 'block';
+
+    fetch('/queue/search?' + buildParams(false), { headers: {'X-Requested-With':'XMLHttpRequest'} })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        loading = false;
+        document.getElementById('admqSFLoader').style.display = 'none';
+        if (!data.success) return;
+        var result = data.data;
+        total   = result.total;
+        hasMore = result.hasMore;
+        page    = result.page + 1;
+
+        document.getElementById('admqSFMeta').textContent = total + ' result' + (total === 1 ? '' : 's') + ' found';
+
+        if (result.rows.length === 0 && result.page === 1) {
+          document.getElementById('admqSFEmpty').style.display = 'block';
+          document.getElementById('admqSFTable').style.display = 'none';
+          document.getElementById('admqSFExportBtn').style.display = 'none';
+        } else {
+          document.getElementById('admqSFTable').style.display = 'table';
+          document.getElementById('admqSFEmpty').style.display = 'none';
+          document.getElementById('admqSFExportBtn').style.display = 'flex';
+          renderRows(result.rows);
+          if (hasMore) setupObserver();
+        }
+      })
+      .catch(function() {
+        loading = false;
+        document.getElementById('admqSFLoader').style.display = 'none';
+      });
+  }
+
+  function loadOptions() {
+    if (optionsLoaded) return;
+    fetch('/queue/filter-options', { headers: {'X-Requested-With':'XMLHttpRequest'} })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (!data.success) return;
+        optionsLoaded = true;
+        var cSel = document.getElementById('admqSFClient');
+        var pSel = document.getElementById('admqSFPickedBy');
+        (data.data.clients || []).forEach(function(c) {
+          var o = document.createElement('option');
+          o.value = c.id; o.textContent = c.name + (c.org_name ? ' ('+c.org_name+')' : '');
+          cSel.appendChild(o);
+        });
+        (data.data.localUsers || []).forEach(function(u) {
+          var o = document.createElement('option');
+          o.value = u.id; o.textContent = u.name;
+          pSel.appendChild(o);
+        });
+      });
+  }
+
+  // Enter key on search input triggers apply
+  (function attachQueryKeydown() {
+    var qInput = document.getElementById('admqSFQuery');
+    if (qInput) {
+      qInput.addEventListener('keydown', function(e) { if (e.key === 'Enter') { admqSF.apply(); } });
+    } else {
+      document.addEventListener('DOMContentLoaded', attachQueryKeydown);
+    }
+  })();
+
+  return {
+    open: function() {
+      document.getElementById('admqSFOverlay').style.display = 'block';
+      document.getElementById('admqSFPanel').style.display   = 'flex';
+      document.body.style.overflow = 'hidden';
+      loadOptions();
+    },
+    close: function() {
+      document.getElementById('admqSFOverlay').style.display = 'none';
+      document.getElementById('admqSFPanel').style.display   = 'none';
+      document.body.style.overflow = '';
+    },
+    apply: function() {
+      if (observer) { observer.disconnect(); observer = null; }
+      doSearch(true);
+    },
+    reset: function() {
+      document.getElementById('admqSFClient').value   = '';
+      document.getElementById('admqSFPickedBy').value = '';
+      document.getElementById('admqSFQuery').value    = '';
+      document.getElementById('admqSFRows').innerHTML = '';
+      document.getElementById('admqSFTable').style.display = 'none';
+      document.getElementById('admqSFEmpty').style.display = 'none';
+      document.getElementById('admqSFMeta').textContent = '';
+      document.getElementById('admqSFExportBtn').style.display = 'none';
+      if (observer) { observer.disconnect(); observer = null; }
+      page = 1; hasMore = false; total = 0;
+    },
+    export: function(e) {
+      e.preventDefault();
+      window.location.href = '/queue/export?' + buildParams(true);
+    }
+  };
 })();
 </script>

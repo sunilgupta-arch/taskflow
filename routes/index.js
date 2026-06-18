@@ -316,6 +316,10 @@ router.get('/queue/data', authenticate, ClientQueueController.getQueue);
 router.get('/queue/badge', authenticate, ClientQueueController.getBadgeCount);
 router.get('/queue/client-online', authenticate, ClientQueueController.getOnlineClients);
 router.get('/queue/available-months', authenticate, ClientQueueController.getAvailableMonths);
+router.get('/queue/filter-options', authenticate, ClientQueueController.getFilterOptions);
+router.get('/queue/search',         authenticate, ClientQueueController.searchFilter);
+router.get('/queue/export',         authenticate, ClientQueueController.exportFilter);
+router.get('/queue/chat-file/:fileId', authenticate, ClientQueueController.serveChatFile);
 router.post('/queue/monthly-report', authenticate, requireRoles('LOCAL_ADMIN', 'LOCAL_MANAGER'), ClientQueueController.sendMonthlyReport);
 router.post('/queue/:id/pick', authenticate, ClientQueueController.pick);
 router.post('/queue/:id/release', authenticate, ClientQueueController.release);
@@ -330,6 +334,12 @@ router.post('/queue/:id/attachments', authenticate, (req, res, next) => queueAtt
   if (err) return res.status(400).json({ success: false, message: err.message || 'Upload failed' });
   next();
 }), ClientQueueController.uploadAttachment);
+const queueChatUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 25 * 1024 * 1024, files: 5 } });
+router.post('/queue/:id/chat', authenticate, (req, res, next) => queueChatUpload.array('files', 5)(req, res, err => {
+  if (err && err.code === 'LIMIT_FILE_SIZE') return res.status(413).json({ success: false, message: 'File too large. Max 25 MB each.' });
+  if (err) return res.status(400).json({ success: false, message: err.message || 'Upload failed' });
+  next();
+}), ClientQueueController.sendChatMessage);
 
 // Announcements / Info Board
 router.get('/announcements', authenticate, requireRoles('LOCAL_ADMIN', 'LOCAL_MANAGER', 'LOCAL_USER', 'CLIENT_ADMIN', 'CLIENT_MANAGER'), AnnouncementController.index);

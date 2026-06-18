@@ -492,14 +492,28 @@ const isSalesUser = user.role_name === 'CLIENT_SALES';
 
   const recLabels = { none: 'One-time', daily: 'Daily', weekly: 'Weekly', monthly: 'Monthly' };
 
+  function _parseET(s) {
+    if (!s) return null;
+    s = String(s);
+    if (s.charAt(s.length - 1) === 'Z' || s.indexOf('+') !== -1 ||
+        (s.indexOf('T') !== -1 && s.length > 19)) return new Date(s);
+    var now = new Date();
+    var etOffsetMs = new Date(now.toLocaleString('en-US', { timeZone: 'UTC' })).getTime() -
+                     new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' })).getTime();
+    var d = new Date(s.replace(' ', 'T') + 'Z');
+    return isNaN(d.getTime()) ? null : new Date(d.getTime() + etOffsetMs);
+  }
   function fmtTime(dtStr) {
     if (!dtStr) return '';
-    var d = new Date(dtStr);
-    if (isNaN(d)) return '';
-    var h = d.getUTCHours(), m = d.getUTCMinutes();
-    var ampm = h >= 12 ? 'PM' : 'AM';
-    h = h % 12 || 12;
-    return h + ':' + String(m).padStart(2,'0') + ' ' + ampm;
+    var d = _parseET(dtStr);
+    if (!d) return '';
+    return d.toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: '2-digit', minute: '2-digit', hour12: true });
+  }
+  function fmtTs(dtStr) {
+    if (!dtStr) return '';
+    var d = _parseET(dtStr);
+    if (!d) return '';
+    return d.toLocaleString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
   }
   function fmtDuration(from, to) {
     if (!from || !to) return null;
@@ -1040,7 +1054,7 @@ const isSalesUser = user.role_name === 'CLIENT_SALES';
     }
     if (history.length > 0) {
       html += `<div class="mb-3"><div class="small text-muted mb-2 fw-semibold">Timeline</div><ul class="list-group list-group-flush">`;
-      history.forEach(h => { html += `<li class="list-group-item px-0 py-1 small"><span class="text-muted">${new Date(h.released_at).toLocaleString()}</span> — returned by <strong>${escHtml(h.released_by_name)}</strong>${h.reason ? ': ' + escHtml(h.reason) : ''}</li>`; });
+      history.forEach(h => { html += `<li class="list-group-item px-0 py-1 small"><span class="text-muted">${fmtTs(h.released_at)}</span> — returned by <strong>${escHtml(h.released_by_name)}</strong>${h.reason ? ': ' + escHtml(h.reason) : ''}</li>`; });
       html += `</ul></div>`;
     }
     html += `<hr><div class="mb-2 small fw-semibold">Comments</div><div id="reqCommentsList">`;
@@ -1050,7 +1064,7 @@ const isSalesUser = user.role_name === 'CLIENT_SALES';
       const name = c.commenter_name || '?';
       html += `<div class="d-flex gap-2 mb-2">
         <div class="flex-shrink-0 rounded-circle d-flex align-items-center justify-content-center text-white small fw-bold" style="width:32px;height:32px;background:${isClient?'#0d6efd':'#198754'}">${escHtml(name[0])}</div>
-        <div><div class="small fw-semibold">${escHtml(name)} <span class="text-muted fw-normal">${new Date(c.created_at).toLocaleString()}</span></div>
+        <div><div class="small fw-semibold">${escHtml(name)} <span class="text-muted fw-normal">${fmtTs(c.created_at)}</span></div>
         <div class="small" style="white-space:pre-wrap">${escHtml(c.body)}</div></div>
       </div>`;
     });

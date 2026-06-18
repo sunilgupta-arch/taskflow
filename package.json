@@ -8,7 +8,15 @@
     "dev": "nodemon server.js",
     "seed": "node utils/seeder.js",
     "migrate": "node utils/migrate.js",
-    "migrate:latest": "node utils/migrate-latest.js"
+    "migrate:latest": "node utils/migrate-latest.js",
+    "test": "jest --runInBand",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "testMatch": ["**/tests/**/*.test.js"],
+    "clearMocks": true
   },
   "dependencies": {
     "axios": "^1.6.2",
@@ -33,6 +41,7 @@
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
+    "jest": "^30.4.2",
     "nodemon": "^3.0.2"
   }
 }

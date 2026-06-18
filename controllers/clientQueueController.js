@@ -387,6 +387,145 @@ class ClientQueueController {
       return ApiResponse.error(res, 'Failed to serve file');
     }
   }
+
+  static async sendChatMessage(req, res) {
+    try {
+      const instanceId = parseInt(req.params.id);
+      const body = (req.body.body || '').trim();
+      const files = req.files || [];
+      if (!body && !files.length) return ApiResponse.error(res, 'Message cannot be empty', 400);
+
+      const [comment, ctx] = await Promise.all([
+        ClientRequest.addComment(instanceId, req.user.id, body),
+        ClientRequest.getInstanceContext(instanceId)
+      ]);
+
+      if (files.length) {
+        const fileRows = [];
+        for (const file of files) {
+          const driveFile = await GoogleDriveService.uploadRequestAttachment(file);
+          fileRows.push({
+            uploaded_by: req.user.id,
+            file_name: file.originalname,
+            mime_type: file.mimetype,
+            drive_file_id: driveFile.id,
+            drive_view_link: driveFile.webViewLink || null,
+            file_size: file.size
+          });
+        }
+        await ClientRequest.addCommentFiles(comment.id, fileRows);
+      }
+
+      if (ctx) {
+        try {
+          const io = getIO();
+          const notifBody = body || `${files.length} file${files.length > 1 ? 's' : ''} shared`;
+          const payload = {
+            instance_id: instanceId, instance_date: ctx.instance_date,
+            title: ctx.title, body: notifBody,
+            commenter_name: req.user.name, commenter_role: req.user.role_name
+          };
+          io.of('/portal').to(`portal:user:${ctx.created_by}`).emit('request:comment', payload);
+          const Notification = require('../models/Notification');
+          const nTitle = 'New Message on Request';
+          const nBody = `${req.user.name}: "${notifBody.substring(0, 55)}"`;
+          const nLink = '/portal/requests';
+          const nid = await Notification.createIfNotExists(ctx.created_by, 'portal_req_comment', nTitle, nBody, nLink, 'client_request_instance', instanceId);
+          io.of('/portal').to(`portal:user:${ctx.created_by}`).emit('notification:new', {
+            id: nid, type: 'portal_req_comment', title: nTitle, body: nBody,
+            link: nLink, ref_type: 'client_request_instance', ref_id: instanceId,
+            is_read: 0, created_at: new Date()
+          });
+        } catch (_) {}
+      }
+      return ApiResponse.success(res, { comment });
+    } catch (err) {
+      console.error('sendChatMessage error:', err);
+      return ApiResponse.error(res, 'Server error');
+    }
+  }
+
+  static async serveChatFile(req, res) {
+    try {
+      const fileId = parseInt(req.params.fileId);
+      const file = await ClientRequest.getChatFile(fileId);
+      if (!file) return res.status(404).json({ success: false, message: 'Not found' });
+      if (!file.drive_file_id) return res.status(404).json({ success: false, message: 'File unavailable' });
+      const { stream, mimeType } = await GoogleDriveService.downloadFile(file.drive_file_id);
+      res.setHeader('Content-Type', mimeType || file.mime_type || 'application/octet-stream');
+      res.setHeader('Content-Disposition', `inline; filename="${file.file_name}"`);
+      stream.on('error', () => { if (!res.headersSent) res.status(500).end(); });
+      stream.pipe(res);
+    } catch (err) {
+      console.error('serveChatFile error:', err);
+      if (!res.headersSent) res.status(500).end();
+    }
+  }
+
+  static async getFilterOptions(req, res) {
+    try {
+      const [clients, localUsers] = await Promise.all([
+        ClientRequest.getPortalClients(),
+        ClientRequest.getLocalUsers(),
+      ]);
+      return ApiResponse.success(res, { clients, localUsers });
+    } catch (err) {
+      console.error('Queue getFilterOptions error:', err);
+      return ApiResponse.error(res, 'Failed to load filter options');
+    }
+  }
+
+  static async searchFilter(req, res) {
+    try {
+      const clientId  = req.query.client_id  ? parseInt(req.query.client_id)  : null;
+      const pickedBy  = req.query.picked_by  ? parseInt(req.query.picked_by)  : null;
+      const q         = (req.query.q || '').trim().substring(0, 200) || null;
+      const page      = Math.max(1, parseInt(req.query.page) || 1);
+      const result    = await ClientRequest.searchFilter({ clientId, pickedBy, q, page, limit: 20 });
+      return ApiResponse.success(res, result);
+    } catch (err) {
+      console.error('Queue searchFilter error:', err);
+      return ApiResponse.error(res, 'Search failed');
+    }
+  }
+
+  static async exportFilter(req, res) {
+    try {
+      const clientId = req.query.client_id ? parseInt(req.query.client_id) : null;
+      const pickedBy = req.query.picked_by ? parseInt(req.query.picked_by) : null;
+      const q        = (req.query.q || '').trim().substring(0, 200) || null;
+
+      const rows = await ClientRequest.searchFilterAll({ clientId, pickedBy, q });
+
+      function csvCell(v) {
+        if (v === null || v === undefined) return '';
+        const s = String(v).replace(/"/g, '""');
+        return /[",\n\r]/.test(s) ? '"' + s + '"' : s;
+      }
+
+      const headers = ['Instance ID','Date','Status','Title','Org','Priority','Task Type','Recurrence','Created By','Picked By','Picked At','Completed At','Late','Comments'];
+      const lines = [headers.join(',')];
+      for (const r of rows) {
+        lines.push([
+          r.instance_id, r.instance_date, r.status,
+          csvCell(r.title), csvCell(r.org_name),
+          r.priority, r.task_type, r.recurrence,
+          csvCell(r.created_by_name), csvCell(r.picked_by_name),
+          r.picked_at || '', r.completed_at || '',
+          r.completed_late ? 'Yes' : 'No',
+          r.comment_count,
+        ].join(','));
+      }
+
+      const csv = lines.join('\r\n');
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', 'attachment; filename="queue-export.csv"');
+      return res.send(csv);
+    } catch (err) {
+      console.error('Queue exportFilter error:', err);
+      return ApiResponse.error(res, 'Export failed');
+    }
+  }
 }
 
 module.exports = ClientQueueController;

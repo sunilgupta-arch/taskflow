@@ -350,9 +350,47 @@
       flex: 1;
     }
     .adm-clock {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      padding: 4px 10px;
+      border-radius: 7px;
+      transition: color .15s, background .15s;
+      user-select: none;
+      position: relative;
+    }
+    .adm-clock:hover { background: rgba(0,212,255,0.08); }
+    [data-bs-theme="light"] .adm-clock:hover { background: rgba(2,132,199,0.08); }
+    .adm-clock-tz {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0;
+      line-height: 1;
+    }
+    .adm-clock-time {
       font-family: var(--adm-mono);
       font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--adm-text-2);
+      letter-spacing: 0.02em;
+      transition: color .15s;
+    }
+    .adm-clock-lbl {
+      font-family: var(--adm-mono);
+      font-size: 0.48rem;
+      letter-spacing: 2px;
+      text-transform: uppercase;
       color: var(--adm-muted);
+      margin-top: 1px;
+    }
+    .adm-clock:hover .adm-clock-time { color: var(--adm-accent); }
+    .adm-clock-sep {
+      width: 1px;
+      height: 22px;
+      background: var(--adm-border);
+      flex-shrink: 0;
     }
     .adm-theme-btn {
       width: 30px; height: 30px;
@@ -1232,7 +1270,17 @@
   <main class="adm-main">
     <div class="adm-topbar">
       <div class="adm-topbar-title"><%= typeof title !== 'undefined' ? title : 'Admin' %></div>
-      <span class="adm-clock" id="admClock"></span>
+      <div class="adm-clock" title="Click to open screensaver" onclick="window.admSS&&window.admSS.show()">
+        <div class="adm-clock-tz">
+          <span class="adm-clock-time" id="admClockET"></span>
+          <span class="adm-clock-lbl">Arden NC</span>
+        </div>
+        <span class="adm-clock-sep"></span>
+        <div class="adm-clock-tz">
+          <span class="adm-clock-time" id="admClock"></span>
+          <span class="adm-clock-lbl">India</span>
+        </div>
+      </div>
       <a href="/admin/queue" class="adm-queue-btn" id="admQueueBtn" title="Client Queue — unpicked requests" style="display:none">
         <i class="bi bi-inbox-fill"></i>
         <span>Queue</span>
@@ -1363,10 +1411,18 @@
 
   // Clock
   (function() {
-    var el = document.getElementById('admClock');
+    var elIST = document.getElementById('admClock');
+    var elET  = document.getElementById('admClockET');
     function tick() {
-      if (!el) return;
-      el.textContent = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+      var now = new Date();
+      if (elIST) elIST.textContent = now.toLocaleTimeString('en-US', {
+        timeZone: 'Asia/Kolkata',
+        hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
+      });
+      if (elET) elET.textContent = now.toLocaleTimeString('en-US', {
+        timeZone: 'America/New_York',
+        hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
+      });
     }
     tick(); setInterval(tick, 1000);
   })();
@@ -1475,7 +1531,7 @@
       var dl = admBdrDateLabel(m.created_at);
       if (dl !== lastDate) { html += '<div class="bdr-date-div"><span>'+dl+'</span></div>'; lastDate = dl; }
       var sent = m.sender_id === admBdrUserId, cls = sent ? 'sent' : 'received';
-      var t = new Date(m.created_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+      var t = new Date(m.created_at).toLocaleTimeString('en-US',{timeZone:'America/New_York',hour:'2-digit',minute:'2-digit',hour12:true});
       var content = '';
       if (m.is_deleted) { content = '<i class="bi bi-ban me-1"></i><em>This message was deleted</em>'; }
       else if (m.type==='file' && m.attachment) { content = admBdrRenderFile(m.attachment, m.id); }
@@ -1643,7 +1699,7 @@
   function _gcBuildBubble(m) {
     var sent = m.sender_id === admGcUserId;
     var cls  = sent ? 'sent' : 'received';
-    var t    = new Date(m.created_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+    var t    = new Date(m.created_at).toLocaleTimeString('en-US',{timeZone:'America/New_York',hour:'2-digit',minute:'2-digit',hour12:true});
     var content = m.is_deleted ? '<em>This message was deleted</em>'
       : (m.type==='file' && m.attachment ? admGcRenderFile(m.attachment, m.id)
         : admGcRenderWithMentions(m.content||''));
@@ -2010,7 +2066,7 @@
         var box = document.getElementById('admBdrMessages');
         if (box.querySelector('.text-center')) box.innerHTML = '';
         var sent = msg.sender_id === admBdrUserId, cls = sent?'sent':'received';
-        var t = new Date(msg.created_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+        var t = new Date(msg.created_at).toLocaleTimeString('en-US',{timeZone:'America/New_York',hour:'2-digit',minute:'2-digit',hour12:true});
         var content = '';
         if (msg.type==='file'&&msg.attachment) content = admBdrRenderFile(msg.attachment, msg.id);
         else { var tmp2=document.createElement('div'); tmp2.textContent=msg.content||''; content=tmp2.innerHTML; }
@@ -2916,5 +2972,456 @@ function handleLogout() {
 </script>
 
 <%- script %>
+
+<!-- ════════════════════════════════════════════════════════════════════
+     SCREENSAVER  —  activates after 5 min of inactivity
+     ════════════════════════════════════════════════════════════════════ -->
+<style>
+#admSS {
+  display:none; position:fixed; inset:0; z-index:9998;
+  cursor:none; overflow:hidden;
+  opacity:0; transition:opacity .9s ease;
+}
+#admSS.adm-ss-in { opacity:1; }
+#admSSClkRow {
+  display:flex; align-items:flex-start; justify-content:center;
+  gap:80px; flex-wrap:wrap; width:100%; box-sizing:border-box; padding:0 24px;
+}
+.adm-ss-clk-unit {
+  display:flex; flex-direction:column; align-items:center; gap:0; flex-shrink:0;
+}
+.adm-ss-clk-unit canvas {
+  width:400px; height:400px; display:block;
+}
+.adm-ss-city-lbl {
+  margin-top:18px;
+  font-size:0.95rem; font-weight:700; letter-spacing:3px;
+  text-transform:uppercase; color:rgba(255,255,255,0.65);
+  font-family:var(--adm-font,'DM Sans',sans-serif);
+}
+.adm-ss-city-lbl em { color:rgba(255,255,255,0.35); font-style:normal; margin:0 7px; }
+.adm-ss-tz-lbl {
+  margin-top:4px; font-size:0.6rem; letter-spacing:3.5px;
+  text-transform:uppercase; color:rgba(255,255,255,0.15);
+  font-family:var(--adm-mono,monospace);
+}
+#admSSDateLine {
+  margin-top:26px; font-size:0.68rem; letter-spacing:4px;
+  text-transform:uppercase; color:rgba(255,255,255,0.18);
+  font-family:var(--adm-mono,monospace); text-align:center;
+}
+#admSSHint {
+  font-size:0.58rem; letter-spacing:5px; text-transform:uppercase;
+  color:rgba(255,255,255,0.1); font-family:var(--adm-mono,monospace);
+  white-space:nowrap; pointer-events:none; margin-top:14px;
+}
+/* Light-theme overrides for screensaver text */
+[data-bs-theme="light"] #admSS { }
+[data-bs-theme="light"] .adm-ss-city-lbl       { color: rgba(26,44,61,0.62); }
+[data-bs-theme="light"] .adm-ss-city-lbl em    { color: rgba(26,44,61,0.30); }
+[data-bs-theme="light"] .adm-ss-tz-lbl         { color: rgba(26,44,61,0.22); }
+[data-bs-theme="light"] #admSSDateLine         { color: rgba(26,44,61,0.25); }
+[data-bs-theme="light"] #admSSHint             { color: rgba(26,44,61,0.15); }
+
+/* Responsive scaling — shrink canvas display size, drawing stays at 400px */
+@media (max-width:1100px) {
+  #admSSClkRow { gap:48px; }
+  .adm-ss-clk-unit canvas { width:340px; height:340px; }
+}
+@media (max-width:840px) {
+  #admSSClkRow { gap:32px; }
+  .adm-ss-clk-unit canvas { width:280px; height:280px; }
+  .adm-ss-city-lbl { font-size:0.82rem; letter-spacing:2px; }
+}
+@media (max-width:620px) {
+  #admSSClkRow { gap:20px; }
+  .adm-ss-clk-unit canvas { width:min(240px, 85vw); height:min(240px, 85vw); }
+  .adm-ss-city-lbl { font-size:0.75rem; }
+}
+</style>
+
+<div id="admSS">
+  <canvas id="admSSBgC" style="position:absolute;inset:0;width:100%;height:100%"></canvas>
+
+  <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px 16px 0;box-sizing:border-box">
+
+    <div id="admSSClkRow">
+
+      <div class="adm-ss-clk-unit">
+        <canvas id="admSSC1" width="400" height="400"></canvas>
+        <div class="adm-ss-city-lbl">Arden, NC<em>·</em>USA</div>
+        <div class="adm-ss-tz-lbl">America / New_York</div>
+      </div>
+
+      <div class="adm-ss-clk-unit">
+        <canvas id="admSSC2" width="400" height="400"></canvas>
+        <div class="adm-ss-city-lbl">New Delhi<em>·</em>India</div>
+        <div class="adm-ss-tz-lbl">Asia / Kolkata</div>
+      </div>
+
+    </div>
+
+    <div id="admSSDateLine"></div>
+    <div id="admSSHint">Move mouse or press any key to resume</div>
+
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var TIMEOUT  = 5 * 60 * 1000;   // 5 minutes
+  var _active  = false;
+  var _timer   = null;
+  var _raf     = null;
+  var _stars   = [];
+
+  var _el   = document.getElementById('admSS');
+  var _bgC  = document.getElementById('admSSBgC');
+  var _c1   = document.getElementById('admSSC1');
+  var _c2   = document.getElementById('admSSC2');
+  var _date = document.getElementById('admSSDateLine');
+
+  // ── helpers ──────────────────────────────────────────────────────────
+  function p2(n) { return String(n).padStart(2, '0'); }
+
+  function getTZ(tz) {
+    var now  = new Date();
+    var obj  = {};
+    new Intl.DateTimeFormat('en-US', {
+      timeZone: tz, hour: '2-digit', minute: '2-digit',
+      second: '2-digit', hour12: false
+    }).formatToParts(now).forEach(function (part) {
+      if (part.type === 'hour')   obj.h = +part.value % 24;
+      if (part.type === 'minute') obj.m = +part.value;
+      if (part.type === 'second') obj.s = +part.value;
+    });
+    obj.ms = now.getMilliseconds();
+    return obj;
+  }
+
+  function getTheme() {
+    return document.documentElement.getAttribute('data-bs-theme') === 'light' ? 'light' : 'dark';
+  }
+
+  function getClockColors(theme) {
+    if (theme === 'light') {
+      return {
+        bezelA: '#c4d0de', bezelB: '#b2c2d4', bezelC: '#c4d0de',
+        bezelRing: 'rgba(26,44,61,0.10)',
+        faceA: '#f4f8fc', faceB: '#e8f0f8', faceC: '#dce6f4',
+        tickQ: 'rgba(26,44,61,0.85)',
+        tickHr: 'rgba(26,44,61,0.38)',
+        tickMin: 'rgba(26,44,61,0.10)',
+        numBig: 'rgba(26,44,61,0.80)',
+        numSmall: 'rgba(26,44,61,0.22)',
+        digBg: 'rgba(255,255,255,0.80)',
+        digBorder: 'rgba(26,44,61,0.12)',
+        digText: 'rgba(26,44,61,0.62)',
+        hrHand: 'rgba(20,40,65,0.90)',
+        minHand: 'rgba(40,70,100,0.75)',
+        secHand: '#0284c7',
+        jewOuter: 'rgba(26,44,61,0.80)',
+        jewInner: 'rgba(248,250,252,0.92)'
+      };
+    }
+    return {
+      bezelA: '#2e2e38', bezelB: '#1a1a22', bezelC: '#2e2e38',
+      bezelRing: 'rgba(255,255,255,0.10)',
+      faceA: '#161620', faceB: '#0e0e18', faceC: '#08080f',
+      tickQ: 'rgba(255,255,255,0.88)',
+      tickHr: 'rgba(255,255,255,0.42)',
+      tickMin: 'rgba(255,255,255,0.12)',
+      numBig: 'rgba(255,255,255,0.82)',
+      numSmall: 'rgba(255,255,255,0.28)',
+      digBg: 'rgba(0,0,0,0.55)',
+      digBorder: 'rgba(255,255,255,0.10)',
+      digText: 'rgba(255,255,255,0.72)',
+      hrHand: 'rgba(235,235,245,0.92)',
+      minHand: 'rgba(210,220,235,0.80)',
+      secHand: '#c0392b',
+      jewOuter: 'rgba(220,225,240,0.92)',
+      jewInner: 'rgba(80,80,100,0.85)'
+    };
+  }
+
+  function roundRect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.arcTo(x + w, y, x + w, y + r, r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
+    ctx.lineTo(x + r, y + h);
+    ctx.arcTo(x, y + h, x, y + h - r, r);
+    ctx.lineTo(x, y + r);
+    ctx.arcTo(x, y, x + r, y, r);
+    ctx.closePath();
+  }
+
+  // ── background (star field) ───────────────────────────────────────────
+  function initBg() {
+    if (!_bgC) return;
+    _bgC.width  = window.innerWidth;
+    _bgC.height = window.innerHeight;
+    _stars = [];
+    for (var i = 0; i < 140; i++) {
+      _stars.push({
+        x:  Math.random() * _bgC.width,
+        y:  Math.random() * _bgC.height,
+        r:  Math.random() * 1.4 + 0.2,
+        o:  Math.random() * 0.45 + 0.08,
+        dx: (Math.random() - 0.5) * 0.12,
+        dy: -(Math.random() * 0.08 + 0.04)
+      });
+    }
+  }
+
+  function drawBg() {
+    if (!_bgC) return;
+    var ctx = _bgC.getContext('2d');
+    var W = _bgC.width, H = _bgC.height;
+    var isDark = getTheme() === 'dark';
+
+    if (isDark) {
+      // deep-space gradient
+      var bg = ctx.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, Math.hypot(W, H) * 0.55);
+      bg.addColorStop(0,   '#0d0d1c');
+      bg.addColorStop(0.6, '#07070f');
+      bg.addColorStop(1,   '#030307');
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, W, H);
+    } else {
+      // soft airy wash for light theme
+      var bg = ctx.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, Math.hypot(W, H) * 0.6);
+      bg.addColorStop(0,   '#eef3fb');
+      bg.addColorStop(0.55, '#e4ecf8');
+      bg.addColorStop(1,   '#d8e6f4');
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, W, H);
+    }
+
+    // particles — white dots for dark, soft navy dots for light
+    _stars.forEach(function (st) {
+      ctx.beginPath();
+      ctx.arc(st.x, st.y, st.r, 0, Math.PI * 2);
+      ctx.fillStyle = isDark
+        ? 'rgba(255,255,255,' + st.o + ')'
+        : 'rgba(26,44,61,' + (st.o * 0.28) + ')';
+      ctx.fill();
+      st.x += st.dx; st.y += st.dy;
+      if (st.y < -4) { st.y = H + 4; st.x = Math.random() * W; }
+      if (st.x < -4) st.x = W + 4;
+      if (st.x > W + 4) st.x = -4;
+    });
+  }
+
+  // ── clock ─────────────────────────────────────────────────────────────
+  function drawClock(canvas, tz) {
+    if (!canvas) return;
+    var ctx = canvas.getContext('2d');
+    var cx = 200, cy = 200, R = 181;
+    var C  = getClockColors(getTheme());
+
+    var t  = getTZ(tz);
+    var h  = t.h, m = t.m, s = t.s, ms = t.ms;
+    var ss = s + ms / 1000;   // smooth seconds
+
+    ctx.clearRect(0, 0, 400, 400);
+
+    // ── bezel ──
+    var bez = ctx.createLinearGradient(cx - R, cy - R, cx + R, cy + R);
+    bez.addColorStop(0,    C.bezelA);
+    bez.addColorStop(0.35, C.bezelB);
+    bez.addColorStop(0.65, C.bezelB);
+    bez.addColorStop(1,    C.bezelC);
+    ctx.beginPath();
+    ctx.arc(cx, cy, R + 13, 0, Math.PI * 2);
+    ctx.fillStyle = bez;
+    ctx.fill();
+
+    // bezel inner accent ring
+    ctx.beginPath();
+    ctx.arc(cx, cy, R + 2, 0, Math.PI * 2);
+    ctx.strokeStyle = C.bezelRing;
+    ctx.lineWidth   = 1;
+    ctx.stroke();
+
+    // ── face ──
+    var face = ctx.createRadialGradient(cx, cy - 55, 8, cx, cy, R);
+    face.addColorStop(0,   C.faceA);
+    face.addColorStop(0.5, C.faceB);
+    face.addColorStop(1,   C.faceC);
+    ctx.beginPath();
+    ctx.arc(cx, cy, R, 0, Math.PI * 2);
+    ctx.fillStyle = face;
+    ctx.fill();
+
+    // ── tick marks ──
+    for (var i = 0; i < 60; i++) {
+      var ang  = (i / 60) * Math.PI * 2 - Math.PI / 2;
+      var isQ  = i % 15 === 0;
+      var isHr = i % 5  === 0;
+      var len  = isQ ? 22 : (isHr ? 14 : 6);
+      var lw   = isQ ? 3 : (isHr ? 1.8 : 0.75);
+      var rO   = R - 7, rI = rO - len;
+
+      ctx.beginPath();
+      ctx.moveTo(cx + rO * Math.cos(ang), cy + rO * Math.sin(ang));
+      ctx.lineTo(cx + rI * Math.cos(ang), cy + rI * Math.sin(ang));
+      ctx.strokeStyle = isQ ? C.tickQ : isHr ? C.tickHr : C.tickMin;
+      ctx.lineWidth   = lw;
+      ctx.lineCap     = 'round';
+      ctx.stroke();
+    }
+
+    // ── hour numbers ──
+    for (var n = 1; n <= 12; n++) {
+      var na  = (n / 12) * Math.PI * 2 - Math.PI / 2;
+      var nr  = R - 38;
+      var nx  = cx + nr * Math.cos(na);
+      var ny  = cy + nr * Math.sin(na);
+      var big = n % 3 === 0;
+
+      ctx.save();
+      ctx.font         = (big ? 'bold 15px' : '500 11px') + ' "DM Sans",sans-serif';
+      ctx.textAlign    = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle    = big ? C.numBig : C.numSmall;
+      ctx.fillText(String(n), nx, ny);
+      ctx.restore();
+    }
+
+    // ── digital readout below the 12 ──
+    var digY   = cy - R + 60;
+    var digStr = p2(h) + ':' + p2(m) + ':' + p2(s);
+
+    ctx.save();
+    roundRect(ctx, cx - 47, digY - 13, 94, 26, 7);
+    ctx.fillStyle   = C.digBg;
+    ctx.fill();
+    ctx.strokeStyle = C.digBorder;
+    ctx.lineWidth   = 0.75;
+    ctx.stroke();
+    ctx.restore();
+
+    ctx.save();
+    ctx.font         = 'bold 12.5px "DM Mono","Courier New",monospace';
+    ctx.textAlign    = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle    = C.digText;
+    ctx.fillText(digStr, cx, digY);
+    ctx.restore();
+
+    // ── hour hand ──
+    var hA = ((h % 12) / 12 + m / 720 + ss / 43200) * Math.PI * 2 - Math.PI / 2;
+    _hand(ctx, cx, cy, hA, R * 0.48, 7.5, C.hrHand, 20);
+
+    // ── minute hand ──
+    var mA = (m / 60 + ss / 3600) * Math.PI * 2 - Math.PI / 2;
+    _hand(ctx, cx, cy, mA, R * 0.73, 4.5, C.minHand, 14);
+
+    // ── second hand ──
+    var sA = (ss / 60) * Math.PI * 2 - Math.PI / 2;
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(cx - Math.cos(sA) * 34, cy - Math.sin(sA) * 34);
+    ctx.lineTo(cx + Math.cos(sA) * (R * 0.84), cy + Math.sin(sA) * (R * 0.84));
+    ctx.strokeStyle = C.secHand;
+    ctx.lineWidth   = 1.75;
+    ctx.lineCap     = 'round';
+    ctx.stroke();
+    // counterweight disc
+    ctx.beginPath();
+    ctx.arc(cx - Math.cos(sA) * 22, cy - Math.sin(sA) * 22, 4.5, 0, Math.PI * 2);
+    ctx.fillStyle = C.secHand;
+    ctx.fill();
+    ctx.restore();
+
+    // ── centre jewel ──
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(cx, cy, 9, 0, Math.PI * 2);
+    ctx.fillStyle = C.jewOuter;
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(cx, cy, 4.5, 0, Math.PI * 2);
+    ctx.fillStyle = C.jewInner;
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function _hand(ctx, cx, cy, a, len, w, color, tail) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(cx - Math.cos(a) * tail, cy - Math.sin(a) * tail);
+    ctx.lineTo(cx + Math.cos(a) * len,  cy + Math.sin(a) * len);
+    ctx.strokeStyle = color;
+    ctx.lineWidth   = w;
+    ctx.lineCap     = 'round';
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // ── date line ────────────────────────────────────────────────────────
+  function updateDate() {
+    if (!_date) return;
+    _date.textContent = new Date().toLocaleDateString('en-US', {
+      timeZone: 'America/New_York',
+      weekday: 'long', month: 'long', day: 'numeric', year: 'numeric'
+    });
+  }
+
+  // ── animation loop ───────────────────────────────────────────────────
+  function tick() {
+    drawBg();
+    drawClock(_c1, 'America/New_York');
+    drawClock(_c2, 'Asia/Kolkata');
+    updateDate();
+    _raf = requestAnimationFrame(tick);
+  }
+
+  // ── show / hide ──────────────────────────────────────────────────────
+  function show() {
+    if (_active || !_el) return;
+    _active = true;
+    initBg();
+    _el.style.display = 'block';
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () { _el.classList.add('adm-ss-in'); });
+    });
+    tick();
+  }
+
+  function hide() {
+    if (!_active || !_el) return;
+    _active = false;
+    if (_raf) { cancelAnimationFrame(_raf); _raf = null; }
+    _el.classList.remove('adm-ss-in');
+    setTimeout(function () { if (!_active) _el.style.display = 'none'; }, 920);
+    resetTimer();
+  }
+
+  function resetTimer() {
+    clearTimeout(_timer);
+    _timer = setTimeout(show, TIMEOUT);
+  }
+
+  // ── inactivity events ────────────────────────────────────────────────
+  ['mousemove','mousedown','keydown','touchstart','scroll','wheel','click'].forEach(function (ev) {
+    document.addEventListener(ev, function () {
+      if (_active) hide(); else resetTimer();
+    }, { passive: true, capture: true });
+  });
+
+  window.addEventListener('resize', function () { if (_active) initBg(); });
+
+  // Expose so the clock button can trigger it directly
+  window.admSS = { show: show, hide: hide };
+
+  resetTimer();
+})();
+</script>
 </body>
 </html>
