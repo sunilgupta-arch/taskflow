@@ -497,11 +497,9 @@ const isSalesUser = user.role_name === 'CLIENT_SALES';
     s = String(s);
     if (s.charAt(s.length - 1) === 'Z' || s.indexOf('+') !== -1 ||
         (s.indexOf('T') !== -1 && s.length > 19)) return new Date(s);
-    var now = new Date();
-    var etOffsetMs = new Date(now.toLocaleString('en-US', { timeZone: 'UTC' })).getTime() -
-                     new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' })).getTime();
+    // Bare MySQL datetime string — DB session is UTC, treat as UTC directly
     var d = new Date(s.replace(' ', 'T') + 'Z');
-    return isNaN(d.getTime()) ? null : new Date(d.getTime() + etOffsetMs);
+    return isNaN(d.getTime()) ? null : d;
   }
   function fmtTime(dtStr) {
     if (!dtStr) return '';

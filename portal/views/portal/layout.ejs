@@ -1604,13 +1604,9 @@
       const s = String(dateStr);
       if (s.charAt(s.length - 1) === 'Z' || s.includes('+') ||
           (s.includes('T') && s.length > 19)) return new Date(s);
-      // MySQL TIMESTAMP arrives in Eastern timezone (server OS = America/New_York).
-      // Compute ET↔UTC offset dynamically so EDT (-4h) and EST (-5h) both work.
-      const now = new Date();
-      const etOffsetMs = new Date(now.toLocaleString('en-US', { timeZone: 'UTC' })).getTime() -
-                         new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' })).getTime();
+      // Bare MySQL datetime string — DB session is UTC, treat as UTC directly
       const d = new Date(s.replace(' ', 'T') + 'Z');
-      return isNaN(d.getTime()) ? new Date() : new Date(d.getTime() + etOffsetMs);
+      return isNaN(d.getTime()) ? new Date() : d;
     }
 
     function timeAgo(dateStr) {
