@@ -164,7 +164,7 @@ class ClientRequest {
   static async pick(instanceId, userId) {
     const [result] = await db.query(
       `UPDATE client_request_instances
-       SET status = 'picked', picked_by = ?, picked_at = NOW()
+       SET status = 'picked', picked_by = ?, picked_at = UTC_TIMESTAMP()
        WHERE id = ? AND status IN ('open', 'missed', 'rejected')`,
       [userId, instanceId]
     );
@@ -197,7 +197,7 @@ class ClientRequest {
     const isLate = inst.instance_date < today ? 1 : 0;
     await db.query(
       `UPDATE client_request_instances
-       SET status = 'done', completed_by = ?, completed_at = NOW(), completed_late = ?
+       SET status = 'done', completed_by = ?, completed_at = UTC_TIMESTAMP(), completed_late = ?
        WHERE id = ?`,
       [userId, isLate, instanceId]
     );
@@ -539,7 +539,7 @@ class ClientRequest {
     if (inst.status !== 'open') throw new Error('Only open tasks can be cancelled');
     await db.query(
       `UPDATE client_request_instances
-       SET status = 'cancelled', cancelled_by = ?, cancelled_at = NOW()
+       SET status = 'cancelled', cancelled_by = ?, cancelled_at = UTC_TIMESTAMP()
        WHERE id = ?`,
       [userId || null, instanceId]
     );
@@ -556,7 +556,7 @@ class ClientRequest {
     if (inst.status !== 'cancelled') throw new Error('Only cancelled requests can be restored');
     await db.query(
       `UPDATE client_request_instances
-       SET status = 'open', uncancelled_by = ?, uncancelled_at = NOW()
+       SET status = 'open', uncancelled_by = ?, uncancelled_at = UTC_TIMESTAMP()
        WHERE id = ?`,
       [userId || null, instanceId]
     );
@@ -610,7 +610,7 @@ class ClientRequest {
     if (inst.status !== 'done') throw new Error('Only completed requests can be approved');
     await db.query(
       `UPDATE client_request_instances
-       SET status = 'approved', approved_by = ?, approved_at = NOW()
+       SET status = 'approved', approved_by = ?, approved_at = UTC_TIMESTAMP()
        WHERE id = ?`,
       [userId, instanceId]
     );
@@ -624,7 +624,7 @@ class ClientRequest {
     if (inst.status !== 'done') throw new Error('Only completed requests can be rejected');
     await db.query(
       `UPDATE client_request_instances
-       SET status = 'rejected', rejected_by = ?, rejected_at = NOW(),
+       SET status = 'rejected', rejected_by = ?, rejected_at = UTC_TIMESTAMP(),
            picked_by = NULL, picked_at = NULL, completed_by = NULL, completed_at = NULL
        WHERE id = ?`,
       [userId, instanceId]

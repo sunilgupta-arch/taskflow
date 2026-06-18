@@ -7,8 +7,8 @@ const pool = mysql.createPool({
   user: process.env.DB_USER || 'root',
   password: process.env.DB_PASSWORD || '',
   database: process.env.DB_NAME || 'taskflow_db',
-  timezone: '+00:00',  // Driver-level offset; MySQL session uses OS timezone (Eastern)
-  dateStrings: ['DATE', 'TIMESTAMP'],  // Return as strings to avoid JS Date timezone shifting
+  timezone: '+00:00',  // DB stores UTC; driver treats all DATETIME values as UTC
+  dateStrings: ['DATE', 'TIMESTAMP'],  // Return DATE/TIMESTAMP as strings; DATETIME comes as JS Date
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,

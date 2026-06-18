@@ -761,29 +761,27 @@
   // Parse a server datetime string to a correct-epoch Date (handles DST automatically).
   // MySQL TIMESTAMP strings arrive in Eastern timezone (server OS = America/New_York).
   // UTC ISO strings (DATETIME columns, JSON) arrive with 'Z' suffix.
-  function _parseET(s) {
+  function _parseTS(s) {
     if (!s) return null;
     s = String(s);
+    // Already timezone-aware (JS Date serialized with Z, or offset string)
     if (s.charAt(s.length - 1) === 'Z' || s.indexOf('+') !== -1 ||
         (s.indexOf('T') !== -1 && s.length > 19)) return new Date(s);
-    // Eastern string: compute current ET↔UTC offset via Intl (auto-handles EDT/EST)
-    var now = new Date();
-    var etOffsetMs = new Date(now.toLocaleString('en-US', { timeZone: 'UTC' })).getTime() -
-                     new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' })).getTime();
+    // Bare MySQL datetime string — DB session is UTC, so append Z directly
     var d = new Date(s.replace(' ', 'T') + 'Z');
-    return isNaN(d.getTime()) ? null : new Date(d.getTime() + etOffsetMs);
+    return isNaN(d.getTime()) ? null : d;
   }
   function fmtTs(ts) {
     if (!ts) return '';
-    var d = _parseET(ts);
+    var d = _parseTS(ts);
     if (!d) return '';
-    return d.toLocaleString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
+    return d.toLocaleString('en-US', { timeZone: 'Asia/Kolkata', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
   }
   function fmtTime(dtStr) {
     if (!dtStr) return '—';
-    var d = _parseET(dtStr);
+    var d = _parseTS(dtStr);
     if (!d) return '—';
-    return d.toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: '2-digit', minute: '2-digit', hour12: true });
+    return d.toLocaleTimeString('en-US', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true });
   }
   function fmtDateShort(dtStr) {
     if (!dtStr) return '—';
