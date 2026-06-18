@@ -901,7 +901,7 @@
     }
     var buildRow = function(inst, idx, hidden, isPastRow) {
       var past       = (isPastRow !== undefined) ? isPastRow : isPast(date);
-      var isYesterday = inst.instance_date === yesterday;
+      var isYesterday = isToday && inst.instance_date === yesterday;
       var overdue    = !isYesterday && inst.instance_date < _today && inst.status === 'open';
       var rowCls     = isYesterday ? 'row-yesterday' : (overdue ? 'row-overdue' : 'row-'+inst.status);
       var badge      = isYesterday ? '<span class="admq-yesterday-chip">Yesterday</span>'
