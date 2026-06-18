@@ -5,6 +5,7 @@ uploads/tasks/*
 !uploads/tasks/.gitkeep
 uploads/portal/
 uploads/channel/
+uploads/downloads/
 public/dist/
 backups/
 *.log
