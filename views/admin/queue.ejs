@@ -233,22 +233,28 @@
   z-index: 1040; backdrop-filter: blur(2px); display: none;
 }
 .admq-drawer {
-  position: fixed; top: 0; right: 0; height: 100vh; width: 500px;
-  background: var(--adm-bg, #060d18); border-left: 1px solid var(--adm-border, #1a3050);
-  box-shadow: -8px 0 30px rgba(0,0,0,0.4); z-index: 1041;
-  display: flex; flex-direction: column;
-  transform: translateX(100%); transition: transform 0.25s cubic-bezier(0.4,0,0.2,1);
+  position: fixed; top: 50%; left: 50%;
+  width: 780px; max-width: 96vw; height: 90vh; max-height: 880px;
+  background: var(--adm-bg, #1a1a1a); border: 1px solid var(--adm-border, #383838);
+  border-radius: 18px; box-shadow: 0 28px 80px rgba(0,0,0,0.65); z-index: 1041;
+  display: flex; flex-direction: column; overflow: hidden;
+  transform: translate(-50%, -50%) scale(0.96);
+  opacity: 0; pointer-events: none;
+  transition: transform 0.22s cubic-bezier(0.4,0,0.2,1), opacity 0.22s ease;
 }
-.admq-drawer.open { transform: translateX(0); }
+.admq-drawer.open {
+  transform: translate(-50%, -50%) scale(1);
+  opacity: 1; pointer-events: auto;
+}
 .admq-drawer-header {
-  padding: 14px 18px; border-bottom: 1px solid var(--adm-border, #1a3050);
+  padding: 16px 20px; border-bottom: 1px solid var(--adm-border, #383838);
   display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
-  background: var(--adm-surface, #0e1d30);
+  background: var(--adm-surface, #242424); border-radius: 18px 18px 0 0;
 }
 .admq-drawer-title {
-  font-weight: 600; font-size: 0.88rem; color: var(--adm-text, #dceaf8);
+  font-weight: 600; font-size: 0.92rem; color: var(--adm-text, #e8e8e8);
   display: flex; align-items: center; gap: 8px;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 380px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 640px;
 }
 .admq-close-btn {
   background: none; border: none; color: var(--adm-muted, #445e78);
@@ -257,14 +263,14 @@
 }
 .admq-close-btn:hover { color: var(--adm-text, #dceaf8); }
 .admq-drawer-body {
-  flex: 1; overflow-y: auto; padding: 18px;
+  flex: 1; overflow-y: auto; padding: 20px 24px;
   display: flex; flex-direction: column; gap: 18px;
-  background: var(--adm-bg, #060d18);
+  background: var(--adm-bg, #1a1a1a);
 }
 .admq-drawer-actions {
-  display: flex; gap: 8px; padding: 12px 18px;
-  border-top: 1px solid var(--adm-border, #1a3050);
-  flex-shrink: 0; background: var(--adm-surface, #0e1d30);
+  display: flex; gap: 8px; padding: 12px 20px;
+  border-top: 1px solid var(--adm-border, #383838);
+  flex-shrink: 0; background: var(--adm-surface, #242424);
 }
 .admq-drawer-btn {
   flex: 1; height: 36px; border-radius: 9px;
@@ -286,7 +292,7 @@
   text-transform: uppercase; letter-spacing: 1px; color: var(--adm-muted, #445e78);
   padding-bottom: 8px; border-bottom: 1px solid var(--adm-border, #1a3050); margin-bottom: 2px;
 }
-.admq-info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.admq-info-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
 .admq-info-item { display: flex; flex-direction: column; gap: 3px; }
 .admq-info-key { font-size: 0.65rem; color: var(--adm-muted, #445e78); font-family: var(--adm-mono); text-transform: uppercase; letter-spacing: 0.5px; }
 .admq-info-val { font-size: 0.82rem; font-weight: 500; color: var(--adm-text, #dceaf8); }
@@ -370,6 +376,89 @@
 }
 .admq-modal-cancel:hover  { border-color: var(--adm-border-2, #1e3860); color: var(--adm-text, #dceaf8); }
 .admq-modal-confirm:hover { background: #2563eb; }
+
+/* ── Drawer inline chat ──────────────────────────────────────────── */
+/* body collapses when input is focused */
+.admq-drawer-body {
+  transition: max-height 0.28s cubic-bezier(0.4,0,0.2,1),
+              padding 0.28s cubic-bezier(0.4,0,0.2,1),
+              opacity 0.2s ease;
+  max-height: 9999px;
+}
+.admq-drawer.chat-focused .admq-drawer-body {
+  max-height: 0 !important; padding-top: 0 !important; padding-bottom: 0 !important;
+  overflow: hidden !important; opacity: 0;
+}
+.admq-drawer-actions {
+  transition: max-height 0.28s cubic-bezier(0.4,0,0.2,1), padding 0.28s cubic-bezier(0.4,0,0.2,1);
+  max-height: 200px; overflow: hidden;
+}
+.admq-drawer.chat-focused .admq-drawer-actions {
+  max-height: 0 !important; padding-top: 0 !important; padding-bottom: 0 !important;
+}
+#admqDrawerChat {
+  flex-shrink:0; border-top:1px solid var(--adm-border,#383838);
+  background:var(--adm-surface,#242424); display:flex; flex-direction:column;
+  height:380px; min-height:0; border-radius:0 0 18px 18px;
+  transition: height 0.28s cubic-bezier(0.4,0,0.2,1);
+}
+#admqDrawerChatLabel {
+  font-size:0.6rem; font-family:var(--adm-mono,monospace); font-weight:700;
+  text-transform:uppercase; letter-spacing:1px; color:var(--adm-muted,#888);
+  padding:9px 20px 7px; flex-shrink:0;
+  display:flex; align-items:center; gap:7px; border-bottom:1px solid var(--adm-border,#383838);
+}
+#admqDrawerChatLabel span { color:var(--adm-accent,#00d4ff); font-size:0.75rem; font-weight:600; letter-spacing:0; }
+#admqDrawerMessages {
+  flex:1; overflow-y:auto; padding:12px 20px;
+  display:flex; flex-direction:column; gap:10px; scroll-behavior:smooth;
+}
+#admqDrawerMessages::-webkit-scrollbar { width:3px; }
+#admqDrawerMessages::-webkit-scrollbar-thumb { background:var(--adm-border,#383838); border-radius:3px; }
+#admqDrawerChatPreviews {
+  display:flex; flex-wrap:wrap; gap:6px; padding:4px 14px 0; min-height:0;
+}
+#admqDrawerCompose {
+  padding:8px 14px 12px; border-top:1px solid var(--adm-border,#383838);
+  background:var(--adm-bg,#1a1a1a); flex-shrink:0; border-radius:0 0 18px 18px;
+}
+.admq-compose-box {
+  position:relative;
+  background:var(--adm-surface,#2a2a2a);
+  border:1px solid var(--adm-border,#383838);
+  border-radius:16px;
+  padding:12px 52px 12px 14px;
+  transition:border-color .15s;
+}
+.admq-compose-box:focus-within { border-color:var(--adm-accent,#00d4ff); }
+#admqDrawerInput {
+  width:100%; min-height:56px; max-height:130px;
+  resize:none; border:none; background:transparent;
+  color:var(--adm-text,#e8e8e8); font-family:var(--adm-font,sans-serif);
+  font-size:0.85rem; line-height:1.55; padding:0; overflow-y:auto;
+  box-sizing:border-box; display:block;
+}
+#admqDrawerInput:focus { outline:none; }
+#admqDrawerInput::placeholder { color:var(--adm-muted,#666); }
+.admq-compose-actions {
+  position:absolute; bottom:10px; right:10px;
+  display:flex; flex-direction:column; gap:5px; align-items:center;
+}
+.admq-compose-attach {
+  width:30px; height:30px; border-radius:8px;
+  border:1px solid var(--adm-border,#383838); background:transparent;
+  color:var(--adm-muted,#888); cursor:pointer; font-size:0.9rem;
+  display:flex; align-items:center; justify-content:center; transition:color .15s,border-color .15s;
+}
+.admq-compose-attach:hover { color:var(--adm-text,#e8e8e8); border-color:var(--adm-text-2,#aaa); }
+.admq-compose-send {
+  width:30px; height:30px; border-radius:50%; border:none;
+  background:var(--adm-accent,#00d4ff); color:#000; cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  font-size:0.85rem; font-weight:700; transition:opacity .15s;
+}
+.admq-compose-send:hover { opacity:0.85; }
+.admq-compose-send:disabled { opacity:.35; cursor:not-allowed; }
 
 /* ── Chat Modal ───────────────────────────────────────────────────── */
 #admqChatModal {
@@ -638,6 +727,31 @@
     <div class="admq-loading"><div class="admq-spinner"></div></div>
   </div>
   <div class="admq-drawer-actions" id="admqDrawerActions" style="display:none"></div>
+  <div id="admqDrawerChat" style="display:none">
+    <div id="admqDrawerChatLabel">
+      <i class="bi bi-chat-left-dots-fill" style="color:var(--adm-accent)"></i>
+      Correspondence <span id="admqDrawerChatCount"></span>
+      <button id="admqDrawerExpandBtn" onclick="admqDrawerExpandDetail()" title="Show details" style="display:none;margin-left:auto;background:none;border:none;color:var(--adm-muted,#888);cursor:pointer;font-size:0.72rem;padding:0 2px;align-items:center;gap:4px">
+        <i class="bi bi-chevron-up"></i> Details
+      </button>
+    </div>
+    <div id="admqDrawerMessages"></div>
+    <div id="admqDrawerChatPreviews"></div>
+    <div id="admqDrawerCompose">
+      <input type="file" id="admqDrawerFileInput" multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv,.zip" style="display:none">
+      <div class="admq-compose-box">
+        <textarea id="admqDrawerInput" placeholder="Type a message… or paste an image"></textarea>
+        <div class="admq-compose-actions">
+          <button class="admq-compose-attach" title="Attach file" onclick="document.getElementById('admqDrawerFileInput').click()">
+            <i class="bi bi-paperclip"></i>
+          </button>
+          <button class="admq-compose-send" id="admqDrawerSend" title="Send (Ctrl+Enter)" onclick="admqDrawerSend()">
+            <i class="bi bi-arrow-up"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 <div id="admqTooltip" class="admq-tooltip"></div>
 
@@ -1334,6 +1448,168 @@
     });
   }
 
+  // ── Drawer inline chat ───────────────────────────────────────────────
+  var _drawerPendingFiles = [];
+
+  function _renderDrawerMessages(comments) {
+    var box = document.getElementById('admqDrawerMessages');
+    if (!comments || !comments.length) {
+      box.innerHTML = '<div class="admqc-empty"><i class="bi bi-chat-left-dots" style="font-size:1.6rem;opacity:.3"></i><span>No messages yet. Start the conversation.</span></div>';
+      return;
+    }
+    box.innerHTML = comments.map(function(c) {
+      var isMe = c.commenter_role && !c.commenter_role.startsWith('CLIENT');
+      var side  = isMe ? 'mine' : 'theirs';
+      var bg    = c.commenter_role && c.commenter_role.startsWith('CLIENT') ? '#3b82f6' : '#10b981';
+      var init  = (c.commenter_name || '?').charAt(0).toUpperCase();
+      var bodyHtml = c.body ? '<div class="admqc-bubble">'+esc(c.body)+'</div>' : '';
+      var filesHtml = '';
+      if (c.files && c.files.length) {
+        var chips = c.files.map(function(f) {
+          var isImg = f.mime_type && f.mime_type.startsWith('image/');
+          if (isImg) {
+            return '<a href="/queue/chat-file/'+f.id+'" target="_blank" rel="noopener">'
+              +'<img src="/queue/chat-file/'+f.id+'" class="admqc-img-thumb" alt="'+esc(f.file_name)+'" loading="lazy" onerror="this.style.display=\'none\'">'
+              +'</a>';
+          }
+          return '<a class="admqc-chip" href="/queue/chat-file/'+f.id+'" target="_blank" rel="noopener">'
+            +'<i class="bi '+_mimeIcon(f.mime_type)+'"></i>'
+            +esc(f.file_name)+(f.file_size?' <span style="opacity:.5">'+_fmtBytes(f.file_size)+'</span>':'')
+            +'</a>';
+        }).join('');
+        filesHtml = '<div class="admqc-file-chips">'+chips+'</div>';
+      }
+      if (!bodyHtml && !filesHtml) return '';
+      return '<div class="admqc-bubble-wrap '+side+'">'
+        +'<div class="admqc-avatar" style="background:'+bg+'">'+init+'</div>'
+        +'<div>'+(bodyHtml||'')+filesHtml
+          +'<div class="admqc-meta">'+esc(c.commenter_name||'')+'&nbsp;·&nbsp;'+fmtTs(c.created_at)+'</div>'
+        +'</div></div>';
+    }).join('');
+    box.scrollTop = box.scrollHeight;
+  }
+
+  function _renderDrawerPreviews() {
+    var strip = document.getElementById('admqDrawerChatPreviews');
+    if (!_drawerPendingFiles.length) { strip.innerHTML = ''; return; }
+    strip.innerHTML = _drawerPendingFiles.map(function(pf, i) {
+      var preview = pf.dataUrl
+        ? '<img src="'+pf.dataUrl+'" class="admqc-preview-img">'
+        : '<i class="bi '+_mimeIcon(pf.mime)+'" style="font-size:1.2rem"></i>';
+      return '<div class="admqc-preview-item">'+preview+'<span>'+esc(pf.name)+'</span>'
+        +'<button class="admqc-preview-rm" onclick="_drawerRemoveFile('+i+')">×</button></div>';
+    }).join('');
+  }
+
+  window._drawerRemoveFile = function(i) {
+    _drawerPendingFiles.splice(i, 1);
+    _renderDrawerPreviews();
+  };
+
+  function _addDrawerFiles(fileList) {
+    Array.prototype.forEach.call(fileList, function(file) {
+      if (_drawerPendingFiles.length >= 5) return;
+      if (file.type.startsWith('image/')) {
+        var reader = new FileReader();
+        reader.onload = function(e) {
+          _drawerPendingFiles.push({ file: file, dataUrl: e.target.result, name: file.name, mime: file.type });
+          _renderDrawerPreviews();
+        };
+        reader.readAsDataURL(file);
+      } else {
+        _drawerPendingFiles.push({ file: file, dataUrl: null, name: file.name, mime: file.type });
+        _renderDrawerPreviews();
+      }
+    });
+  }
+
+  window.admqDrawerSend = function() {
+    var id = _detailId;
+    if (!id) return;
+    var body = document.getElementById('admqDrawerInput').value.trim();
+    if (!body && !_drawerPendingFiles.length) return;
+    var btn = document.getElementById('admqDrawerSend');
+    btn.disabled = true;
+    var fd = new FormData();
+    fd.append('body', body);
+    _drawerPendingFiles.forEach(function(pf){ fd.append('files', pf.file, pf.name); });
+    fetch('/queue/'+id+'/chat', { method:'POST', body: fd })
+      .then(function(r){ return r.json(); })
+      .then(function(res) {
+        if (!res.success) { alert(res.message || 'Failed to send'); return; }
+        document.getElementById('admqDrawerInput').value = '';
+        document.getElementById('admqDrawerInput').style.height = 'auto';
+        _drawerPendingFiles = [];
+        _renderDrawerPreviews();
+        return fetch('/queue/'+id+'/detail').then(function(r2){ return r2.json(); }).then(function(d) {
+          if (d.success) {
+            var comments = d.data.comments || [];
+            _renderDrawerMessages(comments);
+            document.getElementById('admqDrawerChatCount').textContent = comments.length ? '('+comments.length+')' : '';
+            loadDate(_date);
+          }
+        });
+      })
+      .catch(function(){ alert('Network error'); })
+      .finally(function(){ btn.disabled = false; });
+  };
+
+  document.getElementById('admqDrawerFileInput').addEventListener('change', function() {
+    _addDrawerFiles(this.files); this.value = '';
+  });
+  document.getElementById('admqDrawerInput').addEventListener('paste', function(e) {
+    var items = (e.clipboardData || e.originalEvent.clipboardData).items;
+    Array.prototype.forEach.call(items, function(item) {
+      if (item.type.startsWith('image/')) {
+        e.preventDefault();
+        _addDrawerFiles([item.getAsFile()]);
+      }
+    });
+  });
+  document.getElementById('admqDrawerInput').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); admqDrawerSend(); }
+  });
+  document.getElementById('admqDrawerInput').addEventListener('input', function() {
+    this.style.height = 'auto';
+    this.style.height = Math.min(this.scrollHeight, 130) + 'px';
+  });
+
+  function _admqCollapseDetails() {
+    var drawer = document.getElementById('admqDrawer');
+    if (drawer.classList.contains('chat-focused')) return;
+    drawer.classList.add('chat-focused');
+    // Compute full remaining height for chat section
+    var headerH = drawer.querySelector('.admq-drawer-header').offsetHeight;
+    document.getElementById('admqDrawerChat').style.height = (drawer.offsetHeight - headerH) + 'px';
+    document.getElementById('admqDrawerExpandBtn').style.display = 'inline-flex';
+  }
+  function _admqExpandDetails() {
+    var drawer = document.getElementById('admqDrawer');
+    drawer.classList.remove('chat-focused');
+    document.getElementById('admqDrawerChat').style.height = '380px';
+    document.getElementById('admqDrawerExpandBtn').style.display = 'none';
+  }
+  window.admqDrawerExpandDetail = function() { _admqExpandDetails(); };
+
+  document.getElementById('admqDrawerInput').addEventListener('focus', function() {
+    _admqCollapseDetails();
+    setTimeout(function() {
+      var box = document.getElementById('admqDrawerMessages');
+      box.scrollTop = box.scrollHeight;
+    }, 300);
+  });
+  // Re-expand only if input is fully empty and blurred away from entire chat section
+  document.getElementById('admqDrawerInput').addEventListener('blur', function() {
+    var self = this;
+    setTimeout(function() {
+      var active = document.activeElement;
+      var chat = document.getElementById('admqDrawerChat');
+      if (!self.value.trim() && !chat.contains(active)) {
+        _admqExpandDetails();
+      }
+    }, 180);
+  });
+
   window.admqOpenChat = function(instanceId) {
     _chatInstanceId = instanceId;
     _chatPendingFiles = [];
@@ -1435,6 +1711,10 @@
   window.admqCloseDetail = function() {
     document.getElementById('admqOverlay').style.display = 'none';
     document.getElementById('admqDrawer').classList.remove('open');
+    document.getElementById('admqDrawerChat').style.display = 'none';
+    _admqExpandDetails();
+    _drawerPendingFiles = [];
+    _renderDrawerPreviews();
     _detailId = null;
   };
 
@@ -1517,27 +1797,12 @@
         +'</div></div>';
     }
 
-    // Comments
-    var lastComment = comments.length
-      ? comments[comments.length-1]
-      : null;
-    var previewHtml = lastComment
-      ? '<div style="font-size:0.78rem;color:var(--adm-muted);white-space:pre-wrap;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">'
-          +(lastComment.body ? esc(lastComment.body) : '<em>attachment</em>')
-        +'</div>'
-        +'<div style="font-size:0.65rem;color:var(--adm-muted);margin-top:3px">'+esc(lastComment.commenter_name||'')+'&nbsp;·&nbsp;'+fmtTs(lastComment.created_at)+'</div>'
-      : '<div style="font-size:0.78rem;color:var(--adm-muted)">No messages yet</div>';
-    html += '<div>'
-      +'<div class="admq-section-label">Correspondence</div>'
-      +'<div style="display:flex;align-items:center;justify-content:space-between;gap:10px">'
-        +'<div style="flex:1">'+previewHtml+'</div>'
-        +'<button onclick="admqOpenChat('+inst.id+')" style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:10px;border:1px solid var(--adm-border);background:var(--adm-surface-2);color:var(--adm-text-2);cursor:pointer;font-size:0.78rem;white-space:nowrap;flex-shrink:0;transition:border-color .15s,color .15s" onmouseover="this.style.borderColor=\'var(--adm-accent)\';this.style.color=\'var(--adm-accent)\'" onmouseout="this.style.borderColor=\'var(--adm-border)\';this.style.color=\'var(--adm-text-2)\'">'
-          +'<i class="bi bi-chat-left-dots-fill"></i> Open Chat'+(comments.length?' ('+comments.length+')':'')
-        +'</button>'
-      +'</div>'
-    +'</div>';
-
     document.getElementById('admqDrawerBody').innerHTML = html;
+
+    // Populate inline chat section
+    _renderDrawerMessages(comments);
+    document.getElementById('admqDrawerChatCount').textContent = comments.length ? '(' + comments.length + ')' : '';
+    document.getElementById('admqDrawerChat').style.display = '';
   }
 
   // ── Comment & Upload ─────────────────────────────────────────────────

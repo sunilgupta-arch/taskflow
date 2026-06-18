@@ -142,6 +142,7 @@ class ClientRequest {
               cr.recurrence, cr.recurrence_days, cr.due_time,
               cr.start_date, cr.recurrence_end_date,
               cr.org_id, o.name as org_name,
+              cr.created_at as request_created_at,
               cr.created_by, creator.name as created_by_name, creator.email as creator_email,
               picker.name as picked_by_name,
               completer.name as completed_by_name,

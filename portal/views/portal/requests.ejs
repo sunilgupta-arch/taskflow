@@ -523,6 +523,16 @@ const isSalesUser = user.role_name === 'CLIENT_SALES';
     return h + 'h' + (m ? ' ' + m + 'm' : '');
   }
 
+  function fmtCreatedDate(dateStr) {
+    if (!dateStr) return '';
+    var today = PAGE_DATE;
+    var yesterday = (function(){ var d = new Date(today + 'T00:00:00'); d.setDate(d.getDate()-1); return d.toISOString().split('T')[0]; })();
+    if (dateStr === today)     return '<span class="text-muted" style="font-size:0.7rem">Today</span>';
+    if (dateStr === yesterday) return '<span class="text-muted" style="font-size:0.7rem">Yesterday</span>';
+    var d = new Date(dateStr + 'T00:00:00');
+    return '<span class="text-muted" style="font-size:0.7rem">' + d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + '</span>';
+  }
+
   function commentSnippet(inst) {
     var body = (inst.latest_comment || '').trim();
     var count = parseInt(inst.comment_count) || 0;
@@ -600,7 +610,10 @@ const isSalesUser = user.role_name === 'CLIENT_SALES';
         <td class="small text-muted">${recLabels[inst.recurrence] || inst.recurrence}</td>
         <td>${priorityBadge(inst.priority)}</td>
         <td class="small text-muted">${inst.due_time ? inst.due_time.substring(0,5) : '—'}</td>
-        <td class="small" title="${escHtml(inst.created_by_name || '—')}">${escHtml((inst.created_by_name || '—').split(' ')[0])}</td>
+        <td class="small" title="${escHtml(inst.created_by_name || '—')}" style="line-height:1.3">
+          ${escHtml((inst.created_by_name || '—').split(' ')[0])}
+          <div>${fmtCreatedDate(inst.instance_date)}</div>
+        </td>
         <td style="line-height:1.4">
           ${statusBadge(inst.status, inst.rescheduled_to)}
           ${['done','approved'].includes(inst.status) && fmtDuration(inst.picked_at, inst.completed_at) ? `<div class="text-muted" style="font-size:0.7rem;font-family:monospace">${fmtDuration(inst.picked_at, inst.completed_at)}</div>` : ''}
@@ -1019,6 +1032,7 @@ const isSalesUser = user.role_name === 'CLIENT_SALES';
 
   function renderReqDetail(d) {
     const { instance: inst, history, comments, attachments } = d;
+    _reqCommentFiles = []; _renderReqPreviews();
     document.getElementById('reqDetailTitle').textContent = inst.title;
     let html = `<div class="row g-3 mb-3">
       <div class="col-6"><div class="small text-muted mb-1">Task Type</div><span class="badge bg-info text-dark">${escHtml(inst.task_type)}</span></div>
@@ -1029,6 +1043,14 @@ const isSalesUser = user.role_name === 'CLIENT_SALES';
       <div class="col-6"><div class="small text-muted mb-1">Handled By</div>${escHtml(inst.picked_by_name || inst.completed_by_name || '—')}</div>
       ${fmtDuration(inst.picked_at, inst.completed_at) ? `<div class="col-6"><div class="small text-muted mb-1">Time Taken</div><span class="small" style="font-family:monospace;color:#198754">${fmtDuration(inst.picked_at, inst.completed_at)}</span></div>` : ''}
       ${inst.rescheduled_from_date ? `<div class="col-12"><div class="small text-muted mb-1">Rescheduled From</div><span class="small" style="font-family:monospace">${escHtml(inst.rescheduled_from_date)}</span>${inst.rescheduled_by_name ? `<span class="text-muted small ms-2">by ${escHtml(inst.rescheduled_by_name)}</span>` : ''}</div>` : ''}
+      <div class="col-12">
+        <div style="border-top:1px solid var(--bs-border-color);padding-top:10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <i class="bi bi-clock-history text-muted" style="font-size:0.8rem"></i>
+          <span class="small text-muted">Submitted</span>
+          <span class="small fw-semibold" style="font-family:monospace">${inst.request_created_at ? fmtTs(inst.request_created_at) : '—'}</span>
+          ${inst.created_by_name ? `<span class="small text-muted">by</span><span class="small fw-semibold">${escHtml(inst.created_by_name)}</span>` : ''}
+        </div>
+      </div>
     </div>`;
     if (inst.description) html += `<div class="mb-3"><div class="small text-muted mb-1">Description</div><div class="p-2 rounded" style="background:var(--tf-surface-2);white-space:pre-wrap">${escHtml(inst.description)}</div></div>`;
     const PREQ_IMG_EXTS = ['jpg','jpeg','png','gif','webp','bmp','svg','avif'];
@@ -1057,41 +1079,158 @@ const isSalesUser = user.role_name === 'CLIENT_SALES';
     }
     html += `<hr><div class="mb-2 small fw-semibold">Comments</div><div id="reqCommentsList">`;
     if (comments.length === 0) html += `<p class="text-muted small" id="reqNoComments">No comments yet.</p>`;
+    const PREQ_COMMENT_IMG_EXTS = ['jpg','jpeg','png','gif','webp','bmp','svg','avif'];
     comments.forEach(c => {
       const isClient = c.commenter_role && c.commenter_role.startsWith('CLIENT');
       const name = c.commenter_name || '?';
+      let filesHtml = '';
+      if (c.files && c.files.length) {
+        filesHtml = '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:5px">' +
+          c.files.map(f => {
+            const ext = (f.file_name||'').split('.').pop().toLowerCase();
+            const url = f.drive_view_link || ('/portal/requests/comment-file/' + f.id);
+            if (PREQ_COMMENT_IMG_EXTS.indexOf(ext) !== -1) {
+              return `<a href="${url}" target="_blank" rel="noopener"><img src="${url}" style="max-width:180px;max-height:130px;border-radius:8px;border:1px solid #dee2e6;display:block;object-fit:cover" loading="lazy"></a>`;
+            }
+            return `<a href="${url}" target="_blank" rel="noopener" class="d-inline-flex align-items-center gap-1 small" style="padding:3px 8px;border-radius:6px;border:1px solid #dee2e6;color:#495057;text-decoration:none"><i class="bi bi-paperclip"></i>${escHtml(f.file_name)}</a>`;
+          }).join('') +
+        '</div>';
+      }
       html += `<div class="d-flex gap-2 mb-2">
         <div class="flex-shrink-0 rounded-circle d-flex align-items-center justify-content-center text-white small fw-bold" style="width:32px;height:32px;background:${isClient?'#0d6efd':'#198754'}">${escHtml(name[0])}</div>
         <div><div class="small fw-semibold">${escHtml(name)} <span class="text-muted fw-normal">${fmtTs(c.created_at)}</span></div>
-        <div class="small" style="white-space:pre-wrap">${escHtml(c.body)}</div></div>
+        ${c.body ? `<div class="small" style="white-space:pre-wrap">${escHtml(c.body)}</div>` : ''}
+        ${filesHtml}</div>
       </div>`;
     });
-    html += `</div><div class="mt-2 d-flex gap-2">
-      <textarea class="form-control form-control-sm flex-grow-1" id="reqCommentInput" rows="2" placeholder="Add a comment..."></textarea>
-      <button class="btn btn-sm btn-primary align-self-end" onclick="submitReqComment(${inst.id})">Send</button>
+    html += `</div>
+    <div class="mt-2">
+      <input type="file" id="reqCommentFileInput" multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv,.zip" style="display:none" onchange="reqCommentAddFiles(this.files);this.value=''">
+      <div id="reqCommentPreviews" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px"></div>
+      <div style="position:relative;background:#f8f9fa;border:1px solid #dee2e6;border-radius:12px;padding:10px 48px 38px 12px;transition:border-color .15s" id="reqCommentBox">
+        <textarea id="reqCommentInput" placeholder="Add a comment… or paste an image"
+          style="width:100%;min-height:52px;max-height:120px;border:none;background:transparent;resize:none;font-size:0.85rem;line-height:1.5;padding:0;outline:none;box-sizing:border-box;color:#212529;font-family:inherit"
+          oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px'"></textarea>
+        <div style="position:absolute;bottom:8px;right:10px;display:flex;gap:5px;align-items:center">
+          <button type="button" id="reqDictateBtn" title="Dictate message" onclick="reqDictate(${inst.id})"
+            style="width:30px;height:30px;border-radius:50%;border:1px solid #dee2e6;background:transparent;color:#6c757d;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:0.85rem;transition:all .15s">
+            <i class="bi bi-mic"></i>
+          </button>
+          <button type="button" title="Attach file" onclick="document.getElementById('reqCommentFileInput').click()"
+            style="width:30px;height:30px;border-radius:50%;border:1px solid #dee2e6;background:transparent;color:#6c757d;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:0.85rem;transition:all .15s">
+            <i class="bi bi-paperclip"></i>
+          </button>
+          <button type="button" id="reqCommentSendBtn" onclick="submitReqComment(${inst.id})"
+            style="width:32px;height:32px;border-radius:50%;border:none;background:#0d6efd;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:0.9rem;font-weight:700;transition:opacity .15s">
+            <i class="bi bi-arrow-up"></i>
+          </button>
+        </div>
+      </div>
     </div>`;
     document.getElementById('reqDetailBody').innerHTML = html;
   }
 
+  // ── Portal comment compose helpers ───────────────────────────────
+  var _reqCommentFiles = [];  // { file, dataUrl, name, mime }
+
+  window.reqCommentAddFiles = function(fileList) {
+    Array.prototype.forEach.call(fileList, function(file) {
+      if (_reqCommentFiles.length >= 5) return;
+      if (file.type.startsWith('image/')) {
+        var reader = new FileReader();
+        reader.onload = function(e) {
+          _reqCommentFiles.push({ file: file, dataUrl: e.target.result, name: file.name, mime: file.type });
+          _renderReqPreviews();
+        };
+        reader.readAsDataURL(file);
+      } else {
+        _reqCommentFiles.push({ file: file, dataUrl: null, name: file.name, mime: file.type });
+        _renderReqPreviews();
+      }
+    });
+  };
+
+  function _renderReqPreviews() {
+    var strip = document.getElementById('reqCommentPreviews');
+    if (!strip) return;
+    if (!_reqCommentFiles.length) { strip.innerHTML = ''; return; }
+    strip.innerHTML = _reqCommentFiles.map(function(pf, i) {
+      var thumb = pf.dataUrl
+        ? '<img src="' + pf.dataUrl + '" style="width:36px;height:36px;object-fit:cover;border-radius:5px">'
+        : '<i class="bi bi-file-earmark" style="font-size:1.2rem"></i>';
+      return '<div style="position:relative;display:inline-flex;align-items:center;gap:5px;padding:4px 8px;border-radius:8px;font-size:0.72rem;background:#f1f3f5;border:1px solid #dee2e6;color:#495057">'
+        + thumb + '<span>' + escHtml(pf.name) + '</span>'
+        + '<button onclick="_reqRemoveFile(' + i + ')" style="position:absolute;top:-5px;right:-5px;width:16px;height:16px;border-radius:50%;background:#dc3545;border:none;color:#fff;font-size:0.6rem;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1">×</button>'
+        + '</div>';
+    }).join('');
+  }
+
+  window._reqRemoveFile = function(i) { _reqCommentFiles.splice(i, 1); _renderReqPreviews(); };
+
+  // Paste image into comment box
+  document.addEventListener('paste', function(e) {
+    var box = document.getElementById('reqCommentInput');
+    if (!box || document.activeElement !== box) return;
+    var items = (e.clipboardData || e.originalEvent.clipboardData).items;
+    Array.prototype.forEach.call(items, function(item) {
+      if (item.type.startsWith('image/')) {
+        e.preventDefault();
+        window.reqCommentAddFiles([item.getAsFile()]);
+      }
+    });
+  });
+
+  // Dictate via Web Speech API
+  var _dictRecognition = null;
+  window.reqDictate = function(instanceId) {
+    var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) { alert('Speech recognition is not supported in this browser. Try Chrome.'); return; }
+    var btn = document.getElementById('reqDictateBtn');
+    if (_dictRecognition) { _dictRecognition.stop(); return; }
+    var r = new SpeechRecognition();
+    r.continuous = false; r.interimResults = false; r.lang = 'en-US';
+    _dictRecognition = r;
+    btn.style.background = '#dc3545'; btn.style.color = '#fff'; btn.style.borderColor = '#dc3545';
+    r.onresult = function(e) {
+      var transcript = e.results[0][0].transcript;
+      var input = document.getElementById('reqCommentInput');
+      if (input) input.value = (input.value ? input.value + ' ' : '') + transcript;
+    };
+    r.onerror = r.onend = function() {
+      _dictRecognition = null;
+      if (btn) { btn.style.background = ''; btn.style.color = '#6c757d'; btn.style.borderColor = '#dee2e6'; }
+    };
+    r.start();
+  };
+
   window.submitReqComment = async function(instanceId) {
     const input = document.getElementById('reqCommentInput');
     const body = input.value.trim();
-    if (!body) return;
+    if (!body && !_reqCommentFiles.length) return;
+    const sendBtn = document.getElementById('reqCommentSendBtn');
+    if (sendBtn) sendBtn.disabled = true;
     input.disabled = true;
     try {
+      const fd = new FormData();
+      fd.append('body', body);
+      _reqCommentFiles.forEach(function(pf) { fd.append('files', pf.file, pf.name); });
       const r = await fetch('/portal/requests/instances/' + instanceId + '/comments', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-        body: JSON.stringify({ body })
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        body: fd
       });
       const data = await r.json();
       if (data.success) {
-        input.value = '';
+        input.value = ''; input.style.height = 'auto';
+        _reqCommentFiles = []; _renderReqPreviews();
         const r2 = await fetch('/portal/requests/instances/' + instanceId, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
         const d2 = await r2.json();
         if (d2.success) renderReqDetail(d2.data);
       } else alert(data.message || 'Failed');
-    } catch { } finally { input.disabled = false; }
+    } catch { } finally {
+      input.disabled = false;
+      if (sendBtn) sendBtn.disabled = false;
+    }
   };
 
   // ── Deactivate / delete request ─────────────────────────

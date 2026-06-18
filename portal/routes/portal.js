@@ -560,8 +560,10 @@ router.patch('/requests/instances/:id/cancel', ClientRequestController.cancelIns
 router.post('/requests/instances/:id/uncancel', ClientRequestController.uncancelInstance);
 router.patch('/requests/instances/:id/approve', ClientRequestController.approveInstance);
 router.patch('/requests/instances/:id/reject', ClientRequestController.rejectInstance);
-router.post('/requests/instances/:id/comments', ClientRequestController.addComment);
+const reqCommentUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024, files: 5 } });
+router.post('/requests/instances/:id/comments', (req, res, next) => reqCommentUpload.array('files')(req, res, err => { if (err) return res.status(400).json({ success: false, message: err.message }); next(); }), ClientRequestController.addComment);
 router.get('/requests/attachments/:attachmentId', ClientRequestController.serveAttachment);
+router.get('/requests/comment-file/:fileId', ClientRequestController.serveCommentFile);
 
 // ── Help & Training ──────────────────────────────────────
 router.get('/help', (req, res) => {

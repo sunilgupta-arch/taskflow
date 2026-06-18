@@ -349,21 +349,36 @@ class ClientRequestController {
       if (!instance || instance.org_id !== req.user.organization_id)
         return ApiResponse.error(res, 'Not found or not authorized', 404);
       const { body } = req.body;
-      if (!body || !body.trim()) return ApiResponse.error(res, 'Comment cannot be empty', 400);
+      const files = req.files || [];
+      if ((!body || !body.trim()) && !files.length)
+        return ApiResponse.error(res, 'Comment cannot be empty', 400);
       const [comment, ctx] = await Promise.all([
-        ClientRequest.addComment(instanceId, req.user.id, body.trim()),
+        ClientRequest.addComment(instanceId, req.user.id, (body || '').trim()),
         ClientRequest.getInstanceContext(instanceId)
       ]);
+      if (files.length) {
+        const fileRows = [];
+        for (const file of files) {
+          const driveFile = await GoogleDriveService.uploadRequestAttachment(file);
+          fileRows.push({
+            uploaded_by: req.user.id,
+            file_name: file.originalname,
+            mime_type: file.mimetype,
+            drive_file_id: driveFile.id,
+            drive_view_link: driveFile.webViewLink || null,
+            file_size: file.size
+          });
+        }
+        await ClientRequest.addCommentFiles(comment.id, fileRows);
+      }
       if (ctx) {
         try {
           const io = getIO();
+          const notifBody = (body || '').trim() || `${files.length} file${files.length > 1 ? 's' : ''} shared`;
           const payload = {
-            instance_id: instanceId,
-            instance_date: ctx.instance_date,
-            title: ctx.title,
-            body: body.trim(),
-            commenter_name: req.user.name,
-            commenter_role: req.user.role_name
+            instance_id: instanceId, instance_date: ctx.instance_date,
+            title: ctx.title, body: notifBody,
+            commenter_name: req.user.name, commenter_role: req.user.role_name
           };
           if (ctx.picked_by) {
             io.to(`user:${ctx.picked_by}`).emit('request:comment', payload);
@@ -402,6 +417,26 @@ class ClientRequestController {
     } catch (err) {
       console.error('Portal serveAttachment error:', err);
       return ApiResponse.error(res, 'Failed to serve file');
+    }
+  }
+
+  static async serveCommentFile(req, res) {
+    try {
+      const db = require('../../config/db');
+      const [rows] = await db.query('SELECT * FROM client_request_comment_files WHERE id = ?', [parseInt(req.params.fileId)]);
+      if (!rows.length) return res.status(404).end();
+      const f = rows[0];
+      res.setHeader('Content-Disposition', `inline; filename="${f.file_name}"`);
+      res.setHeader('Content-Type', f.mime_type || 'application/octet-stream');
+      if (f.drive_file_id) {
+        const { stream } = await GoogleDriveService.downloadFile(f.drive_file_id);
+        stream.on('error', () => { if (!res.headersSent) res.status(500).end(); });
+        return stream.pipe(res);
+      }
+      return res.status(404).end();
+    } catch (err) {
+      console.error('Portal serveCommentFile error:', err);
+      return res.status(500).end();
     }
   }
 }
