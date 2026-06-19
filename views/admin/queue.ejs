@@ -300,7 +300,17 @@
   font-size: 0.82rem; line-height: 1.6; color: var(--adm-text-2, #a8c0d8);
   background: var(--adm-surface-2, #132540); border: 1px solid var(--adm-border, #1a3050);
   border-radius: 10px; padding: 10px 12px; white-space: pre-wrap; word-break: break-word;
+  max-height: 76px; overflow: hidden;
+  transition: max-height 0.3s cubic-bezier(0.4,0,0.2,1);
 }
+.admq-description.expanded { max-height: 600px; }
+.admq-desc-toggle {
+  display: inline-flex; align-items: center; gap: 4px; margin-top: 5px;
+  font-size: 0.7rem; font-family: var(--adm-mono, monospace); letter-spacing: .4px;
+  color: var(--adm-accent, #00d4ff); background: none; border: none; cursor: pointer; padding: 0;
+  opacity: 0.8; transition: opacity .15s;
+}
+.admq-desc-toggle:hover { opacity: 1; }
 .admq-attach-list { display: flex; flex-direction: column; gap: 6px; }
 .admq-attach-item {
   display: flex; align-items: center; gap: 10px; padding: 8px 12px;
@@ -399,7 +409,7 @@
 #admqDrawerChat {
   flex-shrink:0; border-top:1px solid var(--adm-border,#383838);
   background:var(--adm-surface,#242424); display:flex; flex-direction:column;
-  height:380px; min-height:0; border-radius:0 0 18px 18px;
+  min-height:0; border-radius:0 0 18px 18px;
   transition: height 0.28s cubic-bezier(0.4,0,0.2,1);
 }
 #admqDrawerChatLabel {
@@ -410,8 +420,13 @@
 }
 #admqDrawerChatLabel span { color:var(--adm-accent,#00d4ff); font-size:0.75rem; font-weight:600; letter-spacing:0; }
 #admqDrawerMessages {
-  flex:1; overflow-y:auto; padding:12px 20px;
+  overflow-y:hidden; padding:0 20px;
   display:flex; flex-direction:column; gap:10px; scroll-behavior:smooth;
+  max-height:0;
+  transition: max-height 0.28s cubic-bezier(0.4,0,0.2,1), padding 0.28s cubic-bezier(0.4,0,0.2,1);
+}
+.admq-drawer.chat-focused #admqDrawerMessages {
+  flex:1; max-height:600px; overflow-y:auto; padding:12px 20px;
 }
 #admqDrawerMessages::-webkit-scrollbar { width:3px; }
 #admqDrawerMessages::-webkit-scrollbar-thumb { background:var(--adm-border,#383838); border-radius:3px; }
@@ -1586,10 +1601,20 @@
   function _admqExpandDetails() {
     var drawer = document.getElementById('admqDrawer');
     drawer.classList.remove('chat-focused');
-    document.getElementById('admqDrawerChat').style.height = '380px';
+    document.getElementById('admqDrawerChat').style.height = '';
     document.getElementById('admqDrawerExpandBtn').style.display = 'none';
   }
   window.admqDrawerExpandDetail = function() { _admqExpandDetails(); };
+
+  window.admqToggleDesc = function() {
+    var body = document.getElementById('admqDescBody');
+    var toggle = document.getElementById('admqDescToggle');
+    if (!body || !toggle) return;
+    var expanded = body.classList.toggle('expanded');
+    toggle.innerHTML = expanded
+      ? '<i class="bi bi-chevron-up" id="admqDescToggleIcon"></i>&nbsp;Show less'
+      : '<i class="bi bi-chevron-down" id="admqDescToggleIcon"></i>&nbsp;Show more';
+  };
 
   document.getElementById('admqDrawerInput').addEventListener('focus', function() {
     _admqCollapseDetails();
@@ -1768,7 +1793,11 @@
 
     // Description
     if (inst.description) {
-      html += '<div><div class="admq-section-label">Description</div><div class="admq-description">'+esc(inst.description)+'</div></div>';
+      html += '<div><div class="admq-section-label">Description</div>'
+        + '<div class="admq-description" id="admqDescBody">'+esc(inst.description)+'</div>'
+        + '<button class="admq-desc-toggle" id="admqDescToggle" onclick="admqToggleDesc()" style="display:none">'
+        + '<i class="bi bi-chevron-down" id="admqDescToggleIcon"></i>&nbsp;Show more</button>'
+        + '</div>';
     }
 
     // Attachments
@@ -1798,6 +1827,16 @@
     }
 
     document.getElementById('admqDrawerBody').innerHTML = html;
+
+    // Show description toggle only if text overflows the clamped height
+    var descBody = document.getElementById('admqDescBody');
+    var descToggle = document.getElementById('admqDescToggle');
+    if (descBody && descToggle && descBody.scrollHeight > descBody.clientHeight + 4) {
+      descToggle.style.display = 'inline-flex';
+    }
+
+    // Ensure chat messages area is collapsed when drawer opens fresh
+    _admqExpandDetails();
 
     // Populate inline chat section
     _renderDrawerMessages(comments);
