@@ -1270,7 +1270,7 @@
   <main class="adm-main">
     <div class="adm-topbar">
       <div class="adm-topbar-title"><%= typeof title !== 'undefined' ? title : 'Admin' %></div>
-      <div class="adm-clock" title="Click to open screensaver" onclick="window.admSS&&window.admSS.show()">
+      <div class="adm-clock">
         <div class="adm-clock-tz">
           <span class="adm-clock-time" id="admClockET"></span>
           <span class="adm-clock-lbl">Arden NC</span>
@@ -3408,19 +3408,8 @@ function handleLogout() {
     _timer = setTimeout(show, TIMEOUT);
   }
 
-  // ── inactivity events ────────────────────────────────────────────────
-  ['mousemove','mousedown','keydown','touchstart','scroll','wheel','click'].forEach(function (ev) {
-    document.addEventListener(ev, function () {
-      if (_active) hide(); else resetTimer();
-    }, { passive: true, capture: true });
-  });
-
-  window.addEventListener('resize', function () { if (_active) initBg(); });
-
-  // Expose so the clock button can trigger it directly
-  window.admSS = { show: show, hide: hide };
-
-  resetTimer();
+  // Screensaver disabled — no idle auto-trigger and no manual access.
+  // (show/hide/resetTimer left in place, dormant, in case this needs re-enabling later.)
 })();
 </script>
 </body>
