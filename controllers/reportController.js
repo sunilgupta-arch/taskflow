@@ -5,6 +5,7 @@ const { ApiResponse } = require('../utils/response');
 const { getToday, getNow, isScheduledForDate } = require('../utils/timezone');
 const DashboardService = require('../services/dashboardService');
 const ShiftHistory = require('../models/ShiftHistory');
+const Roster = require('../models/Roster');
 
 class ReportController {
   static async completionReport(req, res) {
@@ -198,6 +199,8 @@ class ReportController {
 
       const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
+      const completionReportRosterMap = await Roster.getRosterMapForRange(activeUsers[0].map(u => u.id), startDate, endDate);
+
       const calendarData = {};
       activeUsers[0].forEach(u => {
         calendarData[u.id] = {};
@@ -205,6 +208,7 @@ class ReportController {
           const dateObj = new Date(year, mon - 1, d);
           const dateStr = `${year}-${String(mon).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
           const dayName = dayNames[dateObj.getDay()];
+          const effectiveOffDay = completionReportRosterMap.get(`${u.id}-${Roster.getWeekStart(dateStr)}`) || u.weekly_off_day;
 
           if (dateStr > today && !compOffAppliedSet.has(`${u.id}-${dateStr}`)) {
             // Check if there's a pending/approved leave for future
@@ -222,7 +226,7 @@ class ReportController {
             // Override always takes precedence over weekly off, holiday, and absence
             const overrideKey = `${u.id}-${dateStr}`;
             const override = overrideMap.get(overrideKey);
-            const isUserOff = dayName === u.weekly_off_day;
+            const isUserOff = dayName === effectiveOffDay;
             if (override) {
               const os = override.status;
               if      (os === 'leave')    calendarData[u.id][d] = 'approved_leave';
@@ -233,7 +237,7 @@ class ReportController {
               calendarData[u.id][d] = 'comp_off';
             } else if (isUserOff && compOffEarnedSet.has(`${u.id}-${dateStr}`)) {
               calendarData[u.id][d] = 'comp_earned';
-            } else if (dayName === u.weekly_off_day) {
+            } else if (isUserOff) {
               calendarData[u.id][d] = 'weekoff';
             } else if (holidayMap.has(dateStr)) {
               calendarData[u.id][d] = 'holiday';
@@ -415,11 +419,14 @@ class ReportController {
         myHolidayMap.set(d, h.name);
       });
 
+      const myAttendanceRosterMap = await Roster.getRosterMapForRange([userId], startDate, endDate);
+
       for (let d = 1; d <= lastDay; d++) {
         const dateStr = `${year}-${String(mon).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
         const dateObj = new Date(year, mon - 1, d);
         const dayName = dayNames[dateObj.getDay()];
-        const isOff = dayName === shift.weekly_off_day;
+        const effectiveOffDay = myAttendanceRosterMap.get(`${userId}-${Roster.getWeekStart(dateStr)}`) || shift.weekly_off_day;
+        const isOff = dayName === effectiveOffDay;
         const isHoliday = myHolidayMap.has(dateStr);
         const sessions = logMap[dateStr] || [];
         const log = sessions[0] || null;
@@ -550,6 +557,7 @@ class ReportController {
       // Build calendar grid data
       const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
       const gridData = {};
+      const teamTaskRosterMap = await Roster.getRosterMapForRange(users.map(u => u.id), startDate, endDate);
 
       users.forEach(u => {
         gridData[u.id] = {};
@@ -560,7 +568,8 @@ class ReportController {
           const dateStr = `${year}-${String(mon).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
           const dateObj = new Date(year, mon - 1, d);
           const dayName = dayNames[dateObj.getDay()];
-          const isOff = dayName === u.weekly_off_day;
+          const effectiveOffDay = teamTaskRosterMap.get(`${u.id}-${Roster.getWeekStart(dateStr)}`) || u.weekly_off_day;
+          const isOff = dayName === effectiveOffDay;
           const isHoliday = tcHolidaySet.has(dateStr);
           const isFuture = dateStr > today;
 
@@ -716,6 +725,7 @@ class ReportController {
 
       const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
       const missedRecurring = [];
+      const overdueRosterMap = await Roster.getRosterMapForRange(recurringTasks.map(t => t.assigned_to), sevenDaysAgo, today);
 
       for (let i = 1; i <= 7; i++) {
         const dateObj = new Date(new Date(today + 'T12:00:00').getTime() - i * 86400000);
@@ -723,7 +733,8 @@ class ReportController {
         const dayName = dayNames[dateObj.getDay()];
 
         recurringTasks.forEach(t => {
-          if (dayName === t.weekly_off_day) return;
+          const effectiveOffDay = overdueRosterMap.get(`${t.assigned_to}-${Roster.getWeekStart(dateStr)}`) || t.weekly_off_day;
+          if (dayName === effectiveOffDay) return;
           if (isScheduledForDate(t, dateStr) && !completionSet.has(`${t.id}-${dateStr}`)) {
             missedRecurring.push({
               id: t.id,

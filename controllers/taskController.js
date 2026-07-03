@@ -7,6 +7,7 @@ const db = require('../config/db');
 const { getIO } = require('../config/socket');
 const { getToday, getEffectiveWorkDate, getEffectiveWorkDateWithSession, isScheduledForDate } = require('../utils/timezone');
 const Notification = require('../models/Notification');
+const Roster = require('../models/Roster');
 
 // Helper: fetch the LOCAL org timezone (for employee date calculations)
 async function getLocalOrgTimezone() {
@@ -727,7 +728,9 @@ class TaskController {
 
         // Build unavailable user set: weekly off + approved leaves
         const dayName = new Date(selectedDate + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long' });
-        const offUserIds = new Set(localUsers.filter(u => u.weekly_off_day === dayName).map(u => u.id));
+        const boardRosterMap = await Roster.getRosterMapForRange(localUsers.map(u => u.id), selectedDate, selectedDate);
+        const boardWeekStart = Roster.getWeekStart(selectedDate);
+        const offUserIds = new Set(localUsers.filter(u => (boardRosterMap.get(`${u.id}-${boardWeekStart}`) || u.weekly_off_day) === dayName).map(u => u.id));
 
         // Fetch approved leaves overlapping selectedDate
         const [leaves] = await db.query(

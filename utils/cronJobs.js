@@ -2,6 +2,7 @@ const cron = require('node-cron');
 const db = require('../config/db');
 const { getToday, getNow, getEffectiveWorkDate, isScheduledForDate } = require('./timezone');
 const ChatModel = require('../models/Chat');
+const Roster = require('../models/Roster');
 const path = require('path');
 const fs   = require('fs');
 
@@ -73,9 +74,13 @@ const taskReminderJob = cron.schedule('*/15 * * * *', async () => {
     const nowMinutes = now.getUTCHours() * 60 + now.getUTCMinutes();
     const dayName = new Date().toLocaleDateString('en-US', { timeZone: tz, weekday: 'long' });
 
+    const rosterMap = await Roster.getRosterMapForRange(users.map(u => u.id), today, today);
+    const rosterWeekStart = Roster.getWeekStart(today);
+
     for (const user of users) {
       // Skip if weekly off
-      if (user.weekly_off_day === dayName) continue;
+      const effectiveOffDay = rosterMap.get(`${user.id}-${rosterWeekStart}`) || user.weekly_off_day;
+      if (effectiveOffDay === dayName) continue;
 
       // Use per-user effective work date (accounts for night shifts post-midnight)
       const userWorkDate = getEffectiveWorkDate(tz, user.shift_start, user.shift_hours);
@@ -368,8 +373,9 @@ const overdueAlertJob = cron.schedule('*/15 * * * *', async () => {
 
       const yesterday = new Date(new Date(userToday + 'T12:00:00Z').getTime() - 86400000).toISOString().split('T')[0];
       const dayName = new Date(yesterday + 'T12:00:00Z').toLocaleDateString('en-US', { weekday: 'long' });
+      const effectiveOffDay = await Roster.getWeekOffForDate(user.id, yesterday, user.weekly_off_day);
 
-      if (user.weekly_off_day === dayName) {
+      if (effectiveOffDay === dayName) {
         overdueAlertSent[key] = true;
         continue;
       }

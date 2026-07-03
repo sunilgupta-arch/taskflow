@@ -1,0 +1,193 @@
+<style>
+/* ── Topbar ───────────────────────────────────────────────── */
+.wkr-topbar { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:14px; }
+.wkr-weeknav { display:flex; align-items:center; gap:10px; background:var(--adm-surface); border:1px solid var(--adm-border); border-radius:10px; padding:6px 10px; }
+.wkr-weeknav button { width:28px; height:28px; border-radius:7px; border:1px solid var(--adm-border); background:var(--adm-surface-2); color:var(--adm-text-2); cursor:pointer; display:inline-flex; align-items:center; justify-content:center; }
+.wkr-weeknav button:hover { color:var(--adm-text); border-color:var(--adm-border-2); }
+.wkr-weeklabel { font-family:var(--adm-mono); font-size:0.82rem; font-weight:700; color:var(--adm-text); white-space:nowrap; }
+.wkr-weekstatus { font-size:0.65rem; font-family:var(--adm-mono); text-transform:uppercase; letter-spacing:0.4px; padding:2px 8px; border-radius:20px; }
+.wkr-weekstatus.published { background:rgba(16,185,129,0.12); color:#10b981; border:1px solid rgba(16,185,129,0.25); }
+.wkr-weekstatus.draft { background:rgba(245,158,11,0.12); color:#f59e0b; border:1px solid rgba(245,158,11,0.25); }
+
+.wkr-publish-btn { height:36px; padding:0 18px; border-radius:9px; border:1px solid #10b981; background:#10b981; color:#fff; font-size:0.82rem; font-weight:600; font-family:var(--adm-font); cursor:pointer; display:inline-flex; align-items:center; gap:6px; transition:all 0.15s; }
+.wkr-publish-btn:hover { background:#059669; }
+.wkr-publish-btn:disabled { opacity:0.5; cursor:default; }
+
+/* ── Grid ─────────────────────────────────────────────────── */
+.wkr-wrap { background:var(--adm-surface); border:1px solid var(--adm-border); border-radius:14px; overflow:hidden; }
+.wkr-row { display:flex; align-items:center; gap:14px; padding:12px 16px; border-bottom:1px solid var(--adm-border); }
+.wkr-row:last-child { border-bottom:none; }
+.wkr-user { display:flex; align-items:center; gap:10px; width:190px; flex-shrink:0; }
+.wkr-avatar { width:32px; height:32px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:0.72rem; font-weight:700; color:#fff; font-family:var(--adm-mono); }
+.wkr-uname { font-size:0.86rem; font-weight:500; color:var(--adm-text); }
+.wkr-udefault { font-size:0.65rem; color:var(--adm-muted); }
+
+.wkr-days { display:flex; gap:6px; flex-wrap:wrap; }
+.wkr-day { position:relative; height:34px; min-width:44px; padding:0 8px; border-radius:8px; border:1px solid var(--adm-border); background:var(--adm-surface-2); color:var(--adm-text-2); font-size:0.72rem; font-weight:600; font-family:var(--adm-mono); cursor:pointer; transition:all 0.15s; }
+.wkr-day:hover { border-color:var(--adm-border-2); }
+.wkr-day.selected { background:rgba(0,212,255,0.14); border-color:var(--adm-accent); color:var(--adm-accent); }
+.wkr-day .wkr-req-dot { position:absolute; top:-4px; right:-4px; width:9px; height:9px; border-radius:50%; background:#f59e0b; border:1.5px solid var(--adm-surface); }
+
+.wkr-request-note { width:190px; flex-shrink:0; font-size:0.7rem; color:var(--adm-muted); }
+.wkr-request-note b { color:#f59e0b; font-weight:600; }
+
+/* ── Legend / empty ───────────────────────────────────────── */
+.wkr-legend { display:flex; gap:16px; align-items:center; margin-bottom:12px; font-size:0.72rem; color:var(--adm-muted); }
+.wkr-legend-dot { display:inline-block; width:8px; height:8px; border-radius:50%; background:#f59e0b; margin-right:5px; vertical-align:middle; }
+.wkr-empty { display:flex; flex-direction:column; align-items:center; padding:60px 20px; color:var(--adm-muted); text-align:center; }
+.wkr-empty i { font-size:2.5rem; margin-bottom:10px; opacity:0.2; }
+</style>
+
+<div class="wkr-topbar">
+  <div class="wkr-weeknav">
+    <button onclick="wkrNavWeek(-7)"><i class="bi bi-chevron-left"></i></button>
+    <span class="wkr-weeklabel" id="wkrWeekLabel">Week of <%= weekStart %></span>
+    <button onclick="wkrNavWeek(7)"><i class="bi bi-chevron-right"></i></button>
+    <span class="wkr-weekstatus draft" id="wkrWeekStatus">Draft</span>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px">
+    <a href="/admin/team" class="adm-back-btn"><i class="bi bi-arrow-left"></i> Team</a>
+    <button class="wkr-publish-btn" id="wkrPublishBtn" onclick="wkrPublish()"><i class="bi bi-check2-circle"></i> Publish Week</button>
+  </div>
+</div>
+
+<div class="wkr-legend"><span><span class="wkr-legend-dot"></span>Employee requested this day</span></div>
+
+<div id="wkrGridArea"></div>
+
+<script>
+(function () {
+  var _weekStart = <%- JSON.stringify(weekStart) %>;
+  var _plan = <%- JSON.stringify(plan.map(function(p) {
+    return {
+      id: p.id, name: p.name, default_day: p.default_day,
+      planned_day: p.planned_day || null, roster_status: p.roster_status || null,
+      requested_day: p.requested_day || null, request_note: p.request_note || null,
+      request_status: p.request_status || null
+    };
+  })).replace(/<\//g, '<\\/') %>;
+
+  var DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+  var _selected = {}; // user_id -> day
+
+  function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+  function avatarColor(name) {
+    var c = ['#3b82f6','#8b5cf6','#10b981','#f59e0b','#ef4444','#06b6d4','#f97316','#a78bfa'];
+    var i = 0; for (var ch of (name||'?')) i = (i + ch.charCodeAt(0)) % c.length;
+    return c[i];
+  }
+  function initials(name) {
+    return (name||'?').split(' ').map(function(w){ return w.charAt(0); }).slice(0,2).join('').toUpperCase();
+  }
+
+  var MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  function fmtDate(d) {
+    var p = d.split('-');
+    return MON[parseInt(p[1])-1] + ' ' + parseInt(p[2]) + ', ' + p[0];
+  }
+  function weekEnd(startStr) {
+    var d = new Date(startStr + 'T12:00:00Z');
+    d.setUTCDate(d.getUTCDate() + 6);
+    return d.toISOString().split('T')[0];
+  }
+
+  function render() {
+    document.getElementById('wkrWeekLabel').textContent = 'Week of ' + fmtDate(_weekStart) + ' – ' + fmtDate(weekEnd(_weekStart));
+    var anyPublished = _plan.some(function(p) { return p.roster_status === 'published'; });
+    var statusEl = document.getElementById('wkrWeekStatus');
+    statusEl.textContent = anyPublished ? 'Published' : 'Draft';
+    statusEl.className = 'wkr-weekstatus ' + (anyPublished ? 'published' : 'draft');
+
+    var area = document.getElementById('wkrGridArea');
+    if (!_plan.length) {
+      area.innerHTML = '<div class="wkr-wrap"><div class="wkr-empty"><i class="bi bi-calendar-week"></i><p>No team members to plan for.</p></div></div>';
+      return;
+    }
+
+    var rows = _plan.map(function(p) {
+      _selected[p.id] = p.planned_day || p.default_day;
+      var color = avatarColor(p.name), inits = initials(p.name);
+
+      var dayPills = DAYS.map(function(day) {
+        var isSelected = _selected[p.id] === day;
+        var isRequested = p.requested_day === day && p.request_status === 'pending';
+        return '<button type="button" class="wkr-day' + (isSelected ? ' selected' : '') + '" '
+          + 'onclick="wkrSelectDay(' + p.id + ',\'' + day + '\')" data-user="' + p.id + '" data-day="' + day + '">'
+          + day.slice(0,3) + (isRequested ? '<span class="wkr-req-dot" title="Requested"></span>' : '')
+          + '</button>';
+      }).join('');
+
+      var noteHtml = '<span>Default: ' + p.default_day + '</span>';
+      if (p.requested_day) {
+        var noteColor = p.request_status === 'fulfilled' ? '#10b981' : p.request_status === 'declined' ? '#ef4444' : '#f59e0b';
+        noteHtml = '<span style="color:' + noteColor + '"><b>Requested ' + p.requested_day + '</b>'
+          + (p.request_status !== 'pending' ? ' (' + p.request_status + ')' : '') + '</span>'
+          + (p.request_note ? '<div title="' + esc(p.request_note) + '" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(p.request_note) + '</div>' : '');
+      }
+
+      return '<div class="wkr-row">'
+        + '<div class="wkr-user"><div class="wkr-avatar" style="background:' + color + '">' + inits + '</div>'
+        + '<div><div class="wkr-uname">' + esc(p.name) + '</div></div></div>'
+        + '<div class="wkr-days">' + dayPills + '</div>'
+        + '<div class="wkr-request-note">' + noteHtml + '</div>'
+        + '</div>';
+    }).join('');
+
+    area.innerHTML = '<div class="wkr-wrap">' + rows + '</div>';
+  }
+
+  window.wkrSelectDay = function(userId, day) {
+    _selected[userId] = day;
+    document.querySelectorAll('.wkr-day[data-user="' + userId + '"]').forEach(function(btn) {
+      btn.classList.toggle('selected', btn.dataset.day === day);
+    });
+  };
+
+  window.wkrNavWeek = function(deltaDays) {
+    var d = new Date(_weekStart + 'T12:00:00Z');
+    d.setUTCDate(d.getUTCDate() + deltaDays);
+    var newStart = d.toISOString().split('T')[0];
+    fetch('/roster/week?start=' + newStart, { headers: { 'Accept': 'application/json' } })
+      .then(function(r){ return r.json(); })
+      .then(function(res) {
+        if (!res.success) { alert(res.message || 'Failed to load week'); return; }
+        _weekStart = res.data.week_start_date;
+        _plan = res.data.plan.map(function(p) { return {
+          id: p.id, name: p.name, default_day: p.default_day,
+          planned_day: p.planned_day || null, roster_status: p.roster_status || null,
+          requested_day: p.requested_day || null, request_note: p.request_note || null,
+          request_status: p.request_status || null
+        }; });
+        _selected = {};
+        render();
+      })
+      .catch(function() { alert('Network error'); });
+  };
+
+  window.wkrPublish = function() {
+    var assignments = _plan.map(function(p) { return { user_id: p.id, weekoff_day: _selected[p.id] }; });
+    var btn = document.getElementById('wkrPublishBtn');
+    btn.disabled = true;
+    fetch('/roster/week/publish', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ week_start_date: _weekStart, assignments: assignments })
+    }).then(function(r){ return r.json(); }).then(function(res) {
+      if (res.success) {
+        _plan.forEach(function(p) {
+          p.planned_day = _selected[p.id];
+          p.roster_status = 'published';
+          if (p.requested_day) p.request_status = p.requested_day === _selected[p.id] ? 'fulfilled' : 'declined';
+        });
+        render();
+      } else {
+        alert(res.message || 'Failed to publish');
+      }
+      btn.disabled = false;
+    }).catch(function() { alert('Network error'); btn.disabled = false; });
+  };
+
+  render();
+})();
+</script>

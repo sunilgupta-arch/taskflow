@@ -1,5 +1,6 @@
 const db = require('../../config/db');
 const { getToday, getNow, getDayOfWeek } = require('../../utils/timezone');
+const Roster = require('../../models/Roster');
 
 class PortalTeamStatusController {
 
@@ -93,6 +94,10 @@ class PortalTeamStatusController {
         });
       }
 
+      // Roster-assigned weekoff for today, if a week has been planned
+      const rosterMap = await Roster.getRosterMapForRange(userIds, today, today);
+      const rosterWeekStart = Roster.getWeekStart(today);
+
       // Classify each employee
       const employees = users.map(user => {
         const effectiveShift = shiftMap.get(user.id) || { shift_start: user.shift_start, shift_hours: user.shift_hours };
@@ -108,7 +113,8 @@ class PortalTeamStatusController {
         };
 
         // Weekly off
-        if (user.weekly_off_day === dayName) {
+        const effectiveOffDay = rosterMap.get(`${user.id}-${rosterWeekStart}`) || user.weekly_off_day;
+        if (effectiveOffDay === dayName) {
           result.status = 'Week Off';
           result.statusType = 'off';
           return result;

@@ -10,6 +10,7 @@ const { getToday, getNow, getDayOfWeek, isScheduledForDate } = require('../utils
 const ShiftHistory = require('../models/ShiftHistory');
 const TaskService  = require('../services/taskService');
 const RewardModel  = require('../models/Reward');
+const Roster       = require('../models/Roster');
 
 class AdminHubController {
   static async dashboard(req, res) {
@@ -266,7 +267,9 @@ class AdminHubController {
       const scheduledRecurring = recurringTasks.filter(t => isScheduledForDate(t, selectedDate));
 
       const dayName = new Date(selectedDate + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long' });
-      const offUserIds = new Set(localUsers.filter(u => u.weekly_off_day === dayName).map(u => u.id));
+      const taskboardRosterMap = await Roster.getRosterMapForRange(localUsers.map(u => u.id), selectedDate, selectedDate);
+      const taskboardWeekStart = Roster.getWeekStart(selectedDate);
+      const offUserIds = new Set(localUsers.filter(u => (taskboardRosterMap.get(`${u.id}-${taskboardWeekStart}`) || u.weekly_off_day) === dayName).map(u => u.id));
       const [leaves] = await db.query(
         `SELECT user_id FROM leave_requests WHERE status = 'approved' AND from_date <= ? AND to_date >= ?`,
         [selectedDate, selectedDate]
@@ -380,6 +383,29 @@ class AdminHubController {
     res.render('admin/comp-off', { title: 'Comp-Off', layout: 'admin/layout', section: 'comp-off' });
   }
 
+  static async roster(req, res) {
+    try {
+      const [[org]] = await db.query("SELECT timezone FROM organizations WHERE org_type = 'LOCAL' LIMIT 1");
+      const tz = (org && org.timezone) || 'America/New_York';
+      const today = getToday(tz);
+      const thisWeekStart = Roster.getWeekStart(today);
+      const nextWeekDate = new Date(thisWeekStart + 'T12:00:00Z');
+      nextWeekDate.setUTCDate(nextWeekDate.getUTCDate() + 7);
+      const defaultWeekStart = nextWeekDate.toISOString().split('T')[0];
+
+      const weekStart = Roster.getWeekStart(req.query.start || defaultWeekStart);
+      const plan = await Roster.getWeekPlan(weekStart);
+
+      res.render('admin/roster', {
+        title: 'Roster', layout: 'admin/layout', section: 'team',
+        weekStart, plan
+      });
+    } catch (err) {
+      console.error('AdminHub roster error:', err);
+      res.status(500).send('Server error');
+    }
+  }
+
   static async liveStatus(req, res) {
     try {
       const [[org]] = await db.query("SELECT timezone FROM organizations WHERE org_type = 'LOCAL' LIMIT 1");
@@ -456,6 +482,9 @@ class AdminHubController {
         shiftRows.forEach(r => { if (!shiftMap.has(r.user_id)) shiftMap.set(r.user_id, r); });
       }
 
+      const liveRosterMap = await Roster.getRosterMapForRange(userIds, today, today);
+      const liveRosterWeekStart = Roster.getWeekStart(today);
+
       const employees = users.map(user => {
         const att        = attendanceMap.get(user.id);
         const isLoggedIn = att && !att.logout_time;
@@ -469,7 +498,8 @@ class AdminHubController {
           loginTime: isLoggedIn ? att.login_time : null,
         };
 
-        if (user.weekly_off_day === dayName) { result.status = 'Week Off';  result.statusType = 'off';   return result; }
+        const effectiveOffDay = liveRosterMap.get(`${user.id}-${liveRosterWeekStart}`) || user.weekly_off_day;
+        if (effectiveOffDay === dayName) { result.status = 'Week Off';  result.statusType = 'off';   return result; }
         if (leaveSet.has(user.id))           { result.status = 'On Leave';  result.statusType = 'leave'; return result; }
 
         const eff = shiftMap.get(user.id) || { shift_start: user.shift_start, shift_hours: user.shift_hours };
@@ -665,6 +695,8 @@ class AdminHubController {
         holidaySet.add(d);
       });
 
+      const taskCompletionRosterMap = await Roster.getRosterMapForRange(users.map(u => u.id), startDate, endDate);
+
       const dayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
       const gridData = {};
       users.forEach(u => {
@@ -674,7 +706,8 @@ class AdminHubController {
         for (let d = 1; d <= lastDay; d++) {
           const dateStr = `${year}-${String(mon).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
           const dayName = dayNames[new Date(year, mon - 1, d).getDay()];
-          const isOff     = dayName === u.weekly_off_day;
+          const effectiveOffDay = taskCompletionRosterMap.get(`${u.id}-${Roster.getWeekStart(dateStr)}`) || u.weekly_off_day;
+          const isOff     = dayName === effectiveOffDay;
           const isHoliday = holidaySet.has(dateStr);
           const isFuture  = dateStr > today;
           if (isOff || isFuture || isHoliday) { gridData[u.id][d] = { total:0, done:0, isOff, isFuture, isHoliday }; continue; }
@@ -1080,6 +1113,7 @@ class AdminHubController {
     });
 
     // Build calendar data
+    const attendanceRosterMap = await Roster.getRosterMapForRange(activeUsers[0].map(u => u.id), startDate, endDate);
     const calendarData = {};
     activeUsers[0].forEach(u => {
       calendarData[u.id] = {};
@@ -1087,6 +1121,7 @@ class AdminHubController {
         const dateObj = new Date(year, mon - 1, d);
         const dateStr = `${year}-${String(mon).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
         const dayName = dayNames[dateObj.getDay()];
+        const effectiveOffDay = attendanceRosterMap.get(`${u.id}-${Roster.getWeekStart(dateStr)}`) || u.weekly_off_day;
 
         if (dateStr > today) {
           let st = 'future';
@@ -1103,7 +1138,7 @@ class AdminHubController {
           const ov = overrideMap[`${u.id}-${dateStr}`];
           if (ov) {
             calendarData[u.id][d] = ov.status === 'leave' ? 'approved_leave' : ov.status;
-          } else if (dayName === u.weekly_off_day) {
+          } else if (dayName === effectiveOffDay) {
             calendarData[u.id][d] = 'weekoff';
           } else if (holidayMap[dateStr]) {
             calendarData[u.id][d] = 'holiday';
@@ -1279,7 +1314,8 @@ class AdminHubController {
         .slice(0, 10);
 
       const targetUser     = await UserModel.findById(userId);
-      const isWeekOff      = targetUser && targetUser.weekly_off_day === new Date(selectedDate + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long' });
+      const myProgressEffectiveOffDay = targetUser ? await Roster.getWeekOffForDate(targetUser.id, selectedDate, targetUser.weekly_off_day) : null;
+      const isWeekOff      = targetUser && myProgressEffectiveOffDay === new Date(selectedDate + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long' });
       const isPast         = selectedDate < todayDate;
       const isViewingToday = selectedDate === todayDate;
 
@@ -1395,6 +1431,7 @@ class AdminHubController {
       });
 
       const dayNames   = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+      const myAttendanceRosterMap = await Roster.getRosterMapForRange([userId], startDate, endDate);
       const calendarData = {};
       const uniqueDates  = new Set();
       let leaveDaysCount = 0;
@@ -1402,7 +1439,8 @@ class AdminHubController {
       for (let d = 1; d <= lastDay; d++) {
         const dateStr = `${year}-${String(mon).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
         const dayName = dayNames[new Date(year, mon - 1, d).getDay()];
-        const isOff     = dayName === shift.weekly_off_day;
+        const effectiveOffDay = myAttendanceRosterMap.get(`${userId}-${Roster.getWeekStart(dateStr)}`) || shift.weekly_off_day;
+        const isOff     = dayName === effectiveOffDay;
         const isHoliday = holidayMap.has(dateStr);
         const sessions  = logMap[dateStr] || [];
         const log       = sessions[0] || null;
@@ -1438,10 +1476,20 @@ class AdminHubController {
       const prevMonth = mon === 1  ? `${year-1}-12`                             : `${year}-${String(mon-1).padStart(2,'0')}`;
       const nextMonth = mon === 12 ? `${year+1}-01`                             : `${year}-${String(mon+1).padStart(2,'0')}`;
 
+      const thisWeekStart = Roster.getWeekStart(today);
+      const nextWeekStart = new Date(thisWeekStart + 'T12:00:00Z');
+      nextWeekStart.setUTCDate(nextWeekStart.getUTCDate() + 7);
+      const nextWeek = nextWeekStart.toISOString().split('T')[0];
+      const [nextWeekRoster, nextWeekRequest] = await Promise.all([
+        Roster.getMyRosterForWeek(userId, nextWeek, userRow.weekly_off_day),
+        Roster.getMyRequest(userId, nextWeek)
+      ]);
+
       res.render('admin/my-attendance', {
         title: 'My Attendance', layout: 'admin/layout', section: 'my-attendance',
         today, todaySessions, shift: { start: ss, hours: sh, offDay: shift.weekly_off_day },
-        calendarData, totalPresent, leaveDaysCount, month, year, mon, lastDay, prevMonth, nextMonth
+        calendarData, totalPresent, leaveDaysCount, month, year, mon, lastDay, prevMonth, nextMonth,
+        nextWeekStart: nextWeek, nextWeekRoster, nextWeekRequest
       });
     } catch (err) {
       console.error('AdminHub myAttendance error:', err);

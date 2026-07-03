@@ -12,3 +12,4 @@ backups/
 .DS_Store
 .claude/settings.local.json
 tms_new/
+roster-manager-email.md

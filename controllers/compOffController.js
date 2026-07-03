@@ -1,4 +1,5 @@
 const CompOff = require('../models/CompOff');
+const Roster = require('../models/Roster');
 const { ApiResponse } = require('../utils/response');
 const { getIO } = require('../config/socket');
 const Notification = require('../models/Notification');
@@ -11,8 +12,9 @@ class CompOffController {
       const today = new Date().toISOString().split('T')[0];
       const dayName = new Date(today + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long' });
       const user = req.user;
+      const effectiveOff = await Roster.getWeekOffForDate(user.id, today, user.weekly_off_day);
 
-      if (user.weekly_off_day !== dayName) {
+      if (effectiveOff !== dayName) {
         return ApiResponse.success(res, { showModal: false });
       }
 

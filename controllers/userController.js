@@ -1,6 +1,7 @@
 const UserModel = require('../models/User');
 const TaskService = require('../services/taskService');
 const RewardModel = require('../models/Reward');
+const Roster = require('../models/Roster');
 const { ApiResponse, getPaginationMeta } = require('../utils/response');
 const db = require('../config/db');
 const { getToday } = require('../utils/timezone');
@@ -222,7 +223,8 @@ class UserController {
 
       // Check if selected date is user's weekly off
       const selectedDayName = new Date(selectedDate + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long' });
-      const isWeekOff = targetUser.weekly_off_day === selectedDayName;
+      const effectiveOffDay = await Roster.getWeekOffForDate(targetUser.id, selectedDate, targetUser.weekly_off_day);
+      const isWeekOff = effectiveOffDay === selectedDayName;
 
       const isPast = selectedDate < todayDate;
       const isViewingToday = selectedDate === todayDate;

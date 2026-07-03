@@ -19,7 +19,7 @@ TaskFlow is a Node.js/Express/EJS task management and work allocation platform w
 - **Email**: Nodemailer + Gmail SMTP (OAuth2 + app-password fallback) — `services/emailService.js`
 - **Files**: Multer for uploads, Google Drive API integration
 - **Scheduling**: node-cron (`utils/cronJobs.js`)
-- **Migrations**: Auto-run on startup via `utils/auto-migrate.js` (59 SQL files in `migrations/`)
+- **Migrations**: Auto-run on startup via `utils/auto-migrate.js` (71 SQL files in `migrations/`, latest is `072_weekly_roster_2026-07-03.sql`)
 
 ---
 
@@ -74,7 +74,7 @@ taskflow/
 │   ├── DevProject.js          # Dev workspace projects
 │   ├── Chat.js, GroupChannel.js, BridgeChat.js
 │   ├── CompOff.js, LeaveRequest.js, Note.js, Reward.js
-│   ├── ShiftHistory.js, Notification.js
+│   ├── ShiftHistory.js, Notification.js, Roster.js  # Roster.js: weekly weekoff planning (added Jul 2026)
 ├── services/                  # Shared business logic
 │   ├── emailService.js        # Gmail SMTP, 5 email templates, OAuth2
 │   ├── taskService.js         # Task helpers
@@ -92,7 +92,7 @@ taskflow/
 │   │   ├── layout.ejs         # Admin hub shell
 │   │   ├── dashboard.ejs, work.ejs, queue.ejs, chat.ejs
 │   │   ├── workspace.ejs      # Dev workspace (added May 2026)
-│   │   ├── users.ejs, attendance.ejs, leaves.ejs
+│   │   ├── users.ejs, attendance.ejs, leaves.ejs, comp-off.ejs, roster.ejs
 │   │   ├── my-tasks.ejs, my-attendance.ejs, my-progress.ejs
 │   │   ├── taskboard.ejs, all-tasks.ejs, channel.ejs
 │   │   └── infoboard.ejs, notes.ejs, drive.ejs, reports.ejs, ...
@@ -146,7 +146,7 @@ There are two co-existing UIs for the LOCAL side:
 Portal and admin hub pages use `X-SPA-Request: 1` header. `middleware/spaJson.js` intercepts `res.render()` and returns only the data JSON instead of full HTML. This avoids full-page reloads.
 
 ### Migrations
-`utils/auto-migrate.js` tracks which `.sql` files in `migrations/` have been applied (stored in a `migrations` table) and runs new ones on every server start. To add a migration: create `migrations/060_description.sql`.
+`utils/auto-migrate.js` tracks which `.sql` files in `migrations/` have been applied (stored in a `migrations` table) and runs new ones on every server start. To add a migration: create `migrations/073_description.sql`.
 
 ### Timezone
 All datetimes stored in DB as UTC. App runs on Eastern timezone. Use helpers in `utils/timezone.js` — never do raw `new Date()` for display.
@@ -177,6 +177,7 @@ All datetimes stored in DB as UTC. App runs on Eastern timezone. Use helpers in 
 | Leave management | `views/admin/leaves.ejs` | — |
 | Attendance/shifts | `views/admin/attendance.ejs` | — |
 | Comp-off credits | `models/CompOff.js` | — |
+| Weekly roster (weekoff planning) | `views/admin/roster.ejs`, `models/Roster.js` — admin/manager plan next week's weekoffs, employees request a day | Read-only (Team Status shows the roster-resolved weekoff, no CLIENT edit access) |
 | Info board | `views/admin/infoboard.ejs` | — |
 | Calendar | — | `portal/views/portal/calendar.ejs` |
 | Team status | — | `portal/views/portal/team-status.ejs` |
@@ -192,6 +193,7 @@ All datetimes stored in DB as UTC. App runs on Eastern timezone. Use helpers in 
 - Client requests: `client_requests` table (managed by `models/ClientRequest.js`)
 - Dev workspace: `dev_projects` + related tables (added May 2026, migrations 056–058)
 - Comp-off cancel/revoke: `comp_off_credits.status` now has `revoked` value (migration 059, June 2026)
+- Weekly roster: `weekly_rosters` (per user/week weekoff assignment) + `roster_requests` (employee-submitted day requests) tables (migration 072, July 2026). `models/Roster.js` resolves the effective weekoff for a date — published roster row overrides `users.weekly_off_day`, which remains the fallback. Every weekoff check app-wide (comp-off trigger, attendance calendars, taskboard, live status, reports, portal Team Status, cron reminders) reads through this resolver except the two raw-SQL recurring-task-scheduling filters in `models/Task.js`, which still use the static column.
 - Migrations table: tracks applied SQL files by filename
 
 ---

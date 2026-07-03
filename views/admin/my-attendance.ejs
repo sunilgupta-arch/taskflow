@@ -355,6 +355,55 @@
   <% } %>
 </div>
 
+<!-- Next week's roster -->
+<div class="adma-cal-card" style="padding:14px 18px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap">
+  <div style="display:flex;align-items:center;gap:10px">
+    <i class="bi bi-calendar2-week" style="font-size:1.1rem;color:var(--adm-accent)"></i>
+    <div>
+      <div style="font-size:0.8rem;color:var(--adm-text)">
+        Next week's weekoff: <strong><%= nextWeekRoster.weekoff_day %></strong>
+        <span style="font-size:0.65rem;font-family:var(--adm-mono);text-transform:uppercase;letter-spacing:0.4px;padding:2px 8px;border-radius:20px;margin-left:6px;<%= nextWeekRoster.published ? 'background:rgba(16,185,129,0.12);color:#10b981;border:1px solid rgba(16,185,129,0.25)' : 'background:rgba(102,102,102,0.15);color:var(--adm-muted);border:1px solid var(--adm-border)' %>">
+          <%= nextWeekRoster.published ? 'Planned' : 'Default' %>
+        </span>
+      </div>
+      <% if (nextWeekRequest) { %>
+      <div style="font-size:0.68rem;color:var(--adm-muted);margin-top:2px">
+        Your request for <%= nextWeekRequest.requested_day %> is <%= nextWeekRequest.status %>
+      </div>
+      <% } %>
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px">
+    <select id="wkReqDay" style="height:32px;border-radius:8px;padding:0 10px;background:var(--adm-surface-2);border:1px solid var(--adm-border);color:var(--adm-text);font-size:0.78rem">
+      <% ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'].forEach(function(d) { %>
+      <option value="<%= d %>" <%= (nextWeekRequest && nextWeekRequest.requested_day === d) ? 'selected' : '' %>><%= d %></option>
+      <% }) %>
+    </select>
+    <button id="wkReqBtn" onclick="wkSubmitRequest()" style="height:32px;padding:0 14px;border-radius:8px;border:1px solid rgba(0,212,255,0.4);background:rgba(0,212,255,0.08);color:var(--adm-accent);font-size:0.78rem;font-weight:600;cursor:pointer">
+      Request a different day
+    </button>
+  </div>
+</div>
+<script>
+  window.wkSubmitRequest = function() {
+    var day = document.getElementById('wkReqDay').value;
+    var btn = document.getElementById('wkReqBtn');
+    btn.disabled = true;
+    fetch('/roster/request', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ week_start_date: <%- JSON.stringify(nextWeekStart) %>, requested_day: day })
+    }).then(function(r){ return r.json(); }).then(function(res) {
+      if (res.success) {
+        location.reload();
+      } else {
+        alert(res.message || 'Failed to submit request');
+        btn.disabled = false;
+      }
+    }).catch(function() { alert('Network error'); btn.disabled = false; });
+  };
+</script>
+
 <!-- Month nav toolbar -->
 <div class="adma-toolbar">
   <div class="adma-month-nav">

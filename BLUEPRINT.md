@@ -182,6 +182,19 @@ Types in use: `task_assigned`, `leave_approved`, `leave_granted`
 ### `models/LeaveRequest.js` — table: `leave_requests`
 Key methods: `findById(), create(), createApproved(), updateStatus(), getAll(), hasOverlapping(), getForRange()`
 
+### `models/CompOff.js` — table: `comp_off_credits`
+
+Self-service "worked on your weekoff day" credit system. Key fields: `user_id, earned_date, applied_to_date, status (available|used|revoked)`.
+Key methods: `earn(), getBalance(), getHistory(), getAllBalanceSummary(), applyCredits(), revokeCredit(), cancelCredit(), hasActionToday()`
+
+### `models/Roster.js` — tables: `weekly_rosters`, `roster_requests` (migration 072, July 2026)
+
+Weekly roster planning: managers plan next week's weekoff per employee, honoring employee requests where possible. Mirrors `ShiftHistory`'s "resolve a fact as of a date, fall back to the static column" pattern — `users.weekly_off_day` remains the default; a published roster row for the relevant week overrides it.
+Key fields on `weekly_rosters`: `user_id, week_start_date (Monday), weekoff_day, status (draft|published), created_by`.
+Key fields on `roster_requests`: `user_id, week_start_date, requested_day, note, status (pending|fulfilled|declined)`.
+Key methods: `getWeekStart(dateStr)`, `getWeekOffForDate(userId, dateStr, defaultDay)` — single lookup, `getRosterMapForRange(userIds, startDate, endDate)` — batched lookup for calendar loops, `getWeekPlan(weekStartDate)`, `publishWeek(weekStartDate, assignments, publishedBy)`, `submitRequest()`, `getMyRequest()`, `getMyRosterForWeek()`.
+**Every weekoff check across the app** (comp-off trigger, attendance calendars, taskboard availability, live status, reports, portal Team Status, cron reminders) resolves through `Roster` first, falling back to `users.weekly_off_day` for weeks that haven't been planned. Exception: the two recurring-task-scheduling filters in `models/Task.js` are raw SQL and still read the static column only (not yet migrated).
+
 ### `models/Reward.js` — table: `rewards_ledger`
 Key methods: `create(), markPaid(), getUserSummary(), getAll()`
 
@@ -230,6 +243,8 @@ Calendar entries for CLIENT users; also surfaces portal tasks and reminders.
 | `BackupController` | `index, create, restore, uploadRestore, uploadToDrive, listDriveBackups, restoreFromDrive, download, destroy, updateSettings` |
 | `AuthController` | `showLogin, login, logout, getProfile, checkLateLogin, submitLateReason` |
 | `LeaveController` | `index, apply, grant, approve, reject` |
+| `CompOffController` | `checkToday, offDayAction, applyCompOff, revokeCredit, cancelCompOff, getMyBalance, getAdminSummary, getUserHistory` |
+| `RosterController` | `submitRequest, getMyRoster, getWeekPlan, publish` |
 | `RewardController` | `index, markPaid` |
 | `LiveStatusController` | `show` — real-time LOCAL team status for CLIENT_ADMIN |
 | `AnnouncementController` | `index, create, togglePin, destroy` |
@@ -333,6 +348,13 @@ POST /dm/conversations                       → find or create DM with a user
 GET  /dm/conversations/:id/messages          → paginated messages
 POST /dm/conversations/:id/messages          → send message
 POST /dm/conversations/:id/read             → mark read
+
+# Weekly Roster
+GET  /admin/roster                → planning grid page (admin/manager only)
+POST /roster/request              → employee requests a specific weekoff day for a week
+GET  /roster/mine                 → employee's own effective weekoff + request status
+GET  /roster/week                 → manager: week planning data (admin/manager only)
+POST /roster/week/publish         → manager: publish a week's assignments (admin/manager only)
 
 # Users, Reports, Leaves, Backups, Rewards, Attendance — see section 4 above
 ```
@@ -444,6 +466,21 @@ CLIENT users use this for portal-specific real-time features.
 - Cron job auto-logs-out at 11:59 PM LOCAL timezone.
 - Late reason submitted separately after login.
 
+### Comp-Off (self-service weekoff swap)
+
+- If a LOCAL employee works on their effective weekoff day, `compOffController.checkToday` shows a same-day modal (`check_in` / `half_day` / `working`).
+- `working` earns a `comp_off_credits` row (`status=available`), redeemable on a future date via `applyCompOff` — writes a `manual_status='comp_off'` row to `attendance_logs` for the redeemed date.
+- No manager approval gate on earning/applying; managers/admins can only `revokeCredit` an incorrectly earned one.
+
+### Weekly Roster (LOCAL side only, July 2026)
+
+- Fixes the coverage-planning gap left by comp-off being purely reactive: managers plan a full week's weekoffs in advance instead of everyone defaulting to their static `weekly_off_day`.
+- Employees request a specific day for an upcoming week from the "Next week's weekoff" widget on `/admin/my-attendance` — notifies all managers (`roster_pending`).
+- Managers plan/publish the week at `/admin/roster` — a per-employee 7-day picker pre-filled with the default day, flagging any pending request. Publishing upserts `weekly_rosters`, auto-resolves matching `roster_requests` to `fulfilled`/`declined`, clears the manager-side notifications, and notifies every employee whose effective day actually changed (`roster_published`).
+- **Editable anytime, no lock** — re-publishing a week updates the plan and re-notifies affected employees. This is intentional: staffing changes don't respect a lock, and silent edits are avoided via the always-notify rule instead.
+- **Interaction with comp-off:** if a roster-assigned weekoff still ends up being worked, nothing new happens — `compOffController.checkToday` resolves the effective weekoff through `Roster.getWeekOffForDate` first, so the existing same-day modal and credit-earning flow fires exactly as it would for the static default. Proactive reschedules (caught before the day arrives) should just re-plan the roster instead — no comp-off needed.
+- Portal Team Status (`portal/controllers/teamStatusController.js`) reads the same roster resolution for read-only display; CLIENT roles have no roster write access.
+
 ### Google Drive Integration
 - All file uploads go to Google Drive, not local disk (except DB backups).
 - `services/googleDriveService.js` wraps the googleapis client.
@@ -525,6 +562,8 @@ Built in parallel with the classic UI. Fully migrated pages:
 | Help Center | `/admin/helpcenter` | Help articles (all LOCAL roles) |
 | Live Status | `/admin/live-status` | Real-time LOCAL team status; includes LOCAL-team DM slide-over |
 | Task Completion Report | `/admin/task-completion` | Monthly grid per employee, colour-coded chips, day detail modal |
+| Comp-Off | `/admin/comp-off` | Admin/manager balance summary + credit history (admin/manager only) |
+| Roster | `/admin/roster` | Weekly weekoff planning grid, employee requests honored where possible (admin/manager only; added July 2026) |
 | Work / Team / Reports / Comms / Tools | hub cards | Hub landing pages; remaining sub-pages still link to classic |
 
 ### Topbar / Layout features live in admin hub

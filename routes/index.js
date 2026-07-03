@@ -10,6 +10,7 @@ const ReportController = require('../controllers/reportController');
 const NoteController = require('../controllers/noteController');
 const LeaveController = require('../controllers/leaveController');
 const CompOffController = require('../controllers/compOffController');
+const RosterController = require('../controllers/rosterController');
 const BackupController = require('../controllers/backupController');
 const LiveStatusController = require('../controllers/liveStatusController');
 const AnnouncementController = require('../controllers/announcementController');
@@ -81,6 +82,12 @@ router.delete('/comp-off/:creditId/cancel', authenticate, requireRoles('LOCAL_AD
 router.delete('/comp-off/:creditId/revoke', authenticate, requireRoles('LOCAL_ADMIN','LOCAL_MANAGER'), CompOffController.revokeCredit);
 router.get('/comp-off/admin-summary',authenticate, requireRoles('LOCAL_ADMIN','LOCAL_MANAGER'), CompOffController.getAdminSummary);
 router.get('/comp-off/:userId/history', authenticate, requireRoles('LOCAL_ADMIN','LOCAL_MANAGER'), CompOffController.getUserHistory);
+
+// ── Weekly Roster ────────────────────────────────────────────
+router.post('/roster/request',      authenticate, requireRoles('LOCAL_ADMIN','LOCAL_MANAGER','LOCAL_USER'), RosterController.submitRequest);
+router.get('/roster/mine',          authenticate, requireRoles('LOCAL_ADMIN','LOCAL_MANAGER','LOCAL_USER'), RosterController.getMyRoster);
+router.get('/roster/week',          authenticate, requireRoles('LOCAL_ADMIN','LOCAL_MANAGER'), RosterController.getWeekPlan);
+router.post('/roster/week/publish', authenticate, requireRoles('LOCAL_ADMIN','LOCAL_MANAGER'), RosterController.publish);
 
 // ── Urgent Chat (Local team responds to client urgent) ──────
 const UrgentController = require('../portal/controllers/urgentController');
@@ -236,6 +243,7 @@ router.get('/admin/taskboard/data',     authenticate, requireLocalAdmin, AdminHu
 router.get('/admin/work',               authenticate, requireLocalAdmin, AdminHubController.work);
 router.get('/admin/team',               authenticate, requireLocalAdmin, AdminHubController.team);
 router.get('/admin/comp-off',           authenticate, requireLocalAdmin, AdminHubController.compOff);
+router.get('/admin/roster',             authenticate, requireLocalAdmin, AdminHubController.roster);
 router.get('/admin/live-status',        authenticate, requireLocalAdmin, AdminHubController.liveStatus);
 router.get('/admin/live-status/data',   authenticate, requireLocalAdmin, AdminHubController.liveStatusData);
 router.get('/admin/users',              authenticate, requireLocalAdmin, AdminHubController.users);
