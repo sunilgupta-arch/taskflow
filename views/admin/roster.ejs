@@ -23,7 +23,7 @@
 .wkr-udefault { font-size:0.65rem; color:var(--adm-muted); }
 
 .wkr-days { display:flex; gap:6px; flex-wrap:wrap; }
-.wkr-day { position:relative; height:34px; min-width:44px; padding:0 8px; border-radius:8px; border:1px solid var(--adm-border); background:var(--adm-surface-2); color:var(--adm-text-2); font-size:0.72rem; font-weight:600; font-family:var(--adm-mono); cursor:pointer; transition:all 0.15s; }
+.wkr-day { position:relative; height:44px; min-width:48px; padding:4px 8px; border-radius:8px; border:1px solid var(--adm-border); background:var(--adm-surface-2); color:var(--adm-text-2); font-size:0.72rem; font-weight:600; font-family:var(--adm-mono); cursor:pointer; transition:all 0.15s; line-height:1.3; }
 .wkr-day:hover { border-color:var(--adm-border-2); }
 .wkr-day.selected { background:rgba(0,212,255,0.14); border-color:var(--adm-accent); color:var(--adm-accent); }
 .wkr-day .wkr-req-dot { position:absolute; top:-4px; right:-4px; width:9px; height:9px; border-radius:50%; background:#f59e0b; border:1.5px solid var(--adm-surface); }
@@ -36,6 +36,26 @@
 .wkr-legend-dot { display:inline-block; width:8px; height:8px; border-radius:50%; background:#f59e0b; margin-right:5px; vertical-align:middle; }
 .wkr-empty { display:flex; flex-direction:column; align-items:center; padding:60px 20px; color:var(--adm-muted); text-align:center; }
 .wkr-empty i { font-size:2.5rem; margin-bottom:10px; opacity:0.2; }
+
+.wkr-day .wkr-day-date { display:block; font-size:0.6rem; font-weight:500; opacity:0.7; margin-top:1px; }
+
+/* ── Page layout / calendar panel ─────────────────────────── */
+.wkr-layout { display:flex; align-items:flex-start; gap:16px; }
+.wkr-main { flex:1; min-width:0; }
+.wkr-cal { width:270px; flex-shrink:0; background:var(--adm-surface); border:1px solid var(--adm-border); border-radius:14px; padding:14px; }
+.wkr-cal-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+.wkr-cal-title { font-size:0.82rem; font-weight:700; color:var(--adm-text); font-family:var(--adm-mono); }
+.wkr-cal-nav { display:flex; gap:4px; }
+.wkr-cal-nav button { width:24px; height:24px; border-radius:6px; border:1px solid var(--adm-border); background:var(--adm-surface-2); color:var(--adm-text-2); cursor:pointer; display:inline-flex; align-items:center; justify-content:center; font-size:0.7rem; }
+.wkr-cal-nav button:hover { color:var(--adm-text); border-color:var(--adm-border-2); }
+.wkr-cal-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:3px; }
+.wkr-cal-dow { font-size:0.6rem; text-align:center; color:var(--adm-muted); font-weight:600; padding-bottom:4px; }
+.wkr-cal-cell { position:relative; aspect-ratio:1; display:flex; align-items:center; justify-content:center; font-size:0.68rem; border-radius:7px; cursor:pointer; color:var(--adm-text-2); background:transparent; border:1px solid transparent; }
+.wkr-cal-cell:hover { border-color:var(--adm-border-2); }
+.wkr-cal-cell.muted { color:var(--adm-muted); opacity:0.35; }
+.wkr-cal-cell.today { font-weight:700; color:var(--adm-text); }
+.wkr-cal-cell.today::after { content:''; position:absolute; bottom:2px; width:4px; height:4px; border-radius:50%; background:var(--adm-accent); }
+.wkr-cal-cell.active-week { background:rgba(0,212,255,0.14); border-color:var(--adm-accent); color:var(--adm-accent); }
 </style>
 
 <div class="wkr-topbar">
@@ -53,7 +73,21 @@
 
 <div class="wkr-legend"><span><span class="wkr-legend-dot"></span>Employee requested this day</span></div>
 
-<div id="wkrGridArea"></div>
+<div class="wkr-layout">
+  <div class="wkr-main">
+    <div id="wkrGridArea"></div>
+  </div>
+  <div class="wkr-cal">
+    <div class="wkr-cal-head">
+      <span class="wkr-cal-title" id="wkrCalTitle"></span>
+      <div class="wkr-cal-nav">
+        <button onclick="wkrCalNavMonth(-1)"><i class="bi bi-chevron-left"></i></button>
+        <button onclick="wkrCalNavMonth(1)"><i class="bi bi-chevron-right"></i></button>
+      </div>
+    </div>
+    <div class="wkr-cal-grid" id="wkrCalGrid"></div>
+  </div>
+</div>
 
 <script>
 (function () {
@@ -91,6 +125,15 @@
     d.setUTCDate(d.getUTCDate() + 6);
     return d.toISOString().split('T')[0];
   }
+  function addDays(startStr, n) {
+    var d = new Date(startStr + 'T12:00:00Z');
+    d.setUTCDate(d.getUTCDate() + n);
+    return d.toISOString().split('T')[0];
+  }
+  function fmtShort(dateStr) {
+    var p = dateStr.split('-');
+    return p[1] + '/' + p[2];
+  }
 
   function render() {
     document.getElementById('wkrWeekLabel').textContent = 'Week of ' + fmtDate(_weekStart) + ' – ' + fmtDate(weekEnd(_weekStart));
@@ -102,6 +145,7 @@
     var area = document.getElementById('wkrGridArea');
     if (!_plan.length) {
       area.innerHTML = '<div class="wkr-wrap"><div class="wkr-empty"><i class="bi bi-calendar-week"></i><p>No team members to plan for.</p></div></div>';
+      renderCalendar();
       return;
     }
 
@@ -109,12 +153,13 @@
       _selected[p.id] = p.planned_day || p.default_day;
       var color = avatarColor(p.name), inits = initials(p.name);
 
-      var dayPills = DAYS.map(function(day) {
+      var dayPills = DAYS.map(function(day, idx) {
         var isSelected = _selected[p.id] === day;
         var isRequested = p.requested_day === day && p.request_status === 'pending';
         return '<button type="button" class="wkr-day' + (isSelected ? ' selected' : '') + '" '
           + 'onclick="wkrSelectDay(' + p.id + ',\'' + day + '\')" data-user="' + p.id + '" data-day="' + day + '">'
           + day.slice(0,3) + (isRequested ? '<span class="wkr-req-dot" title="Requested"></span>' : '')
+          + '<span class="wkr-day-date">' + fmtShort(addDays(_weekStart, idx)) + '</span>'
           + '</button>';
       }).join('');
 
@@ -135,6 +180,62 @@
     }).join('');
 
     area.innerHTML = '<div class="wkr-wrap">' + rows + '</div>';
+    renderCalendar();
+  }
+
+  var _calYear, _calMonth; // month is 0-indexed, defaults to the month containing weekStart
+  (function initCal() {
+    var d = new Date(_weekStart + 'T12:00:00Z');
+    _calYear = d.getUTCFullYear();
+    _calMonth = d.getUTCMonth();
+  })();
+
+  function renderCalendar() {
+    var wStart = _weekStart, wEnd = weekEnd(_weekStart);
+    document.getElementById('wkrCalTitle').textContent = MON[_calMonth] + ' ' + _calYear;
+
+    var firstOfMonth = new Date(Date.UTC(_calYear, _calMonth, 1));
+    var firstDow = firstOfMonth.getUTCDay(); // 0=Sun..6=Sat
+    var leadDays = firstDow === 0 ? 6 : firstDow - 1; // convert to Mon-first offset
+    var gridStart = new Date(firstOfMonth);
+    gridStart.setUTCDate(gridStart.getUTCDate() - leadDays);
+
+    var todayStr = new Date().toISOString().split('T')[0];
+    var cells = ['Mo','Tu','We','Th','Fr','Sa','Su'].map(function(d) {
+      return '<div class="wkr-cal-dow">' + d + '</div>';
+    }).join('');
+
+    for (var i = 0; i < 42; i++) {
+      var cellDate = new Date(gridStart);
+      cellDate.setUTCDate(cellDate.getUTCDate() + i);
+      var cellStr = cellDate.toISOString().split('T')[0];
+      if (i >= 35 && cellDate.getUTCMonth() !== _calMonth) break; // trim trailing row if unneeded
+      var classes = ['wkr-cal-cell'];
+      if (cellDate.getUTCMonth() !== _calMonth) classes.push('muted');
+      if (cellStr === todayStr) classes.push('today');
+      if (cellStr >= wStart && cellStr <= wEnd) classes.push('active-week');
+      cells += '<div class="' + classes.join(' ') + '" onclick="wkrCalPick(\'' + cellStr + '\')">' + cellDate.getUTCDate() + '</div>';
+    }
+    document.getElementById('wkrCalGrid').innerHTML = cells;
+  }
+
+  window.wkrCalNavMonth = function(delta) {
+    _calMonth += delta;
+    if (_calMonth < 0) { _calMonth = 11; _calYear--; }
+    if (_calMonth > 11) { _calMonth = 0; _calYear++; }
+    renderCalendar();
+  };
+
+  window.wkrCalPick = function(dateStr) {
+    wkrLoadWeek(mondayOf(dateStr));
+  };
+
+  function mondayOf(dateStr) {
+    var d = new Date(dateStr + 'T12:00:00Z');
+    var day = d.getUTCDay();
+    var diff = day === 0 ? -6 : 1 - day;
+    d.setUTCDate(d.getUTCDate() + diff);
+    return d.toISOString().split('T')[0];
   }
 
   window.wkrSelectDay = function(userId, day) {
@@ -144,10 +245,7 @@
     });
   };
 
-  window.wkrNavWeek = function(deltaDays) {
-    var d = new Date(_weekStart + 'T12:00:00Z');
-    d.setUTCDate(d.getUTCDate() + deltaDays);
-    var newStart = d.toISOString().split('T')[0];
+  function wkrLoadWeek(newStart) {
     fetch('/roster/week?start=' + newStart, { headers: { 'Accept': 'application/json' } })
       .then(function(r){ return r.json(); })
       .then(function(res) {
@@ -160,9 +258,16 @@
           request_status: p.request_status || null
         }; });
         _selected = {};
+        var d = new Date(_weekStart + 'T12:00:00Z');
+        _calYear = d.getUTCFullYear();
+        _calMonth = d.getUTCMonth();
         render();
       })
       .catch(function() { alert('Network error'); });
+  }
+
+  window.wkrNavWeek = function(deltaDays) {
+    wkrLoadWeek(addDays(_weekStart, deltaDays));
   };
 
   window.wkrPublish = function() {
