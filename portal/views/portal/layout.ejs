@@ -76,10 +76,10 @@
         <span class="ab-label">Downloads</span>
         <span class="ab-tooltip">Downloads</span>
       </a>
-      <a href="/portal/help" class="activity-bar-item <%= section === 'help' ? 'active' : '' %>">
+      <a href="javascript:void(0)" onclick="openPortalHelp()" class="activity-bar-item">
         <i class="bi bi-question-circle"></i>
         <span class="ab-label">Help</span>
-        <span class="ab-tooltip">Help</span>
+        <span class="ab-tooltip">Help for this page</span>
       </a>
     </div>
     <div class="activity-bar-bottom">
@@ -2911,6 +2911,89 @@ html.sidebar-expanded .pnp { left: 200px; }
   // Periodic refresh
   setInterval(_load, 90000);
 })();
+</script>
+
+<!-- ── Page Help Drawer ──────────────────────────── -->
+<style>
+.portal-help-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.4);
+  z-index: 1049;
+  backdrop-filter: blur(2px);
+}
+.portal-help-drawer {
+  position: fixed; top: 0; right: 0;
+  width: 360px; max-width: 92vw; height: 100vh;
+  background: var(--bs-body-bg);
+  border-left: 1px solid rgba(var(--bs-border-color-rgb, 255,255,255),.12);
+  box-shadow: -8px 0 30px rgba(0,0,0,.35);
+  z-index: 1050;
+  display: flex; flex-direction: column;
+  transform: translateX(100%);
+  transition: transform .25s cubic-bezier(.4,0,.2,1);
+}
+.portal-help-drawer.open { transform: translateX(0); }
+.portal-help-hdr {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 13px 14px; border-bottom: 1px solid rgba(var(--bs-border-color-rgb,255,255,255),.1);
+  flex-shrink: 0;
+}
+.portal-help-title { font-size: .88rem; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+.portal-help-close {
+  width: 28px; height: 28px; border-radius: 7px; border: none;
+  background: transparent; color: var(--bs-secondary-color, #8899aa); cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.portal-help-close:hover { background: rgba(128,128,128,.15); }
+.portal-help-body { flex: 1; overflow-y: auto; padding: 16px; }
+.portal-help-intro { font-size: .8rem; color: var(--bs-secondary-color, #8899aa); line-height: 1.5; margin-bottom: 16px; padding-bottom: 14px; border-bottom: 1px dashed rgba(var(--bs-border-color-rgb,255,255,255),.15); }
+.portal-help-topic { margin-bottom: 16px; }
+.portal-help-q { font-size: .81rem; font-weight: 600; margin-bottom: 4px; display: flex; gap: 6px; }
+.portal-help-q i { color: var(--bs-primary, #3b82f6); flex-shrink: 0; margin-top: 2px; }
+.portal-help-a { font-size: .77rem; color: var(--bs-secondary-color, #8899aa); line-height: 1.55; margin-left: 20px; }
+</style>
+<div class="portal-help-overlay" id="portalHelpOverlay" onclick="closePortalHelp()" style="display:none"></div>
+<div class="portal-help-drawer" id="portalHelpDrawer">
+  <div class="portal-help-hdr">
+    <span class="portal-help-title"><i class="bi bi-question-circle-fill" style="color:var(--bs-primary,#3b82f6)"></i><span id="portalHelpTitle">Page Help</span></span>
+    <button class="portal-help-close" onclick="closePortalHelp()" title="Close"><i class="bi bi-x-lg"></i></button>
+  </div>
+  <div class="portal-help-body" id="portalHelpBody"></div>
+</div>
+<script src="/portal/help-content.js"></script>
+<script>
+  function openPortalHelp() {
+    document.getElementById('portalHelpOverlay').style.display = '';
+    document.getElementById('portalHelpDrawer').classList.add('open');
+    renderPortalHelp();
+  }
+  function closePortalHelp() {
+    document.getElementById('portalHelpOverlay').style.display = 'none';
+    document.getElementById('portalHelpDrawer').classList.remove('open');
+  }
+  function _portalHelpEsc(s) {
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+  function renderPortalHelp() {
+    var path = window.location.pathname.replace(/\/+$/, '') || '/portal';
+    var content = (window.PORTAL_HELP_CONTENT || {})[path];
+    var titleEl = document.getElementById('portalHelpTitle');
+    var body = document.getElementById('portalHelpBody');
+    if (!content) {
+      titleEl.textContent = 'Page Help';
+      body.innerHTML = '<div class="portal-help-topic"><div class="portal-help-q"><i class="bi bi-emoji-neutral"></i>No help topics yet for this page</div>'
+        + '<div class="portal-help-a">We haven\'t written a guide for this page yet. Reach out to your support contact if you need a hand.</div></div>';
+      return;
+    }
+    titleEl.textContent = content.title || 'Page Help';
+    var html = '';
+    if (content.intro) html += '<div class="portal-help-intro">' + _portalHelpEsc(content.intro) + '</div>';
+    (content.topics || []).forEach(function(t) {
+      html += '<div class="portal-help-topic"><div class="portal-help-q"><i class="bi bi-patch-question-fill"></i>' + _portalHelpEsc(t.q) + '</div>'
+        + '<div class="portal-help-a">' + _portalHelpEsc(t.a) + '</div></div>';
+    });
+    body.innerHTML = html;
+  }
 </script>
 
 </body>

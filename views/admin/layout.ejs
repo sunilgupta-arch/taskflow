@@ -926,6 +926,50 @@
       display: flex; align-items: center; justify-content: center; font-size: 0.85rem;
     }
 
+    /* ── Page Help Drawer ─────────────────────────────── */
+    .adm-help-btn {
+      position: relative; width: 34px; height: 34px; border-radius: 9px;
+      background: transparent; border: 1px solid var(--adm-border);
+      color: var(--adm-muted); cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.9rem; transition: all 0.15s; flex-shrink: 0;
+    }
+    .adm-help-btn:hover { border-color: var(--adm-accent); color: var(--adm-accent); }
+    .adm-help-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.4);
+      z-index: 99;
+      backdrop-filter: blur(2px);
+    }
+    .adm-help-drawer {
+      position: fixed; top: 0; right: 0;
+      width: 380px; height: 100vh;
+      background: var(--adm-surface);
+      border-left: 1px solid var(--adm-border);
+      box-shadow: -8px 0 30px rgba(0,0,0,0.3);
+      z-index: 100;
+      display: flex; flex-direction: column;
+      transform: translateX(100%);
+      transition: transform 0.25s cubic-bezier(0.4,0,0.2,1);
+    }
+    .adm-help-drawer.open { transform: translateX(0); }
+    .adm-help-drawer-header {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--adm-border);
+      display: flex; align-items: center; justify-content: space-between;
+      flex-shrink: 0;
+    }
+    .adm-help-drawer-title {
+      font-weight: 600; font-size: 0.9rem; color: var(--adm-text);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .adm-help-body { flex: 1; overflow-y: auto; padding: 16px; }
+    .adm-help-intro { font-size: 0.82rem; color: var(--adm-muted); line-height: 1.5; margin-bottom: 16px; padding-bottom: 14px; border-bottom: 1px dashed var(--adm-border); }
+    .adm-help-topic { margin-bottom: 16px; }
+    .adm-help-q { font-size: 0.83rem; font-weight: 600; color: var(--adm-text); margin-bottom: 4px; display: flex; gap: 6px; }
+    .adm-help-q i { color: var(--adm-accent); flex-shrink: 0; margin-top: 2px; }
+    .adm-help-a { font-size: 0.79rem; color: var(--adm-muted); line-height: 1.55; margin-left: 20px; }
+
     /* ── Group Channel Drawer ─────────────────────────── */
     .adm-gc-btn {
       position: relative; width: 34px; height: 34px; border-radius: 9px;
@@ -1189,8 +1233,8 @@
           <span>Downloads</span>
         </a>
 
-        <a href="/admin/helpcenter" data-s="helpcenter"
-           class="adm-nav-link <%= section === 'helpcenter' ? 'active' : '' %>">
+        <a href="javascript:void(0)" onclick="openAdmHelp()" data-s="helpcenter"
+           class="adm-nav-link">
           <div class="adm-nav-icon"><i class="bi bi-question-circle-fill"></i></div>
           <span>Help</span>
         </a>
@@ -1302,6 +1346,9 @@
         <i class="bi bi-chat-dots-fill"></i>
         <span class="adm-bridge-badge" id="admBridgeBadge" style="display:none"></span>
       </button>
+      <button class="adm-help-btn" id="admHelpBtn" onclick="openAdmHelp()" title="Help for this page">
+        <i class="bi bi-question-circle-fill"></i>
+      </button>
       <button class="adm-theme-btn" id="admThemeBtn" onclick="toggleAdmTheme()" title="Toggle theme"></button>
     </div>
     <div class="adm-content">
@@ -1359,6 +1406,19 @@
   </div>
 </div>
 
+<!-- Page Help Drawer -->
+<div class="adm-help-overlay" id="admHelpOverlay" onclick="closeAdmHelp()" style="display:none"></div>
+<div class="adm-help-drawer" id="admHelpDrawer">
+  <div class="adm-help-drawer-header">
+    <div class="adm-help-drawer-title">
+      <i class="bi bi-question-circle-fill" style="color:var(--adm-accent)"></i>
+      <span id="admHelpDrawerTitle">Page Help</span>
+    </div>
+    <button class="adm-theme-btn" onclick="closeAdmHelp()" title="Close"><i class="bi bi-x-lg"></i></button>
+  </div>
+  <div class="adm-help-body" id="admHelpBody"></div>
+</div>
+
 <!-- Group Channel Drawer -->
 <div class="adm-gc-overlay" id="admGcOverlay" onclick="closeAdmGc()" style="display:none"></div>
 <div class="adm-gc-drawer" id="admGcDrawer">
@@ -1398,6 +1458,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.6.2/axios.min.js"></script>
 <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
+<script src="/js/help-content.js"></script>
 <script>
   var USER_TIMEZONE = '<%= typeof user !== "undefined" && user.org_timezone ? user.org_timezone : "UTC" %>';
 
@@ -1442,6 +1503,43 @@
     applyAdmTheme(_admTheme);
   }
   applyAdmTheme(_admTheme);
+
+  // ── Page Help Drawer ───────────────────────────────────────
+  function openAdmHelp() {
+    document.getElementById('admHelpOverlay').style.display = '';
+    document.getElementById('admHelpDrawer').classList.add('open');
+    renderAdmHelp();
+  }
+
+  function closeAdmHelp() {
+    document.getElementById('admHelpOverlay').style.display = 'none';
+    document.getElementById('admHelpDrawer').classList.remove('open');
+  }
+
+  function _admHelpEsc(s) {
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function renderAdmHelp() {
+    var path = window.location.pathname.replace(/\/+$/, '') || '/admin';
+    var content = (window.ADM_HELP_CONTENT || {})[path];
+    var titleEl = document.getElementById('admHelpDrawerTitle');
+    var body = document.getElementById('admHelpBody');
+    if (!content) {
+      titleEl.textContent = 'Page Help';
+      body.innerHTML = '<div class="adm-help-topic"><div class="adm-help-q"><i class="bi bi-emoji-neutral"></i>No help topics yet for this page</div>'
+        + '<div class="adm-help-a">We haven\'t written a guide for this page yet. Reach out to your admin if you need a hand.</div></div>';
+      return;
+    }
+    titleEl.textContent = content.title || 'Page Help';
+    var html = '';
+    if (content.intro) html += '<div class="adm-help-intro">' + _admHelpEsc(content.intro) + '</div>';
+    (content.topics || []).forEach(function(t) {
+      html += '<div class="adm-help-topic"><div class="adm-help-q"><i class="bi bi-patch-question-fill"></i>' + _admHelpEsc(t.q) + '</div>'
+        + '<div class="adm-help-a">' + _admHelpEsc(t.a) + '</div></div>';
+    });
+    body.innerHTML = html;
+  }
 
   // ── Bridge Chat Slide-over ────────────────────────────────
   var admBdrConvId  = null;
