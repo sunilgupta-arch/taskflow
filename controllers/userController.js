@@ -85,6 +85,33 @@ class UserController {
     }
   }
 
+  static async archiveUser(req, res) {
+    try {
+      const targetId = parseInt(req.params.id);
+      if (targetId === req.user.id) {
+        return ApiResponse.error(res, 'You cannot archive your own account', 403);
+      }
+      const user = await UserModel.findById(targetId);
+      if (!user) return ApiResponse.error(res, 'User not found', 404);
+      await UserModel.update(targetId, { is_archived: 1 });
+      return ApiResponse.success(res, { is_archived: 1 }, 'User archived');
+    } catch (err) {
+      return ApiResponse.error(res, err.message, 400);
+    }
+  }
+
+  static async unarchiveUser(req, res) {
+    try {
+      const targetId = parseInt(req.params.id);
+      const user = await UserModel.findById(targetId);
+      if (!user) return ApiResponse.error(res, 'User not found', 404);
+      await UserModel.update(targetId, { is_archived: 0 });
+      return ApiResponse.success(res, { is_archived: 0 }, 'User restored');
+    } catch (err) {
+      return ApiResponse.error(res, err.message, 400);
+    }
+  }
+
   static async resetPassword(req, res) {
     try {
       const { password } = req.body;

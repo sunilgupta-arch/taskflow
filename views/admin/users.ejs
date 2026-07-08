@@ -16,6 +16,16 @@
 .usr-add-btn { height:36px; padding:0 16px; border-radius:9px; border:none; background:#8b5cf6; color:#fff; font-size:0.82rem; font-weight:600; font-family:var(--adm-font); cursor:pointer; display:inline-flex; align-items:center; gap:6px; transition:background 0.15s; white-space:nowrap; }
 .usr-add-btn:hover { background:#7c3aed; }
 
+/* ── View toggle (card/table) ─────────────────────────────── */
+.usr-vbtn-group { display:flex; gap:2px; background:var(--adm-surface); border:1px solid var(--adm-border); border-radius:9px; padding:3px; }
+.usr-vbtn { width:30px; height:30px; border-radius:6px; border:none; background:transparent; color:var(--adm-muted); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:0.85rem; transition:all 0.15s; }
+.usr-vbtn.active { background:var(--adm-surface-2); color:#8b5cf6; }
+
+/* ── Archived toggle ──────────────────────────────────────── */
+.usr-archived-btn { height:36px; padding:0 14px; border-radius:9px; border:1px solid var(--adm-border); background:transparent; color:var(--adm-muted); font-size:0.8rem; font-weight:600; font-family:var(--adm-font); cursor:pointer; display:inline-flex; align-items:center; gap:6px; transition:all 0.15s; white-space:nowrap; }
+.usr-archived-btn:hover { border-color:var(--adm-border-2); color:var(--adm-text-2); }
+.usr-archived-btn.active { background:rgba(100,116,139,0.15); border-color:#64748b; color:#94a3b8; }
+
 /* ── Delegate strip ───────────────────────────────────────── */
 .usr-delegate { display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap; padding:12px 16px; background:var(--adm-surface); border:1px solid var(--adm-border); border-radius:12px; margin-bottom:16px; }
 .usr-delegate-info { display:flex; align-items:center; gap:10px; }
@@ -67,6 +77,38 @@
 
 .usr-btn.kick  { color:#f97316; border-color:rgba(249,115,22,0.3); }
 .usr-btn.kick:hover  { background:rgba(249,115,22,0.1); }
+.usr-btn.archive { color:#64748b; border-color:rgba(100,116,139,0.3); }
+.usr-btn.archive:hover { background:rgba(100,116,139,0.1); }
+.usr-btn.unarchive { color:#06b6d4; border-color:rgba(6,182,212,0.3); }
+.usr-btn.unarchive:hover { background:rgba(6,182,212,0.1); }
+
+/* ── Table view ───────────────────────────────────────────── */
+.usr-table-wrap { overflow-x:auto; border:1px solid var(--adm-border); border-radius:12px; }
+.usr-table { width:100%; border-collapse:collapse; font-size:0.8rem; }
+.usr-table th { text-align:left; padding:10px 14px; background:var(--adm-surface-2); color:var(--adm-muted); font-size:0.68rem; font-weight:700; text-transform:uppercase; letter-spacing:0.4px; font-family:var(--adm-mono); border-bottom:1px solid var(--adm-border); white-space:nowrap; }
+.usr-table td { padding:10px 14px; border-bottom:1px solid var(--adm-border); vertical-align:middle; color:var(--adm-text-2); }
+.usr-table tr:last-child td { border-bottom:none; }
+.usr-table tr.inactive { opacity:0.6; }
+.usr-table tr:hover td { background:var(--adm-surface-2); }
+.usr-t-identity { display:flex; align-items:center; gap:9px; }
+.usr-t-avatar { width:30px; height:30px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:0.68rem; font-weight:700; color:#fff; font-family:var(--adm-mono); }
+.usr-t-name { font-size:0.82rem; font-weight:600; color:var(--adm-text); }
+.usr-t-email { font-size:0.68rem; color:var(--adm-muted); }
+.usr-t-actions { display:flex; align-items:center; gap:5px; flex-wrap:wrap; }
+.usr-tbtn { width:26px; height:26px; border-radius:6px; border:1px solid var(--adm-border); background:transparent; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; font-size:0.7rem; color:var(--adm-text-2); transition:all 0.15s; }
+.usr-tbtn:hover { border-color:var(--adm-border-2); color:var(--adm-text); }
+.usr-tbtn.edit  { color:#8b5cf6; border-color:rgba(139,92,246,0.3); }
+.usr-tbtn.edit:hover  { background:rgba(139,92,246,0.1); }
+.usr-tbtn.pwd   { color:#f59e0b; border-color:rgba(245,158,11,0.3); }
+.usr-tbtn.pwd:hover   { background:rgba(245,158,11,0.1); }
+.usr-tbtn.deact { color:#ef4444; border-color:rgba(239,68,68,0.3); }
+.usr-tbtn.deact:hover { background:rgba(239,68,68,0.08); }
+.usr-tbtn.act   { color:#10b981; border-color:rgba(16,185,129,0.3); }
+.usr-tbtn.act:hover   { background:rgba(16,185,129,0.08); }
+.usr-tbtn.archive { color:#64748b; border-color:rgba(100,116,139,0.3); }
+.usr-tbtn.archive:hover { background:rgba(100,116,139,0.1); }
+.usr-t-status { display:inline-flex; align-items:center; gap:5px; font-size:0.72rem; font-weight:600; }
+.usr-t-status .dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
 
 /* ── Visibility toggle ────────────────────────────────────── */
 .usr-actions { display:flex; align-items:center; justify-content:space-between; gap:6px; margin-top:12px; }
@@ -198,8 +240,13 @@
       <button class="usr-tab"        id="usrTabClient" onclick="usrSetTab('client')"><i class="bi bi-briefcase"></i> Client Users</button>
     </div>
     <span class="usr-count-pill" id="usrCountPill">—</span>
+    <div class="usr-vbtn-group">
+      <button class="usr-vbtn active" id="usrVbtnGrid" onclick="usrSetView('grid')" title="Card view"><i class="bi bi-grid-3x3-gap-fill"></i></button>
+      <button class="usr-vbtn" id="usrVbtnTable" onclick="usrSetView('table')" title="Table view"><i class="bi bi-table"></i></button>
+    </div>
   </div>
   <div class="usr-topbar-right">
+    <button class="usr-archived-btn" id="usrArchivedBtn" onclick="usrToggleArchived()"><i class="bi bi-archive"></i> Archived</button>
     <div class="usr-search-wrap">
       <i class="bi bi-search"></i>
       <input class="usr-search" type="text" id="usrSearch" placeholder="Search…" oninput="usrRender()">
@@ -224,7 +271,7 @@
   <div class="usr-delegate-controls">
     <select class="usr-delegate-sel" id="usrDelegateSel">
       <option value="">— No secondary support —</option>
-      <% users.filter(u => u.org_type === 'LOCAL' && u.role_name !== 'LOCAL_ADMIN' && u.is_active).forEach(u => { %>
+      <% users.filter(u => u.org_type === 'LOCAL' && u.role_name !== 'LOCAL_ADMIN' && u.is_active && !u.is_archived).forEach(u => { %>
         <option value="<%= u.id %>" <%= delegatedSupportId === u.id ? 'selected' : '' %>><%= u.name %> (<%= u.role_name.replace('LOCAL_','') %>)</option>
       <% }) %>
     </select>
@@ -262,6 +309,8 @@
   var _isMgr   = _d.isMgr;
   var _myId    = _d.myId;
   var _tab     = 'local';
+  var _usrView = localStorage.getItem('adm-users-view') || 'grid';
+  var _showArchived = false;
 
   var roleMap = {}, orgMap = {};
   _roles.forEach(function(r) { roleMap[r.id] = r.name; });
@@ -325,7 +374,13 @@
     // Actions
     var actHtml = '';
     var canKick = isLocal && u.is_active && roleName === 'LOCAL_USER' && u.id !== _myId;
-    if (_isAdmin) {
+    if (u.is_archived) {
+      if (_isAdmin) {
+        actHtml = '<div class="usr-actions"><div class="usr-actions-left">'
+          +'<button class="usr-btn unarchive" onclick="usrUnarchive('+u.id+',\''+esc(u.name)+'\')"><i class="bi bi-box-arrow-up"></i> Restore</button>'
+          +'</div></div>';
+      }
+    } else if (_isAdmin) {
       var toggleBtn = u.is_active
         ? '<button class="usr-btn deact" onclick="usrToggle('+u.id+')" title="Deactivate"><i class="bi bi-person-slash"></i></button>'
         : '<button class="usr-btn act"   onclick="usrToggle('+u.id+')" title="Activate"><i class="bi bi-person-check"></i></button>';
@@ -341,11 +396,13 @@
           +'</label>'
         : '';
       var kickBtn = canKick ? '<button class="usr-btn kick" onclick="usrForceLogout('+u.id+',\''+esc(u.name)+'\')" title="Force logout"><i class="bi bi-box-arrow-right"></i></button>' : '';
+      var archiveBtn = '<button class="usr-btn archive" onclick="usrArchive('+u.id+',\''+esc(u.name)+'\')" title="Archive"><i class="bi bi-archive"></i></button>';
       actHtml = '<div class="usr-actions">'
         +'<div class="usr-actions-left">'
           +'<button class="usr-btn edit" onclick="usrOpenEdit('+u.id+')"><i class="bi bi-pencil"></i> Edit</button>'
           +'<button class="usr-btn pwd"  onclick="usrOpenPwd('+u.id+',\''+esc(u.name)+'\')"><i class="bi bi-key"></i> Pwd</button>'
           +toggleBtn
+          +archiveBtn
           +kickBtn
         +'</div>'
         +visToggle
@@ -375,12 +432,118 @@
       +'</div>';
   }
 
+  // ── Render one table row ────────────────────────────────────────────────
+  function renderTableRow(u) {
+    var color    = avatarColor(u.name);
+    var inits    = initials(u.name);
+    var roleName = u.role_name || roleMap[u.role_id] || '—';
+    var isLocal  = u.org_type === 'LOCAL';
+    var statusColor = u.is_active ? '#10b981' : '#ef4444';
+
+    var actHtml = '';
+    if (u.is_archived) {
+      if (_isAdmin) {
+        actHtml = '<button class="usr-tbtn archive" onclick="usrUnarchive('+u.id+',\''+esc(u.name)+'\')" title="Restore"><i class="bi bi-box-arrow-up"></i></button>';
+      }
+    } else if (_isAdmin) {
+      var toggleBtn = u.is_active
+        ? '<button class="usr-tbtn deact" onclick="usrToggle('+u.id+')" title="Deactivate"><i class="bi bi-person-slash"></i></button>'
+        : '<button class="usr-tbtn act"   onclick="usrToggle('+u.id+')" title="Activate"><i class="bi bi-person-check"></i></button>';
+      actHtml = '<button class="usr-tbtn edit" onclick="usrOpenEdit('+u.id+')" title="Edit"><i class="bi bi-pencil"></i></button>'
+        +'<button class="usr-tbtn pwd" onclick="usrOpenPwd('+u.id+',\''+esc(u.name)+'\')" title="Reset password"><i class="bi bi-key"></i></button>'
+        +toggleBtn
+        +'<button class="usr-tbtn archive" onclick="usrArchive('+u.id+',\''+esc(u.name)+'\')" title="Archive"><i class="bi bi-archive"></i></button>';
+    } else if (_isMgr) {
+      var canKick = isLocal && u.is_active && roleName === 'LOCAL_USER' && u.id !== _myId;
+      if (canKick) actHtml = '<button class="usr-tbtn" onclick="usrForceLogout('+u.id+',\''+esc(u.name)+'\')" title="Force logout"><i class="bi bi-box-arrow-right"></i></button>';
+    }
+
+    return '<tr'+(u.is_active?'':' class="inactive"')+'>'
+      +'<td><div class="usr-t-identity"><div class="usr-t-avatar" style="background:'+color+'">'+inits+'</div>'
+        +'<div><div class="usr-t-name">'+esc(u.name)+'</div><div class="usr-t-email">'+esc(u.email)+'</div></div></div></td>'
+      +'<td><span class="usr-role-badge" style="'+roleBadgeStyle(roleName)+'">'+roleShortName(roleName)+'</span></td>'
+      +'<td><span class="usr-t-status"><span class="dot" style="background:'+statusColor+'"></span>'+(u.is_active?'Active':'Inactive')+'</span></td>'
+      +'<td><div class="usr-t-actions">'+actHtml+'</div></td>'
+      +'</tr>';
+  }
+
+  function renderTable(members) {
+    var rows = members.map(renderTableRow).join('');
+    return '<div class="usr-table-wrap"><table class="usr-table"><thead><tr>'
+      +'<th>Name</th><th>Role</th><th>Status</th><th>Actions</th>'
+      +'</tr></thead><tbody>'+rows+'</tbody></table></div>';
+  }
+
+  // ── Render one tab's role-grouped list, as cards or a flat table ───────
+  function renderRoleGroups(filtered, roleOrder, roleLabels, emptyMsg, areaId) {
+    var area = document.getElementById(areaId);
+    if (!filtered.length) {
+      area.innerHTML = '<div class="usr-empty"><i class="bi bi-people"></i><p>'+emptyMsg+'</p></div>';
+      return;
+    }
+    var groups = {};
+    roleOrder.forEach(function(r) { groups[r] = []; });
+    filtered.forEach(function(u) {
+      if (groups[u.role_name]) groups[u.role_name].push(u);
+      else { if (!groups.__other) groups.__other = []; groups.__other.push(u); }
+    });
+    Object.keys(groups).forEach(function(r) {
+      groups[r].sort(function(a,b) {
+        if (b.is_active !== a.is_active) return b.is_active - a.is_active;
+        return (a.name||'').localeCompare(b.name||'');
+      });
+    });
+
+    if (_usrView === 'table') {
+      var allMembers = [];
+      roleOrder.forEach(function(role) { if (groups[role]) allMembers = allMembers.concat(groups[role]); });
+      if (groups.__other) allMembers = allMembers.concat(groups.__other);
+      area.innerHTML = renderTable(allMembers);
+      return;
+    }
+
+    var html = '';
+    roleOrder.forEach(function(role) {
+      var members = groups[role];
+      if (!members || !members.length) return;
+      var info = roleLabels[role];
+      html += '<div class="usr-org-section">'
+        +'<div class="usr-org-header">'
+          +'<span class="usr-org-pill" style="background:rgba(0,0,0,0.12);border-color:'+info.color+'40;color:'+info.color+';">'
+            +'<i class="bi '+info.icon+'"></i>'+info.title
+          +'</span>'
+          +'<span class="usr-org-sub">'+members.length+' member'+(members.length!==1?'s':'')+'</span>'
+        +'</div>'
+        +'<div class="usr-grid">'+members.map(renderCard).join('')+'</div>'
+        +'</div>';
+    });
+    area.innerHTML = html;
+  }
+
   // ── Render ────────────────────────────────────────────────────────────
+  var localRoleOrder  = ['LOCAL_ADMIN', 'LOCAL_MANAGER', 'LOCAL_USER'];
+  var localRoleLabels = {
+    LOCAL_ADMIN:   { title: 'Admin',    icon: 'bi-shield-lock-fill', color: '#a78bfa' },
+    LOCAL_MANAGER: { title: 'Managers', icon: 'bi-person-badge-fill', color: '#eab308' },
+    LOCAL_USER:    { title: 'Users',    icon: 'bi-person-fill',       color: '#94a3b8' }
+  };
+  var clientRoleOrder  = ['CLIENT_ADMIN','CLIENT_TOP_MGMT','CLIENT_MGMT','CLIENT_MANAGER','CLIENT_SALES','CLIENT_USER'];
+  var clientRoleLabels = {
+    CLIENT_ADMIN:    { title: 'Admin',          icon: 'bi-shield-lock-fill',  color: '#a78bfa' },
+    CLIENT_TOP_MGMT: { title: 'Top Management', icon: 'bi-star-fill',          color: '#3b82f6' },
+    CLIENT_MGMT:     { title: 'Management',     icon: 'bi-briefcase-fill',     color: '#22c55e' },
+    CLIENT_MANAGER:  { title: 'Managers',       icon: 'bi-person-badge-fill',  color: '#eab308' },
+    CLIENT_SALES:    { title: 'Sales',           icon: 'bi-cart-fill',          color: '#f97316' },
+    CLIENT_USER:     { title: 'Users',           icon: 'bi-person-fill',        color: '#94a3b8' }
+  };
+
   window.usrRender = function() {
     var q = (document.getElementById('usrSearch').value || '').toLowerCase();
     var filtered = _users.filter(function(u) {
       if (_tab === 'local'  && u.org_type !== 'LOCAL')  return false;
       if (_tab === 'client' && u.org_type !== 'CLIENT') return false;
+      if (_showArchived) { if (!u.is_archived) return false; }
+      else { if (u.is_archived) return false; }
       if (q) return (u.name||'').toLowerCase().includes(q) || (u.email||'').toLowerCase().includes(q) || (u.role_name||'').toLowerCase().includes(q);
       return true;
     });
@@ -388,87 +551,22 @@
     document.getElementById('usrCountPill').textContent = filtered.length + ' user' + (filtered.length !== 1 ? 's' : '');
 
     if (_tab === 'local') {
-      var area = document.getElementById('usrLocalArea');
-      if (!filtered.length) {
-        area.innerHTML = '<div class="usr-empty"><i class="bi bi-people"></i><p>No team members found</p></div>';
-        return;
-      }
-      // Group by role
-      var localRoleOrder  = ['LOCAL_ADMIN', 'LOCAL_MANAGER', 'LOCAL_USER'];
-      var localRoleLabels = {
-        LOCAL_ADMIN:   { title: 'Admin',    icon: 'bi-shield-lock-fill', color: '#a78bfa' },
-        LOCAL_MANAGER: { title: 'Managers', icon: 'bi-person-badge-fill', color: '#eab308' },
-        LOCAL_USER:    { title: 'Users',    icon: 'bi-person-fill',       color: '#94a3b8' }
-      };
-      var localGroups = {};
-      localRoleOrder.forEach(function(r) { localGroups[r] = []; });
-      filtered.forEach(function(u) {
-        if (localGroups[u.role_name]) localGroups[u.role_name].push(u);
-      });
-      var html = '';
-      localRoleOrder.forEach(function(role) {
-        var members = localGroups[role];
-        if (!members || !members.length) return;
-        members.sort(function(a,b) {
-          if (b.is_active !== a.is_active) return b.is_active - a.is_active;
-          return (a.name||'').localeCompare(b.name||'');
-        });
-        var info = localRoleLabels[role];
-        html += '<div class="usr-org-section">'
-          +'<div class="usr-org-header">'
-            +'<span class="usr-org-pill" style="background:rgba(0,0,0,0.12);border-color:'+info.color+'40;color:'+info.color+';">'
-              +'<i class="bi '+info.icon+'"></i>'+info.title
-            +'</span>'
-            +'<span class="usr-org-sub">'+members.length+' member'+(members.length!==1?'s':'')+'</span>'
-          +'</div>'
-          +'<div class="usr-grid">'+members.map(renderCard).join('')+'</div>'
-          +'</div>';
-      });
-      area.innerHTML = html;
-
+      renderRoleGroups(filtered, localRoleOrder, localRoleLabels,
+        _showArchived ? 'No archived team members' : 'No team members found', 'usrLocalArea');
     } else {
-      var area = document.getElementById('usrClientArea');
-      if (!filtered.length) {
-        area.innerHTML = '<div class="usr-empty"><i class="bi bi-briefcase"></i><p>No client users found</p></div>';
-        return;
-      }
-      // Group by role
-      var roleOrder  = ['CLIENT_ADMIN','CLIENT_TOP_MGMT','CLIENT_MGMT','CLIENT_MANAGER','CLIENT_SALES','CLIENT_USER'];
-      var roleLabels = {
-        CLIENT_ADMIN:    { title: 'Admin',          icon: 'bi-shield-lock-fill',  color: '#a78bfa' },
-        CLIENT_TOP_MGMT: { title: 'Top Management', icon: 'bi-star-fill',          color: '#3b82f6' },
-        CLIENT_MGMT:     { title: 'Management',     icon: 'bi-briefcase-fill',     color: '#22c55e' },
-        CLIENT_MANAGER:  { title: 'Managers',       icon: 'bi-person-badge-fill',  color: '#eab308' },
-        CLIENT_SALES:    { title: 'Sales',           icon: 'bi-cart-fill',          color: '#f97316' },
-        CLIENT_USER:     { title: 'Users',           icon: 'bi-person-fill',        color: '#94a3b8' }
-      };
-      var groups = {};
-      roleOrder.forEach(function(r) { groups[r] = []; });
-      filtered.forEach(function(u) {
-        if (groups[u.role_name]) groups[u.role_name].push(u);
-        else { if (!groups.__other) groups.__other = []; groups.__other.push(u); }
-      });
-      var html = '';
-      roleOrder.forEach(function(role) {
-        var members = groups[role];
-        if (!members || !members.length) return;
-        members.sort(function(a,b){ return (a.name||'').localeCompare(b.name||''); });
-        var info = roleLabels[role];
-        html += '<div class="usr-org-section">'
-          +'<div class="usr-org-header">'
-            +'<span class="usr-org-pill" style="background:rgba(0,0,0,0.12);border-color:'+info.color+'40;color:'+info.color+';">'
-              +'<i class="bi '+info.icon+'"></i>'+info.title
-            +'</span>'
-            +'<span class="usr-org-sub">'+members.length+' member'+(members.length!==1?'s':'')+'</span>'
-          +'</div>'
-          +'<div class="usr-grid">'+members.map(renderCard).join('')+'</div>'
-          +'</div>';
-      });
-      area.innerHTML = html;
+      renderRoleGroups(filtered, clientRoleOrder, clientRoleLabels,
+        _showArchived ? 'No archived client users' : 'No client users found', 'usrClientArea');
     }
   };
 
   // ── Tab switch ────────────────────────────────────────────────────────
+  function updateAddBtnVisibility() {
+    var addBtn = document.getElementById('usrAddBtn');
+    if (!addBtn) return;
+    // No creating from the Archived view, and managers can't create client users
+    addBtn.style.display = (!_showArchived && (_isAdmin || _tab === 'local')) ? '' : 'none';
+  }
+
   window.usrSetTab = function(tab) {
     _tab = tab;
     document.getElementById('usrTabLocal').classList.toggle('active', tab === 'local');
@@ -476,13 +574,64 @@
     document.getElementById('usrLocalArea').style.display  = tab === 'local'  ? '' : 'none';
     document.getElementById('usrClientArea').style.display = tab === 'client' ? '' : 'none';
     var strip = document.getElementById('usrDelegateStrip');
-    if (strip) strip.style.display = tab === 'local' ? '' : 'none';
-    // Hide Add button on client tab for managers (they can't create client users)
-    var addBtn = document.getElementById('usrAddBtn');
-    if (addBtn) addBtn.style.display = (_isAdmin || tab === 'local') ? '' : 'none';
+    if (strip) strip.style.display = (tab === 'local' && !_showArchived) ? '' : 'none';
+    updateAddBtnVisibility();
     document.getElementById('usrAddLbl').textContent = tab === 'local' ? 'Add Member' : 'Add Client User';
     document.getElementById('usrSearch').value = '';
     usrRender();
+  };
+
+  // ── View toggle (card/table) ───────────────────────────────────────────
+  window.usrSetView = function(v) {
+    _usrView = v;
+    localStorage.setItem('adm-users-view', v);
+    document.getElementById('usrVbtnGrid').classList.toggle('active', v === 'grid');
+    document.getElementById('usrVbtnTable').classList.toggle('active', v === 'table');
+    usrRender();
+  };
+
+  // ── Archived filter ─────────────────────────────────────────────────────
+  window.usrToggleArchived = function() {
+    _showArchived = !_showArchived;
+    var btn = document.getElementById('usrArchivedBtn');
+    btn.classList.toggle('active', _showArchived);
+    btn.innerHTML = _showArchived ? '<i class="bi bi-arrow-left"></i> Back to Active' : '<i class="bi bi-archive"></i> Archived';
+    var strip = document.getElementById('usrDelegateStrip');
+    if (strip) strip.style.display = (_tab === 'local' && !_showArchived) ? '' : 'none';
+    updateAddBtnVisibility();
+    usrRender();
+  };
+
+  // ── Archive / Restore ────────────────────────────────────────────────────
+  window.usrArchive = function(userId, name) {
+    if (!confirm('Archive ' + name + '? They\'ll be hidden from the default list but can be restored anytime from the Archived view.')) return;
+    fetch('/users/'+userId+'/archive', { method: 'PATCH', headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+      .then(function(r){ return r.json(); })
+      .then(function(res) {
+        if (res.success) {
+          var u = _users.find(function(x){ return x.id === userId; });
+          if (u) u.is_archived = 1;
+          usrRender();
+        } else {
+          alert(res.message || 'Failed to archive user');
+        }
+      })
+      .catch(function() { alert('Network error — could not archive user'); });
+  };
+
+  window.usrUnarchive = function(userId, name) {
+    fetch('/users/'+userId+'/unarchive', { method: 'PATCH', headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+      .then(function(r){ return r.json(); })
+      .then(function(res) {
+        if (res.success) {
+          var u = _users.find(function(x){ return x.id === userId; });
+          if (u) u.is_archived = 0;
+          usrRender();
+        } else {
+          alert(res.message || 'Failed to restore user');
+        }
+      })
+      .catch(function() { alert('Network error — could not restore user'); });
   };
 
   // ── Modal: org + role selects ─────────────────────────────────────────
@@ -701,6 +850,8 @@
   };
 
   // ── Initial render ────────────────────────────────────────────────────
+  document.getElementById('usrVbtnGrid').classList.toggle('active', _usrView === 'grid');
+  document.getElementById('usrVbtnTable').classList.toggle('active', _usrView === 'table');
   usrSetTab('local');
 })();
 </script>

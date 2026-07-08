@@ -37,6 +37,8 @@ router.get('/users/:id/progress', authenticate, requireRoles('LOCAL_ADMIN', 'LOC
 router.get('/users/:id/monthly-report', authenticate, requireRoles('LOCAL_ADMIN', 'LOCAL_MANAGER', 'CLIENT_ADMIN', 'CLIENT_MANAGER'), UserController.monthlyReport);
 router.post('/users/:id/reset-password', authenticate, requireRoles('LOCAL_ADMIN'), UserController.resetPassword);
 router.patch('/users/:id/toggle', authenticate, requireRoles('LOCAL_ADMIN'), UserController.toggleActive);
+router.patch('/users/:id/archive', authenticate, requireRoles('LOCAL_ADMIN'), UserController.archiveUser);
+router.patch('/users/:id/unarchive', authenticate, requireRoles('LOCAL_ADMIN'), UserController.unarchiveUser);
 router.post('/users/:id/force-logout', authenticate, requireRoles('LOCAL_ADMIN', 'LOCAL_MANAGER'), UserController.forceLogoutUser);
 
 // Change Password (all authenticated users)
