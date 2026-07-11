@@ -1517,7 +1517,7 @@ class AdminHubController {
 
       // One-time tasks due on this date
       const [onceTasks] = await db.query(
-        `SELECT id, title, type, status, due_date
+        `SELECT id, title, type, status, due_date, deadline_time
          FROM tasks
          WHERE is_deleted = 0 AND type = 'once' AND assigned_to = ?
            AND status IN ('pending', 'in_progress', 'completed')
@@ -1526,9 +1526,9 @@ class AdminHubController {
         [userId, date]
       );
 
-      // Completion records for the date
+      // Completion records for the date (includes the "what I did" note captured on completion)
       const [completions] = await db.query(
-        `SELECT task_id, started_at, completed_at, duration_minutes
+        `SELECT task_id, started_at, completed_at, duration_minutes, notes
          FROM task_completions WHERE user_id = ? AND completion_date = ?`,
         [userId, date]
       );
@@ -1543,6 +1543,9 @@ class AdminHubController {
           status: (comp && comp.completed_at) ? 'done' : (comp && comp.started_at) ? 'in_progress' : 'pending',
           duration_minutes: comp ? comp.duration_minutes : null,
           started_at: comp ? comp.started_at : null,
+          completed_at: comp ? comp.completed_at : null,
+          notes: comp ? comp.notes : null,
+          deadline_time: t.deadline_time || null,
         });
       });
       onceTasks.forEach(t => {
@@ -1552,12 +1555,17 @@ class AdminHubController {
           status: t.status === 'completed' ? 'done' : (comp && comp.started_at ? 'in_progress' : t.status),
           duration_minutes: comp ? comp.duration_minutes : null,
           started_at: comp ? comp.started_at : null,
+          completed_at: comp ? comp.completed_at : null,
+          notes: comp ? comp.notes : null,
+          deadline_time: t.deadline_time || null,
         });
       });
 
-      // Client queue requests picked by this user on this date
+      // Client queue requests picked by this user on this date (with their latest remark/comment)
       const [queueRequests] = await db.query(
-        `SELECT cr.title, cri.status, cri.picked_at
+        `SELECT cr.title, cri.status, cri.picked_at, cri.completed_at,
+                (SELECT body FROM client_request_comments crc
+                 WHERE crc.instance_id = cri.id ORDER BY crc.created_at DESC LIMIT 1) as latest_comment
          FROM client_request_instances cri
          JOIN client_requests cr ON cri.request_id = cr.id
          WHERE cri.picked_by = ? AND DATE(cri.picked_at) = ?

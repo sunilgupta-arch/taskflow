@@ -490,8 +490,9 @@ class TaskController {
   static async completeSession(req, res) {
     try {
       const tz = req.user.org_timezone || 'America/New_York';
+      const notes = (req.body && req.body.notes) ? String(req.body.notes).trim().slice(0, 2000) : null;
       const workDate = await getEffectiveWorkDateWithSession(db, req.user.id, tz, req.user.shift_start, req.user.shift_hours);
-      const task = await TaskService.completeSession(req.params.id, req.user.id, tz, workDate);
+      const task = await TaskService.completeSession(req.params.id, req.user.id, tz, workDate, notes);
 
       const io = getIO();
       io.to('admins').emit('task:completed', {
@@ -509,8 +510,9 @@ class TaskController {
   static async complete(req, res) {
     try {
       const tz = req.user.org_timezone || 'America/New_York';
+      const notes = (req.body && req.body.notes) ? String(req.body.notes).trim().slice(0, 2000) : null;
       const workDate = await getEffectiveWorkDateWithSession(db, req.user.id, tz, req.user.shift_start, req.user.shift_hours);
-      const task = await TaskService.completeTask(req.params.id, req.user.id, workDate);
+      const task = await TaskService.completeTask(req.params.id, req.user.id, workDate, notes);
 
       // Notify all admins/managers via socket
       const io = getIO();

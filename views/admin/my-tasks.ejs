@@ -381,6 +381,34 @@
   display: flex; align-items: center; gap: 8px; margin: 0;
 }
 .admt-page-title i { color: #22d3ee; }
+
+/* Complete-task modal (captures a "what I did" note for the DPR) */
+.admt-modal-backdrop {
+  display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.55);
+  z-index: 1100; align-items: center; justify-content: center;
+}
+.admt-modal {
+  width: 92%; max-width: 420px; background: var(--adm-surface); border: 1px solid var(--adm-border);
+  border-radius: 12px; padding: 20px;
+}
+.admt-modal-title { font-family: var(--adm-mono); font-size: 1rem; font-weight: 700; color: var(--adm-text); margin-bottom: 5px; }
+.admt-modal-sub   { font-size: 0.78rem; color: var(--adm-muted); margin-bottom: 14px; line-height: 1.5; }
+.admt-modal-hint  { font-size: 0.72rem; color: var(--adm-muted); margin-top: 7px; line-height: 1.45; display: flex; gap: 6px; align-items: flex-start; }
+.admt-modal-hint i { color: var(--adm-accent); margin-top: 1px; flex-shrink: 0; }
+.admt-modal-textarea {
+  width: 100%; background: var(--adm-surface-2); border: 1px solid var(--adm-border);
+  border-radius: 8px; color: var(--adm-text); font-size: 0.82rem; padding: 10px;
+  resize: vertical; font-family: var(--adm-font); line-height: 1.4;
+}
+.admt-modal-textarea:focus { outline: none; border-color: var(--adm-accent); }
+.admt-modal-footer { display: flex; gap: 8px; justify-content: flex-end; margin-top: 14px; }
+.admt-modal-cancel, .admt-modal-confirm {
+  height: 34px; padding: 0 16px; border-radius: 8px; font-size: 0.78rem; font-weight: 700; cursor: pointer;
+}
+.admt-modal-cancel { background: transparent; border: 1px solid var(--adm-border); color: var(--adm-text-2); }
+.admt-modal-cancel:hover { border-color: var(--adm-accent); color: var(--adm-text); }
+.admt-modal-confirm { background: var(--adm-accent); color: #000; border: none; }
+.admt-modal-confirm:hover { opacity: 0.88; }
 </style>
 
 <!-- Header -->
@@ -814,14 +842,70 @@
   }
 
   window.startSession   = function(id){ doAction('/tasks/' + id + '/start-session',   'POST', id, 'in_progress'); };
-  window.completeSession= function(id){ doAction('/tasks/' + id + '/complete-session','POST', id, 'done'); };
   window.startTask      = function(id){ doAction('/tasks/start/'   + id,              'POST', id, 'in_progress'); };
-  window.completeTask   = function(id){ doAction('/tasks/complete/' + id,             'POST', id, 'completed'); };
+
+  /* ── complete-task modal: captures a short "what I did" note that     */
+  /* ── feeds the Daily Progress Report, instead of a bare status flip ── */
+  var _admtCompleteCtx = null;
+  function admtOpenCompleteModal(url, taskId, optimisticStatus) {
+    _admtCompleteCtx = { url: url, taskId: taskId, optimisticStatus: optimisticStatus };
+    document.getElementById('admtCompleteNote').value = '';
+    document.getElementById('admtCompleteModal').style.display = 'flex';
+    setTimeout(function(){ document.getElementById('admtCompleteNote').focus(); }, 50);
+  }
+  window.completeSession = function(id){ admtOpenCompleteModal('/tasks/' + id + '/complete-session', id, 'done'); };
+  window.completeTask    = function(id){ admtOpenCompleteModal('/tasks/complete/' + id, id, 'completed'); };
+
+  window.admtCloseCompleteModal = function() {
+    document.getElementById('admtCompleteModal').style.display = 'none';
+    _admtCompleteCtx = null;
+  };
+  window.admtConfirmComplete = function() {
+    if (!_admtCompleteCtx) return;
+    var note = document.getElementById('admtCompleteNote').value.trim();
+    if (!note) { document.getElementById('admtCompleteNote').focus(); return; }
+    var ctx = _admtCompleteCtx;
+    var btn = document.getElementById('admtCompleteConfirmBtn');
+    btn.disabled = true;
+    fetch(ctx.url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
+      body: JSON.stringify({ notes: note })
+    })
+      .then(function(r){ return r.json(); })
+      .then(function(data) {
+        if (data.success) {
+          allTasks.forEach(function(t) { if (t.id === ctx.taskId) t.status = ctx.optimisticStatus; });
+          render();
+          admtCloseCompleteModal();
+          setTimeout(loadData, 600);
+        } else {
+          alert(data.message || 'Action failed');
+        }
+      })
+      .catch(function(){ alert('Network error'); })
+      .finally(function(){ btn.disabled = false; });
+  };
 
   /* ── initial load ────────────────────────────────────────────── */
   loadData();
 })();
 </script>
+
+<!-- ── Complete task modal (note used to build the Daily Progress Report) ── -->
+<div id="admtCompleteModal" class="admt-modal-backdrop">
+  <div class="admt-modal">
+    <div class="admt-modal-title"><i class="bi bi-check-circle"></i> Mark Task Complete</div>
+    <div class="admt-modal-sub">Add a note on what you did — this shows up in your Daily Progress Report. Include a number wherever you can (tickets, records, calls, files…) so your manager can see how much work got done, not just that it's "done".</div>
+    <textarea class="admt-modal-textarea" id="admtCompleteNote" placeholder="e.g. Entered 45 tickets into the system, cleared 3 pending queries…" rows="3"></textarea>
+    <div class="admt-modal-hint"><i class="bi bi-lightbulb-fill"></i> <span>Examples: "Entered 62 tickets in the system" &middot; "Matched 12 client acknowledgements, no discrepancies" &middot; "Downloaded and sorted 30 images"</span></div>
+    <div class="admt-modal-footer">
+      <button class="admt-modal-cancel" onclick="admtCloseCompleteModal()">Cancel</button>
+      <button class="admt-modal-confirm" id="admtCompleteConfirmBtn" onclick="admtConfirmComplete()"><i class="bi bi-check-lg"></i> Complete</button>
+    </div>
+  </div>
+</div>
 
 <!-- ── Task detail drawer ─────────────────────────────────────── -->
 <div id="admtOverlay" class="admt-overlay" onclick="admtCloseDetail()"></div>
@@ -960,18 +1044,58 @@
     if (h === 0) return m + 'm';
     return h + 'h' + (m > 0 ? ' ' + m + 'm' : '');
   }
+  /* dtStr is a raw MySQL string ("YYYY-MM-DD HH:MM:SS" or a bare "HH:MM:SS" TIME value),
+     already converted to the org's wall-clock time by MySQL/the app before it reaches here.
+     Parse it as plain text — never via new Date() — so we don't re-interpret it through
+     whatever timezone this browser happens to be running in (RDP session host can vary). */
+  function timeOnly(dtStr) {
+    if (!dtStr) return null;
+    var s = String(dtStr);
+    var sp = s.indexOf(' ');
+    return sp === -1 ? s : s.slice(sp + 1);
+  }
   function fmtTime(dtStr) {
-    if (!dtStr) return '';
-    return new Date(dtStr).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+    var t = timeOnly(dtStr);
+    if (!t) return '';
+    var hm = t.split(':');
+    var h = parseInt(hm[0], 10), m = hm[1];
+    var ampm = h >= 12 ? 'PM' : 'AM';
+    h = h % 12; if (h === 0) h = 12;
+    return h + ':' + m + ' ' + ampm;
+  }
+  function isLate(t) {
+    if (!t.deadline_time || !t.completed_at) return false;
+    var ct = timeOnly(t.completed_at);
+    return !!ct && ct > t.deadline_time;
   }
   function fmtDate(dateStr) {
     return new Date(dateStr + 'T12:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+  }
+
+  function taskLine(t, i, showDeadlineForPending) {
+    var line = '    ' + (i + 1) + '.  ' + t.title;
+    var bits = [];
+    if (t.started_at && t.completed_at) {
+      bits.push(fmtTime(t.started_at) + '–' + fmtTime(t.completed_at));
+    } else if (t.completed_at) {
+      bits.push('at ' + fmtTime(t.completed_at));
+    } else if (t.started_at) {
+      bits.push('started ' + fmtTime(t.started_at));
+    }
+    if (t.duration_minutes) bits.push(fmtDuration(t.duration_minutes));
+    if (isLate(t)) bits.push('LATE vs ' + fmtTime(t.deadline_time));
+    if (showDeadlineForPending && t.deadline_time && !bits.length) bits.push('due by ' + fmtTime(t.deadline_time));
+    if (bits.length) line += '  (' + bits.join(', ') + ')';
+    line += '\n';
+    if (t.notes) line += '        ↳ ' + t.notes + '\n';
+    return line;
   }
 
   function buildDprBody(data) {
     var done    = data.tasks.filter(function(t) { return t.status === 'done'; });
     var inProg  = data.tasks.filter(function(t) { return t.status === 'in_progress'; });
     var pending = data.tasks.filter(function(t) { return t.status === 'pending'; });
+    var totalMinutes = data.tasks.reduce(function(sum, t) { return sum + (t.duration_minutes || 0); }, 0);
     var sep  = '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━';
     var thin = '────────────────────────────────────────────────';
     var n    = '\n';
@@ -981,16 +1105,16 @@
     b += 'Please find below my Daily Progress Report for ' + fmtDate(data.date) + '.' + n + n;
     b += sep + n;
     b += 'DAILY PROGRESS REPORT' + n;
-    b += 'Date: ' + fmtDate(data.date) + '   |   Employee: ' + data.userName + n;
+    b += 'Date: ' + fmtDate(data.date) + '   |   Employee: ' + data.userName;
+    if (totalMinutes > 0) b += '   |   Logged time: ' + fmtDuration(totalMinutes);
+    b += n;
     b += sep + n + n;
 
     b += '✅  COMPLETED (' + done.length + ')' + n + thin + n;
     if (done.length === 0) {
       b += '    —  None' + n;
     } else {
-      done.forEach(function(t, i) {
-        b += '    ' + (i + 1) + '.  ' + t.title + n;
-      });
+      done.forEach(function(t, i) { b += taskLine(t, i); });
     }
     b += n;
 
@@ -998,9 +1122,7 @@
     if (inProg.length === 0) {
       b += '    —  None' + n;
     } else {
-      inProg.forEach(function(t, i) {
-        b += '    ' + (i + 1) + '.  ' + t.title + n;
-      });
+      inProg.forEach(function(t, i) { b += taskLine(t, i); });
     }
     b += n;
 
@@ -1008,9 +1130,7 @@
     if (pending.length === 0) {
       b += '    —  None' + n;
     } else {
-      pending.forEach(function(t, i) {
-        b += '    ' + (i + 1) + '.  ' + t.title + n;
-      });
+      pending.forEach(function(t, i) { b += taskLine(t, i, true); });
     }
     b += n;
 
@@ -1018,13 +1138,17 @@
       b += '📋  CLIENT REQUESTS HANDLED (' + data.queueRequests.length + ')' + n + thin + n;
       data.queueRequests.forEach(function(q, i) {
         var st = q.status === 'done' ? 'Done' : 'In Progress';
-        b += '    ' + (i + 1) + '.  ' + q.title + '  –  ' + st + n;
+        var bits = [];
+        if (q.completed_at) bits.push('done ' + fmtTime(q.completed_at));
+        b += '    ' + (i + 1) + '.  ' + q.title + '  –  ' + st + (bits.length ? '  (' + bits.join(', ') + ')' : '') + n;
+        if (q.latest_comment) b += '        ↳ ' + q.latest_comment + n;
       });
       b += n;
     }
 
     b += sep + n;
     b += 'Summary:  ✅ ' + done.length + ' completed   🔄 ' + inProg.length + ' in progress   ⏳ ' + pending.length + ' pending';
+    if (totalMinutes > 0) b += '   ⏱ ' + fmtDuration(totalMinutes) + ' logged';
     if (data.queueRequests && data.queueRequests.length > 0) {
       b += '   📋 ' + data.queueRequests.length + ' client request(s)';
     }

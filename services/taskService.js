@@ -232,14 +232,14 @@ class TaskService {
     return TaskModel.findById(taskId);
   }
 
-  static async completeTask(taskId, userId, workDate = null) {
+  static async completeTask(taskId, userId, workDate = null, notes = null) {
     const task = await TaskModel.findById(taskId);
     if (!task) throw new Error('Task not found');
     if (task.assigned_to !== userId) throw new Error('You can only complete tasks assigned to you');
 
     // Recurring tasks use logCompletion instead
     if (task.type === 'recurring' && task.status === 'active') {
-      return this.logCompletion(taskId, userId, workDate);
+      return this.logCompletion(taskId, userId, workDate, undefined, notes);
     }
 
     // Adhoc task: original flow
@@ -252,6 +252,15 @@ class TaskService {
       await conn.query(
         `UPDATE tasks SET status = 'completed', completed_at = NOW() WHERE id = ?`, [taskId]
       );
+
+      if (workDate) {
+        await conn.query(
+          `INSERT INTO task_completions (task_id, user_id, completion_date, notes, completed_at)
+           VALUES (?, ?, ?, ?, NOW())
+           ON DUPLICATE KEY UPDATE notes = COALESCE(VALUES(notes), notes), completed_at = COALESCE(completed_at, VALUES(completed_at))`,
+          [taskId, userId, workDate, notes]
+        );
+      }
 
       if (task.reward_amount && parseFloat(task.reward_amount) > 0) {
         await conn.query(
@@ -276,7 +285,7 @@ class TaskService {
   /**
    * Log completion for a recurring task for today (or a specific date).
    */
-  static async logCompletion(taskId, userId, date = null, timezone = 'America/New_York') {
+  static async logCompletion(taskId, userId, date = null, timezone = 'America/New_York', notes = null) {
     const task = await TaskModel.findById(taskId);
     if (!task) throw new Error('Task not found');
     if (task.assigned_to !== userId) throw new Error('You can only log completion for tasks assigned to you');
@@ -298,8 +307,8 @@ class TaskService {
       if (existing) throw new Error('Already completed for this date');
 
       await conn.query(
-        `INSERT INTO task_completions (task_id, user_id, completion_date) VALUES (?, ?, ?)`,
-        [taskId, userId, completionDate]
+        `INSERT INTO task_completions (task_id, user_id, completion_date, notes, completed_at) VALUES (?, ?, ?, ?, NOW())`,
+        [taskId, userId, completionDate, notes]
       );
 
       // Create reward entry if applicable
@@ -383,7 +392,7 @@ class TaskService {
     return task;
   }
 
-  static async completeSession(taskId, userId, timezone = 'America/New_York', workDate = null) {
+  static async completeSession(taskId, userId, timezone = 'America/New_York', workDate = null, notes = null) {
     const task = await TaskModel.findById(taskId);
     if (!task) throw new Error('Task not found');
     if (task.assigned_to !== userId) throw new Error('You can only complete tasks assigned to you');
@@ -405,9 +414,9 @@ class TaskService {
       await conn.beginTransaction();
 
       await conn.query(
-        `UPDATE task_completions SET completed_at = NOW(), duration_minutes = TIMESTAMPDIFF(MINUTE, started_at, NOW())
+        `UPDATE task_completions SET completed_at = NOW(), duration_minutes = TIMESTAMPDIFF(MINUTE, started_at, NOW()), notes = COALESCE(?, notes)
          WHERE task_id = ? AND user_id = ? AND completion_date = ?`,
-        [taskId, userId, today]
+        [notes, taskId, userId, today]
       );
 
       if (task.reward_amount && parseFloat(task.reward_amount) > 0) {
