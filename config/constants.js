@@ -36,6 +36,14 @@ module.exports = {
     PAID: 'paid'
   },
 
+  BREAK_TYPES: {
+    tea:          { label: 'Tea Break',      idealMin: 10, idealMax: 15 },
+    lunch_dinner: { label: 'Lunch / Dinner', idealMin: 20, idealMax: 30 },
+    washroom:     { label: 'Washroom',       idealMin: 4,  idealMax: 5  },
+    meeting:      { label: 'Meeting',        idealMin: null, idealMax: null },
+    other:        { label: 'Other',          idealMin: null, idealMax: null }
+  },
+
   PERMISSIONS: {
     CLIENT_ADMIN: [
       'task:create', 'task:assign', 'task:reward',

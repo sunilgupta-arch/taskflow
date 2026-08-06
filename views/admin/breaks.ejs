@@ -1,0 +1,216 @@
+<style>
+.brk-header { display:flex; align-items:flex-start; justify-content:space-between; gap:1rem; flex-wrap:wrap; margin-bottom:1.25rem; }
+.brk-breadcrumb { display:flex; align-items:center; gap:6px; font-size:0.72rem; color:var(--adm-muted); margin-bottom:4px; }
+.brk-breadcrumb a { color:var(--adm-muted); text-decoration:none; }
+.brk-breadcrumb a:hover { color:var(--adm-text); }
+.brk-title { font-size:1.4rem; font-weight:700; color:var(--adm-text); margin:0; display:flex; align-items:center; gap:8px; }
+.brk-sub { font-size:0.78rem; color:var(--adm-muted); margin-top:4px; }
+
+.brk-active-banner {
+  display:none; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;
+  background:rgba(0,212,255,0.06); border:1px solid rgba(0,212,255,0.25); border-radius:12px;
+  padding:14px 18px; margin-bottom:1.25rem;
+}
+.brk-active-banner.show { display:flex; }
+.brk-active-left { display:flex; align-items:center; gap:12px; }
+.brk-active-icon { width:42px; height:42px; border-radius:50%; background:rgba(0,212,255,0.12); color:#00d4ff; display:flex; align-items:center; justify-content:center; font-size:1.1rem; flex-shrink:0; }
+.brk-active-type { font-weight:700; font-size:0.95rem; color:var(--adm-text); }
+.brk-active-meta { font-size:0.72rem; color:var(--adm-muted); font-family:var(--adm-mono); margin-top:2px; }
+.brk-elapsed { color:#00d4ff; font-weight:700; }
+.brk-elapsed.overdue { color:#f97316; }
+.brk-end-btn {
+  background:linear-gradient(135deg,#ef4444,#dc2626); border:none; color:#fff;
+  padding:9px 20px; border-radius:8px; font-family:var(--adm-font); font-size:0.82rem;
+  font-weight:600; cursor:pointer; transition:opacity 0.15s; white-space:nowrap;
+}
+.brk-end-btn:hover { opacity:0.86; }
+
+.brk-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:12px; margin-bottom:1.5rem; }
+.brk-btn {
+  background:var(--adm-surface); border:1px solid var(--adm-border); border-radius:12px;
+  padding:16px; text-align:left; cursor:pointer; transition:all 0.15s; color:var(--adm-text);
+}
+.brk-btn:hover:not(:disabled) { border-color:var(--card-accent,#00d4ff); background:var(--adm-surface-2); }
+.brk-btn:disabled { opacity:0.4; cursor:not-allowed; }
+.brk-btn-icon { width:38px; height:38px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:1.1rem; margin-bottom:10px; background:rgba(var(--card-rgb,0,212,255),0.12); color:var(--card-accent,#00d4ff); }
+.brk-btn-label { font-weight:600; font-size:0.86rem; margin-bottom:3px; }
+.brk-btn-ideal { font-size:0.68rem; color:var(--adm-muted); font-family:var(--adm-mono); }
+
+.brk-note-wrap { margin-bottom:1.25rem; }
+.brk-note-wrap.hide { display:none; }
+.brk-note-inp {
+  width:100%; max-width:480px; background:var(--adm-surface-2); border:1px solid var(--adm-border);
+  border-radius:8px; padding:9px 12px; color:var(--adm-text); font-family:var(--adm-font);
+  font-size:0.82rem; outline:none;
+}
+.brk-note-inp:focus { border-color:#00d4ff; }
+
+.brk-hist-title { font-size:0.8rem; font-weight:700; color:var(--adm-text); text-transform:uppercase; letter-spacing:0.4px; margin-bottom:10px; display:flex; align-items:center; gap:8px; }
+.brk-hist-total { font-family:var(--adm-mono); font-size:0.68rem; color:#00d4ff; background:rgba(0,212,255,0.1); border:1px solid rgba(0,212,255,0.2); border-radius:20px; padding:2px 10px; }
+.brk-table { width:100%; border-collapse:collapse; background:var(--adm-surface); border:1px solid var(--adm-border); border-radius:12px; overflow:hidden; }
+.brk-table th { text-align:left; font-size:0.65rem; text-transform:uppercase; letter-spacing:0.4px; color:var(--adm-muted); padding:10px 14px; border-bottom:1px solid var(--adm-border); }
+.brk-table td { padding:10px 14px; font-size:0.8rem; color:var(--adm-text-2); border-bottom:1px solid var(--adm-border); }
+.brk-table tr:last-child td { border-bottom:none; }
+.brk-table td.type { color:var(--adm-text); font-weight:600; }
+.brk-empty { text-align:center; padding:2.5rem 1rem; color:var(--adm-muted); font-size:0.82rem; background:var(--adm-surface); border:1px solid var(--adm-border); border-radius:12px; }
+</style>
+
+<div class="brk-header">
+  <div>
+    <div class="brk-breadcrumb">
+      <a href="/admin"><i class="bi bi-grid-1x2-fill"></i> Dashboard</a>
+      <i class="bi bi-chevron-right" style="font-size:0.6rem"></i>
+      <span>Breaks</span>
+    </div>
+    <h1 class="brk-title"><i class="bi bi-cup-hot"></i> Breaks</h1>
+    <div class="brk-sub">Punch a break, and end it when you're back</div>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px">
+    <% if (['LOCAL_ADMIN', 'LOCAL_MANAGER'].includes(user.role_name)) { %>
+    <a href="/admin/team-breaks" class="adm-back-btn"><i class="bi bi-broadcast"></i> Team Break Status</a>
+    <% } %>
+    <a href="/admin" class="adm-back-btn"><i class="bi bi-arrow-left"></i> Dashboard</a>
+  </div>
+</div>
+
+<!-- Active break banner -->
+<div class="brk-active-banner" id="brkBanner">
+  <div class="brk-active-left">
+    <div class="brk-active-icon"><i class="bi bi-cup-hot-fill"></i></div>
+    <div>
+      <div class="brk-active-type" id="brkActiveType">--</div>
+      <div class="brk-active-meta">Started <span id="brkActiveStart">--</span> &bull; <span class="brk-elapsed" id="brkElapsed">0m</span></div>
+    </div>
+  </div>
+  <button class="brk-end-btn" onclick="brkEnd()"><i class="bi bi-stop-circle"></i> End Break</button>
+</div>
+
+<!-- Punch buttons -->
+<div class="brk-grid" id="brkGrid"></div>
+
+<!-- Optional note -->
+<div class="brk-note-wrap" id="brkNoteWrap">
+  <input class="brk-note-inp" id="brkNoteInp" placeholder="Add a note (optional)&hellip;" maxlength="255">
+</div>
+
+<!-- Today's history -->
+<div class="brk-hist-title">
+  Today's Breaks <span class="brk-hist-total" id="brkTotal">0m total</span>
+</div>
+<div id="brkHistWrap"></div>
+
+<script>
+(function() {
+  'use strict';
+
+  var BREAK_TYPES = <%- JSON.stringify(breakTypes).replace(/<\//g, '<\/') %>;
+  var ACCENTS = { tea:['#f59e0b','245,158,11'], lunch_dinner:['#10b981','16,185,129'], washroom:['#00d4ff','0,212,255'], meeting:['#8b5cf6','139,92,246'], other:['#64748b','100,116,139'] };
+  var ICONS = { tea:'bi-cup-hot', lunch_dinner:'bi-egg-fried', washroom:'bi-droplet', meeting:'bi-people', other:'bi-three-dots' };
+
+  var _active = <%- JSON.stringify(active).replace(/<\//g, '<\/') %>;
+  var _history = [];
+  var _elapsedTimer = null;
+
+  function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  function idealLabel(key) {
+    var c = BREAK_TYPES[key];
+    return (c.idealMin != null) ? (c.idealMin + '–' + c.idealMax + ' min') : 'no limit';
+  }
+  function fmtTime(v) {
+    if (!v) return '--';
+    return new Date(v).toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit' });
+  }
+  function fmtDuration(min) {
+    if (min == null) return '--';
+    var h = Math.floor(min/60), m = min%60;
+    return h > 0 ? h+'h '+m+'m' : m+'m';
+  }
+
+  function renderGrid() {
+    var grid = document.getElementById('brkGrid');
+    grid.innerHTML = Object.keys(BREAK_TYPES).map(function(key) {
+      var c = BREAK_TYPES[key];
+      var accent = ACCENTS[key] || ['#00d4ff','0,212,255'];
+      return '<button class="brk-btn" style="--card-accent:'+accent[0]+';--card-rgb:'+accent[1]+'" ' +
+        (_active ? 'disabled' : '') + ' onclick="brkStart(\''+key+'\')">' +
+        '<div class="brk-btn-icon"><i class="bi '+(ICONS[key]||'bi-clock')+'"></i></div>' +
+        '<div class="brk-btn-label">'+esc(c.label)+'</div>' +
+        '<div class="brk-btn-ideal">'+idealLabel(key)+'</div>' +
+        '</button>';
+    }).join('');
+  }
+
+  function renderBanner() {
+    var banner = document.getElementById('brkBanner');
+    var noteWrap = document.getElementById('brkNoteWrap');
+    if (!_active) { banner.classList.remove('show'); noteWrap.classList.remove('hide'); return; }
+    banner.classList.add('show');
+    noteWrap.classList.add('hide');
+    document.getElementById('brkActiveType').textContent = BREAK_TYPES[_active.break_type].label;
+    document.getElementById('brkActiveStart').textContent = fmtTime(_active.started_at);
+    updateElapsed();
+  }
+
+  function updateElapsed() {
+    if (!_active) return;
+    var el = document.getElementById('brkElapsed');
+    var ms = Date.now() - new Date(_active.started_at).getTime();
+    var min = Math.max(0, Math.floor(ms/60000));
+    el.textContent = fmtDuration(min);
+    var cfg = BREAK_TYPES[_active.break_type];
+    el.classList.toggle('overdue', cfg.idealMax != null && min > cfg.idealMax);
+  }
+
+  function renderHistory() {
+    document.getElementById('brkTotal').textContent = fmtDuration(_history.reduce(function(s,b){ return s+(b.duration_minutes||0); }, 0)) + ' total';
+    var wrap = document.getElementById('brkHistWrap');
+    if (!_history.length) {
+      wrap.innerHTML = '<div class="brk-empty"><i class="bi bi-cup"></i><br>No breaks punched today.</div>';
+      return;
+    }
+    var rows = _history.map(function(b) {
+      return '<tr><td class="type">'+esc(BREAK_TYPES[b.break_type].label)+'</td>' +
+        '<td>'+fmtTime(b.started_at)+'</td>' +
+        '<td>'+(b.ended_at ? fmtTime(b.ended_at) : '<span style="color:#00d4ff">In progress</span>')+'</td>' +
+        '<td>'+fmtDuration(b.duration_minutes)+'</td>' +
+        '<td>'+(b.note ? esc(b.note) : '<span style="opacity:0.4">--</span>')+'</td></tr>';
+    }).join('');
+    wrap.innerHTML = '<table class="brk-table"><thead><tr><th>Type</th><th>Start</th><th>End</th><th>Duration</th><th>Note</th></tr></thead><tbody>'+rows+'</tbody></table>';
+  }
+
+  function loadStatus() {
+    fetch('/admin/breaks/status').then(function(r){ return r.json(); }).then(function(d) {
+      if (!d.success) return;
+      _active = d.data.active;
+      _history = d.data.history || [];
+      renderGrid(); renderBanner(); renderHistory();
+    });
+  }
+
+  window.brkStart = function(breakType) {
+    var note = document.getElementById('brkNoteInp').value.trim();
+    fetch('/admin/breaks/start', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ break_type: breakType, note: note || null })
+    }).then(function(r){ return r.json(); }).then(function(d) {
+      if (!d.success) { showToast(d.message || 'Could not start break', 'error'); return; }
+      document.getElementById('brkNoteInp').value = '';
+      showToast('Break started');
+      loadStatus();
+    }).catch(function(){ showToast('Could not start break', 'error'); });
+  };
+
+  window.brkEnd = function() {
+    fetch('/admin/breaks/end', { method:'POST' }).then(function(r){ return r.json(); }).then(function(d) {
+      if (!d.success) { showToast(d.message || 'Could not end break', 'error'); return; }
+      showToast('Break ended');
+      loadStatus();
+    }).catch(function(){ showToast('Could not end break', 'error'); });
+  };
+
+  renderGrid();
+  renderBanner();
+  loadStatus();
+  _elapsedTimer = setInterval(updateElapsed, 15000);
+})();
+</script>

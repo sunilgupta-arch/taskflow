@@ -1,0 +1,113 @@
+<style>
+.tbrk-topbar { display:flex; align-items:flex-start; justify-content:space-between; gap:1rem; flex-wrap:wrap; margin-bottom:1.25rem; }
+.tbrk-title { font-size:1.4rem; font-weight:700; color:var(--adm-text); margin:0 0 2px; }
+.tbrk-subtitle { font-size:0.72rem; color:var(--adm-muted); font-family:var(--adm-mono); display:flex; align-items:center; gap:6px; }
+.tbrk-live-dot { display:inline-block; width:7px; height:7px; border-radius:50%; background:#10b981; animation:tbrk-pulse 1.5s ease-in-out infinite; }
+@keyframes tbrk-pulse { 0%,100%{opacity:1} 50%{opacity:0.2} }
+.tbrk-actions { display:flex; align-items:center; gap:8px; }
+.tbrk-count-pill { display:inline-flex; align-items:center; gap:6px; background:rgba(0,212,255,0.1); border:1px solid rgba(0,212,255,0.25); color:#00d4ff; border-radius:20px; padding:6px 14px; font-family:var(--adm-mono); font-size:0.78rem; font-weight:700; margin-bottom:1.25rem; }
+
+.tbrk-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(270px,1fr)); gap:0.85rem; }
+.tbrk-card { background:var(--adm-surface); border:1px solid var(--adm-border); border-radius:12px; padding:1rem; border-left:3px solid #00d4ff; }
+.tbrk-card.overdue { border-left-color:#f97316; }
+.tbrk-card-head { display:flex; align-items:center; gap:10px; margin-bottom:0.6rem; }
+.tbrk-avatar { width:36px; height:36px; border-radius:50%; background:rgba(0,212,255,0.12); color:#00d4ff; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:0.78rem; flex-shrink:0; }
+.tbrk-name { font-weight:600; font-size:0.88rem; color:var(--adm-text); }
+.tbrk-badge { display:inline-flex; align-items:center; gap:4px; font-size:0.62rem; font-weight:700; padding:2px 8px; border-radius:6px; font-family:var(--adm-mono); text-transform:uppercase; letter-spacing:0.3px; background:rgba(0,212,255,0.12); color:#00d4ff; margin-top:2px; }
+.tbrk-card.overdue .tbrk-badge { background:rgba(249,115,22,0.14); color:#f97316; }
+.tbrk-meta { font-size:0.68rem; color:var(--adm-muted); font-family:var(--adm-mono); display:flex; justify-content:space-between; align-items:center; padding-top:0.5rem; border-top:1px solid var(--adm-border); }
+.tbrk-elapsed { color:#00d4ff; font-weight:700; }
+.tbrk-card.overdue .tbrk-elapsed { color:#f97316; }
+.tbrk-note { font-size:0.75rem; color:var(--adm-text-2); margin-top:6px; font-style:italic; }
+.tbrk-empty { text-align:center; padding:3rem 1rem; color:var(--adm-muted); font-size:0.85rem; }
+.tbrk-empty i { font-size:2rem; display:block; margin-bottom:0.5rem; }
+</style>
+
+<div class="tbrk-topbar">
+  <div>
+    <h1 class="tbrk-title">Team Break Status</h1>
+    <div class="tbrk-subtitle"><span class="tbrk-live-dot"></span> Live &bull; refreshes automatically</div>
+  </div>
+  <div class="tbrk-actions">
+    <a href="/admin/team" class="adm-back-btn"><i class="bi bi-arrow-left"></i> Team</a>
+  </div>
+</div>
+
+<div class="tbrk-count-pill"><i class="bi bi-cup-hot"></i> <span id="tbrkCount">0</span> on break right now</div>
+
+<div class="tbrk-grid" id="tbrkGrid"></div>
+<div class="tbrk-empty" id="tbrkEmpty" style="display:none">
+  <i class="bi bi-cup"></i>
+  No one is on a break right now.
+</div>
+
+<script>
+(function() {
+  'use strict';
+
+  var BREAK_LABELS = { tea:'Tea Break', lunch_dinner:'Lunch / Dinner', washroom:'Washroom', meeting:'Meeting', other:'Other' };
+  var _active = [];
+  var _pollTimer = null;
+  var _elapsedTimer = null;
+
+  function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  function nameInitials(name) { return (name || '').split(' ').map(function(w){ return w[0]||''; }).join('').substring(0,2).toUpperCase(); }
+  function fmtTime(v) { return v ? new Date(v).toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit' }) : '--'; }
+  function fmtDuration(min) {
+    var h = Math.floor(min/60), m = min%60;
+    return h > 0 ? h+'h '+m+'m' : m+'m';
+  }
+
+  function renderCard(b) {
+    var h = '<div class="tbrk-card'+(b.isOverdue?' overdue':'')+'" data-started="'+esc(b.startedAt)+'" data-id="'+b.userId+'">';
+    h += '<div class="tbrk-card-head">';
+    h += '<div class="tbrk-avatar">'+esc(nameInitials(b.name))+'</div>';
+    h += '<div><div class="tbrk-name">'+esc(b.name)+'</div>';
+    h += '<span class="tbrk-badge">'+esc(BREAK_LABELS[b.breakType]||b.breakType)+'</span></div>';
+    h += '</div>';
+    if (b.note) h += '<div class="tbrk-note">"'+esc(b.note)+'"</div>';
+    h += '<div class="tbrk-meta"><span>Since '+fmtTime(b.startedAt)+'</span><span class="tbrk-elapsed">--</span></div>';
+    h += '</div>';
+    return h;
+  }
+
+  function updateElapsed() {
+    document.querySelectorAll('.tbrk-card[data-started]').forEach(function(el) {
+      var ms = Date.now() - new Date(el.dataset.started).getTime();
+      var min = Math.max(0, Math.floor(ms/60000));
+      var elapsedEl = el.querySelector('.tbrk-elapsed');
+      if (elapsedEl) elapsedEl.textContent = fmtDuration(min);
+    });
+  }
+
+  function render() {
+    var grid = document.getElementById('tbrkGrid');
+    var empty = document.getElementById('tbrkEmpty');
+    document.getElementById('tbrkCount').textContent = _active.length;
+    if (!_active.length) { grid.innerHTML = ''; empty.style.display = ''; return; }
+    empty.style.display = 'none';
+    grid.innerHTML = _active.map(renderCard).join('');
+    updateElapsed();
+  }
+
+  function fetchData() {
+    fetch('/admin/team-breaks/data').then(function(r){ return r.json(); }).then(function(d) {
+      if (!d.success) return;
+      _active = d.data.active || [];
+      render();
+    });
+  }
+
+  function setupSocket() {
+    if (typeof io === 'undefined') return;
+    var sock = io({ transports:['websocket','polling'] });
+    sock.on('break:started', function() { fetchData(); });
+    sock.on('break:ended', function() { fetchData(); });
+  }
+
+  fetchData();
+  setupSocket();
+  _pollTimer = setInterval(fetchData, 20000);
+  _elapsedTimer = setInterval(updateElapsed, 15000);
+})();
+</script>

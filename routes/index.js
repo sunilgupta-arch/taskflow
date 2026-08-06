@@ -204,6 +204,8 @@ router.post('/channel/mentions/seen', authenticate, GroupChannelController.markA
 
 // ── Admin Hub (new clean UI for LOCAL_ADMIN / LOCAL_MANAGER / LOCAL_USER) ─
 const AdminHubController = require('../controllers/adminHubController');
+const BreakController = require('../controllers/breakController');
+const auditLog = require('../middleware/auditLog');
 const requireLocalAdmin = requireRoles('LOCAL_ADMIN', 'LOCAL_MANAGER');
 const requireLocalAll   = requireRoles('LOCAL_ADMIN', 'LOCAL_MANAGER', 'LOCAL_USER');
 // Pages all local roles can access
@@ -238,6 +240,10 @@ router.patch('/admin/downloads/:id/toggle',        authenticate, requireRoles('L
 router.patch('/admin/downloads/:id/toggle-public', authenticate, requireRoles('LOCAL_ADMIN', 'LOCAL_MANAGER'), DownloadController.togglePublic);
 router.get('/admin/my-attendance',      authenticate, requireLocalAll,   AdminHubController.myAttendance);
 router.get('/admin/my-progress',        authenticate, requireLocalAll,   AdminHubController.myProgress);
+router.get('/admin/breaks',             authenticate, requireLocalAll,   BreakController.myBreaksPage);
+router.get('/admin/breaks/status',      authenticate, requireLocalAll,   BreakController.status);
+router.post('/admin/breaks/start',      authenticate, requireLocalAll,   auditLog('START_BREAK', 'break'), BreakController.start);
+router.post('/admin/breaks/end',        authenticate, requireLocalAll,   auditLog('END_BREAK', 'break'),   BreakController.end);
 // Pages admin/manager only
 router.get('/admin/all-tasks',          authenticate, requireLocalAdmin, AdminHubController.allTasks);
 router.get('/admin/taskboard',          authenticate, requireLocalAdmin, AdminHubController.taskboard);
@@ -248,6 +254,8 @@ router.get('/admin/comp-off',           authenticate, requireLocalAdmin, AdminHu
 router.get('/admin/roster',             authenticate, requireLocalAdmin, AdminHubController.roster);
 router.get('/admin/live-status',        authenticate, requireLocalAdmin, AdminHubController.liveStatus);
 router.get('/admin/live-status/data',   authenticate, requireLocalAdmin, AdminHubController.liveStatusData);
+router.get('/admin/team-breaks',        authenticate, requireLocalAdmin, BreakController.teamBreaksPage);
+router.get('/admin/team-breaks/data',   authenticate, requireLocalAdmin, BreakController.teamStatus);
 router.get('/admin/users',              authenticate, requireLocalAdmin, AdminHubController.users);
 router.get('/admin/attendance',         authenticate, requireLocalAdmin, AdminHubController.attendance);
 router.get('/admin/attendance/data',    authenticate, requireLocalAdmin, AdminHubController.attendanceDailyData);
