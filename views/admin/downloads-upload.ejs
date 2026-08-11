@@ -117,7 +117,7 @@
       <input type="file" id="upFileInput" onchange="upHandleFile(this.files[0])">
       <i class="bi bi-cloud-arrow-up-fill up-drop-icon"></i>
       <div class="up-drop-title">Drop file here or click to browse</div>
-      <div class="up-drop-sub">Any file type &nbsp;·&nbsp; <strong>Max 500 MB</strong></div>
+      <div class="up-drop-sub">Any file type &nbsp;·&nbsp; <strong>Max 1 GB</strong></div>
     </div>
 
     <!-- File preview -->
@@ -192,8 +192,8 @@ drop.addEventListener('drop', e => {
 
 function upHandleFile(file) {
   if (!file) return;
-  if (file.size > 500 * 1024 * 1024) {
-    upShowMsg('File is too large. Maximum size is 500 MB.', 'error'); return;
+  if (file.size > 1024 * 1024 * 1024) {
+    upShowMsg('File is too large. Maximum size is 1 GB.', 'error'); return;
   }
   upFile = file;
   document.getElementById('upPreviewName').textContent = file.name;

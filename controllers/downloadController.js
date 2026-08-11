@@ -6,7 +6,7 @@ const GoogleDriveService = require('../services/googleDriveService');
 
 const UPLOADS_DIR = path.join(__dirname, '../uploads/downloads');
 
-// ── Multer: disk storage, 500 MB ─────────────────────────────────────
+// ── Multer: disk storage, 1 GB ─────────────────────────────────────
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, UPLOADS_DIR),
   filename:    (req, file, cb) => {
@@ -15,7 +15,7 @@ const storage = multer.diskStorage({
   }
 });
 
-const upload = multer({ storage, limits: { fileSize: 500 * 1024 * 1024 } });
+const upload = multer({ storage, limits: { fileSize: 1024 * 1024 * 1024 } });
 
 const CAN_UPLOAD = ['LOCAL_ADMIN', 'LOCAL_MANAGER', 'CLIENT_ADMIN'];
 

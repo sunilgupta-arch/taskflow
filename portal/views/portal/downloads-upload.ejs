@@ -117,7 +117,7 @@
       <input type="file" id="pupFileInput" onchange="pupHandleFile(this.files[0])">
       <i class="bi bi-cloud-arrow-up-fill pup-drop-icon"></i>
       <div class="pup-drop-title">Drop file here or click to browse</div>
-      <div class="pup-drop-sub">Any file type &nbsp;·&nbsp; <strong>Max 500 MB</strong></div>
+      <div class="pup-drop-sub">Any file type &nbsp;·&nbsp; <strong>Max 1 GB</strong></div>
     </div>
 
     <div class="pup-file-preview" id="pupFilePreview">
@@ -176,7 +176,7 @@ pupDrop.addEventListener('drop', e => {
 
 function pupHandleFile(file) {
   if (!file) return;
-  if (file.size > 500 * 1024 * 1024) { pupShowMsg('File exceeds 500 MB limit.', 'error'); return; }
+  if (file.size > 1024 * 1024 * 1024) { pupShowMsg('File exceeds 1 GB limit.', 'error'); return; }
   pupFile = file;
   document.getElementById('pupPreviewName').textContent = file.name;
   document.getElementById('pupPreviewSize').textContent = pupFmt(file.size);

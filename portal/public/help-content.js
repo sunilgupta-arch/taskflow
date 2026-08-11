@@ -137,7 +137,7 @@ window.PORTAL_HELP_CONTENT = {
     "title": "Upload File",
     "intro": "Add a new file to the shared Downloads library for your team to access.",
     "topics": [
-      { "q": "How do I select a file to upload?", "a": "Drag and drop it onto the drop zone, or click the drop zone to browse your computer. Max file size is 500 MB." },
+      { "q": "How do I select a file to upload?", "a": "Drag and drop it onto the drop zone, or click the drop zone to browse your computer. Max file size is 1 GB." },
       { "q": "What fields do I need to fill in?", "a": "Name is required; Description and Version are optional. The name is pre-filled from the file's filename but you can change it." },
       { "q": "Why does it say Saving to Drive after the upload bar hits 100%?", "a": "The file finishes uploading to the server first, then gets copied to Google Drive in the background — that second step is what that message means." },
       { "q": "Who can access this upload page?", "a": "Only Admin accounts can upload files; everyone else is redirected back to the Downloads page." }
