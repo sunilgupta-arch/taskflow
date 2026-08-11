@@ -43,7 +43,7 @@ const isSalesUser = user.role_name === 'CLIENT_SALES';
 
 <div class="portal-requests-wrap">
 <div class="portal-page-header">
-  <h5>Allocate Task TI</h5>
+  <div></div><%# title now lives in the top bar %>
   <% if (canCreate) { %>
   <div class="d-flex gap-2">
     <% if (!isSalesUser) { %>

@@ -3,6 +3,26 @@
   --portal-sidebar-expanded: 180px;
   --portal-font: 'Inter', -apple-system, sans-serif;
   --portal-font-mono: 'Space Mono', monospace;
+
+  /* Horizontal space occupied by the group channel panel on the right.
+     Floating widgets add this to their own offset so they never sit on top
+     of the panel. 0 when the panel is absent or collapsed. */
+  --gc-offset: 0px;
+}
+
+/* .gc-present is set server-side when the panel is rendered for this page;
+   .gc-collapsed is set from localStorage before paint and kept in sync by
+   toggleGroupChannel(). */
+html.gc-present:not(.gc-collapsed) {
+  --gc-offset: var(--gc-panel-width, 300px);
+}
+
+/* The group-channel handle and the chat bubble now live in the top bar.
+   The elements stay in the DOM so their existing JS keeps working, but they
+   are never shown. */
+.gc-handle,
+.pcw-fab {
+  display: none !important;
 }
 
 /* ── Dark Theme ─────────────────────────────────────────── */
@@ -370,7 +390,128 @@ html.sidebar-expanded .portal-activity-bar .dropdown-menu {
   margin-left: var(--portal-sidebar-width);
   height: 100vh;
   overflow: hidden;
+  /* Top bar pins; only .portal-content scrolls */
+  display: flex;
+  flex-direction: column;
+  position: relative;
   transition: margin-left 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Holds <%- body %>. min-height:0 is what lets a flex child scroll
+   instead of growing past its parent. */
+.portal-content {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* ── Top bar ────────────────────────────────────────────── */
+.portal-topbar {
+  flex: 0 0 auto;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 16px 0 20px;
+  background: var(--tf-surface);
+  border-bottom: 1px solid var(--tf-border);
+}
+
+.portal-topbar-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--tf-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.portal-topbar-title .portal-help-link { display: inline-flex; align-items: center; }
+
+.portal-topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.tb-item {
+  position: relative;
+  height: 36px;
+  min-width: 36px;
+  padding: 0 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  color: var(--tf-text-muted);
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.tb-item:hover { background: var(--tf-surface-2); color: var(--tf-text); }
+.tb-item i { font-size: 1rem; }
+
+/* Set while the chat widget is open, mirrored from .pcw-fab.pcw-on */
+.tb-item-active { background: var(--tf-surface-2); color: var(--tf-accent); }
+
+.tb-item-text { display: flex; flex-direction: column; line-height: 1.1; text-align: left; }
+.tb-item-name { font-size: 0.8rem; color: var(--tf-text); }
+.tb-item-role { font-size: 0.62rem; opacity: 0.7; }
+
+.tb-avatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--tf-accent);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.72rem;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+.tb-caret { font-size: 0.65rem !important; opacity: 0.6; }
+
+.tb-badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  min-width: 15px;
+  height: 15px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: var(--tf-danger);
+  color: #fff;
+  font-size: 0.6rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tb-sep {
+  width: 1px;
+  height: 22px;
+  background: var(--tf-border);
+  margin: 0 6px;
+  flex-shrink: 0;
+}
+
+/* Narrow screens: drop the support names, keep the icons */
+@media (max-width: 900px) {
+  .tb-item-support .tb-item-text { display: none; }
+  .tb-item-user .tb-item-name,
+  .tb-item-user .tb-caret { display: none; }
+  .portal-topbar { padding: 0 10px 0 14px; }
 }
 
 .portal-activity-bar.expanded ~ .portal-main,
@@ -2379,7 +2520,8 @@ html.sidebar-expanded .portal-main {
 .admin-chat-panel {
   position: fixed;
   bottom: 16px;
-  right: 16px;
+  right: calc(var(--gc-offset) + 16px);
+  transition: right 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   width: 380px;
   height: 500px;
   background: var(--tf-surface);
@@ -4491,7 +4633,8 @@ html.sidebar-expanded .portal-main {
 /* Floating widget */
 .urgent-widget {
   position: fixed;
-  bottom: 20px; right: 20px;
+  bottom: 20px; right: calc(var(--gc-offset) + 20px);
+  transition: right 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   width: 380px; height: 480px;
   background: var(--tf-surface);
   border: 1px solid rgba(239, 68, 68, 0.4);
@@ -4578,7 +4721,7 @@ html.sidebar-expanded .portal-main {
 
 /* Minimized FAB */
 .urgent-fab {
-  position: fixed; bottom: 20px; right: 20px;
+  position: fixed; bottom: 20px; right: calc(var(--gc-offset) + 20px);
   width: 50px; height: 50px; border-radius: 50%;
   background: linear-gradient(135deg, #dc2626, #b91c1c);
   border: none; color: #fff; font-size: 1.2rem;
