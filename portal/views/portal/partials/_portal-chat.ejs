@@ -3,7 +3,7 @@
 /* ── Widget shell ─────────────────────────────────────────────────────────── */
 .pcw {
   position: fixed;
-  bottom: 80px; right: 20px;
+  bottom: 80px; right: calc(var(--gc-offset, 0px) + 20px);
   width: 720px; height: 510px;
   display: flex; flex-direction: column;
   background: #111827;
@@ -432,7 +432,9 @@
 
 /* ── Floating toggle button ───────────────────────────────────────────────── */
 .pcw-fab {
-  position: fixed; bottom: 20px; right: 20px;
+  /* --gc-offset keeps the bubble clear of the group channel panel.
+     The `transition: all .2s` below already animates the shift. */
+  position: fixed; bottom: 20px; right: calc(var(--gc-offset, 0px) + 20px);
   width: 48px; height: 48px; border-radius: 50%;
   background: #6366f1; border: none; cursor: pointer;
   display: flex; align-items: center; justify-content: center;
@@ -646,7 +648,7 @@ window.pcwOpen = async ()=>{
 function restorePos(){
   const w=$('pcwWidget');
   try{ const s=localStorage.getItem('pcwPos'); if(s){ const {x,y}=JSON.parse(s); applyPos(x,y); return; } }catch(e){}
-  w.style.cssText+=';bottom:80px;right:20px;left:auto;top:auto';
+  w.style.cssText+=';bottom:80px;right:calc(var(--gc-offset, 0px) + 20px);left:auto;top:auto';
 }
 function applyPos(x,y){
   const w=$('pcwWidget');

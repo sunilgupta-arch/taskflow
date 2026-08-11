@@ -1,0 +1,1175 @@
+<%
+const weekdayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+%>
+
+<div class="duties-wrap">
+
+  <!-- Tabs -->
+  <div class="duty-tabs" id="dutyTabs">
+    <button class="duty-tab active" data-tab="mine" onclick="switchDutyTab('mine')">
+      <i class="bi bi-check2-square me-1"></i>My Duties
+    </button>
+    <% if (canManage) { %>
+      <button class="duty-tab" data-tab="schedule" onclick="switchDutyTab('schedule')">
+        <i class="bi bi-calendar-week me-1"></i>Schedule
+      </button>
+      <button class="duty-tab" data-tab="catalogue" onclick="switchDutyTab('catalogue')">
+        <i class="bi bi-list-check me-1"></i>Catalogue
+      </button>
+      <button class="duty-tab" data-tab="report" onclick="switchDutyTab('report')">
+        <i class="bi bi-stopwatch me-1"></i>Time Report
+      </button>
+    <% } %>
+  </div>
+
+  <!-- ── My Duties ───────────────────────────────────────── -->
+  <section class="duty-panel" id="dutyPanel-mine">
+    <div class="duty-datebar">
+      <button class="btn btn-sm btn-outline-secondary" onclick="shiftMineDate(-1)" title="Previous day">
+        <i class="bi bi-chevron-left"></i>
+      </button>
+      <input type="date" class="form-control form-control-sm" id="mineDate" value="<%= today %>" onchange="loadMyDuties()" style="width:auto">
+      <button class="btn btn-sm btn-outline-secondary" onclick="shiftMineDate(1)" title="Next day">
+        <i class="bi bi-chevron-right"></i>
+      </button>
+      <button class="btn btn-sm btn-outline-primary" onclick="goToday()">Today</button>
+      <div class="duty-daysummary ms-auto" id="mineSummary"></div>
+    </div>
+    <div id="mineList"><div class="portal-empty-state text-muted">Loading…</div></div>
+  </section>
+
+  <% if (canManage) { %>
+
+  <!-- ── Schedule ────────────────────────────────────────── -->
+  <section class="duty-panel" id="dutyPanel-schedule" style="display:none">
+    <div class="duty-datebar">
+      <button class="btn btn-sm btn-outline-secondary" onclick="shiftSchedDate(-1)" title="Previous day">
+        <i class="bi bi-chevron-left"></i>
+      </button>
+      <input type="date" class="form-control form-control-sm" id="schedDate" value="<%= today %>" onchange="loadSchedule()" style="width:auto">
+      <button class="btn btn-sm btn-outline-secondary" onclick="shiftSchedDate(1)" title="Next day">
+        <i class="bi bi-chevron-right"></i>
+      </button>
+      <button class="btn btn-sm btn-primary ms-auto" onclick="showAssignModal()">
+        <i class="bi bi-person-plus me-1"></i>Assign Duty
+      </button>
+    </div>
+    <div id="scheduleList"><div class="portal-empty-state text-muted">Loading…</div></div>
+  </section>
+
+  <!-- ── Catalogue ───────────────────────────────────────── -->
+  <section class="duty-panel" id="dutyPanel-catalogue" style="display:none">
+    <div class="duty-datebar">
+      <div class="duty-search">
+        <i class="bi bi-search"></i>
+        <input type="search" class="form-control form-control-sm" id="catalogueSearch"
+               placeholder="Search category or duty…" oninput="applyCatalogueFilter()" autocomplete="off">
+        <button type="button" class="duty-search-clear" id="catalogueSearchClear"
+                onclick="clearCatalogueSearch()" title="Clear" style="display:none">&times;</button>
+      </div>
+      <select class="form-select form-select-sm" id="catalogueCategoryFilter"
+              onchange="applyCatalogueFilter()" style="width:auto">
+        <option value="">All categories</option>
+      </select>
+      <span class="small text-muted" id="catalogueCount"></span>
+      <div class="form-check form-switch ms-auto">
+        <input class="form-check-input" type="checkbox" id="showArchivedDuties" onchange="loadCatalogue()">
+        <label class="form-check-label small" for="showArchivedDuties">Show archived</label>
+      </div>
+      <button class="btn btn-sm btn-primary" onclick="showDutyModal()">
+        <i class="bi bi-plus-lg me-1"></i>New Duty
+      </button>
+    </div>
+    <div class="portal-requests-table-wrap">
+      <table class="portal-table" id="catalogueTable">
+        <thead>
+          <tr>
+            <th>Duty</th>
+            <th>Category</th>
+            <th>Schedule</th>
+            <th class="text-end">Target</th>
+            <th class="text-end">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="catalogueBody">
+          <tr><td colspan="5" class="text-muted text-center py-4">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ── Time Report ─────────────────────────────────────── -->
+  <section class="duty-panel" id="dutyPanel-report" style="display:none">
+    <div class="duty-datebar">
+      <label class="small text-muted">From</label>
+      <input type="date" class="form-control form-control-sm" id="reportFrom" style="width:auto" onchange="loadReport()">
+      <label class="small text-muted">To</label>
+      <input type="date" class="form-control form-control-sm" id="reportTo" value="<%= today %>" style="width:auto" onchange="loadReport()">
+    </div>
+    <div id="reportSummary" class="duty-summary-row"></div>
+    <div class="portal-requests-table-wrap">
+      <table class="portal-table">
+        <thead>
+          <tr>
+            <th>Duty</th>
+            <th>Employee</th>
+            <th class="text-end">Runs</th>
+            <th class="text-end">Average</th>
+            <th class="text-end">Fastest</th>
+            <th class="text-end">Slowest</th>
+            <th class="text-end">Total</th>
+          </tr>
+        </thead>
+        <tbody id="reportBody">
+          <tr><td colspan="7" class="text-muted text-center py-4">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <% } %>
+</div>
+
+<% if (canManage) { %>
+<!-- Create / Edit Duty Modal -->
+<div class="modal fade" id="dutyModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h6 class="modal-title" id="dutyModalTitle">New Duty</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="dutyId">
+        <div class="mb-3">
+          <label class="form-label small">Title *</label>
+          <input type="text" class="form-control form-control-sm" id="dutyTitle" placeholder="e.g. Deep clean bathrooms, break room and stock room">
+        </div>
+        <div class="mb-3">
+          <label class="form-label small">Description</label>
+          <textarea class="form-control form-control-sm" id="dutyDescription" rows="2" placeholder="Optional detail or instructions"></textarea>
+        </div>
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <label class="form-label small">Category</label>
+            <select class="form-select form-select-sm" id="dutyCategory" onchange="onDutyCategoryChange()">
+              <option value="">— No category —</option>
+            </select>
+            <input type="text" class="form-control form-control-sm mt-2" id="dutyCategoryNew"
+                   style="display:none" maxlength="100" placeholder="Name the new category">
+          </div>
+          <div class="col-md-3 mb-3">
+            <label class="form-label small">Target minutes</label>
+            <input type="number" min="1" class="form-control form-control-sm" id="dutyEstimate" placeholder="—">
+          </div>
+          <div class="col-md-3 mb-3">
+            <label class="form-label small">Sort order</label>
+            <input type="number" class="form-control form-control-sm" id="dutySortOrder" value="0">
+          </div>
+        </div>
+        <div class="alert alert-secondary py-2 px-3 small mb-0">
+          <i class="bi bi-info-circle me-1"></i>
+          This records <strong>what</strong> the duty is. Who performs it and on which days is set
+          separately, under <strong>Schedule</strong> on the catalogue row — a duty can have several
+          rules, or none at all.
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-sm btn-primary" onclick="saveDuty()">Save Duty</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Manage Schedules Modal -->
+<div class="modal fade" id="scheduleModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div>
+          <h6 class="modal-title mb-0">Schedule</h6>
+          <div class="small text-muted" id="scheduleModalDuty"></div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="scheduleDutyId">
+
+        <div class="mb-3">
+          <div class="duty-group-title">Currently assigned to</div>
+          <div id="ruleList"><div class="text-muted small py-2">Loading…</div></div>
+        </div>
+
+        <hr>
+
+        <div class="duty-group-title mb-2">Assign to an employee</div>
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <label class="form-label small">Employee *</label>
+            <select class="form-select form-select-sm" id="ruleUser">
+              <option value="">Select employee…</option>
+              <% employees.forEach(e => { %>
+                <option value="<%= e.id %>"><%= e.name %></option>
+              <% }) %>
+            </select>
+          </div>
+          <div class="col-md-6 mb-3">
+            <label class="form-label small">Repeats</label>
+            <select class="form-select form-select-sm" id="ruleRecurrence" onchange="toggleRuleWeekdays()">
+              <option value="weekly" selected>Certain weekdays</option>
+              <option value="daily">Every day</option>
+              <option value="once">One specific day</option>
+            </select>
+          </div>
+        </div>
+        <div class="mb-3" id="ruleWeekdayWrap">
+          <label class="form-label small">On these days</label>
+          <div class="duty-weekdays">
+            <% weekdayNames.forEach((d, i) => { %>
+              <label class="duty-weekday">
+                <input type="checkbox" class="duty-rule-weekday" value="<%= i %>">
+                <span><%= d %></span>
+              </label>
+            <% }) %>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <label class="form-label small">Starts</label>
+            <input type="date" class="form-control form-control-sm" id="ruleStartDate" value="<%= today %>">
+          </div>
+          <div class="col-md-6 mb-3">
+            <label class="form-label small">Ends (optional)</label>
+            <input type="date" class="form-control form-control-sm" id="ruleEndDate">
+          </div>
+        </div>
+        <%# The save action lives in the footer, where a modal's confirm button belongs %>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-sm btn-primary" onclick="addRule()">
+          <i class="bi bi-person-check me-1"></i>Assign Duty
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Assign Duty Modal -->
+<div class="modal fade" id="assignModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h6 class="modal-title">Assign a Duty</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label class="form-label small">Date</label>
+          <input type="date" class="form-control form-control-sm" id="assignDate">
+        </div>
+        <div class="mb-3">
+          <label class="form-label small">Duty *</label>
+          <select class="form-select form-select-sm" id="assignDuty"></select>
+        </div>
+        <div class="mb-3">
+          <label class="form-label small">Employee *</label>
+          <select class="form-select form-select-sm" id="assignUser">
+            <option value="">Select employee…</option>
+            <% employees.forEach(e => { %>
+              <option value="<%= e.id %>"><%= e.name %></option>
+            <% }) %>
+          </select>
+        </div>
+        <div class="mb-2">
+          <label class="form-label small">Note (optional)</label>
+          <input type="text" class="form-control form-control-sm" id="assignNote" maxlength="500" placeholder="Anything the employee should know">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-sm btn-primary" onclick="submitAssign()">Assign</button>
+      </div>
+    </div>
+  </div>
+</div>
+<% } %>
+
+<style>
+/* The portal shell is height:100vh; overflow:hidden on both body and
+   .portal-main, so every page must supply its own scroll container.
+   Header and tabs stay put; only the active panel scrolls. */
+.duties-wrap {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 20px 24px;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+.duties-wrap > .duty-tabs { flex: 0 0 auto; }
+/* min-height:0 is what actually lets a flex child scroll instead of growing */
+.duty-panel { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+.portal-empty-state { text-align:center; padding:3rem 1rem; }
+.portal-requests-table-wrap { overflow-x:auto; }
+.portal-table { width:100%; border-collapse:collapse; }
+.portal-table th { padding:7px 12px; border-bottom:1px solid var(--tf-border); font-size:0.7rem; font-weight:500; text-transform:uppercase; letter-spacing:.06em; color:var(--tf-text-muted); white-space:nowrap; }
+.portal-table td { padding:9px 12px; border-bottom:1px solid var(--tf-border); font-size:0.875rem; }
+
+.duty-tabs { display:flex; gap:4px; border-bottom:1px solid var(--tf-border); margin-bottom:1rem; flex-wrap:wrap; }
+.duty-tab { background:none; border:none; border-bottom:2px solid transparent; padding:8px 14px; font-size:0.85rem; color:var(--tf-text-muted); cursor:pointer; }
+.duty-tab:hover { color:var(--tf-text); }
+.duty-tab.active { color:var(--tf-accent); border-bottom-color:var(--tf-accent); font-weight:500; }
+
+.duty-datebar { display:flex; align-items:center; gap:8px; margin-bottom:1rem; flex-wrap:wrap; }
+
+.duty-search { position:relative; display:flex; align-items:center; }
+.duty-search > .bi-search { position:absolute; left:9px; font-size:.8rem; color:var(--tf-text-muted); pointer-events:none; }
+.duty-search input { padding-left:28px; padding-right:26px; width:230px; }
+/* Hide the browser's own clear affordance so ours is the only one */
+.duty-search input[type="search"]::-webkit-search-cancel-button { display:none; }
+.duty-search-clear {
+  position:absolute; right:6px; border:none; background:transparent;
+  color:var(--tf-text-muted); font-size:1rem; line-height:1; cursor:pointer; padding:0 3px;
+}
+.duty-search-clear:hover { color:var(--tf-text); }
+.duty-daysummary { font-size:0.8rem; color:var(--tf-text-muted); }
+
+.duty-group { margin-bottom:1.25rem; }
+.duty-group-title { font-size:0.7rem; text-transform:uppercase; letter-spacing:.06em; color:var(--tf-text-muted); margin-bottom:6px; font-weight:600; }
+
+.duty-card { display:flex; align-items:center; gap:12px; padding:10px 14px; border:1px solid var(--tf-border); border-radius:8px; background:var(--tf-surface); margin-bottom:6px; }
+.duty-card-main { flex:1; min-width:0; }
+.duty-card-title { font-size:0.9rem; color:var(--tf-text); }
+.duty-card-meta { font-size:0.75rem; color:var(--tf-text-muted); margin-top:2px; }
+.duty-card.is-running { border-color:var(--tf-accent); box-shadow:0 0 0 1px var(--tf-accent) inset; }
+.duty-card.is-done { opacity:.72; }
+.duty-card.is-done .duty-card-title { text-decoration:line-through; }
+
+.duty-timer { font-family:var(--portal-font-mono, monospace); font-size:0.95rem; font-variant-numeric:tabular-nums; color:var(--tf-accent); min-width:76px; text-align:right; }
+.duty-timer.done { color:var(--tf-success); }
+.duty-timer.over { color:var(--tf-danger); }
+
+/* Schedule tab table — the employee name prints once per group, and a heavier
+   top border marks where one person's rows end and the next begin. */
+.duty-emp-cell { white-space:nowrap; vertical-align:top; }
+.duty-row-newuser > td { border-top:2px solid var(--tf-border); }
+.duty-stat-sub { font-size:0.72rem; color:var(--tf-text-muted); font-weight:400; }
+
+.duty-weekdays { display:flex; gap:6px; flex-wrap:wrap; }
+.duty-weekday { position:relative; }
+.duty-weekday input { position:absolute; opacity:0; pointer-events:none; }
+.duty-weekday span { display:inline-block; padding:5px 12px; border:1px solid var(--tf-border); border-radius:16px; font-size:0.78rem; cursor:pointer; user-select:none; }
+.duty-weekday input:checked + span { background:var(--tf-accent); border-color:var(--tf-accent); color:#fff; }
+
+.duty-rule-line { line-height:1.35; }
+.duty-rule-row { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:8px 10px; border:1px solid var(--tf-border); border-radius:6px; margin-bottom:6px; }
+
+.duty-summary-row { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:1rem; }
+.duty-stat { border:1px solid var(--tf-border); border-radius:8px; padding:8px 14px; min-width:110px; background:var(--tf-surface); }
+.duty-stat-label { font-size:0.68rem; text-transform:uppercase; letter-spacing:.06em; color:var(--tf-text-muted); }
+.duty-stat-value { font-size:1.05rem; color:var(--tf-text); font-variant-numeric:tabular-nums; }
+</style>
+
+<script>
+// ── Store Duties ───────────────────────────────────────────────
+var DUTY_CAN_MANAGE = <%= canManage ? 'true' : 'false' %>;
+var DUTY_TODAY = '<%= today %>';
+var dutyTimerHandle = null;
+var dutyRunning = {};   // assignmentId -> { baseSeconds, startedTick }
+
+function dutyEsc(s) {
+  if (s === null || s === undefined) return '';
+  return String(s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+function fmtDur(seconds) {
+  if (seconds === null || seconds === undefined) return '—';
+  var s = Math.max(0, Math.floor(seconds));
+  var h = Math.floor(s / 3600);
+  var m = Math.floor((s % 3600) / 60);
+  var sec = s % 60;
+  var pad = function (n) { return n < 10 ? '0' + n : String(n); };
+  if (h > 0) return h + ':' + pad(m) + ':' + pad(sec);
+  return m + ':' + pad(sec);
+}
+
+function shiftDateInput(inputId, days, cb) {
+  var el = document.getElementById(inputId);
+  var d = new Date(el.value + 'T00:00:00');
+  d.setDate(d.getDate() + days);
+  el.value = d.toISOString().split('T')[0];
+  cb();
+}
+
+function shiftMineDate(days) { shiftDateInput('mineDate', days, loadMyDuties); }
+function goToday() { document.getElementById('mineDate').value = DUTY_TODAY; loadMyDuties(); }
+
+function switchDutyTab(name) {
+  var tabs = document.querySelectorAll('#dutyTabs .duty-tab');
+  for (var i = 0; i < tabs.length; i++) {
+    tabs[i].classList.toggle('active', tabs[i].getAttribute('data-tab') === name);
+  }
+  var panels = document.querySelectorAll('.duty-panel');
+  for (var j = 0; j < panels.length; j++) {
+    panels[j].style.display = (panels[j].id === 'dutyPanel-' + name) ? '' : 'none';
+  }
+  if (name === 'mine') loadMyDuties();
+  if (name === 'schedule') loadSchedule();
+  if (name === 'catalogue') loadCatalogue();
+  if (name === 'report') loadReport();
+}
+
+// ── My Duties ──────────────────────────────────────────────────
+
+function loadMyDuties() {
+  var date = document.getElementById('mineDate').value || DUTY_TODAY;
+  fetch('/portal/duties/mine?date=' + encodeURIComponent(date))
+    .then(function (r) { return r.json(); })
+    .then(function (res) {
+      if (!res.success) throw new Error(res.message);
+      renderMyDuties(res.data.assignments || []);
+    })
+    .catch(function () {
+      document.getElementById('mineList').innerHTML =
+        '<div class="portal-empty-state text-danger">Could not load your duties.</div>';
+    });
+}
+
+function renderMyDuties(rows) {
+  var wrap = document.getElementById('mineList');
+  var summary = document.getElementById('mineSummary');
+  dutyRunning = {};
+
+  if (!rows.length) {
+    wrap.innerHTML = '<div class="portal-empty-state text-muted">'
+      + '<i class="bi bi-check2-circle" style="font-size:2rem;opacity:.4"></i>'
+      + '<div class="mt-2">No duties for this day.</div></div>';
+    summary.textContent = '';
+    return;
+  }
+
+  var done = 0, total = rows.length, spent = 0;
+  var groups = {};
+  var order = [];
+
+  for (var i = 0; i < rows.length; i++) {
+    var r = rows[i];
+    var cat = r.category || 'Other';
+    if (!groups[cat]) { groups[cat] = []; order.push(cat); }
+    groups[cat].push(r);
+    if (r.status === 'completed') { done++; spent += (r.duration_seconds || 0); }
+  }
+
+  var html = '';
+  for (var g = 0; g < order.length; g++) {
+    var cat = order[g];
+    html += '<div class="duty-group"><div class="duty-group-title">' + dutyEsc(cat) + '</div>';
+    var list = groups[cat];
+    for (var k = 0; k < list.length; k++) html += dutyCardHtml(list[k]);
+    html += '</div>';
+  }
+  wrap.innerHTML = html;
+
+  summary.textContent = done + ' of ' + total + ' done · ' + fmtDur(spent) + ' logged';
+  startDutyTicker();
+}
+
+function dutyCardHtml(r) {
+  var cls = 'duty-card';
+  if (r.status === 'in_progress') cls += ' is-running';
+  if (r.status === 'completed') cls += ' is-done';
+
+  var meta = [];
+  if (r.estimated_minutes) meta.push('target ' + r.estimated_minutes + ' min');
+  if (r.note) meta.push(dutyEsc(r.note));
+  if (r.description) meta.push(dutyEsc(r.description));
+
+  var timerHtml = '';
+  var btnHtml = '';
+
+  if (r.status === 'completed') {
+    var over = r.estimated_minutes && r.duration_seconds > r.estimated_minutes * 60;
+    timerHtml = '<div class="duty-timer ' + (over ? 'over' : 'done') + '">' + fmtDur(r.duration_seconds) + '</div>';
+    btnHtml = '<span class="badge bg-success">Done</span>';
+  } else if (r.status === 'in_progress') {
+    dutyRunning[r.id] = { base: r.running_seconds || 0, tick: Date.now() };
+    timerHtml = '<div class="duty-timer" id="dutyTimer-' + r.id + '">' + fmtDur(r.running_seconds || 0) + '</div>';
+    btnHtml = '<button class="btn btn-sm btn-success" onclick="finishDuty(' + r.id + ')">'
+      + '<i class="bi bi-stop-fill me-1"></i>Finish</button>';
+  } else {
+    timerHtml = '<div class="duty-timer" style="color:var(--tf-text-muted)">—</div>';
+    btnHtml = '<button class="btn btn-sm btn-primary" onclick="startDuty(' + r.id + ')">'
+      + '<i class="bi bi-play-fill me-1"></i>Start</button>';
+  }
+
+  return '<div class="' + cls + '">'
+    + '<div class="duty-card-main">'
+    + '<div class="duty-card-title">' + dutyEsc(r.title) + '</div>'
+    + (meta.length ? '<div class="duty-card-meta">' + meta.join(' · ') + '</div>' : '')
+    + '</div>'
+    + timerHtml
+    + '<div>' + btnHtml + '</div>'
+    + '</div>';
+}
+
+function startDutyTicker() {
+  if (dutyTimerHandle) clearInterval(dutyTimerHandle);
+  if (!Object.keys(dutyRunning).length) return;
+  dutyTimerHandle = setInterval(function () {
+    for (var id in dutyRunning) {
+      var el = document.getElementById('dutyTimer-' + id);
+      if (!el) continue;
+      var st = dutyRunning[id];
+      var elapsed = st.base + Math.floor((Date.now() - st.tick) / 1000);
+      el.textContent = fmtDur(elapsed);
+    }
+  }, 1000);
+}
+
+function startDuty(id) {
+  fetch('/portal/duties/assignments/' + id + '/start', { method: 'POST' })
+    .then(function (r) { return r.json(); })
+    .then(function (res) {
+      if (!res.success) { alert(res.message || 'Could not start this duty'); return; }
+      loadMyDuties();
+    })
+    .catch(function () { alert('Could not start this duty'); });
+}
+
+function finishDuty(id) {
+  fetch('/portal/duties/assignments/' + id + '/finish', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({})
+  })
+    .then(function (r) { return r.json(); })
+    .then(function (res) {
+      if (!res.success) { alert(res.message || 'Could not finish this duty'); return; }
+      loadMyDuties();
+    })
+    .catch(function () { alert('Could not finish this duty'); });
+}
+
+// ── Schedule (admin) ───────────────────────────────────────────
+
+function shiftSchedDate(days) { shiftDateInput('schedDate', days, loadSchedule); }
+
+function loadSchedule() {
+  if (!DUTY_CAN_MANAGE) return;
+  var date = document.getElementById('schedDate').value || DUTY_TODAY;
+  fetch('/portal/duties/schedule?date=' + encodeURIComponent(date))
+    .then(function (r) { return r.json(); })
+    .then(function (res) {
+      if (!res.success) throw new Error(res.message);
+      renderSchedule(res.data.assignments || [], res.data.stats || []);
+    })
+    .catch(function () {
+      document.getElementById('scheduleList').innerHTML =
+        '<div class="portal-empty-state text-danger">Could not load the schedule.</div>';
+    });
+}
+
+function dutyStatusBadge(status) {
+  if (status === 'completed')   return '<span class="badge bg-success">Done</span>';
+  if (status === 'in_progress') return '<span class="badge bg-primary">In progress</span>';
+  return '<span class="badge bg-secondary">Pending</span>';
+}
+
+function renderSchedule(rows, stats) {
+  var wrap = document.getElementById('scheduleList');
+
+  if (!rows.length) {
+    wrap.innerHTML = '<div class="portal-empty-state text-muted">'
+      + '<i class="bi bi-calendar-x" style="font-size:2rem;opacity:.4"></i>'
+      + '<div class="mt-2">Nothing assigned for this day.</div></div>';
+    return;
+  }
+
+  // Per-employee totals across the top
+  var chips = '';
+  for (var s = 0; s < stats.length; s++) {
+    var st = stats[s];
+    chips += '<div class="duty-stat">'
+      + '<div class="duty-stat-label">' + dutyEsc(st.user_name) + '</div>'
+      + '<div class="duty-stat-value">' + (st.completed || 0) + '/' + (st.total || 0)
+      + (st.total_seconds ? ' <span class="duty-stat-sub">' + fmtDur(st.total_seconds) + '</span>' : '')
+      + '</div></div>';
+  }
+
+  // One row per assignment. The employee name is printed only on the first row
+  // of each person's block so the eye can still group them.
+  var body = '';
+  var lastUser = null;
+  for (var i = 0; i < rows.length; i++) {
+    var r = rows[i];
+    var newUser = r.user_id !== lastUser;
+    lastUser = r.user_id;
+
+    var time = '<span class="text-muted">—</span>';
+    if (r.status === 'completed') {
+      var over = r.estimated_minutes && r.duration_seconds > r.estimated_minutes * 60;
+      time = '<span class="' + (over ? 'text-danger fw-semibold' : '') + '">' + fmtDur(r.duration_seconds) + '</span>';
+    } else if (r.status === 'in_progress') {
+      time = '<span class="text-primary">' + fmtDur(r.running_seconds || 0) + '</span>';
+    }
+
+    body += '<tr' + (newUser && i > 0 ? ' class="duty-row-newuser"' : '') + '>'
+      + '<td class="duty-emp-cell">' + (newUser ? '<strong>' + dutyEsc(r.user_name) + '</strong>' : '') + '</td>'
+      + '<td>' + dutyEsc(r.title)
+      + (r.note ? '<div class="small text-muted">' + dutyEsc(r.note) + '</div>' : '')
+      + '</td>'
+      + '<td class="small text-muted">' + (r.category ? dutyEsc(r.category) : '—') + '</td>'
+      + '<td>' + dutyStatusBadge(r.status) + '</td>'
+      + '<td class="text-end">' + time
+      + (r.estimated_minutes ? '<div class="small text-muted">of ' + r.estimated_minutes + ' min</div>' : '')
+      + '</td>'
+      + '<td class="text-end">'
+      + (r.status === 'completed'
+          ? '<span class="text-muted small" title="Completed duties stay on the record">—</span>'
+          : '<button class="btn btn-sm btn-outline-danger" title="Unassign from this day" onclick="unassignDuty(' + r.id + ')"><i class="bi bi-x-lg"></i></button>')
+      + '</td>'
+      + '</tr>';
+  }
+
+  wrap.innerHTML =
+    (chips ? '<div class="duty-summary-row">' + chips + '</div>' : '')
+    + '<div class="portal-requests-table-wrap"><table class="portal-table">'
+    + '<thead><tr>'
+    + '<th style="width:16%">Employee</th>'
+    + '<th>Duty</th>'
+    + '<th style="width:14%">Category</th>'
+    + '<th style="width:11%">Status</th>'
+    + '<th class="text-end" style="width:11%">Time</th>'
+    + '<th class="text-end" style="width:7%">Actions</th>'
+    + '</tr></thead><tbody>' + body + '</tbody></table></div>';
+}
+
+function showAssignModal() {
+  document.getElementById('assignDate').value = document.getElementById('schedDate').value || DUTY_TODAY;
+  document.getElementById('assignUser').value = '';
+  document.getElementById('assignNote').value = '';
+
+  fetch('/portal/duties/catalogue')
+    .then(function (r) { return r.json(); })
+    .then(function (res) {
+      var sel = document.getElementById('assignDuty');
+      var duties = (res.data && res.data.duties) || [];
+      var opts = '<option value="">Select duty…</option>';
+      for (var i = 0; i < duties.length; i++) {
+        var label = duties[i].category ? duties[i].category + ' — ' + duties[i].title : duties[i].title;
+        opts += '<option value="' + duties[i].id + '">' + dutyEsc(label) + '</option>';
+      }
+      sel.innerHTML = opts;
+      new bootstrap.Modal(document.getElementById('assignModal')).show();
+    });
+}
+
+function submitAssign() {
+  var payload = {
+    duty_id: document.getElementById('assignDuty').value,
+    user_id: document.getElementById('assignUser').value,
+    duty_date: document.getElementById('assignDate').value,
+    note: document.getElementById('assignNote').value
+  };
+  if (!payload.duty_id || !payload.user_id) { alert('Pick a duty and an employee'); return; }
+
+  fetch('/portal/duties/assignments', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  })
+    .then(function (r) { return r.json(); })
+    .then(function (res) {
+      if (!res.success) { alert(res.message || 'Could not assign'); return; }
+      bootstrap.Modal.getInstance(document.getElementById('assignModal')).hide();
+      document.getElementById('schedDate').value = payload.duty_date;
+      loadSchedule();
+    })
+    .catch(function () { alert('Could not assign the duty'); });
+}
+
+function unassignDuty(id) {
+  if (!confirm('Remove this duty from that day?')) return;
+  fetch('/portal/duties/assignments/' + id, { method: 'DELETE' })
+    .then(function (r) { return r.json(); })
+    .then(function (res) {
+      if (!res.success) { alert(res.message || 'Could not remove'); return; }
+      loadSchedule();
+    })
+    .catch(function () { alert('Could not remove the assignment'); });
+}
+
+// ── Catalogue (admin) ──────────────────────────────────────────
+
+var DUTY_WEEKDAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+function loadCatalogue() {
+  if (!DUTY_CAN_MANAGE) return;
+  var inactive = document.getElementById('showArchivedDuties').checked ? '1' : '0';
+  fetch('/portal/duties/catalogue?inactive=' + inactive)
+    .then(function (r) { return r.json(); })
+    .then(function (res) {
+      if (!res.success) throw new Error(res.message);
+
+      // Cache the full set once; filtering is done client-side from here.
+      window.__dutyCache = res.data.duties || [];
+      window.__dutySchedules = res.data.schedules || [];
+
+      var cats = {};
+      for (var i = 0; i < window.__dutyCache.length; i++) {
+        var c = window.__dutyCache[i].category;
+        if (c) cats[c] = true;
+      }
+      var list = [];
+      for (var k in cats) list.push(k);
+      window.__dutyCategories = list;
+
+      populateCategoryFilter();
+      applyCatalogueFilter();
+    })
+    .catch(function () {
+      document.getElementById('catalogueBody').innerHTML =
+        '<tr><td colspan="5" class="text-danger text-center py-4">Could not load the catalogue.</td></tr>';
+    });
+}
+
+// ── Catalogue filtering ────────────────────────────────────────
+
+function populateCategoryFilter() {
+  var sel = document.getElementById('catalogueCategoryFilter');
+  var current = sel.value;
+  var cats = (window.__dutyCategories || []).slice().sort(function (a, b) {
+    return String(a).localeCompare(String(b));
+  });
+
+  var html = '<option value="">All categories</option>';
+  for (var i = 0; i < cats.length; i++) {
+    html += '<option value="' + dutyEsc(cats[i]) + '">' + dutyEsc(cats[i]) + '</option>';
+  }
+  sel.innerHTML = html;
+  // Keep the admin's selection across reloads, but fall back to "All" if that
+  // category is gone (e.g. its last duty was archived) — otherwise the filter
+  // would silently match nothing. Set explicitly rather than relying on the
+  // browser resetting .value when the options are replaced.
+  sel.value = (current && cats.indexOf(current) !== -1) ? current : '';
+}
+
+function applyCatalogueFilter() {
+  var q = (document.getElementById('catalogueSearch').value || '').trim().toLowerCase();
+  var cat = document.getElementById('catalogueCategoryFilter').value;
+  var all = window.__dutyCache || [];
+
+  document.getElementById('catalogueSearchClear').style.display = q ? '' : 'none';
+
+  var rows = all.filter(function (d) {
+    if (cat && d.category !== cat) return false;
+    if (!q) return true;
+    return String(d.category || '').toLowerCase().indexOf(q) !== -1
+        || String(d.title || '').toLowerCase().indexOf(q) !== -1;
+  });
+
+  var count = document.getElementById('catalogueCount');
+  count.textContent = (q || cat) ? (rows.length + ' of ' + all.length) : (all.length + ' duties');
+
+  renderCatalogue(rows, window.__dutySchedules || [], !!(q || cat));
+}
+
+function clearCatalogueSearch() {
+  document.getElementById('catalogueSearch').value = '';
+  applyCatalogueFilter();
+}
+
+function ruleLabel(s) {
+  if (s.recurrence === 'daily') return 'Every day';
+  if (s.recurrence === 'once') return 'Once on ' + String(s.start_date).split('T')[0];
+  var days = String(s.recurrence_days || '').split(',').filter(function (x) { return x !== ''; });
+  if (!days.length) return 'Weekly';
+  var names = days.map(function (n) { return DUTY_WEEKDAY_NAMES[parseInt(n, 10)] || ''; });
+  return names.join(', ');
+}
+
+// Pure render — the full set and the category list are cached by loadCatalogue.
+function renderCatalogue(duties, schedules, filtered) {
+  var body = document.getElementById('catalogueBody');
+
+  if (!duties.length) {
+    body.innerHTML = filtered
+      ? '<tr><td colspan="5" class="text-muted text-center py-4">No duties match that search.'
+        + ' <a href="#" onclick="resetCatalogueFilters(); return false;">Clear filters</a></td></tr>'
+      : '<tr><td colspan="5" class="text-muted text-center py-4">No duties yet. Create the first one.</td></tr>';
+    return;
+  }
+
+  // Group rules by duty so each row can show who does it and when
+  var rulesByDuty = {};
+  for (var s = 0; s < schedules.length; s++) {
+    var rid = schedules[s].duty_id;
+    if (!rulesByDuty[rid]) rulesByDuty[rid] = [];
+    rulesByDuty[rid].push(schedules[s]);
+  }
+
+  var html = '';
+  for (var i = 0; i < duties.length; i++) {
+    var d = duties[i];
+    var rules = rulesByDuty[d.id] || [];
+    var scheduleCell;
+    if (!rules.length) {
+      scheduleCell = '<span class="text-muted">Not scheduled</span>';
+    } else {
+      scheduleCell = '';
+      for (var k = 0; k < rules.length; k++) {
+        scheduleCell += '<div class="duty-rule-line"><strong>' + dutyEsc(rules[k].user_name) + '</strong> '
+          + '<span class="text-muted">' + dutyEsc(ruleLabel(rules[k])) + '</span></div>';
+      }
+    }
+
+    html += '<tr' + (d.is_active ? '' : ' style="opacity:.5"') + '>'
+      + '<td><div>' + dutyEsc(d.title) + '</div>'
+      + (d.description ? '<div class="small text-muted">' + dutyEsc(d.description) + '</div>' : '')
+      + '</td>'
+      + '<td>' + (d.category ? dutyEsc(d.category) : '<span class="text-muted">—</span>') + '</td>'
+      + '<td class="small">' + scheduleCell + '</td>'
+      + '<td class="text-end">' + (d.estimated_minutes ? d.estimated_minutes + ' min' : '<span class="text-muted">—</span>') + '</td>'
+      + '<td class="text-end text-nowrap">'
+      + '<button class="btn btn-sm btn-outline-primary me-1" onclick="openSchedules(' + d.id + ')" title="Who does this, and when"><i class="bi bi-calendar-week"></i></button>'
+      + '<button class="btn btn-sm btn-outline-secondary me-1" onclick="editDuty(' + d.id + ')" title="Edit"><i class="bi bi-pencil"></i></button>'
+      + (d.is_active
+        ? '<button class="btn btn-sm btn-outline-danger" onclick="archiveDuty(' + d.id + ')" title="Archive"><i class="bi bi-archive"></i></button>'
+        : '<button class="btn btn-sm btn-outline-success" onclick="restoreDuty(' + d.id + ')" title="Restore"><i class="bi bi-arrow-counterclockwise"></i></button>')
+      + '</td></tr>';
+  }
+  body.innerHTML = html;
+
+}
+
+function resetCatalogueFilters() {
+  document.getElementById('catalogueSearch').value = '';
+  document.getElementById('catalogueCategoryFilter').value = '';
+  applyCatalogueFilter();
+}
+
+// ── Category picker: choose an existing one, or add a new one ──
+
+function populateCategorySelect(selected) {
+  var sel = document.getElementById('dutyCategory');
+  // Sort here rather than trusting the caller, so the list reads the same
+  // however __dutyCategories was built.
+  var cats = (window.__dutyCategories || []).slice().sort(function (a, b) {
+    return String(a).localeCompare(String(b));
+  });
+  var known = false;
+
+  var html = '<option value="">— No category —</option>';
+  for (var i = 0; i < cats.length; i++) {
+    if (cats[i] === selected) known = true;
+    html += '<option value="' + dutyEsc(cats[i]) + '">' + dutyEsc(cats[i]) + '</option>';
+  }
+  // A duty may carry a category that no longer appears elsewhere (e.g. the only
+  // other duty using it was archived) — keep it selectable rather than silently
+  // dropping it on save.
+  if (selected && !known) {
+    html += '<option value="' + dutyEsc(selected) + '">' + dutyEsc(selected) + '</option>';
+  }
+  html += '<option value="__new__">+ Add new category…</option>';
+
+  sel.innerHTML = html;
+  sel.value = selected || '';
+  onDutyCategoryChange();
+}
+
+function onDutyCategoryChange() {
+  var sel = document.getElementById('dutyCategory');
+  var input = document.getElementById('dutyCategoryNew');
+  var adding = sel.value === '__new__';
+  input.style.display = adding ? '' : 'none';
+  if (adding) input.focus();
+  else input.value = '';
+}
+
+// Resolved category from the picker: '' , an existing name, or the typed one.
+function selectedCategory() {
+  var sel = document.getElementById('dutyCategory');
+  if (sel.value !== '__new__') return sel.value;
+  return document.getElementById('dutyCategoryNew').value.trim();
+}
+
+// ── Duty modal (the raw duty only) ─────────────────────────────
+
+function showDutyModal() {
+  document.getElementById('dutyModalTitle').textContent = 'New Duty';
+  document.getElementById('dutyId').value = '';
+  document.getElementById('dutyTitle').value = '';
+  document.getElementById('dutyDescription').value = '';
+  document.getElementById('dutyEstimate').value = '';
+  document.getElementById('dutySortOrder').value = '0';
+  populateCategorySelect('');
+  new bootstrap.Modal(document.getElementById('dutyModal')).show();
+}
+
+function editDuty(id) {
+  var duties = window.__dutyCache || [];
+  var d = null;
+  for (var i = 0; i < duties.length; i++) if (duties[i].id === id) d = duties[i];
+  if (!d) return;
+
+  document.getElementById('dutyModalTitle').textContent = 'Edit Duty';
+  document.getElementById('dutyId').value = d.id;
+  document.getElementById('dutyTitle').value = d.title || '';
+  document.getElementById('dutyDescription').value = d.description || '';
+  document.getElementById('dutyEstimate').value = d.estimated_minutes || '';
+  document.getElementById('dutySortOrder').value = d.sort_order || 0;
+  populateCategorySelect(d.category || '');
+  new bootstrap.Modal(document.getElementById('dutyModal')).show();
+}
+
+function saveDuty() {
+  var id = document.getElementById('dutyId').value;
+  var payload = {
+    title: document.getElementById('dutyTitle').value,
+    description: document.getElementById('dutyDescription').value,
+    category: selectedCategory(),
+    estimated_minutes: document.getElementById('dutyEstimate').value,
+    sort_order: document.getElementById('dutySortOrder').value
+  };
+
+  if (!payload.title.trim()) { alert('Title is required'); return; }
+  if (document.getElementById('dutyCategory').value === '__new__' && !payload.category) {
+    alert('Name the new category, or pick an existing one');
+    document.getElementById('dutyCategoryNew').focus();
+    return;
+  }
+
+  var url = id ? '/portal/duties/catalogue/' + id : '/portal/duties/catalogue';
+  var method = id ? 'PUT' : 'POST';
+
+  fetch(url, {
+    method: method,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  })
+    .then(function (r) { return r.json(); })
+    .then(function (res) {
+      if (!res.success) { alert(res.message || 'Could not save the duty'); return; }
+      bootstrap.Modal.getInstance(document.getElementById('dutyModal')).hide();
+      loadCatalogue();
+    })
+    .catch(function () { alert('Could not save the duty'); });
+}
+
+function archiveDuty(id) {
+  if (!confirm('Archive this duty? Its schedule rules stop and future unstarted work is removed; past records are kept.')) return;
+  fetch('/portal/duties/catalogue/' + id, { method: 'DELETE' })
+    .then(function (r) { return r.json(); })
+    .then(function (res) {
+      if (!res.success) { alert(res.message || 'Could not archive'); return; }
+      loadCatalogue();
+    })
+    .catch(function () { alert('Could not archive the duty'); });
+}
+
+function restoreDuty(id) {
+  fetch('/portal/duties/catalogue/' + id, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ is_active: 1 })
+  })
+    .then(function (r) { return r.json(); })
+    .then(function (res) {
+      if (!res.success) { alert(res.message || 'Could not restore'); return; }
+      loadCatalogue();
+    })
+    .catch(function () { alert('Could not restore the duty'); });
+}
+
+// ── Schedule rules — who does a duty, and when ─────────────────
+
+function openSchedules(dutyId) {
+  document.getElementById('scheduleDutyId').value = dutyId;
+
+  var duties = window.__dutyCache || [];
+  var title = '';
+  for (var i = 0; i < duties.length; i++) if (duties[i].id === dutyId) title = duties[i].title;
+  document.getElementById('scheduleModalDuty').textContent = title;
+
+  document.getElementById('ruleUser').value = '';
+  document.getElementById('ruleRecurrence').value = 'weekly';
+  document.getElementById('ruleStartDate').value = DUTY_TODAY;
+  document.getElementById('ruleEndDate').value = '';
+  setRuleWeekdays('');
+  toggleRuleWeekdays();
+
+  loadRules(dutyId);
+  new bootstrap.Modal(document.getElementById('scheduleModal')).show();
+}
+
+function loadRules(dutyId) {
+  fetch('/portal/duties/catalogue/' + dutyId + '/schedules')
+    .then(function (r) { return r.json(); })
+    .then(function (res) {
+      if (!res.success) throw new Error(res.message);
+      renderRules(res.data.schedules || []);
+    })
+    .catch(function () {
+      document.getElementById('ruleList').innerHTML =
+        '<div class="text-danger small py-2">Could not load the rules.</div>';
+    });
+}
+
+function renderRules(rules) {
+  var wrap = document.getElementById('ruleList');
+  if (!rules.length) {
+    wrap.innerHTML = '<div class="text-muted small py-2">'
+      + 'Not assigned to anyone yet — this duty never appears on anyone&#39;s day. '
+      + 'Fill in the form below and press <strong>Assign Duty</strong>.</div>';
+    return;
+  }
+
+  var html = '';
+  for (var i = 0; i < rules.length; i++) {
+    var s = rules[i];
+    var window_ = 'from ' + String(s.start_date).split('T')[0]
+      + (s.end_date ? ' to ' + String(s.end_date).split('T')[0] : '');
+    html += '<div class="duty-rule-row">'
+      + '<div><strong>' + dutyEsc(s.user_name) + '</strong>'
+      + '<span class="text-muted"> · ' + dutyEsc(ruleLabel(s)) + '</span>'
+      + '<div class="small text-muted">' + dutyEsc(window_) + '</div></div>'
+      + '<button class="btn btn-sm btn-outline-danger" onclick="deleteRule(' + s.id + ')" title="Unassign">'
+      + '<i class="bi bi-trash"></i></button>'
+      + '</div>';
+  }
+  wrap.innerHTML = html;
+}
+
+function toggleRuleWeekdays() {
+  var rec = document.getElementById('ruleRecurrence').value;
+  document.getElementById('ruleWeekdayWrap').style.display = (rec === 'weekly') ? '' : 'none';
+}
+
+function setRuleWeekdays(csv) {
+  var days = String(csv || '').split(',').filter(function (x) { return x !== ''; });
+  var cbs = document.querySelectorAll('.duty-rule-weekday');
+  for (var i = 0; i < cbs.length; i++) cbs[i].checked = days.indexOf(cbs[i].value) !== -1;
+}
+
+function getRuleWeekdays() {
+  var out = [];
+  var cbs = document.querySelectorAll('.duty-rule-weekday');
+  for (var i = 0; i < cbs.length; i++) if (cbs[i].checked) out.push(cbs[i].value);
+  return out.join(',');
+}
+
+function addRule() {
+  var dutyId = document.getElementById('scheduleDutyId').value;
+  var rec = document.getElementById('ruleRecurrence').value;
+  var payload = {
+    user_id: document.getElementById('ruleUser').value,
+    recurrence: rec,
+    recurrence_days: rec === 'weekly' ? getRuleWeekdays() : '',
+    start_date: document.getElementById('ruleStartDate').value,
+    end_date: document.getElementById('ruleEndDate').value
+  };
+
+  if (!payload.user_id) { alert('Pick an employee'); return; }
+  if (rec === 'weekly' && !payload.recurrence_days) { alert('Pick at least one weekday'); return; }
+
+  fetch('/portal/duties/catalogue/' + dutyId + '/schedules', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  })
+    .then(function (r) { return r.json(); })
+    .then(function (res) {
+      if (!res.success) { alert(res.message || 'Could not assign the duty'); return; }
+      renderRules(res.data.schedules || []);
+      document.getElementById('ruleUser').value = '';
+      setRuleWeekdays('');
+      loadCatalogue();
+    })
+    .catch(function () { alert('Could not assign the duty'); });
+}
+
+function deleteRule(scheduleId) {
+  if (!confirm('Unassign this duty from that employee? Future work not yet started is removed; completed records are kept.')) return;
+  var dutyId = document.getElementById('scheduleDutyId').value;
+  fetch('/portal/duties/catalogue/' + dutyId + '/schedules/' + scheduleId, { method: 'DELETE' })
+    .then(function (r) { return r.json(); })
+    .then(function (res) {
+      if (!res.success) { alert(res.message || 'Could not unassign'); return; }
+      loadRules(dutyId);
+      loadCatalogue();
+    })
+    .catch(function () { alert('Could not unassign'); });
+}
+
+// ── Report (admin) ─────────────────────────────────────────────
+
+function loadReport() {
+  if (!DUTY_CAN_MANAGE) return;
+  var from = document.getElementById('reportFrom').value;
+  var to = document.getElementById('reportTo').value || DUTY_TODAY;
+  var qs = 'to=' + encodeURIComponent(to) + (from ? '&from=' + encodeURIComponent(from) : '');
+
+  fetch('/portal/duties/report?' + qs)
+    .then(function (r) { return r.json(); })
+    .then(function (res) {
+      if (!res.success) throw new Error(res.message);
+      if (!document.getElementById('reportFrom').value) {
+        document.getElementById('reportFrom').value = res.data.from;
+      }
+      renderReport(res.data.rows || [], res.data.summary || {});
+    })
+    .catch(function () {
+      document.getElementById('reportBody').innerHTML =
+        '<tr><td colspan="7" class="text-danger text-center py-4">Could not build the report.</td></tr>';
+    });
+}
+
+function renderReport(rows, summary) {
+  var sum = document.getElementById('reportSummary');
+  sum.innerHTML =
+    dutyStat('Assignments', summary.total_assignments || 0)
+    + dutyStat('Completed', summary.completed || 0)
+    + dutyStat('Still open', (summary.pending || 0) + (summary.in_progress || 0))
+    + dutyStat('Time logged', fmtDur(summary.total_seconds || 0));
+
+  var body = document.getElementById('reportBody');
+  if (!rows.length) {
+    body.innerHTML = '<tr><td colspan="7" class="text-muted text-center py-4">No completed duties in this range.</td></tr>';
+    return;
+  }
+
+  var html = '';
+  for (var i = 0; i < rows.length; i++) {
+    var r = rows[i];
+    var over = r.estimated_minutes && r.avg_seconds > r.estimated_minutes * 60;
+    html += '<tr>'
+      + '<td>' + dutyEsc(r.title)
+      + (r.category ? '<div class="small text-muted">' + dutyEsc(r.category) + '</div>' : '')
+      + '</td>'
+      + '<td>' + dutyEsc(r.user_name) + '</td>'
+      + '<td class="text-end">' + r.runs + '</td>'
+      + '<td class="text-end' + (over ? ' text-danger fw-semibold' : '') + '">' + fmtDur(r.avg_seconds)
+      + (r.estimated_minutes ? '<div class="small text-muted">target ' + r.estimated_minutes + ' min</div>' : '')
+      + '</td>'
+      + '<td class="text-end">' + fmtDur(r.fastest_seconds) + '</td>'
+      + '<td class="text-end">' + fmtDur(r.slowest_seconds) + '</td>'
+      + '<td class="text-end">' + fmtDur(r.total_seconds) + '</td>'
+      + '</tr>';
+  }
+  body.innerHTML = html;
+}
+
+function dutyStat(label, value) {
+  return '<div class="duty-stat"><div class="duty-stat-label">' + dutyEsc(label) + '</div>'
+    + '<div class="duty-stat-value">' + dutyEsc(value) + '</div></div>';
+}
+
+// ── Init ───────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', function () {
+  if (document.getElementById('mineList')) loadMyDuties();
+});
+</script>

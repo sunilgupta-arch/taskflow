@@ -645,6 +645,36 @@ router.delete('/notes/:id', async (req, res) => {
   }
 });
 
+// ── Store Duties ─────────────────────────────────────────
+// Catalogue + per-day assignment + start/finish time tracking.
+// Managing is admin-only; every client role can work their own duties.
+const DutyController = require('../controllers/dutyController');
+const requireDutyManager = requireRoles('CLIENT_ADMIN', 'CLIENT_TOP_MGMT');
+
+router.get('/duties', DutyController.index);
+
+// My duties — any client role
+router.get('/duties/mine',                     DutyController.mine);
+router.post('/duties/assignments/:id/start',   DutyController.start);
+router.post('/duties/assignments/:id/finish',  DutyController.finish);
+
+// Catalogue CRUD — the raw duty only (admin)
+router.get('/duties/catalogue',        requireDutyManager, DutyController.listCatalogue);
+router.post('/duties/catalogue',       requireDutyManager, DutyController.createDuty);
+router.put('/duties/catalogue/:id',    requireDutyManager, DutyController.updateDuty);
+router.delete('/duties/catalogue/:id', requireDutyManager, DutyController.deleteDuty);
+
+// Schedule rules — how a duty is managed (admin)
+router.get('/duties/catalogue/:id/schedules',                 requireDutyManager, DutyController.listSchedules);
+router.post('/duties/catalogue/:id/schedules',                requireDutyManager, DutyController.addSchedule);
+router.delete('/duties/catalogue/:id/schedules/:scheduleId',  requireDutyManager, DutyController.deleteSchedule);
+
+// Schedule + reporting — admin
+router.get('/duties/schedule',           requireDutyManager, DutyController.schedule);
+router.get('/duties/report',             requireDutyManager, DutyController.report);
+router.post('/duties/assignments',       requireDutyManager, DutyController.assign);
+router.delete('/duties/assignments/:id', requireDutyManager, DutyController.unassign);
+
 // ── Team India (Live Status) ─────────────────────────────
 router.get('/team-status', requireRoles('CLIENT_ADMIN', 'CLIENT_TOP_MGMT'), PortalTeamStatusController.index);
 router.get('/team-status/data', requireRoles('CLIENT_ADMIN', 'CLIENT_TOP_MGMT'), PortalTeamStatusController.getData);

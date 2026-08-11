@@ -884,46 +884,89 @@ function clearTaskFile() {
 
 // ── USERS (Admin only) ─────────────────────────────────────
 
+// Role metadata shared by both views
+var USER_ROLE_ORDER = ['CLIENT_ADMIN', 'CLIENT_TOP_MGMT', 'CLIENT_MGMT', 'CLIENT_MANAGER', 'CLIENT_SALES', 'CLIENT_USER'];
+var USER_ROLE_LABELS = {
+  CLIENT_ADMIN:    { title: 'Admin',          icon: 'bi-shield-lock-fill',  color: '#a78bfa' },
+  CLIENT_TOP_MGMT: { title: 'Top Management', icon: 'bi-star-fill',         color: '#3b82f6' },
+  CLIENT_MGMT:     { title: 'Management',     icon: 'bi-briefcase-fill',    color: '#22c55e' },
+  CLIENT_MANAGER:  { title: 'Managers',       icon: 'bi-person-badge-fill', color: '#eab308' },
+  CLIENT_SALES:    { title: 'Sales',          icon: 'bi-cart-fill',         color: '#f97316' },
+  CLIENT_USER:     { title: 'Users',          icon: 'bi-person-fill',       color: '#94a3b8' }
+};
+
+var _usersCache = [];
+var _usersView = (function () {
+  try { return localStorage.getItem('portal-users-view') === 'table' ? 'table' : 'cards'; }
+  catch (e) { return 'cards'; }
+})();
+
 function loadUsers() {
   fetch('/portal/users/list')
     .then(r => r.json())
     .then(res => {
       if (!res.success) return;
-      renderUsers(res.data.users);
+      _usersCache = res.data.users || [];
+      syncUsersViewButtons();
+      renderUsers(_usersCache);
     });
+}
+
+function setUsersView(mode) {
+  _usersView = (mode === 'table') ? 'table' : 'cards';
+  try { localStorage.setItem('portal-users-view', _usersView); } catch (e) {}
+  syncUsersViewButtons();
+  renderUsers(_usersCache);
+}
+
+function syncUsersViewButtons() {
+  var c = document.getElementById('usersViewCardsBtn');
+  var t = document.getElementById('usersViewTableBtn');
+  if (!c || !t) return;
+  c.classList.toggle('active', _usersView === 'cards');
+  t.classList.toggle('active', _usersView === 'table');
+}
+
+// Shared action buttons — identical behaviour in both views
+function userActionButtons(u) {
+  if (u.role_name === 'CLIENT_ADMIN') return '';
+  var safeName = escapeHtml(u.name).replace(/'/g, "\\'");
+  var safeEmail = escapeHtml(u.email).replace(/'/g, "\\'");
+  return ''
+    + '<button class="btn btn-outline-secondary" title="Edit" onclick="showEditUserModal(' + u.id + ', \'' + safeName + '\', \'' + safeEmail + '\', ' + u.role_id + ')"><i class="bi bi-pencil"></i></button>'
+    + '<button class="btn btn-outline-secondary" title="Reset Password" onclick="showResetPwModal(' + u.id + ', \'' + safeName + '\')"><i class="bi bi-key"></i></button>'
+    + '<button class="btn ' + (u.is_active ? 'btn-outline-danger' : 'btn-outline-success') + '" title="' + (u.is_active ? 'Deactivate' : 'Activate') + '" onclick="toggleUserActive(' + u.id + ')"><i class="bi ' + (u.is_active ? 'bi-person-slash' : 'bi-person-check') + '"></i></button>';
+}
+
+function groupUsersByRole(users) {
+  var grouped = {};
+  USER_ROLE_ORDER.forEach(function (r) { grouped[r] = []; });
+  users.forEach(function (u) { if (grouped[u.role_name]) grouped[u.role_name].push(u); });
+  return grouped;
 }
 
 function renderUsers(users) {
   const list = document.getElementById('usersList');
   if (!list) return;
 
-  if (!users.length) {
+  if (!users || !users.length) {
     list.innerHTML = '<div class="text-center text-muted p-4">No team members found</div>';
     return;
   }
 
-  // Group users by role
-  const roleOrder = ['CLIENT_ADMIN', 'CLIENT_TOP_MGMT', 'CLIENT_MGMT', 'CLIENT_MANAGER', 'CLIENT_SALES', 'CLIENT_USER'];
-  const roleLabels = {
-    CLIENT_ADMIN: { title: 'Admin', icon: 'bi-shield-lock-fill', color: '#a78bfa' },
-    CLIENT_TOP_MGMT: { title: 'Top Management', icon: 'bi-star-fill', color: '#3b82f6' },
-    CLIENT_MGMT: { title: 'Management', icon: 'bi-briefcase-fill', color: '#22c55e' },
-    CLIENT_MANAGER: { title: 'Managers', icon: 'bi-person-badge-fill', color: '#eab308' },
-    CLIENT_SALES: { title: 'Sales', icon: 'bi-cart-fill', color: '#f97316' },
-    CLIENT_USER: { title: 'Users', icon: 'bi-person-fill', color: '#94a3b8' }
-  };
+  list.innerHTML = (_usersView === 'table')
+    ? renderUsersTable(users)
+    : renderUsersCards(users);
+}
 
-  const grouped = {};
-  roleOrder.forEach(r => { grouped[r] = []; });
-  users.forEach(u => {
-    if (grouped[u.role_name]) grouped[u.role_name].push(u);
-  });
-
+function renderUsersCards(users) {
+  var grouped = groupUsersByRole(users);
   var html = '';
-  roleOrder.forEach(role => {
+
+  USER_ROLE_ORDER.forEach(function (role) {
     var group = grouped[role];
     if (!group.length) return;
-    var info = roleLabels[role];
+    var info = USER_ROLE_LABELS[role];
 
     html += '<div class="user-role-section">';
     html += '<div class="user-role-header">';
@@ -934,13 +977,10 @@ function renderUsers(users) {
     html += '</div></div>';
 
     html += '<div class="user-role-grid">';
-    group.forEach(function(u) {
+    group.forEach(function (u) {
       var initial = u.name.charAt(0).toUpperCase();
-      var isAdmin = u.role_name === 'CLIENT_ADMIN';
       var activeClass = u.is_active ? 'active' : 'inactive';
       var activeText = u.is_active ? 'Active' : 'Inactive';
-      var safeName = escapeHtml(u.name).replace(/'/g, "\\'");
-      var safeEmail = escapeHtml(u.email).replace(/'/g, "\\'");
 
       html += '<div class="user-card ' + (u.is_active ? '' : 'user-card-inactive') + '">';
       html += '<div class="user-card-avatar" style="background:linear-gradient(135deg, ' + info.color + ', ' + info.color + '99)">' + initial + '</div>';
@@ -949,18 +989,52 @@ function renderUsers(users) {
       html += '<div class="user-card-email">' + escapeHtml(u.email) + '</div>';
       html += '<div class="user-card-meta"><span class="active-badge ' + activeClass + '">' + activeText + '</span></div>';
       html += '</div>';
-      html += '<div class="user-card-actions">';
-      if (!isAdmin) {
-        html += '<button class="btn btn-outline-secondary" title="Edit" onclick="showEditUserModal(' + u.id + ', \'' + safeName + '\', \'' + safeEmail + '\', ' + u.role_id + ')"><i class="bi bi-pencil"></i></button>';
-        html += '<button class="btn btn-outline-secondary" title="Reset Password" onclick="showResetPwModal(' + u.id + ', \'' + safeName + '\')"><i class="bi bi-key"></i></button>';
-        html += '<button class="btn ' + (u.is_active ? 'btn-outline-danger' : 'btn-outline-success') + '" title="' + (u.is_active ? 'Deactivate' : 'Activate') + '" onclick="toggleUserActive(' + u.id + ')"><i class="bi ' + (u.is_active ? 'bi-person-slash' : 'bi-person-check') + '"></i></button>';
-      }
-      html += '</div></div>';
+      html += '<div class="user-card-actions">' + userActionButtons(u) + '</div>';
+      html += '</div>';
     });
     html += '</div></div>';
   });
 
-  list.innerHTML = html;
+  return html;
+}
+
+function renderUsersTable(users) {
+  var grouped = groupUsersByRole(users);
+  var body = '';
+
+  USER_ROLE_ORDER.forEach(function (role) {
+    var group = grouped[role];
+    if (!group.length) return;
+    var info = USER_ROLE_LABELS[role];
+
+    group.forEach(function (u, idx) {
+      var initial = u.name.charAt(0).toUpperCase();
+      body += '<tr class="' + (u.is_active ? '' : 'user-row-inactive') + (idx === 0 ? ' user-row-newrole' : '') + '">';
+      body += '<td class="user-tbl-role">'
+        + (idx === 0
+            ? '<i class="bi ' + info.icon + ' me-1" style="color:' + info.color + '"></i>' + info.title
+              + ' <span class="user-role-count">' + group.length + '</span>'
+            : '')
+        + '</td>';
+      body += '<td><div class="user-tbl-member">'
+        + '<span class="user-tbl-avatar" style="background:linear-gradient(135deg, ' + info.color + ', ' + info.color + '99)">' + initial + '</span>'
+        + '<span>' + escapeHtml(u.name) + '</span></div></td>';
+      body += '<td class="small text-muted">' + escapeHtml(u.email) + '</td>';
+      body += '<td><span class="active-badge ' + (u.is_active ? 'active' : 'inactive') + '">'
+        + (u.is_active ? 'Active' : 'Inactive') + '</span></td>';
+      body += '<td class="text-end"><div class="user-tbl-actions">' + userActionButtons(u) + '</div></td>';
+      body += '</tr>';
+    });
+  });
+
+  return '<div class="portal-requests-table-wrap"><table class="portal-table user-table">'
+    + '<thead><tr>'
+    + '<th style="width:18%">Role</th>'
+    + '<th style="width:26%">Member</th>'
+    + '<th>Email</th>'
+    + '<th style="width:10%">Status</th>'
+    + '<th class="text-end" style="width:14%">Actions</th>'
+    + '</tr></thead><tbody>' + body + '</tbody></table></div>';
 }
 
 function showCreateUserModal() {

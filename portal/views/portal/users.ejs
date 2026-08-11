@@ -1,18 +1,52 @@
 <div class="users-container">
   <div class="users-header">
-    <div>
-      <h5 class="mb-0">Users Management <a href="/portal/help?section=team-mgmt" class="portal-help-link" title="Help — Team Management"><i class="bi bi-question-circle-fill"></i></a></h5>
+    <div><%# title lives in the top bar %>
       <span class="text-muted small">Manage your portal team by role</span>
+      <a href="/portal/help?section=team-mgmt" class="portal-help-link ms-1" title="Help — Team Management"><i class="bi bi-question-circle-fill"></i></a>
     </div>
-    <button class="btn btn-sm btn-primary" onclick="showCreateUserModal()">
-      <i class="bi bi-person-plus me-1"></i> Add Member
-    </button>
+    <div class="d-flex gap-2 align-items-center">
+      <div class="btn-group btn-group-sm" role="group" aria-label="View style">
+        <button type="button" class="btn btn-outline-secondary" id="usersViewCardsBtn"
+                onclick="setUsersView('cards')" title="Card view"><i class="bi bi-grid-3x3-gap-fill"></i></button>
+        <button type="button" class="btn btn-outline-secondary" id="usersViewTableBtn"
+                onclick="setUsersView('table')" title="Table view"><i class="bi bi-list-ul"></i></button>
+      </div>
+      <button class="btn btn-sm btn-primary" onclick="showCreateUserModal()">
+        <i class="bi bi-person-plus me-1"></i> Add Member
+      </button>
+    </div>
   </div>
 
   <div class="users-list" id="usersList">
-    <!-- Populated by JS -->
+    <!-- Populated by JS — cards or table depending on the toggle -->
   </div>
 </div>
+
+<style>
+/* Table view. Cards keep their existing styles in portal.css. */
+.portal-requests-table-wrap { overflow-x: auto; }
+.portal-table { width: 100%; border-collapse: collapse; }
+.portal-table th {
+  padding: 7px 12px; border-bottom: 1px solid var(--tf-border);
+  font-size: 0.7rem; font-weight: 500; text-transform: uppercase;
+  letter-spacing: .06em; color: var(--tf-text-muted); white-space: nowrap;
+}
+.portal-table td { padding: 9px 12px; border-bottom: 1px solid var(--tf-border); font-size: 0.875rem; }
+
+/* Role name prints once per group, with a heavier rule where a group starts */
+.user-tbl-role { white-space: nowrap; vertical-align: top; font-size: 0.8rem; }
+.user-row-newrole > td { border-top: 2px solid var(--tf-border); }
+.user-row-inactive { opacity: .55; }
+
+.user-tbl-member { display: flex; align-items: center; gap: 9px; }
+.user-tbl-avatar {
+  width: 26px; height: 26px; border-radius: 7px; flex-shrink: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  color: #fff; font-size: .72rem; font-weight: 600;
+}
+.user-tbl-actions { display: inline-flex; gap: 4px; }
+.user-tbl-actions .btn { padding: 2px 8px; font-size: .8rem; }
+</style>
 
 <!-- Create/Edit User Modal -->
 <div class="modal fade" id="userModal" tabindex="-1">
