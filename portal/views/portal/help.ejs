@@ -12,6 +12,7 @@
       <div class="help-nav-section">Features</div>
       <a class="help-nav-item" href="#" onclick="showHelpSection('chat', this)">Chat</a>
       <a class="help-nav-item" href="#" onclick="showHelpSection('tasks', this)">Tasks</a>
+      <a class="help-nav-item" href="#" onclick="showHelpSection('duties', this)">Duties</a>
       <a class="help-nav-item" href="#" onclick="showHelpSection('notes', this)">Notes & Dictation</a>
       <a class="help-nav-item" href="#" onclick="showHelpSection('admin-chat', this)">Admin Chat</a>
       <% if (['CLIENT_ADMIN', 'CLIENT_TOP_MGMT'].includes(user.role_name)) { %>
@@ -380,6 +381,80 @@
     </div>
 
     <!-- ═══ NOTES ═══ -->
+    <!-- ═══ DUTIES ═══ -->
+    <div class="help-section" id="section-duties" style="display:none">
+      <h4>Duties</h4>
+      <p class="help-lead">Recurring store jobs, assigned to staff by day, with start/finish timing.</p>
+
+      <div class="help-block">
+        <h6>The three pieces</h6>
+        <table class="help-table">
+          <tr><td><strong>The duty</strong></td><td>What the job is — just a title, a category and an optional target time. It does not say who does it.</td></tr>
+          <tr><td><strong>The assignment</strong></td><td>Who performs that duty and on which days — every day, certain weekdays, or one specific date. A duty can have several, or none.</td></tr>
+          <tr><td><strong>The day's work</strong></td><td>What actually lands on someone's list for a given date, carrying its status and timings.</td></tr>
+        </table>
+        <div class="help-callout info">
+          <i class="bi bi-info-circle-fill me-2"></i>
+          A duty with no assignment simply sits in the catalogue — it never appears on anyone's day until you assign it.
+        </div>
+      </div>
+
+      <div class="help-block">
+        <h6>My Duties — for everyone</h6>
+        <ol>
+          <li>Open <strong>Duties</strong> from the sidebar. The date defaults to today; use the arrows or <strong>Today</strong> to move around.</li>
+          <li>Duties are grouped by category, e.g. <em>Daily Duties</em> and <em>Evening Closing</em>.</li>
+          <li>Press <strong>Start</strong> when you begin. A timer runs on the row.</li>
+          <li>Press <strong>Finish</strong> when done. The elapsed time is recorded.</li>
+        </ol>
+        <div class="help-callout warning">
+          <i class="bi bi-exclamation-triangle-fill me-2"></i>
+          Timing only counts between Start and Finish. If you forget to press Start, the duty records no time.
+        </div>
+      </div>
+
+      <% if (['CLIENT_ADMIN', 'CLIENT_TOP_MGMT'].includes(user.role_name)) { %>
+      <div class="help-block">
+        <h6>Schedule — who is doing what today</h6>
+        <ul>
+          <li>Pick a date to see every employee and their duties for that day, as a table.</li>
+          <li>Each person shows a completion count and total time logged.</li>
+          <li><strong>Assign Duty</strong> puts a duty on <em>one specific date</em> — useful for cover and one-offs.</li>
+          <li>The <strong>×</strong> removes a duty from that day. Completed duties cannot be removed — they are part of the record.</li>
+        </ul>
+      </div>
+
+      <div class="help-block">
+        <h6>Catalogue — the master list</h6>
+        <ul>
+          <li>Search by category or duty name, or filter with the category dropdown.</li>
+          <li><strong>+ New Duty</strong> adds a job to the list. Pick an existing category or add a new one.</li>
+          <li><strong>Target minutes</strong> is optional. When set, times over it are flagged red in the report.</li>
+          <li>The calendar button on a row opens <strong>Schedule</strong>, where you set who performs it and how often.</li>
+          <li>Archiving a duty stops it generating new work but keeps past records.</li>
+        </ul>
+        <div class="help-callout info">
+          <i class="bi bi-info-circle-fill me-2"></i>
+          <strong>Nothing showing on a day?</strong> Check the duty has an assignment covering that date. A duty set to Tuesdays shows nothing on a Monday.
+        </div>
+      </div>
+
+      <div class="help-block">
+        <h6>Time Report</h6>
+        <p>Pick a date range to see, for each duty and each employee: how many times it was done, the average, fastest and slowest time, and the total. Averages above the duty's target are shown in red.</p>
+        <p class="text-muted small mb-0">This is how you compare how long different people take on the same job.</p>
+      </div>
+      <% } %>
+
+      <div class="help-block">
+        <h6>Who can do what</h6>
+        <table class="help-table">
+          <tr><td><strong>Everyone</strong></td><td>See their own duties, start and finish them</td></tr>
+          <tr><td><strong>Admin &amp; Top Management</strong></td><td>Create duties, assign them, remove assignments, view the schedule and the time report</td></tr>
+        </table>
+      </div>
+    </div>
+
     <div class="help-section" id="section-notes" style="display:none">
       <h4>Notes & Dictation</h4>
       <p class="help-lead">Your personal notepad — auto-saves as you type. Only you can see your notes.</p>
@@ -1589,9 +1664,16 @@
 
 <script>
 function showHelpSection(id, clickedEl) {
+  // An unknown id (a stale ?section= link, or a page whose help was never
+  // written) must not leave the page blank — fall back to the overview.
+  var section = document.getElementById('section-' + id);
+  if (!section) {
+    id = 'overview';
+    section = document.getElementById('section-overview');
+    clickedEl = null;
+  }
   document.querySelectorAll('.help-section').forEach(s => s.style.display = 'none');
   document.querySelectorAll('.help-nav-item').forEach(a => a.classList.remove('active'));
-  const section = document.getElementById('section-' + id);
   if (section) section.style.display = '';
   // Highlight the matching nav item
   var el = clickedEl || document.querySelector('.help-nav-item[onclick*="' + id + '"]');
