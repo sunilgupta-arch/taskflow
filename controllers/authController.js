@@ -6,6 +6,7 @@ const ShiftHistory = require('../models/ShiftHistory');
 const crypto = require('crypto');
 const logger = require('../utils/logger');
 const jwt = require('jsonwebtoken');
+const { LATE_GRACE_MINUTES } = require('../config/constants');
 
 class AuthController {
   static showLogin(req, res) {
@@ -179,8 +180,8 @@ class AuthController {
       const shiftStartDate = new Date(loginTime);
       shiftStartDate.setHours(sh, sm || 0, 0, 0);
 
-      // Grace period: 5 minutes
-      const graceMs = 5 * 60 * 1000;
+      // Grace period — configurable via LATE_GRACE_MINUTES in .env
+      const graceMs = LATE_GRACE_MINUTES * 60 * 1000;
       if (loginTime.getTime() > shiftStartDate.getTime() + graceMs) {
         const lateByMin = Math.round((loginTime.getTime() - shiftStartDate.getTime()) / 60000);
         return ApiResponse.success(res, { needsReason: true, lateByMinutes: lateByMin });

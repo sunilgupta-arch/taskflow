@@ -1,4 +1,10 @@
+// Minutes after shift start before a login is marked late.
+// Change without touching code: set LATE_GRACE_MINUTES in .env, then restart the server.
+const graceEnv = parseInt(process.env.LATE_GRACE_MINUTES, 10);
+
 module.exports = {
+  LATE_GRACE_MINUTES: Number.isFinite(graceEnv) && graceEnv >= 0 ? graceEnv : 5,
+
   ROLES: {
     CLIENT_ADMIN: 'CLIENT_ADMIN',
     CLIENT_MANAGER: 'CLIENT_MANAGER',

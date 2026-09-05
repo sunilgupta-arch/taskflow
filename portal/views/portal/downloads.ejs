@@ -1,5 +1,9 @@
 <style>
 @keyframes pdlFade { from { opacity:0; transform:translateY(5px); } to { opacity:1; transform:none; } }
+/* The layout's .portal-content is overflow:hidden, so each page must supply
+   its own scroller. Full-width so the scrollbar sits at the viewport edge;
+   .pdl-wrap keeps the max-width. */
+.pdl-scroll { height:100%; overflow-y:auto; box-sizing:border-box; padding:24px 28px 40px; }
 .pdl-wrap { animation:pdlFade 0.22s ease; max-width:1000px; }
 
 /* ── Header ──────────────────────────────────────────────────── */
@@ -37,6 +41,53 @@
   color:#a5b4fc; border-radius:7px; padding:5px 12px;
   font-size:0.75rem; font-weight:700; flex-shrink:0;
 }
+
+/* ── View toggle ─────────────────────────────────────────────── */
+.pdl-view-toggle { display:inline-flex; gap:2px; background:var(--portal-surface,rgba(255,255,255,0.05));
+  border:1px solid var(--portal-border,rgba(255,255,255,0.08)); border-radius:9px; padding:2px; flex-shrink:0; }
+.pdl-view-btn {
+  background:transparent; border:none; color:var(--portal-muted,#64748b);
+  border-radius:7px; width:32px; height:28px; cursor:pointer; font-size:0.82rem;
+  display:inline-flex; align-items:center; justify-content:center; transition:all 0.15s;
+}
+.pdl-view-btn:hover { color:var(--portal-text,#e2e8f0); }
+.pdl-view-btn.active { background:rgba(99,102,241,0.15); color:#a5b4fc; }
+
+/* ── Table view ──────────────────────────────────────────────── */
+/* Which view shows is driven entirely by one class on .pdl-wrap, so the
+   toggle never fights inline styles left behind by anything else. */
+.pdl-table-wrap { overflow-x:auto; display:none; }
+.pdl-wrap.pdl-view-table .pdl-grid { display:none; }
+.pdl-wrap.pdl-view-table .pdl-table-wrap { display:block; }
+
+/* Filtered down to nothing — say so instead of showing a blank page.
+   Must come after the view-table rules: same specificity, last one wins. */
+#pdlNoMatch { display:none; }
+.pdl-wrap.pdl-no-match #pdlNoMatch { display:block; }
+.pdl-wrap.pdl-no-match .pdl-grid,
+.pdl-wrap.pdl-no-match .pdl-table-wrap { display:none; }
+.pdl-table { width:100%; border-collapse:collapse; }
+.pdl-table th {
+  padding:7px 12px; border-bottom:1px solid var(--portal-border,rgba(255,255,255,0.08));
+  font-size:0.7rem; font-weight:600; text-transform:uppercase; letter-spacing:0.06em;
+  color:var(--portal-muted,#64748b); white-space:nowrap; text-align:left;
+}
+.pdl-table td {
+  padding:9px 12px; border-bottom:1px solid var(--portal-border,rgba(255,255,255,0.06));
+  font-size:0.82rem; color:var(--portal-text,#e2e8f0); vertical-align:middle;
+}
+.pdl-table tbody tr:hover td { background:rgba(99,102,241,0.04); }
+.pdl-table tr.pdl-disabled { opacity:0.45; }
+.pdl-num { text-align:right; white-space:nowrap; color:var(--portal-muted,#64748b); }
+.pdl-row-file { display:flex; align-items:center; gap:10px; min-width:0; }
+.pdl-file-icon-sm { width:28px; height:28px; border-radius:8px; font-size:0.82rem; }
+.pdl-row-name { font-weight:600; line-height:1.3; }
+.pdl-row-desc {
+  font-size:0.73rem; color:var(--portal-muted,#64748b); margin-top:2px;
+  max-width:340px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.pdl-row-actions { display:flex; align-items:center; gap:6px; justify-content:flex-end; }
+.pdl-dl-btn-sm { height:28px; padding:0 10px; font-size:0.74rem; }
 
 /* ── Cards grid ──────────────────────────────────────────────── */
 .pdl-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:12px; }
@@ -135,6 +186,7 @@
 .pdl-modal-save:hover { background:#4f46e5; }
 </style>
 
+<div class="pdl-scroll">
 <div class="pdl-wrap">
 
   <!-- Header -->
@@ -155,10 +207,21 @@
   <div class="pdl-toolbar">
     <div class="pdl-search-wrap">
       <i class="bi bi-search pdl-search-icon"></i>
-      <input type="text" class="pdl-search" id="pdlSearch" placeholder="Search files…"
-             value="<%= search %>" oninput="pdlFilter(this.value)">
+      <%# type=search + the ignore hints stop password managers autofilling an
+          email in here — that silently filtered every file out. %>
+      <input type="search" class="pdl-search" id="pdlSearch" name="pdl-file-search"
+             placeholder="Search files…" value="<%= search %>"
+             autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+             data-lpignore="true" data-1p-ignore data-form-type="other"
+             oninput="pdlFilter(this.value)">
     </div>
     <span class="pdl-count" id="pdlCount"><%= files.length %> file<%= files.length !== 1 ? 's' : '' %></span>
+    <div class="pdl-view-toggle" role="group" aria-label="View style">
+      <button type="button" class="pdl-view-btn" id="pdlViewCardsBtn"
+              onclick="setPdlView('cards')" title="Card view"><i class="bi bi-grid-3x3-gap-fill"></i></button>
+      <button type="button" class="pdl-view-btn" id="pdlViewTableBtn"
+              onclick="setPdlView('table')" title="Table view"><i class="bi bi-list-ul"></i></button>
+    </div>
   </div>
 
   <!-- Grid -->
@@ -168,9 +231,10 @@
       <p><% if (search) { %>No files match "<%= search %>"<% } else { %>No files available yet<% } %></p>
     </div>
   <% } else { %>
-  <div class="pdl-grid" id="pdlGrid">
-    <% files.forEach(function(f) { %>
-    <%
+  <%
+    // Computed once and shared by both views below.
+    function pdlFmtSize(b) { if(!b) return '—'; if(b<1024) return b+'B'; if(b<1048576) return (b/1024).toFixed(1)+'KB'; return (b/1048576).toFixed(1)+'MB'; }
+    const pdlFiles = files.map(function(f) {
       const ext2 = (f.original_name||'').split('.').pop().toLowerCase();
       const mime2 = f.mime_type || '';
       let iconCls = 'pdl-icon-file', iconBi = 'bi-file-earmark-fill';
@@ -182,15 +246,29 @@
       else if (['doc','docx'].includes(ext2)) { iconCls='pdl-icon-doc'; iconBi='bi-file-word-fill'; }
       else if (['xls','xlsx'].includes(ext2)) { iconCls='pdl-icon-doc'; iconBi='bi-file-spreadsheet-fill'; }
       else if (['js','ts','py','java','cpp','c','cs','go','rb','php','json','xml','yaml','yml','sql'].includes(ext2)) { iconCls='pdl-icon-code'; iconBi='bi-file-code-fill'; }
-      function fmtSize(b) { if(!b) return '—'; if(b<1024) return b+'B'; if(b<1048576) return (b/1024).toFixed(1)+'KB'; return (b/1048576).toFixed(1)+'MB'; }
-      const dateStr = new Date(f.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
-    %>
+      return Object.assign({}, f, {
+        iconCls: iconCls,
+        iconBi: iconBi,
+        sizeStr: pdlFmtSize(f.file_size),
+        dateStr: new Date(f.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}),
+        nameKey: (f.name||'').toLowerCase(),
+        descKey: (f.description||'').toLowerCase(),
+        uploaderKey: (f.uploader_name||'').toLowerCase(),
+        canEdit: canUpload && f.uploaded_by === userId
+      });
+    });
+  %>
+
+  <div class="pdl-grid" id="pdlGrid">
+    <% pdlFiles.forEach(function(f) { %>
+    <% const dateStr = f.dateStr; %>
     <div class="pdl-card <%= f.is_disabled ? 'pdl-disabled' : '' %>"
-         data-name="<%= (f.name||'').toLowerCase() %>"
-         data-desc="<%= (f.description||'').toLowerCase() %>"
-         data-uploader="<%= (f.uploader_name||'').toLowerCase() %>">
+         data-file-id="<%= f.id %>"
+         data-name="<%= f.nameKey %>"
+         data-desc="<%= f.descKey %>"
+         data-uploader="<%= f.uploaderKey %>">
       <div class="pdl-card-top">
-        <div class="pdl-file-icon <%= iconCls %>"><i class="bi <%= iconBi %>"></i></div>
+        <div class="pdl-file-icon <%= f.iconCls %>"><i class="bi <%= f.iconBi %>"></i></div>
         <div class="pdl-card-info">
           <div class="pdl-card-name">
             <%= f.name %>
@@ -201,14 +279,14 @@
           <div class="pdl-card-meta">
             <span><i class="bi bi-person"></i> <%= f.uploader_name %></span>
             <span><i class="bi bi-calendar3"></i> <%= dateStr %></span>
-            <span><i class="bi bi-hdd"></i> <%= fmtSize(f.file_size) %></span>
+            <span><i class="bi bi-hdd"></i> <%= f.sizeStr %></span>
           </div>
         </div>
       </div>
       <div class="pdl-card-footer">
         <span class="pdl-dl-count"><i class="bi bi-download"></i> <%= f.download_count %> download<%= f.download_count !== 1 ? 's' : '' %></span>
         <div style="display:flex;align-items:center;gap:8px;">
-          <% if (canUpload && f.uploaded_by === userId) { %>
+          <% if (f.canEdit) { %>
           <div class="pdl-actions">
             <button class="pdl-act-btn" title="Edit"
                     onclick="pdlOpenEdit(<%= f.id %>, '<%= (f.name||'').replace(/'/g,`\\'`) %>', '<%= (f.description||'').replace(/'/g,`\\'`).replace(/\n/g,'\\n') %>', '<%= (f.version||'').replace(/'/g,`\\'`) %>')">
@@ -231,8 +309,78 @@
     </div>
     <% }); %>
   </div>
+
+  <!-- Table view — same data, toggled by setPdlView() -->
+  <div class="pdl-table-wrap" id="pdlTableWrap">
+    <table class="pdl-table">
+      <thead>
+        <tr>
+          <th>File</th>
+          <th>Uploaded by</th>
+          <th>Date</th>
+          <th class="pdl-num">Size</th>
+          <th class="pdl-num">Downloads</th>
+          <th style="text-align:right">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% pdlFiles.forEach(function(f) { %>
+        <tr class="pdl-row <%= f.is_disabled ? 'pdl-disabled' : '' %>"
+            data-file-id="<%= f.id %>"
+            data-name="<%= f.nameKey %>"
+            data-desc="<%= f.descKey %>"
+            data-uploader="<%= f.uploaderKey %>">
+          <td>
+            <div class="pdl-row-file">
+              <div class="pdl-file-icon pdl-file-icon-sm <%= f.iconCls %>"><i class="bi <%= f.iconBi %>"></i></div>
+              <div style="min-width:0">
+                <div class="pdl-row-name">
+                  <%= f.name %>
+                  <% if (f.version) { %><span class="pdl-version-badge">v<%= f.version %></span><% } %>
+                  <% if (f.is_disabled) { %><span class="pdl-disabled-chip"><i class="bi bi-slash-circle"></i> Disabled</span><% } %>
+                </div>
+                <% if (f.description) { %><div class="pdl-row-desc" title="<%= f.description %>"><%= f.description %></div><% } %>
+              </div>
+            </div>
+          </td>
+          <td><%= f.uploader_name %></td>
+          <td style="white-space:nowrap"><%= f.dateStr %></td>
+          <td class="pdl-num"><%= f.sizeStr %></td>
+          <td class="pdl-num"><%= f.download_count %></td>
+          <td>
+            <div class="pdl-row-actions">
+              <% if (f.canEdit) { %>
+              <button class="pdl-act-btn" title="Edit"
+                      onclick="pdlOpenEdit(<%= f.id %>, '<%= (f.name||'').replace(/'/g,`\\'`) %>', '<%= (f.description||'').replace(/'/g,`\\'`).replace(/\n/g,'\\n') %>', '<%= (f.version||'').replace(/'/g,`\\'`) %>')">
+                <i class="bi bi-pencil"></i>
+              </button>
+              <button class="pdl-act-btn del" title="Delete" onclick="pdlDelete(<%= f.id %>, this)">
+                <i class="bi bi-trash"></i>
+              </button>
+              <% } %>
+              <% if (!f.is_disabled) { %>
+              <a href="/portal/downloads/<%= f.id %>/download" class="pdl-dl-btn pdl-dl-btn-sm">
+                <i class="bi bi-download"></i> Download
+              </a>
+              <% } else { %>
+              <span class="pdl-dl-btn pdl-dl-btn-sm disabled"><i class="bi bi-slash-circle"></i> Disabled</span>
+              <% } %>
+            </div>
+          </td>
+        </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="pdl-empty" id="pdlNoMatch">
+    <i class="bi bi-search"></i>
+    <p>No files match <strong id="pdlNoMatchTerm"></strong>
+      — <a href="#" onclick="pdlClearSearch(); return false;">clear the search</a></p>
+  </div>
   <% } %>
 
+</div>
 </div>
 
 <!-- Edit Modal -->
@@ -260,17 +408,72 @@
 </div>
 
 <script>
-function pdlFilter(term) {
-  term = term.toLowerCase();
-  const cards = document.querySelectorAll('#pdlGrid .pdl-card');
+/* ── View toggle (cards ⇄ table), remembered per browser ── */
+var _pdlView = (function () {
+  try { return localStorage.getItem('portal-downloads-view') === 'table' ? 'table' : 'cards'; }
+  catch (e) { return 'cards'; }
+})();
+
+function setPdlView(mode) {
+  _pdlView = (mode === 'table') ? 'table' : 'cards';
+  try { localStorage.setItem('portal-downloads-view', _pdlView); } catch (e) {}
+  syncPdlView();
+}
+
+function syncPdlView() {
+  const wrap = document.querySelector('.pdl-wrap');
+  if (!wrap) return;
+  // Never switch to a table that isn't on the page — that would blank the view.
+  const isTable = _pdlView === 'table' && !!document.getElementById('pdlTableWrap');
+  wrap.classList.toggle('pdl-view-table', isTable);
+  const cb = document.getElementById('pdlViewCardsBtn');
+  const tb = document.getElementById('pdlViewTableBtn');
+  if (cb) cb.classList.toggle('active', !isTable);
+  if (tb) tb.classList.toggle('active', isTable);
+}
+
+function pdlFilter(rawTerm) {
+  const term = (rawTerm || '').trim().toLowerCase();
+  // Both views are in the DOM, so filter them together — the count stays
+  // correct no matter which one is showing.
+  const items = document.querySelectorAll('#pdlGrid .pdl-card, #pdlTableWrap .pdl-row');
   let vis = 0;
-  cards.forEach(c => {
+  items.forEach(c => {
     const show = !term || c.dataset.name.includes(term) || c.dataset.desc.includes(term) || c.dataset.uploader.includes(term);
     c.style.display = show ? '' : 'none';
-    if (show) vis++;
+    if (show && c.classList.contains('pdl-card')) vis++;
   });
   document.getElementById('pdlCount').textContent = vis + ' file' + (vis !== 1 ? 's' : '');
+
+  const wrap = document.querySelector('.pdl-wrap');
+  if (wrap) wrap.classList.toggle('pdl-no-match', items.length > 0 && vis === 0);
+  const t = document.getElementById('pdlNoMatchTerm');
+  if (t) t.textContent = '"' + (rawTerm || '').trim() + '"';
 }
+
+function pdlClearSearch() {
+  const box = document.getElementById('pdlSearch');
+  if (box) box.value = '';
+  pdlFilter('');
+}
+
+/* Some password managers fill this box anyway, which used to silently hide
+   every file. Autofill never fires keydown, so if the value changes on its
+   own before the user types, put it back. */
+var _pdlServerSearch = <%- JSON.stringify(search || '').replace(/</g, '\\u003c') %>;
+(function pdlGuardAutofill() {
+  const box = document.getElementById('pdlSearch');
+  if (!box) return;
+  let typed = false;
+  box.addEventListener('keydown', function () { typed = true; });
+  box.addEventListener('paste',   function () { typed = true; });
+  function undoAutofill() {
+    if (typed || box.value === _pdlServerSearch) return;
+    box.value = _pdlServerSearch;
+    pdlFilter(box.value);
+  }
+  [150, 500, 1200].forEach(function (ms) { setTimeout(undoAutofill, ms); });
+})();
 
 function pdlOpenEdit(id, name, desc, version) {
   document.getElementById('pdlEditId').value      = id;
@@ -305,10 +508,20 @@ async function pdlDelete(id, btn) {
   try {
     const r = await fetch('/portal/downloads/' + id, { method: 'DELETE' });
     const d = await r.json();
-    if (d.success) { const card = btn.closest('.pdl-card'); card.style.opacity='0'; card.style.transition='opacity 0.25s'; setTimeout(()=>card.remove(),260); }
+    if (d.success) {
+      // Drop the row from both views, not just the one that was clicked.
+      const nodes = document.querySelectorAll('[data-file-id="' + id + '"]');
+      nodes.forEach(n => { n.style.transition = 'opacity 0.25s'; n.style.opacity = '0'; });
+      setTimeout(() => {
+        nodes.forEach(n => n.remove());
+        pdlFilter(document.getElementById('pdlSearch').value);
+      }, 260);
+    }
     else alert(d.message || 'Delete failed');
   } catch(e) { alert('Network error'); }
   finally { btn.disabled = false; }
 }
 document.getElementById('pdlEditModal').addEventListener('click', e => { if (e.target === document.getElementById('pdlEditModal')) pdlCloseEdit(); });
+
+syncPdlView();
 </script>

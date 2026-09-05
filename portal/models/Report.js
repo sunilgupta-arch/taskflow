@@ -1,6 +1,35 @@
 const db = require('../../config/db');
+const { getDefaultLinksForRole } = require('../../config/portalDefaultLinks');
 
 class PortalReport {
+
+  /**
+   * Hand this user any developer-managed default links for their role that they
+   * have not been given before, and return how many were added.
+   *
+   * The seed row is claimed first with INSERT IGNORE: if it does not insert,
+   * this user already received that link at some point — whether they still
+   * have it, renamed it, or deleted it — so it is left alone. That also makes
+   * the whole thing safe against two concurrent requests seeding at once.
+   */
+  static async seedDefaultsForUser(userId, roleName) {
+    const defaults = getDefaultLinksForRole(roleName);
+    if (!defaults.length) return 0;
+
+    let added = 0;
+    for (const link of defaults) {
+      const [claim] = await db.query(
+        'INSERT IGNORE INTO portal_report_seeds (user_id, source_key) VALUES (?, ?)',
+        [userId, link.key]
+      );
+      if (!claim.affectedRows) continue;
+      await PortalReport.create({
+        user_id: userId, name: link.name, url: link.url, color: link.color
+      });
+      added++;
+    }
+    return added;
+  }
 
   static async create({ user_id, name, url, color }) {
     const [[{ maxOrder }]] = await db.query(

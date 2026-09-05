@@ -1,0 +1,43 @@
+{
+  "_readme": [
+    "Developer-managed default links for the CLIENT portal Links page (/portal/reports).",
+    "Not editable from the UI — this file is the only place these are defined.",
+    "",
+    "Add an entry under a role and it appears for those users on their next visit",
+    "to the Links page. Entries under ALL go to every client role.",
+    "",
+    "Each entry: { \"name\": \"...\", \"url\": \"https://...\", \"color\": \"blue\" }",
+    "  name   required",
+    "  url    required",
+    "  color  optional — blue | green | red | amber | purple | pink | cyan (default blue)",
+    "  key    optional — a stable id, defaults to a slug of the name. Set it if you",
+    "         want to rename a link later without it re-seeding as a second copy.",
+    "",
+    "Once a link reaches a user it belongs to them: their edits and deletes stick,",
+    "and it is never re-added. Changing a name or url here does NOT update users",
+    "who already have that link — it only affects users who haven't received it yet.",
+    "",
+    "Entries missing a name or url are skipped and logged; a malformed file is",
+    "logged and ignored rather than breaking the page."
+  ],
+
+  "ALL": [],
+
+  "CLIENT_ADMIN": [
+    {
+      "name": "",
+      "url": "",
+      "key": ""
+    }
+  ],
+
+  "CLIENT_TOP_MGMT": [],
+
+  "CLIENT_MGMT": [],
+
+  "CLIENT_MANAGER": [],
+
+  "CLIENT_SALES": [],
+
+  "CLIENT_USER": []
+}

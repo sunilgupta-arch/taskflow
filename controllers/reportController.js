@@ -6,6 +6,7 @@ const { getToday, getNow, isScheduledForDate } = require('../utils/timezone');
 const DashboardService = require('../services/dashboardService');
 const ShiftHistory = require('../models/ShiftHistory');
 const Roster = require('../models/Roster');
+const { LATE_GRACE_MINUTES } = require('../config/constants');
 
 class ReportController {
   static async completionReport(req, res) {
@@ -834,8 +835,8 @@ class ReportController {
           const loginMinutes = parseInt(timeParts[0]) * 60 + parseInt(timeParts[1]);
           totalLogin += loginMinutes;
 
-          // Grace period of 5 minutes
-          if (loginMinutes <= shiftMinutes + 5) {
+          // Grace period — configurable via LATE_GRACE_MINUTES in .env
+          if (loginMinutes <= shiftMinutes + LATE_GRACE_MINUTES) {
             onTime++;
           } else {
             late++;

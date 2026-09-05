@@ -230,6 +230,13 @@ router.get('/reports', (req, res) => {
 router.get('/reports/list', async (req, res) => {
   const { ApiResponse } = require('../../utils/response');
   try {
+    // Developer-managed defaults (config/portalDefaultLinks.json) arrive here on
+    // first sight. Never let a bad JSON file take the page down with it.
+    try {
+      await PortalReport.seedDefaultsForUser(req.user.id, req.user.role_name);
+    } catch (seedErr) {
+      require('../../utils/logger').error(`Default links seeding failed for user ${req.user.id}: ${seedErr.message}`);
+    }
     const reports = await PortalReport.getForUser(req.user.id);
     return ApiResponse.success(res, { reports });
   } catch (err) {

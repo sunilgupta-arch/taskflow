@@ -1,5 +1,9 @@
 <style>
 @keyframes pupFade { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
+/* The layout's .portal-content is overflow:hidden, so each page must supply
+   its own scroller. Full-width so the scrollbar sits at the viewport edge;
+   .pup-wrap keeps the max-width. */
+.pup-scroll { height:100%; overflow-y:auto; box-sizing:border-box; padding:24px 28px 40px; }
 .pup-wrap { animation:pupFade 0.22s ease; max-width:600px; }
 
 /* ── Header ──────────────────────────────────────────────────── */
@@ -101,6 +105,7 @@
 .pup-submit:disabled { opacity:0.5; cursor:default; }
 </style>
 
+<div class="pup-scroll">
 <div class="pup-wrap">
 
   <div class="pup-header">
@@ -160,6 +165,7 @@
     </div>
 
   </div>
+</div>
 </div>
 
 <script>
